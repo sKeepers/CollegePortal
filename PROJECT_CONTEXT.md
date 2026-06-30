@@ -136,7 +136,7 @@ Frontend:
 - `frontend/src/App.vue` — старый монолитный GUI, сохранен как legacy до полной миграции.
 - `frontend/src/app/App.vue` — root-компонент нового Quasar GUI.
 - `frontend/src/layouts` — `AppLayout`, `AuthLayout`, `PublicLayout`.
-- `frontend/src/pages` — страницы нового GUI; перенесены авторизация, системная страница UI Foundation и пилотный раздел `students`, остальные разделы постепенно переносятся из legacy.
+- `frontend/src/pages` — страницы нового GUI; перенесены авторизация, системная страница UI Foundation и пилотный раздел `students`, `groups`, `teachers`, `schedule`, `journal`, остальные разделы постепенно переносятся из legacy.
 - `frontend/src/pages/legacy/LegacyPage.vue` — временный доступ к старому GUI по маршруту `/legacy`.
 - `frontend/src/pages/system/UiFoundationPage.vue` — демонстрация базовых UI-компонентов нового GUI.
 - `frontend/src/router` — Vue Router и маршруты нового GUI.
@@ -266,6 +266,15 @@ Responsive Workspace Foundation описан в `docs/RESPONSIVE_WORKSPACE.md`:
 - `frontend/src/stores/workspace.js` хранит ширину бокового меню, состояние свернутого меню, отображение правой панели, плотность интерфейса и режим workspace;
 - настройки workspace сохраняются в `localStorage` по ключу `collegePortal.workspace.settings`;
 - `AppLayout` и `AppPage` прокидывают workspace-классы, чтобы Dashboard, Students, Groups, Schedule и Journal адаптировались единообразно.
+
+В новом Quasar GUI перенесен раздел «Преподаватели»:
+
+- страница `frontend/src/pages/teachers/TeachersPage.vue`;
+- store `frontend/src/stores/teachers.js`;
+- компоненты `TeacherFilters.vue`, `TeacherFormPanel.vue`, `TeacherDetailsPanel.vue`;
+- функции: список, поиск, фильтры по статусу и отделению, создание, редактирование, удаление, импорт/экспорт CSV, карточка преподавателя;
+- маршрут `/teachers` открывает новый раздел;
+- глобальный поиск ищет преподавателей вместе со студентами и группами.
 
 В новом Quasar GUI также перенесен раздел «Группы»:
 

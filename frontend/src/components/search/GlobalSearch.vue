@@ -6,6 +6,7 @@ import {
   Clock3,
   GraduationCap,
   Search,
+  UserRound,
   UsersRound,
   X,
 } from '@lucide/vue'
@@ -27,6 +28,7 @@ const showEmpty = computed(() => canSearch.value && !store.loading && !store.err
 const resultIcons = {
   student: GraduationCap,
   group: UsersRound,
+  teacher: UserRound,
 }
 
 function iconFor(result) {

@@ -221,7 +221,7 @@
 - экспортировать, если поддерживается.
 
 Первые эталоны применения шаблона — разделы `frontend/src/pages/students/StudentsPage.vue`
-и `frontend/src/pages/groups/GroupsPage.vue`.
+и `frontend/src/pages/groups/GroupsPage.vue`. Раздел «Преподаватели» следует тому же шаблону через `frontend/src/pages/teachers/TeachersPage.vue`.
 Новые CRUD-разделы следует переносить по этой структуре: store Pinia для API и состояния,
 отдельный компонент фильтров, отдельная форма, карточка выбранной записи и `AppConfirmDialog`
 для удаления. Эталон GUI-003.2 также включает активные фильтры-чипы, уведомления Quasar Notify,

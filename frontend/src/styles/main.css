@@ -400,6 +400,7 @@ body {
 
 .workspace-right-panel-hidden .students-layout,
 .workspace-right-panel-hidden .groups-layout,
+.workspace-right-panel-hidden .teachers-layout,
 .workspace-right-panel-hidden .schedule-layout,
 .workspace-right-panel-hidden .journal-layout {
   grid-template-columns: minmax(0, 1fr);
@@ -855,6 +856,7 @@ body {
 
 .students-layout,
 .groups-layout,
+.teachers-layout,
 .schedule-layout,
 .journal-layout {
   display: grid;
@@ -869,6 +871,7 @@ body {
 
 .students-main,
 .groups-main,
+.teachers-main,
 .schedule-main,
 .journal-main {
   display: grid;
@@ -880,6 +883,7 @@ body {
 
 .students-side,
 .groups-side,
+.teachers-side,
 .schedule-side,
 .journal-side {
   display: grid;
@@ -943,6 +947,233 @@ body {
 
 .students-import-field {
   width: 132px;
+}
+
+.teacher-form,
+.teacher-details {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.teacher-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.teachers-row-link {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #1d4ed8;
+  font: inherit;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.teachers-row--selected td {
+  background: #eff6ff !important;
+}
+
+.teachers-row--selected .teachers-row-link {
+  color: #1e40af;
+}
+
+.teachers-secondary-cell,
+.teachers-contact-cell {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.teachers-secondary-cell span,
+.teachers-contact-cell span {
+  overflow-wrap: anywhere;
+}
+
+.teachers-secondary-cell small,
+.teachers-contact-cell small {
+  color: #64748b;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.teachers-row-actions {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.teachers-import-field {
+  width: 132px;
+}
+
+.teacher-details__header {
+  display: grid;
+  gap: 8px;
+}
+
+.teacher-details-card {
+  min-width: 0;
+}
+
+.teacher-details__hero {
+  display: grid;
+  gap: 8px;
+}
+
+.teacher-details__title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.teacher-details__title-block {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.teacher-details__title-block h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+
+.teacher-details__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.teacher-details__name {
+  margin: 0;
+  color: #0f172a;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.teacher-details__subtitle {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.teacher-details__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.teacher-details__metrics > div,
+.teacher-details__metric {
+  border: 1px solid #dbe4f0;
+  border-radius: 8px;
+  padding: 8px;
+  background: #f8fafc;
+  min-width: 0;
+}
+
+.teacher-details__metrics span,
+.teacher-details__metric span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.teacher-details__metrics strong,
+.teacher-details__metric strong {
+  display: block;
+  margin-top: 2px;
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+
+.teacher-details__section {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.teacher-details__section h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.teacher-details__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.teacher-details__list div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.teacher-details__list dt,
+.teacher-details__list span {
+  color: #64748b;
+}
+
+.teacher-details__list dd,
+.teacher-details__list strong {
+  margin: 0;
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+
+.teacher-details__tags,
+.teacher-details__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.teacher-details__lesson-list,
+.teacher-details__lessons {
+  display: grid;
+  gap: 6px;
+}
+
+.teacher-details__lesson-list > div,
+.teacher-details__lesson {
+  border: 1px solid #dbe4f0;
+  border-radius: 8px;
+  padding: 8px;
+  background: #ffffff;
+}
+
+.teacher-details__lesson-list strong,
+.teacher-details__lesson-list span,
+.teacher-details__lesson strong,
+.teacher-details__lesson span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.teacher-details__lesson-list span,
+.teacher-details__lesson span {
+  margin-top: 2px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.teacher-details__muted {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
 }
 
 .schedule-viewbar {
@@ -2104,6 +2335,7 @@ body {
 @media (max-width: 1440px) {
   .students-layout,
   .groups-layout,
+  .teachers-layout,
   .schedule-layout,
   .journal-layout {
     grid-template-columns: 1fr;
@@ -2112,6 +2344,7 @@ body {
 
   .students-side,
   .groups-side,
+  .teachers-side,
   .schedule-side,
   .journal-side {
     max-width: none;
@@ -2121,6 +2354,7 @@ body {
 @media (min-width: 1920px) {
   .students-layout,
   .groups-layout,
+  .teachers-layout,
   .schedule-layout,
   .journal-layout {
     grid-template-columns: minmax(0, 1fr) clamp(390px, 24vw, 430px);
@@ -2128,6 +2362,7 @@ body {
 
   .students-side,
   .groups-side,
+  .teachers-side,
   .schedule-side,
   .journal-side {
     max-width: 430px;
@@ -2137,6 +2372,7 @@ body {
 @media (min-width: 2560px) {
   .students-layout,
   .groups-layout,
+  .teachers-layout,
   .schedule-layout,
   .journal-layout {
     grid-template-columns: minmax(0, 1fr) clamp(420px, 20vw, 520px);
@@ -2144,6 +2380,7 @@ body {
 
   .students-side,
   .groups-side,
+  .teachers-side,
   .schedule-side,
   .journal-side {
     max-width: 520px;
@@ -2194,6 +2431,7 @@ body {
   .ui-foundation-grid,
   .students-layout,
   .groups-layout,
+  .teachers-layout,
   .schedule-layout,
   .schedule-filters .app-filter-bar__content,
   .journal-layout,
@@ -2204,6 +2442,9 @@ body {
   .journal-lesson__metrics,
   .student-form__grid,
   .group-form__grid,
+  .teacher-form__grid,
+  .teacher-details__list div,
+  .teacher-details__metrics,
   .group-details__list div,
   .student-details__list div {
     grid-template-columns: 1fr;
@@ -2220,7 +2461,8 @@ body {
   }
 
   .students-import-field,
-  .groups-import-field {
+  .groups-import-field,
+  .teachers-import-field {
     width: 100%;
   }
 }

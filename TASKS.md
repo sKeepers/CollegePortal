@@ -66,6 +66,7 @@
 - [x] INFRA-004: безопасно инициализировать Git в DEV на ветке `develop` без remote
 - [x] INFRA-005: документировать обязательный Git checkpoint после каждой задачи
 - [x] DESIGN-001: создать единую дизайн-систему CollegePortal
+- [x] GUI-012: перенести раздел «Преподаватели» в новый Quasar GUI
 - [x] Dashboard
 - [x] Students page
 - [x] Groups page

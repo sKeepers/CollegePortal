@@ -89,6 +89,42 @@ async function searchStudents(query) {
     }))
 }
 
+async function searchTeachers(query) {
+  const payload = await api.list('teachers', { search: query })
+  const rows = extractRows(payload)
+  const matched = rows.filter((teacher) => containsQuery(query, [
+    fullName(teacher),
+    teacher.phone,
+    teacher.email,
+    teacher.position,
+    teacher.department,
+    teacher.is_active ? 'активен' : 'неактивен',
+  ]))
+
+  return sortByRelevance(query, matched.length ? matched : rows, (teacher) => [
+    fullName(teacher),
+    teacher.department,
+    teacher.email,
+  ])
+    .slice(0, MAX_RESULTS_PER_PROVIDER)
+    .map((teacher) => ({
+      id: teacher.id,
+      type: 'teacher',
+      group: 'Преподаватели',
+      title: fullName(teacher) || `Преподаватель #${teacher.id}`,
+      subtitle: [teacher.department, teacher.position].filter(Boolean).join(' · ') || 'Карточка преподавателя',
+      meta: [teacher.phone, teacher.email, teacher.is_active ? 'Активен' : 'Неактивен'].filter(Boolean),
+      route: {
+        path: '/teachers',
+        query: {
+          selected: teacher.id,
+          search: fullName(teacher) || query,
+        },
+      },
+      entity: teacher,
+    }))
+}
+
 async function searchGroups(query) {
   const payload = await api.list('groups')
   const rows = extractRows(payload)
@@ -137,6 +173,11 @@ const providers = [
     type: 'group',
     label: 'Группы',
     search: searchGroups,
+  },
+  {
+    type: 'teacher',
+    label: 'Преподаватели',
+    search: searchTeachers,
   },
 ]
 
