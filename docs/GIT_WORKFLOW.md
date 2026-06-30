@@ -89,6 +89,75 @@ DOCS-004: update domain documentation
 - один commit — одна логическая задача;
 - не смешивать frontend, backend и документацию в одном commit без необходимости.
 
+
+## Git checkpoint после каждой задачи
+
+Каждая выполненная задача должна завершаться Git checkpoint в DEV.
+
+Порядок:
+
+1. Выполнить задачу в `/srv/college-dev`.
+2. Запустить необходимые проверки: build, тесты, `bash -n` для shell-скриптов или ручную проверку страниц.
+3. Выполнить:
+
+```bash
+git status
+```
+
+4. Проверить список измененных файлов:
+
+```bash
+git diff --name-only
+git diff --check
+```
+
+5. Убедиться, что в commit не попадут:
+
+- `.env`;
+- `backend/.env`;
+- `frontend/.env`;
+- `vendor/`;
+- `node_modules/`;
+- `tmp/`;
+- logs;
+- runtime/cache-файлы;
+- docker volumes и backup-файлы.
+
+6. Добавить только нужные файлы:
+
+```bash
+git add <files>
+```
+
+Для обычной задачи после проверки `.gitignore` допустимо:
+
+```bash
+git add .
+```
+
+7. Еще раз проверить staged-файлы:
+
+```bash
+git status --short
+git diff --cached --name-only
+```
+
+8. Сделать commit с номером задачи:
+
+```bash
+git commit -m "GUI-011A.1: fix official SKKI branding"
+```
+
+Примеры:
+
+```text
+GUI-011A.1: fix official SKKI branding
+INFRA-005: document Codex git workflow
+DOCS-004: update architecture index
+```
+
+Если задача не меняла файлы, в отчете нужно явно написать, что commit не создан, потому что изменений нет.
+
 ## Что проверять перед коммитом
 
 Минимально:
