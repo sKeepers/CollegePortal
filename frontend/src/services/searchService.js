@@ -125,6 +125,46 @@ async function searchTeachers(query) {
     }))
 }
 
+async function searchSubjects(query) {
+  const payload = await api.list('subjects', { search: query })
+  const rows = extractRows(payload)
+  const matched = rows.filter((subject) => containsQuery(query, [
+    subject.name,
+    subject.code,
+    subject.department,
+    subject.description,
+    ...(Array.isArray(subject.teachers) ? subject.teachers.map(teacherName) : []),
+  ]))
+
+  return sortByRelevance(query, matched.length ? matched : rows, (subject) => [
+    subject.name,
+    subject.code,
+    subject.department,
+  ])
+    .slice(0, MAX_RESULTS_PER_PROVIDER)
+    .map((subject) => ({
+      id: subject.id,
+      type: 'subject',
+      group: 'Дисциплины',
+      title: subject.name || `Дисциплина #${subject.id}`,
+      subtitle: [subject.code, subject.department].filter(Boolean).join(' · ') || 'Карточка дисциплины',
+      meta: [
+        Array.isArray(subject.teachers) && subject.teachers.length
+          ? subject.teachers.map(teacherName).filter(Boolean).join(', ')
+          : '',
+        subject.description,
+      ].filter(Boolean),
+      route: {
+        path: '/subjects',
+        query: {
+          selected: subject.id,
+          search: subject.name || query,
+        },
+      },
+      entity: subject,
+    }))
+}
+
 async function searchGroups(query) {
   const payload = await api.list('groups')
   const rows = extractRows(payload)
@@ -178,6 +218,11 @@ const providers = [
     type: 'teacher',
     label: 'Преподаватели',
     search: searchTeachers,
+  },
+  {
+    type: 'subject',
+    label: 'Дисциплины',
+    search: searchSubjects,
   },
 ]
 

@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   ArrowRight,
+  BookOpen,
   Clock3,
   GraduationCap,
   Search,
@@ -29,6 +30,7 @@ const resultIcons = {
   student: GraduationCap,
   group: UsersRound,
   teacher: UserRound,
+  subject: BookOpen,
 }
 
 function iconFor(result) {

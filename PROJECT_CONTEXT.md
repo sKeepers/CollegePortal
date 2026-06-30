@@ -136,11 +136,11 @@ Frontend:
 - `frontend/src/App.vue` — старый монолитный GUI, сохранен как legacy до полной миграции.
 - `frontend/src/app/App.vue` — root-компонент нового Quasar GUI.
 - `frontend/src/layouts` — `AppLayout`, `AuthLayout`, `PublicLayout`.
-- `frontend/src/pages` — страницы нового GUI; перенесены авторизация, системная страница UI Foundation и пилотный раздел `students`, `groups`, `teachers`, `schedule`, `journal`, остальные разделы постепенно переносятся из legacy.
+- `frontend/src/pages` — страницы нового GUI; перенесены авторизация, системная страница UI Foundation и разделы `students`, `groups`, `teachers`, `subjects`, `schedule`, `journal`, остальные разделы постепенно переносятся из legacy.
 - `frontend/src/pages/legacy/LegacyPage.vue` — временный доступ к старому GUI по маршруту `/legacy`.
 - `frontend/src/pages/system/UiFoundationPage.vue` — демонстрация базовых UI-компонентов нового GUI.
 - `frontend/src/router` — Vue Router и маршруты нового GUI.
-- `frontend/src/stores` — Pinia stores: `auth`, `students`, `groups`, `schedule`, `journal`, `search`, `workspace`.
+- `frontend/src/stores` — Pinia stores: `auth`, `students`, `groups`, `teachers`, `subjects`, `schedule`, `journal`, `search`, `workspace`.
 - `frontend/src/styles` — стили нового GUI.
 - `frontend/src/services/api.js` — клиент API, токен авторизации, обработка ошибок.
 - `frontend/src/services/tableSettings.js` — общий helper для сохранения пользовательских настроек таблиц.
@@ -274,7 +274,18 @@ Responsive Workspace Foundation описан в `docs/RESPONSIVE_WORKSPACE.md`:
 - компоненты `TeacherFilters.vue`, `TeacherFormPanel.vue`, `TeacherDetailsPanel.vue`;
 - функции: список, поиск, фильтры по статусу и отделению, создание, редактирование, удаление, импорт/экспорт CSV, карточка преподавателя;
 - маршрут `/teachers` открывает новый раздел;
-- глобальный поиск ищет преподавателей вместе со студентами и группами.
+- глобальный поиск ищет преподавателей вместе со студентами, группами и дисциплинами.
+
+В новом Quasar GUI перенесен раздел «Дисциплины»:
+
+- страница `frontend/src/pages/subjects/SubjectsPage.vue`;
+- store `frontend/src/stores/subjects.js`;
+- компоненты `SubjectFilters.vue`, `SubjectFormPanel.vue`, `SubjectDetailsPanel.vue`;
+- функции: список, поиск по названию/коду/описанию, фильтры по отделению и преподавателю, создание, редактирование, удаление, импорт/экспорт CSV, карточка дисциплины справа;
+- карточка показывает название, код, статус, отделение, преподавателей, связанные занятия и быстрые переходы к расписанию, журналу и преподавателям;
+- размер страницы таблицы сохраняется по ключу `collegePortal.subjects.rowsPerPage`;
+- маршрут `/subjects` открывает новый раздел;
+- глобальный поиск ищет дисциплины через `frontend/src/services/searchService.js`.
 
 В новом Quasar GUI также перенесен раздел «Группы»:
 
@@ -310,7 +321,7 @@ Responsive Workspace Foundation описан в `docs/RESPONSIVE_WORKSPACE.md`:
 - из карточки группы можно открыть список студентов группы через `/students?group=<group_id>`;
 - `/students` читает query-параметр `group`, применяет фильтр по группе и показывает активный фильтр чипом.
 - глобальный поиск в верхней панели использует `frontend/src/services/searchService.js`, `frontend/src/stores/search.js` и компонент `frontend/src/components/search/GlobalSearch.vue`;
-- на этапе GUI-006 глобальный поиск работает по студентам и группам, хранит историю запросов в `localStorage` и открывает карточки через `/students?selected=<student_id>&search=<text>` и `/groups?selected=<group_id>`.
+- глобальный поиск работает по студентам, группам, преподавателям и дисциплинам, хранит историю запросов в `localStorage` и открывает карточки через query-параметры `selected` и `search`.
 
 Интерфейс ориентирован на рабочий стиль, близкий к 1С-Колледж:
 
