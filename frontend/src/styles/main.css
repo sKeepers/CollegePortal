@@ -36,6 +36,34 @@ body {
   padding: 0 18px;
 }
 
+.cp-app-layout::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 7000;
+  height: 4px;
+  background: var(--cp-environment-color, #16a34a);
+  pointer-events: none;
+}
+
+.cp-topbar-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.environment-badge {
+  border: 1px solid;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
 .cp-page-title {
   color: #172033;
   font-size: 18px;

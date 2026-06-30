@@ -20,7 +20,9 @@ import {
 import { useAuthStore } from '../stores/auth'
 import { useWorkspaceStore } from '../stores/workspace'
 import { useLayoutService } from '../services/layoutService'
+import { getEnvironmentCssVars } from '../services/environmentService'
 import GlobalSearch from '../components/search/GlobalSearch.vue'
+import EnvironmentBadge from '../components/system/EnvironmentBadge.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -93,6 +95,7 @@ const layoutStyle = computed(() => ({
   '--cp-sidebar-width': `${workspace.sidebarWidth}px`,
   '--cp-viewport-width': `${workspace.viewportWidth}px`,
   '--cp-viewport-height': `${workspace.viewportHeight}px`,
+  ...getEnvironmentCssVars(),
 }))
 
 async function logout() {
@@ -132,7 +135,10 @@ watch(
           <div class="cp-page-subtitle">Рабочее место колледжа</div>
         </q-toolbar-title>
 
-        <GlobalSearch />
+        <div class="cp-topbar-tools">
+          <EnvironmentBadge />
+          <GlobalSearch />
+        </div>
 
         <q-chip v-if="auth.loading" color="blue-1" text-color="primary" dense>
           Загрузка данных...

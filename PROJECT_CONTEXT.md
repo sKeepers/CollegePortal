@@ -55,6 +55,7 @@ Frontend:
 - демонстрационная страница UI-компонентов доступна администратору по маршруту `/system/ui-foundation`;
 - новые стили находятся в `frontend/src/styles/main.css`;
 - брендовые favicon/PWA-иконки собраны из официального черно-белого логотипа СККИ `docs/logo/Logo_SKKI_чб.jpg`; frontend-копия находится в `frontend/public/brand/logo-skki-bw.jpg`, favicon/PWA-файлы — в `frontend/public/favicon.svg`, `frontend/public/favicon.ico`, `frontend/public/apple-touch-icon.png`, `frontend/public/icons/`;
+- окружение frontend определяется через `VITE_APP_ENV`; визуальная индикация DEV/TEST/PROD описана в `docs/ENVIRONMENTS.md`;
 - Quasar подключен с русской локалью `quasar/lang/ru`;
 - старые стили находятся в `frontend/src/style.css` и будут удаляться только после полного переноса разделов.
 
@@ -72,11 +73,10 @@ Frontend:
 - Ubuntu Server 24.04;
 - Hyper-V VM для текущего стенда.
 
-Текущий сервер разработки:
+Текущие окружения:
 
-- Frontend: `http://192.168.34.104:5173`;
-- Backend через Nginx: `http://192.168.34.104:8080`;
-- API: `http://192.168.34.104:8080/api`;
+- DEV: `/srv/college-dev`, frontend `http://192.168.34.104:5174`, API `http://192.168.34.104:8001/api`, PostgreSQL `5433`;
+- PROD: `/home/andale/college_portal`, frontend `http://192.168.34.104:5173`, API `http://192.168.34.104:8080/api`, PostgreSQL `5432`;
 - тестовый администратор: `admin@college-portal.local` / `password`.
 
 Окружения на Ubuntu:

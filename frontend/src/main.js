@@ -7,6 +7,9 @@ import 'quasar/src/css/index.sass'
 import './styles/main.css'
 import App from './app/App.vue'
 import { router } from './router'
+import { applyEnvironmentTitle } from './services/environmentService'
+
+applyEnvironmentTitle()
 
 createApp(App)
   .use(createPinia())
