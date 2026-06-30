@@ -50,6 +50,7 @@ Frontend:
 - старый GUI сохранен в `frontend/src/App.vue` на время миграции;
 - новый Quasar-каркас подключен через `frontend/src/app/App.vue`;
 - временный маршрут `/legacy` открывает старый интерфейс до полной миграции разделов;
+- Design System нового GUI описан в `docs/DESIGN_SYSTEM.md`;
 - UI Foundation нового GUI описан в `docs/UI_FOUNDATION.md`;
 - демонстрационная страница UI-компонентов доступна администратору по маршруту `/system/ui-foundation`;
 - новые стили находятся в `frontend/src/styles/main.css`;
@@ -101,7 +102,8 @@ Frontend:
 - `TASKS.md` — чек-лист задач и ближайший backlog.
 - `SECURITY_NOTES.md` — заметки по безопасности.
 - `EXTERNAL_SERVICES_NOTES.md` — заметки по ФРДО, ФИС ГИА/Приема и материалам для абитуриентов.
-- `docs/ARCHITECTURE_DOCUMENTATION.md` — единое оглавление архитектурной документации, словарь терминов и результаты ревизии ARCH-004.
+- `docs/ARCHITECTURE_DOCUMENTATION.md` — единое оглавление архитектурной и проектной документации.
+- `docs/DESIGN_SYSTEM.md` — единая дизайн-система CollegePortal: логотип, цвета, типографика, компоненты и адаптивность.
 - `docs/PRODUCT_VISION.md` — продуктовая цель, пользователи, границы MVP и критерии успеха CollegePortal.
 - `docs/PHILOSOPHY.md` — принципы развития системы, рабочего интерфейса, данных и безопасности.
 - `docs/ARCHITECTURE_DECISIONS.md` — зафиксированные архитектурные решения, включая выбор frontend UI-платформы.

@@ -65,6 +65,7 @@
 - [x] INFRA-003: подготовить Git workflow для DEV/PROD без изменения PROD
 - [x] INFRA-004: безопасно инициализировать Git в DEV на ветке `develop` без remote
 - [x] INFRA-005: документировать обязательный Git checkpoint после каждой задачи
+- [x] DESIGN-001: создать единую дизайн-систему CollegePortal
 - [x] Dashboard
 - [x] Students page
 - [x] Groups page
