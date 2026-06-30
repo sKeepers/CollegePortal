@@ -1,0 +1,220 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\EnrollApplicantApplicationRequest;
+use App\Http\Requests\StoreApplicantApplicationRequest;
+use App\Http\Requests\UpdateApplicantApplicationDocumentRequest;
+use App\Http\Requests\UpdateApplicantApplicationRequest;
+use App\Http\Resources\ApplicantApplicationResource;
+use App\Http\Resources\StudentResource;
+use App\Models\ApplicantApplication;
+use App\Models\Student;
+use App\Services\ApplicantApplicationCsvService;
+use App\Services\ApplicantApplicationDocumentService;
+use App\Services\ApplicantApplicationEventService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use RuntimeException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
+class ApplicantApplicationController extends Controller
+{
+    public function __construct(
+        private readonly ApplicantApplicationCsvService $applicantApplicationCsvService,
+        private readonly ApplicantApplicationEventService $eventService,
+        private readonly ApplicantApplicationDocumentService $documentService,
+    ) {
+    }
+
+    public function index(Request $request): AnonymousResourceCollection
+    {
+        $applications = ApplicantApplication::query()
+            ->with(['educationProgram.specialty', 'events', 'documents'])
+            ->when($request->integer('education_program_id'), fn ($query, int $programId) => $query->where('education_program_id', $programId))
+            ->when($request->string('status')->toString(), fn ($query, string $status) => $query->where('status', $status))
+            ->when($request->string('education_base')->toString(), fn ($query, string $base) => $query->where('education_base', $base))
+            ->when($request->string('search')->toString(), function ($query, string $search): void {
+                $operator = $query->getModel()->getConnection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
+
+                $query->where(function ($query) use ($operator, $search): void {
+                    $query
+                        ->where('last_name', $operator, "%{$search}%")
+                        ->orWhere('first_name', $operator, "%{$search}%")
+                        ->orWhere('middle_name', $operator, "%{$search}%")
+                        ->orWhere('phone', $operator, "%{$search}%")
+                        ->orWhere('email', $operator, "%{$search}%");
+                });
+            })
+            ->orderByDesc('submitted_at')
+            ->orderBy('last_name')
+            ->paginate(50);
+
+        $applications->getCollection()->each(function (ApplicantApplication $application): void {
+            $this->documentService->ensureDefaultDocuments($application);
+            $application->load('documents');
+        });
+
+        return ApplicantApplicationResource::collection($applications);
+    }
+
+    public function store(StoreApplicantApplicationRequest $request): JsonResponse
+    {
+        $application = ApplicantApplication::create($request->validated());
+        $this->documentService->ensureDefaultDocuments($application);
+        $this->eventService->record($application, 'created', 'Создано заявление', 'Заявление добавлено вручную.');
+
+        return (new ApplicantApplicationResource($application->load(['educationProgram.specialty', 'events', 'documents'])))
+            ->response()
+            ->setStatusCode(Response::HTTP_CREATED);
+    }
+
+    public function show(ApplicantApplication $applicantApplication): ApplicantApplicationResource
+    {
+        $this->documentService->ensureDefaultDocuments($applicantApplication);
+
+        return new ApplicantApplicationResource($applicantApplication->load(['educationProgram.specialty', 'events', 'documents']));
+    }
+
+    public function update(UpdateApplicantApplicationRequest $request, ApplicantApplication $applicantApplication): ApplicantApplicationResource
+    {
+        $oldStatus = $applicantApplication->status;
+        $oldComment = $applicantApplication->comment;
+        $applicantApplication->update($request->validated());
+
+        if ($applicantApplication->wasChanged('status')) {
+            $this->eventService->record(
+                $applicantApplication,
+                'status_changed',
+                'Изменен статус',
+                "Статус изменен с {$this->statusLabel($oldStatus)} на {$this->statusLabel($applicantApplication->status)}.",
+                ['from' => $oldStatus, 'to' => $applicantApplication->status],
+            );
+        }
+
+        if ($applicantApplication->wasChanged('comment') && $oldComment !== $applicantApplication->comment) {
+            $this->eventService->record($applicantApplication, 'comment_changed', 'Изменен комментарий', $applicantApplication->comment);
+        }
+
+        return new ApplicantApplicationResource($applicantApplication->load(['educationProgram.specialty', 'events', 'documents']));
+    }
+
+    public function destroy(ApplicantApplication $applicantApplication): Response
+    {
+        $applicantApplication->delete();
+
+        return response()->noContent();
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        return $this->applicantApplicationCsvService->export($request);
+    }
+
+    public function import(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+        ]);
+
+        try {
+            $summary = $this->applicantApplicationCsvService->import($request->file('file'));
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        return response()->json([
+            'message' => 'Импорт заявлений абитуриентов завершен.',
+            'data' => $summary,
+        ]);
+    }
+
+    public function enroll(EnrollApplicantApplicationRequest $request, ApplicantApplication $applicantApplication): JsonResponse
+    {
+        $this->documentService->ensureDefaultDocuments($applicantApplication);
+
+        $documentsTotal = $applicantApplication->documents()->count();
+        $documentsReceived = $applicantApplication->documents()->where('is_received', true)->count();
+
+        if ($documentsTotal === 0 || $documentsReceived < $documentsTotal) {
+            throw ValidationException::withMessages([
+                'documents' => ['Нельзя зачислить: получены не все обязательные документы.'],
+            ]);
+        }
+
+        if ($applicantApplication->email && Student::where('email', $applicantApplication->email)->exists()) {
+            throw ValidationException::withMessages([
+                'email' => ['Студент с таким email уже существует.'],
+            ]);
+        }
+
+        $student = DB::transaction(function () use ($request, $applicantApplication): Student {
+            $student = Student::create([
+                'group_id' => $request->integer('group_id'),
+                'last_name' => $applicantApplication->last_name,
+                'first_name' => $applicantApplication->first_name,
+                'middle_name' => $applicantApplication->middle_name,
+                'birth_date' => $applicantApplication->birth_date,
+                'phone' => $applicantApplication->phone,
+                'email' => $applicantApplication->email,
+                'status' => 'active',
+                'enrollment_date' => $request->date('enrollment_date')->toDateString(),
+            ]);
+
+            $applicantApplication->update(['status' => 'enrolled']);
+            $this->eventService->record(
+                $applicantApplication,
+                'enrolled',
+                'Абитуриент зачислен',
+                "Создана карточка студента в группе {$student->group_id}.",
+                ['student_id' => $student->id, 'group_id' => $student->group_id],
+            );
+
+            return $student;
+        });
+
+        return response()->json([
+            'message' => 'Абитуриент зачислен в студенты.',
+            'data' => [
+                'application' => new ApplicantApplicationResource($applicantApplication->fresh()->load(['educationProgram.specialty', 'events', 'documents'])),
+                'student' => new StudentResource($student->load('group')),
+            ],
+        ], Response::HTTP_CREATED);
+    }
+
+    public function updateDocument(
+        UpdateApplicantApplicationDocumentRequest $request,
+        ApplicantApplication $applicantApplication,
+        string $type,
+    ): ApplicantApplicationResource {
+        $document = $this->documentService->updateDocument($applicantApplication, $type, $request->validated());
+        $this->eventService->record(
+            $applicantApplication,
+            'document_updated',
+            $document->is_received ? 'Документ получен' : 'Документ отмечен как неполученный',
+            $document->title,
+            ['document_type' => $document->type, 'document_id' => $document->id],
+        );
+
+        return new ApplicantApplicationResource($applicantApplication->fresh()->load(['educationProgram.specialty', 'events', 'documents']));
+    }
+
+    private function statusLabel(string $status): string
+    {
+        return match ($status) {
+            'new' => 'Новое',
+            'accepted' => 'Принято',
+            'needs_clarification' => 'Требуется уточнение',
+            'rejected' => 'Отклонено',
+            'enrolled' => 'Зачислен',
+            default => $status,
+        };
+    }
+}
