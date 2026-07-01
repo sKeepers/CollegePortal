@@ -20,6 +20,7 @@ import {
   documentsCompleteness,
   documentsCompletenessLabel,
   educationBaseLabel,
+  formatDate,
   programLabel,
   statusLabel,
   statusTone,
@@ -384,7 +385,7 @@ onMounted(async () => {
               </button>
               <div class="admissions-secondary-cell">
                 <small>{{ [props.row.phone, props.row.email].filter(Boolean).join(' · ') || 'Контакты не указаны' }}</small>
-                <small>{{ educationBaseLabel(props.row.education_base) }} · подано {{ props.row.submitted_at || '—' }}</small>
+                <small>{{ educationBaseLabel(props.row.education_base) }} · подано {{ formatDate(props.row.submitted_at) }}</small>
               </div>
             </q-td>
           </template>

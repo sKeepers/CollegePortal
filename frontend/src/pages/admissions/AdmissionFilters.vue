@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive, watch } from 'vue'
 import AppFilterBar from '../../components/ui/AppFilterBar.vue'
-import { COMPLETENESS_OPTIONS, STATUS_OPTIONS } from '../../stores/admissions'
+import { COMPLETENESS_OPTIONS, STATUS_OPTIONS, formatDate } from '../../stores/admissions'
 
 const props = defineProps({
   modelValue: {
@@ -61,7 +61,7 @@ const activeChips = computed(() => {
   }
 
   if (localFilters.submittedDate) {
-    chips.push({ key: 'submittedDate', label: `Дата подачи: ${localFilters.submittedDate}` })
+    chips.push({ key: 'submittedDate', label: `Дата подачи: ${formatDate(localFilters.submittedDate)}` })
   }
 
   return chips

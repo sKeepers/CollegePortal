@@ -85,6 +85,46 @@ export function documentsCompleteness(application) {
   return received >= total ? 'complete' : 'incomplete'
 }
 
+export function formatDate(value) {
+  if (!value) {
+    return '—'
+  }
+
+  const isoDate = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/)
+
+  if (isoDate) {
+    return `${isoDate[3]}.${isoDate[2]}.${isoDate[1]}`
+  }
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value)
+  }
+
+  return date.toLocaleDateString('ru-RU')
+}
+
+export function formatDateTime(value) {
+  if (!value) {
+    return '—'
+  }
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return formatDate(value)
+  }
+
+  return date.toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export function documentsCompletenessLabel(application) {
   const { total, received } = documentCounts(application)
 

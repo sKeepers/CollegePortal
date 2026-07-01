@@ -9,6 +9,8 @@ import {
   documentsCompleteness,
   documentsCompletenessLabel,
   educationBaseLabel,
+  formatDate,
+  formatDateTime,
   programLabel,
   statusLabel,
   statusTone,
@@ -98,19 +100,6 @@ function toggleDocument(document) {
   })
 }
 
-function eventDate(value) {
-  if (!value) {
-    return '—'
-  }
-
-  return new Date(value).toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
 </script>
 
 <template>
@@ -138,7 +127,7 @@ function eventDate(value) {
       <div class="admission-details__metrics">
         <div>
           <span>Дата подачи</span>
-          <strong>{{ application.submitted_at || '—' }}</strong>
+          <strong>{{ formatDate(application.submitted_at) }}</strong>
         </div>
         <div>
           <span>База</span>
@@ -184,7 +173,7 @@ function eventDate(value) {
               </div>
               <div>
                 <dt>Дата рождения</dt>
-                <dd>{{ application.birth_date || '—' }}</dd>
+                <dd>{{ formatDate(application.birth_date) }}</dd>
               </div>
             </dl>
           </section>
@@ -217,7 +206,7 @@ function eventDate(value) {
                 <div>
                   <strong>{{ document.title }}</strong>
                   <span>
-                    <template v-if="document.received_at">Дата: {{ document.received_at }}</template>
+                    <template v-if="document.received_at">Дата: {{ formatDate(document.received_at) }}</template>
                     <template v-if="document.number"> · № {{ document.number }}</template>
                     <template v-if="document.comment"> · {{ document.comment }}</template>
                   </span>
@@ -239,7 +228,7 @@ function eventDate(value) {
             <h3><History :size="16" /> События</h3>
             <div v-if="events.length" class="admission-events">
               <div v-for="event in events" :key="event.id" class="admission-events__item">
-                <time>{{ eventDate(event.created_at) }}</time>
+                <time>{{ formatDateTime(event.created_at) }}</time>
                 <strong>{{ event.title }}</strong>
                 <span>{{ event.description || '—' }}</span>
               </div>
