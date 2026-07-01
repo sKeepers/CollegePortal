@@ -29,6 +29,13 @@ Roadmap фиксирует порядок развития проекта пос
 - Dashboard;
 - публичный раздел «Абитуриенту».
 
+### Архитектура
+
+- [x] ARCH-001: Identity Domain Architecture — выполнено;
+- создан `docs/IDENTITY_DOMAIN.md`;
+- обновлена доменная модель `docs/DOMAIN_MODEL.md`;
+- зафиксирована основа для Person, Digital Identity, QR/Mobile Pass, Access Control, Authentication и Authorization.
+
 ### Приемная комиссия
 
 - [x] ADM-001: Приемная комиссия — выполнено;
@@ -79,7 +86,7 @@ Roadmap фиксирует порядок развития проекта пос
 - отчеты по преподавателям;
 - отчеты по сотрудникам;
 - отчеты по гостям;
-- связь с будущей сущностью Person и Digital Identity.
+- связь с Identity Domain, Person и Digital Identity.
 
 ### 3. MOB-001: Mobile Student Cabinet Phase 1
 
@@ -91,7 +98,7 @@ Roadmap фиксирует порядок развития проекта пос
 - оценки;
 - посещаемость;
 - уведомления;
-- мобильный QR-пропуск;
+- мобильный QR-пропуск на базе Digital Identity;
 - базовый профиль студента;
 - адаптация под мобильные экраны;
 - разделение интерфейса сотрудника и студента.

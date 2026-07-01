@@ -67,6 +67,7 @@
 - [x] INFRA-004: безопасно инициализировать Git в DEV на ветке `develop` без remote
 - [x] INFRA-005: документировать обязательный Git checkpoint после каждой задачи
 - [x] DESIGN-001: создать единую дизайн-систему CollegePortal
+- [x] ARCH-001: спроектировать Identity Domain Architecture
 - [x] GUI-012: перенести раздел «Преподаватели» в новый Quasar GUI
 - [x] GUI-013: перенести раздел «Дисциплины» в новый Quasar GUI
 - [x] GUI-014: перенести раздел «Аудитории» в новый Quasar GUI
@@ -116,6 +117,13 @@
 - [x] Активные фильтры заявлений с быстрым сбросом
 - [x] Зачисление абитуриента в студенты
 - [x] Запрет зачисления без полного комплекта документов
+
+## Архитектура
+
+- [x] Создать docs/IDENTITY_DOMAIN.md
+- [x] Обновить docs/DOMAIN_MODEL.md
+- [x] Обновить docs/ARCHITECTURE_DOCUMENTATION.md
+- [x] Зафиксировать Person, Digital Identity, QR/Mobile Pass и Access Control
 
 ## Следующие задачи
 

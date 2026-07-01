@@ -108,7 +108,8 @@ Frontend:
 - `docs/PHILOSOPHY.md` — принципы развития системы, рабочего интерфейса, данных и безопасности.
 - `docs/ARCHITECTURE_DECISIONS.md` — зафиксированные архитектурные решения, включая выбор frontend UI-платформы.
 - `docs/ACCESS_CONTROL_CONCEPT.md` — концепция Person, Digital Identity, QR-пропусков и будущего модуля присутствия.
-- `docs/DOMAIN_MODEL.md` — доменная модель CollegePortal Platform: Identity, Academic, Learning, Administration, Integrations и Analytics.
+- `docs/IDENTITY_DOMAIN.md` — архитектура Identity Domain: Person, Digital Identity, роли, учетные данные, QR/Mobile Pass, Access Control, Authentication и Authorization.
+- `docs/DOMAIN_MODEL.md` — доменная модель CollegePortal Platform: Identity, Academic, Learning, Administration, Integrations, Analytics.
 - `docs/LAYOUT_GUIDELINES.md` — правила раскладки рабочих страниц, включая таблицу слева и карточку справа без overlay.
 - `docs/RESPONSIVE_WORKSPACE.md` — правила адаптивного рабочего пространства, breakpoints, плотность и workspace-режимы.
 - `docs/DEV_ENVIRONMENT.md` — разделение PROD/DEV на Ubuntu, порты и команды обслуживания DEV-окружения.
@@ -184,6 +185,8 @@ CollegePortal Platform рассматривается как набор связ
 ### Person, Digital Identity и присутствие
 
 Архитектурная концепция будущего модуля описана в `docs/ACCESS_CONTROL_CONCEPT.md`.
+
+ARCH-001: Identity Domain Architecture зафиксировал отдельный домен `Identity`. Он станет основой для `Person`, `Digital Identity`, QR-пропусков, мобильного кабинета, авторизации, проходной, будущих RFID/NFC и Face ID. Документ находится в `docs/IDENTITY_DOMAIN.md`.
 
 Ключевая идея: в будущем ввести центральную сущность `Person`, которая объединит физическое лицо и его роли: `Student`, `Teacher`, `Employee`, `Applicant`, `Guest`, `Alumni`. Поверх `Person` планируется `Digital Identity`: QR-код, мобильный QR, печатный QR, фото, срок действия и статус.
 
@@ -713,7 +716,7 @@ Responsive Workspace Foundation описан в `docs/RESPONSIVE_WORKSPACE.md`:
 
 ### Ключевые будущие контуры
 
-- QR-001: печатный QR, мобильный QR, сканирование на проходной, журнал входа/выхода, отчеты по студентам, преподавателям, сотрудникам и гостям.
+- QR-001: печатный QR, мобильный QR, сканирование на проходной, журнал входа/выхода, отчеты по студентам, преподавателям, сотрудникам и гостям; основа — Identity Domain.
 - MOB-001: расписание, оценки, посещаемость, уведомления, мобильный QR-пропуск.
 - GRAD-001: выпускники, шаблоны дипломов, печать дипломов, приложения к диплому, история выдачи.
 - FRDO-001: подготовка данных, проверка полноты, выгрузка, журнал отправки, ошибки и статусы.

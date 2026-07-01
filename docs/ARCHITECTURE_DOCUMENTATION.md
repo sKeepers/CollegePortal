@@ -14,6 +14,8 @@
 ## Архитектура
 
 - `docs/ARCHITECTURE_DECISIONS.md` — ADR и ключевые архитектурные решения.
+- `docs/DOMAIN_MODEL.md` — доменная модель CollegePortal Platform.
+- `docs/IDENTITY_DOMAIN.md` — архитектура Identity Domain, Person, Digital Identity и Access Control.
 - `docs/GLOBAL_SEARCH.md` — архитектура глобального поиска.
 - `docs/DASHBOARD.md` — концепция Dashboard и виджетов.
 
@@ -39,3 +41,12 @@
 - `UI Foundation` — реализация дизайн-системы через переиспользуемые компоненты.
 - `Layout Guidelines` — правила пространственной раскладки.
 - `Responsive Workspace` — адаптация под viewport и режимы workspace.
+
+
+## Доменные термины
+
+- `Person` — физическое лицо, центральная сущность Identity Domain.
+- `Digital Identity` — цифровая идентичность человека: QR, мобильный QR, печатный пропуск, будущие RFID/NFC и Face ID.
+- `Access Event` — событие входа, выхода или отказа доступа.
+- `Access Device` — устройство или рабочее место проходной.
+- `Credential` — учетные данные для входа в приложение или внешнюю систему.
