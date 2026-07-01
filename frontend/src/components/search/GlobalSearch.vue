@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import {
   ArrowRight,
   BookOpen,
+  Building2,
   Clock3,
   GraduationCap,
   Search,
@@ -31,6 +32,7 @@ const resultIcons = {
   group: UsersRound,
   teacher: UserRound,
   subject: BookOpen,
+  classroom: Building2,
 }
 
 function iconFor(result) {

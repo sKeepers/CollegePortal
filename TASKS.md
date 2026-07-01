@@ -69,6 +69,7 @@
 - [x] DESIGN-001: создать единую дизайн-систему CollegePortal
 - [x] GUI-012: перенести раздел «Преподаватели» в новый Quasar GUI
 - [x] GUI-013: перенести раздел «Дисциплины» в новый Quasar GUI
+- [x] GUI-014: перенести раздел «Аудитории» в новый Quasar GUI
 - [x] Dashboard
 - [x] Students page
 - [x] Groups page

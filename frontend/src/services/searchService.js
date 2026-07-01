@@ -165,6 +165,53 @@ async function searchSubjects(query) {
     }))
 }
 
+function classroomLabel(classroom) {
+  return [
+    classroom?.number,
+    classroom?.building ? `корп. ${classroom.building}` : '',
+  ].filter(Boolean).join(' · ')
+}
+
+async function searchClassrooms(query) {
+  const payload = await api.list('classrooms')
+  const rows = extractRows(payload)
+  const matched = rows.filter((classroom) => containsQuery(query, [
+    classroomLabel(classroom),
+    classroom.number,
+    classroom.building,
+    classroom.floor,
+    classroom.capacity,
+    classroom.type,
+    classroom.description,
+  ]))
+
+  return sortByRelevance(query, matched, (classroom) => [
+    classroomLabel(classroom),
+    classroom.number,
+    classroom.type,
+  ])
+    .slice(0, MAX_RESULTS_PER_PROVIDER)
+    .map((classroom) => ({
+      id: classroom.id,
+      type: 'classroom',
+      group: 'Аудитории',
+      title: classroomLabel(classroom) || `Аудитория #${classroom.id}`,
+      subtitle: [classroom.type, classroom.capacity ? `${classroom.capacity} мест` : ''].filter(Boolean).join(' · ') || 'Карточка аудитории',
+      meta: [
+        classroom.floor !== null && classroom.floor !== undefined ? `${classroom.floor} этаж` : '',
+        classroom.description,
+      ].filter(Boolean),
+      route: {
+        path: '/classrooms',
+        query: {
+          selected: classroom.id,
+          search: classroom.number || query,
+        },
+      },
+      entity: classroom,
+    }))
+}
+
 async function searchGroups(query) {
   const payload = await api.list('groups')
   const rows = extractRows(payload)
@@ -223,6 +270,11 @@ const providers = [
     type: 'subject',
     label: 'Дисциплины',
     search: searchSubjects,
+  },
+  {
+    type: 'classroom',
+    label: 'Аудитории',
+    search: searchClassrooms,
   },
 ]
 

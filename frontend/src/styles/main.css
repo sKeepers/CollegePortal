@@ -430,6 +430,7 @@ body {
 .workspace-right-panel-hidden .groups-layout,
 .workspace-right-panel-hidden .teachers-layout,
 .workspace-right-panel-hidden .subjects-layout,
+.workspace-right-panel-hidden .classrooms-layout,
 .workspace-right-panel-hidden .schedule-layout,
 .workspace-right-panel-hidden .journal-layout {
   grid-template-columns: minmax(0, 1fr);
@@ -887,6 +888,7 @@ body {
 .groups-layout,
 .teachers-layout,
 .subjects-layout,
+.classrooms-layout,
 .schedule-layout,
 .journal-layout {
   display: grid;
@@ -903,6 +905,7 @@ body {
 .groups-main,
 .teachers-main,
 .subjects-main,
+.classrooms-main,
 .schedule-main,
 .journal-main {
   display: grid;
@@ -916,6 +919,7 @@ body {
 .groups-side,
 .teachers-side,
 .subjects-side,
+.classrooms-side,
 .schedule-side,
 .journal-side {
   display: grid;
@@ -1437,6 +1441,241 @@ body {
 }
 
 .subject-details__lesson-list span {
+  margin-top: 2px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.classroom-form,
+.classroom-details {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.classroom-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.classroom-form__actions,
+.classroom-details__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.classroom-details__actions {
+  justify-content: flex-start;
+}
+
+.classroom-filters .app-filter-bar__content {
+  grid-template-columns: minmax(260px, 1.4fr) minmax(190px, 0.8fr) minmax(190px, 0.8fr) auto;
+}
+
+.classroom-filters__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.classrooms-row-link {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #1d4ed8;
+  font: inherit;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.classrooms-row-description {
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.classrooms-row--selected td {
+  background: #eff6ff !important;
+}
+
+.classrooms-row--selected .classrooms-row-link {
+  color: #1e40af;
+}
+
+.classrooms-secondary-cell {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.classrooms-secondary-cell span,
+.classrooms-secondary-cell small {
+  overflow-wrap: anywhere;
+}
+
+.classrooms-secondary-cell small {
+  color: #64748b;
+  line-height: 1.25;
+}
+
+.classrooms-row-actions {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.classrooms-import-field {
+  width: 132px;
+}
+
+.classrooms-form-dialog {
+  width: min(720px, calc(100vw - 32px));
+}
+
+.classrooms-import-summary {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+.classrooms-import-summary__errors {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.classroom-details-card {
+  min-width: 0;
+}
+
+.classroom-details__hero {
+  display: grid;
+  gap: 8px;
+}
+
+.classroom-details__title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.classroom-details__title-block {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.classroom-details__title-block h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+
+.classroom-details__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.classroom-details__description,
+.classroom-details__muted {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.classroom-details__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.classroom-details__metrics > div {
+  border: 1px solid #dbe4f0;
+  border-radius: 8px;
+  padding: 8px;
+  background: #f8fafc;
+  min-width: 0;
+}
+
+.classroom-details__metrics span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.classroom-details__metrics strong {
+  display: block;
+  margin-top: 2px;
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+
+.classroom-details__section {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.classroom-details__section h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.classroom-details__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.classroom-details__list div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.classroom-details__list dt {
+  color: #64748b;
+}
+
+.classroom-details__list dd {
+  margin: 0;
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+
+.classroom-details__lesson-list {
+  display: grid;
+  gap: 6px;
+}
+
+.classroom-details__lesson-list > div {
+  border: 1px solid #dbe4f0;
+  border-radius: 8px;
+  padding: 8px;
+  background: #ffffff;
+}
+
+.classroom-details__lesson-list strong,
+.classroom-details__lesson-list span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.classroom-details__lesson-list span {
   margin-top: 2px;
   color: #64748b;
   font-size: 12px;
@@ -2603,6 +2842,7 @@ body {
   .groups-layout,
   .teachers-layout,
   .subjects-layout,
+  .classrooms-layout,
   .schedule-layout,
   .journal-layout {
     grid-template-columns: 1fr;
@@ -2613,6 +2853,7 @@ body {
   .groups-side,
   .teachers-side,
   .subjects-side,
+  .classrooms-side,
   .schedule-side,
   .journal-side {
     max-width: none;
@@ -2624,6 +2865,7 @@ body {
   .groups-layout,
   .teachers-layout,
   .subjects-layout,
+  .classrooms-layout,
   .schedule-layout,
   .journal-layout {
     grid-template-columns: minmax(0, 1fr) clamp(390px, 24vw, 430px);
@@ -2633,6 +2875,7 @@ body {
   .groups-side,
   .teachers-side,
   .subjects-side,
+  .classrooms-side,
   .schedule-side,
   .journal-side {
     max-width: 430px;
@@ -2644,6 +2887,7 @@ body {
   .groups-layout,
   .teachers-layout,
   .subjects-layout,
+  .classrooms-layout,
   .schedule-layout,
   .journal-layout {
     grid-template-columns: minmax(0, 1fr) clamp(420px, 20vw, 520px);
@@ -2653,6 +2897,7 @@ body {
   .groups-side,
   .teachers-side,
   .subjects-side,
+  .classrooms-side,
   .schedule-side,
   .journal-side {
     max-width: 520px;
@@ -2705,9 +2950,11 @@ body {
   .groups-layout,
   .teachers-layout,
   .subjects-layout,
+  .classrooms-layout,
   .schedule-layout,
   .schedule-filters .app-filter-bar__content,
   .subject-filters .app-filter-bar__content,
+  .classroom-filters .app-filter-bar__content,
   .journal-layout,
   .journal-filters .app-filter-bar__content,
   .schedule-details__list div,
@@ -2722,6 +2969,9 @@ body {
   .subject-form__grid,
   .subject-details__list div,
   .subject-details__metrics,
+  .classroom-form__grid,
+  .classroom-details__list div,
+  .classroom-details__metrics,
   .group-details__list div,
   .student-details__list div {
     grid-template-columns: 1fr;
@@ -2740,7 +2990,8 @@ body {
   .students-import-field,
   .groups-import-field,
   .teachers-import-field,
-  .subjects-import-field {
+  .subjects-import-field,
+  .classrooms-import-field {
     width: 100%;
   }
 }
