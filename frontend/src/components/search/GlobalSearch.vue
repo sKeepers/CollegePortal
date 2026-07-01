@@ -8,6 +8,7 @@ import {
   Clock3,
   GraduationCap,
   Search,
+  UserPlus,
   UserRound,
   UsersRound,
   X,
@@ -33,6 +34,7 @@ const resultIcons = {
   teacher: UserRound,
   subject: BookOpen,
   classroom: Building2,
+  applicant: UserPlus,
 }
 
 function iconFor(result) {

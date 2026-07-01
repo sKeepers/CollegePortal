@@ -136,11 +136,11 @@ Frontend:
 - `frontend/src/App.vue` — старый монолитный GUI, сохранен как legacy до полной миграции.
 - `frontend/src/app/App.vue` — root-компонент нового Quasar GUI.
 - `frontend/src/layouts` — `AppLayout`, `AuthLayout`, `PublicLayout`.
-- `frontend/src/pages` — страницы нового GUI; перенесены авторизация, системная страница UI Foundation и разделы `students`, `groups`, `teachers`, `subjects`, `classrooms`, `schedule`, `journal`, остальные разделы постепенно переносятся из legacy.
+- `frontend/src/pages` — страницы нового GUI; перенесены авторизация, системная страница UI Foundation и разделы `students`, `groups`, `teachers`, `subjects`, `classrooms`, `schedule`, `journal`, `admissions`, остальные разделы постепенно переносятся из legacy.
 - `frontend/src/pages/legacy/LegacyPage.vue` — временный доступ к старому GUI по маршруту `/legacy`.
 - `frontend/src/pages/system/UiFoundationPage.vue` — демонстрация базовых UI-компонентов нового GUI.
 - `frontend/src/router` — Vue Router и маршруты нового GUI.
-- `frontend/src/stores` — Pinia stores: `auth`, `students`, `groups`, `teachers`, `subjects`, `classrooms`, `schedule`, `journal`, `search`, `workspace`.
+- `frontend/src/stores` — Pinia stores: `auth`, `students`, `groups`, `teachers`, `subjects`, `classrooms`, `schedule`, `journal`, `admissions`, `search`, `workspace`.
 - `frontend/src/styles` — стили нового GUI.
 - `frontend/src/services/api.js` — клиент API, токен авторизации, обработка ошибок.
 - `frontend/src/services/tableSettings.js` — общий helper для сохранения пользовательских настроек таблиц.
@@ -297,6 +297,20 @@ Responsive Workspace Foundation описан в `docs/RESPONSIVE_WORKSPACE.md`:
 - размер страницы таблицы сохраняется по ключу `collegePortal.classrooms.rowsPerPage`;
 - маршрут `/classrooms` открывает новый раздел;
 - глобальный поиск ищет аудитории через `frontend/src/services/searchService.js`.
+
+
+В новом Quasar GUI перенесен раздел «Приемная комиссия»:
+
+- страница `frontend/src/pages/admissions/AdmissionsPage.vue`;
+- store `frontend/src/stores/admissions.js`;
+- компоненты `AdmissionFilters.vue`, `AdmissionFormPanel.vue`, `AdmissionDetailsPanel.vue`;
+- функции: список заявлений, поиск по ФИО/контактам, фильтры по статусу, специальности, программе, комплектности документов и дате подачи, создание, редактирование, удаление, импорт/экспорт CSV;
+- карточка заявления справа показывает ФИО, контакты, специальность, программу, статус, документы, события/историю и комментарий приемной комиссии;
+- быстрые очереди показывают новые, неполный комплект, готовые к зачислению, зачисленные и отклоненные заявления;
+- через существующий API доступны отметки документов и зачисление абитуриента в студенты при полном комплекте документов;
+- размер страницы таблицы сохраняется по ключу `collegePortal.admissions.rowsPerPage`;
+- маршрут `/admissions` открывает новый раздел;
+- глобальный поиск ищет заявления абитуриентов через `frontend/src/services/searchService.js`.
 
 В новом Quasar GUI также перенесен раздел «Группы»:
 
@@ -649,7 +663,8 @@ Responsive Workspace Foundation описан в `docs/RESPONSIVE_WORKSPACE.md`:
 - фильтры по поиску, программе, статусу, базе поступления и комплектности документов;
 - активные фильтры с быстрым сбросом;
 - сводки по статусам, программам и форме обучения;
-- быстрые очереди: готовы к зачислению, неполный комплект, уже зачислены;
+- новый Quasar GUI по маршруту `/admissions` с таблицей, правой карточкой заявления, быстрыми статусами и глобальным поиском;
+- быстрые очереди: новые, готовы к зачислению, неполный комплект, уже зачислены, отклонены;
 - обязательные документы;
 - дата, номер и комментарий по документу;
 - история событий заявления;
@@ -664,7 +679,7 @@ Responsive Workspace Foundation описан в `docs/RESPONSIVE_WORKSPACE.md`:
 
 - расширить карточку студента полями для ФРДО: СНИЛС, пол, гражданство, документ об образовании;
 - переносить остальные справочники в новый Quasar GUI по образцу разделов «Студенты» и «Группы»;
-- позже вернуться к карточке абитуриента и переносу редактирования документов из строки таблицы в карточку;
+- развить приемную комиссию: приемные кампании, конкурсные группы, приказы и расширенную карточку абитуриента;
 - добавить приемные кампании и конкурсные группы;
 - добавить приказы о зачислении;
 - добавить справочники внешних кодов для ФРДО и ФИС ГИА/Приема;

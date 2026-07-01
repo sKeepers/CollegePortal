@@ -212,6 +212,46 @@ async function searchClassrooms(query) {
     }))
 }
 
+async function searchApplicantApplications(query) {
+  const payload = await api.list('applicant-applications', { search: query })
+  const rows = extractRows(payload)
+  const matched = rows.filter((application) => containsQuery(query, [
+    fullName(application),
+    application.phone,
+    application.email,
+    application.status,
+    application.education_program?.name,
+    application.education_program?.specialty?.code,
+    application.education_program?.specialty?.name,
+  ]))
+
+  return sortByRelevance(query, matched.length ? matched : rows, (application) => [
+    fullName(application),
+    application.email,
+    application.education_program?.name,
+  ])
+    .slice(0, MAX_RESULTS_PER_PROVIDER)
+    .map((application) => ({
+      id: application.id,
+      type: 'applicant',
+      group: 'Приемная комиссия',
+      title: fullName(application) || `Заявление #${application.id}`,
+      subtitle: [
+        application.education_program?.specialty?.name,
+        application.education_program?.name,
+      ].filter(Boolean).join(' · ') || 'Заявление абитуриента',
+      meta: [application.phone, application.email, application.status].filter(Boolean),
+      route: {
+        path: '/admissions',
+        query: {
+          selected: application.id,
+          search: fullName(application) || query,
+        },
+      },
+      entity: application,
+    }))
+}
+
 async function searchGroups(query) {
   const payload = await api.list('groups')
   const rows = extractRows(payload)
@@ -275,6 +315,11 @@ const providers = [
     type: 'classroom',
     label: 'Аудитории',
     search: searchClassrooms,
+  },
+  {
+    type: 'applicant',
+    label: 'Приемная комиссия',
+    search: searchApplicantApplications,
   },
 ]
 
