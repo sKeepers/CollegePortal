@@ -13,6 +13,7 @@ import JournalPage from '../pages/journal/JournalPage.vue'
 import ReportsPage from '../pages/reports/ReportsPage.vue'
 import AdmissionsPage from '../pages/admissions/AdmissionsPage.vue'
 import DigitalPassesPage from '../pages/identity/DigitalPassesPage.vue'
+import AccessGatePage from '../pages/access/AccessGatePage.vue'
 import ApplicantPublicPage from '../pages/public/ApplicantPublicPage.vue'
 import UiFoundationPage from '../pages/system/UiFoundationPage.vue'
 
@@ -116,6 +117,12 @@ export const routes = [
         name: 'admissions',
         component: AdmissionsPage,
         meta: { title: 'Приемная комиссия', permission: 'manage_dictionaries' },
+      },
+      {
+        path: 'access/gate',
+        name: 'access-gate',
+        component: AccessGatePage,
+        meta: { title: 'Проходная', permission: 'manage_dictionaries' },
       },
       {
         path: 'identity/digital-passes',

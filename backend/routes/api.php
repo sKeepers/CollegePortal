@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AccessGateController;
 use App\Http\Controllers\Api\ApplicantApplicationController;
 use App\Http\Controllers\Api\GroupController;
 use App\Http\Controllers\Api\AttendanceController;
@@ -28,6 +29,8 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('classrooms/export', [ClassroomController::class, 'export']);
         Route::post('classrooms/import', [ClassroomController::class, 'import']);
         Route::apiResource('classrooms', ClassroomController::class);
+        Route::get('access/events', [AccessGateController::class, 'events']);
+        Route::post('access/scan', [AccessGateController::class, 'scan']);
         Route::get('digital-identities', [DigitalIdentityController::class, 'index']);
         Route::post('digital-identities/issue', [DigitalIdentityController::class, 'issue']);
         Route::post('digital-identities/{digitalIdentity}/revoke', [DigitalIdentityController::class, 'revoke']);

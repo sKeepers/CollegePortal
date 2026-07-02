@@ -3371,3 +3371,311 @@ body {
 .digital-pass-details__actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .digital-pass-issue-dialog { width: min(560px, calc(100vw - 32px)); }
 .digital-pass-issue-dialog__body { display: grid; gap: 10px; }
+
+.access-gate-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: 12px;
+  align-items: start;
+}
+
+.access-gate-main,
+.access-gate-side {
+  min-width: 0;
+}
+
+.access-gate-main {
+  display: grid;
+  gap: 12px;
+}
+
+.access-gate-scanner-card,
+.access-gate-result,
+.access-gate-events-card {
+  min-width: 0;
+}
+
+.access-gate-scanner-card__header,
+.access-gate-result__status,
+.access-gate-person,
+.access-gate-events-card__header,
+.access-gate-event {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.access-gate-scanner-card__header {
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.access-gate-scanner-card__icon,
+.access-gate-person__photo {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.access-gate-scanner-card__icon {
+  width: 56px;
+  height: 56px;
+}
+
+.access-gate-scanner-card h2,
+.access-gate-events-card h2,
+.access-gate-person h2 {
+  margin: 0;
+  color: #0f172a;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.access-gate-scanner-card h2,
+.access-gate-events-card h2 {
+  font-size: 20px;
+}
+
+.access-gate-scanner-card p,
+.access-gate-person p {
+  margin: 4px 0 0;
+  color: #64748b;
+}
+
+.access-gate-scan-form {
+  display: grid;
+  gap: 12px;
+}
+
+.access-gate-scan-input {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.access-gate-scan-form__meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.access-gate-result {
+  border-width: 2px;
+}
+
+.access-gate-result--allowed {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.access-gate-result--denied {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.access-gate-result--idle {
+  border-color: #dbe4f0;
+  background: #ffffff;
+}
+
+.access-gate-result__status {
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.access-gate-result__status svg {
+  flex: 0 0 auto;
+}
+
+.access-gate-result--allowed .access-gate-result__status svg {
+  color: #16a34a;
+}
+
+.access-gate-result--denied .access-gate-result__status svg {
+  color: #dc2626;
+}
+
+.access-gate-result__status strong {
+  display: block;
+  color: #0f172a;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.access-gate-result__status span {
+  display: block;
+  margin-top: 6px;
+  color: #475569;
+  font-size: 15px;
+}
+
+.access-gate-person {
+  gap: 14px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  padding-top: 16px;
+}
+
+.access-gate-person__photo {
+  width: 92px;
+  height: 92px;
+  background: #ffffff;
+  color: #64748b;
+  box-shadow: inset 0 0 0 1px #dbe4f0;
+}
+
+.access-gate-person__info {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.access-gate-person h2 {
+  font-size: 28px;
+  overflow-wrap: anywhere;
+}
+
+.access-gate-person__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.access-gate-result__details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 18px;
+  margin: 18px 0 0;
+}
+
+.access-gate-result__details div {
+  min-width: 0;
+}
+
+.access-gate-result__details dt {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.access-gate-result__details dd {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 3px 0 0;
+  color: #0f172a;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.access-gate-result__empty {
+  display: grid;
+  min-height: 280px;
+  place-items: center;
+  gap: 8px;
+  color: #64748b;
+  text-align: center;
+}
+
+.access-gate-result__empty strong {
+  color: #0f172a;
+  font-size: 22px;
+}
+
+.access-gate-events-card__header {
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.access-gate-counter {
+  display: inline-grid;
+  min-width: 30px;
+  height: 26px;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.access-gate-counter + .access-gate-counter {
+  margin-left: 6px;
+}
+
+.access-gate-counter--allowed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.access-gate-counter--denied {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.access-gate-events-list {
+  display: grid;
+  gap: 8px;
+  max-height: calc(100vh - 270px);
+  overflow: auto;
+}
+
+.access-gate-event {
+  gap: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px;
+  background: #ffffff;
+}
+
+.access-gate-event__time {
+  flex: 0 0 86px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.access-gate-event__body {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 2px;
+}
+
+.access-gate-event__body strong,
+.access-gate-event__body span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.access-gate-event__body span,
+.access-gate-events-empty {
+  color: #64748b;
+  font-size: 12px;
+}
+
+@media (max-width: 1366px) {
+  .access-gate-layout {
+    grid-template-columns: minmax(0, 1fr) 380px;
+  }
+
+  .access-gate-result__status strong {
+    font-size: 30px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .access-gate-layout,
+  .access-gate-scan-form__meta,
+  .access-gate-result__details {
+    grid-template-columns: 1fr;
+  }
+
+  .access-gate-events-list {
+    max-height: none;
+  }
+}
