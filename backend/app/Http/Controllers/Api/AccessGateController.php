@@ -11,11 +11,23 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class AccessGateController extends Controller
 {
+    private const DUPLICATE_SCAN_WINDOW_SECONDS = 2;
+
     public function scan(ScanAccessPassRequest $request): AccessEventResource
     {
         $validated = $request->validated();
         $token = trim($validated['token']);
         $identity = DigitalIdentity::query()->where('token', $token)->first();
+
+        if ($identity !== null) {
+            $recentEvent = $this->recentEvent($identity);
+            if ($recentEvent !== null) {
+                $recentEvent->setAttribute('duplicate_ignored', true);
+
+                return new AccessEventResource($recentEvent->load('digitalIdentity'));
+            }
+        }
+
         $direction = $identity ? $this->nextDirection($identity) : AccessEvent::DIRECTION_IN;
         [$result, $reason] = $this->scanResult($identity);
 
@@ -43,6 +55,15 @@ class AccessGateController extends Controller
             ->get();
 
         return AccessEventResource::collection($events);
+    }
+
+    private function recentEvent(DigitalIdentity $identity): ?AccessEvent
+    {
+        return AccessEvent::query()
+            ->where('digital_identity_id', $identity->id)
+            ->where('event_time', '>=', now()->subSeconds(self::DUPLICATE_SCAN_WINDOW_SECONDS))
+            ->orderByDesc('event_time')
+            ->first();
     }
 
     private function nextDirection(DigitalIdentity $identity): string

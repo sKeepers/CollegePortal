@@ -50,6 +50,7 @@ onMounted(async () => {
     </AppToolbar>
 
     <AppErrorBanner :message="store.error" />
+    <q-banner v-if="store.warning" rounded class="access-gate-warning">{{ store.warning }}</q-banner>
 
     <div class="access-gate-layout">
       <section class="access-gate-main">

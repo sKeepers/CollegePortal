@@ -22,7 +22,7 @@ class AccessGateApiTest extends TestCase
         $this->withApiAuth();
     }
 
-    public function test_scan_active_qr_allows_entry_and_next_scan_exit(): void
+    public function test_scan_active_qr_allows_entry_and_next_scan_exit_after_interval(): void
     {
         $identity = $this->createStudentIdentity();
 
@@ -36,10 +36,30 @@ class AccessGateApiTest extends TestCase
             ->assertJsonPath('data.direction', AccessEvent::DIRECTION_IN)
             ->assertJsonPath('data.owner.last_name', 'Иванов');
 
+        $this->travel(3)->seconds();
+
         $this->postJson('/api/access/scan', ['token' => $identity->token])
             ->assertOk()
             ->assertJsonPath('data.result', AccessEvent::RESULT_ALLOWED)
             ->assertJsonPath('data.direction', AccessEvent::DIRECTION_OUT);
+    }
+
+    public function test_fast_duplicate_scan_is_ignored(): void
+    {
+        $identity = $this->createStudentIdentity();
+
+        $firstId = $this->postJson('/api/access/scan', ['token' => $identity->token])
+            ->assertOk()
+            ->assertJsonPath('data.direction', AccessEvent::DIRECTION_IN)
+            ->json('data.id');
+
+        $this->postJson('/api/access/scan', ['token' => $identity->token])
+            ->assertOk()
+            ->assertJsonPath('data.id', $firstId)
+            ->assertJsonPath('data.direction', AccessEvent::DIRECTION_IN)
+            ->assertJsonPath('data.duplicate_ignored', true);
+
+        $this->assertSame(1, AccessEvent::count());
     }
 
     public function test_scan_revoked_qr_creates_denied_event(): void
