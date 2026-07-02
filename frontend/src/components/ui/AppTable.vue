@@ -38,6 +38,8 @@ const props = defineProps({
 
 const emit = defineEmits(['update:pagination'])
 
+const safeTableRowClassFn = computed(() => props.tableRowClassFn || (() => ''))
+
 const tablePagination = computed({
   get: () => props.pagination,
   set: (value) => emit('update:pagination', value),
@@ -57,7 +59,7 @@ const tablePagination = computed({
     :pagination="tablePagination"
     :rows-per-page-options="rowsPerPageOptions"
     :rows-per-page-label="rowsPerPageLabel"
-    :table-row-class-fn="tableRowClassFn"
+    :table-row-class-fn="safeTableRowClassFn"
     binary-state-sort
     @update:pagination="tablePagination = $event"
   >

@@ -14,6 +14,7 @@ import ReportsPage from '../pages/reports/ReportsPage.vue'
 import AdmissionsPage from '../pages/admissions/AdmissionsPage.vue'
 import DigitalPassesPage from '../pages/identity/DigitalPassesPage.vue'
 import AccessGatePage from '../pages/access/AccessGatePage.vue'
+import AccessReportsPage from '../pages/access/AccessReportsPage.vue'
 import ApplicantPublicPage from '../pages/public/ApplicantPublicPage.vue'
 import UiFoundationPage from '../pages/system/UiFoundationPage.vue'
 
@@ -123,6 +124,12 @@ export const routes = [
         name: 'access-gate',
         component: AccessGatePage,
         meta: { title: 'Проходная', permission: 'manage_dictionaries' },
+      },
+      {
+        path: 'access/reports',
+        name: 'access-reports',
+        component: AccessReportsPage,
+        meta: { title: 'Отчеты по проходам', permission: 'manage_dictionaries' },
       },
       {
         path: 'identity/digital-passes',

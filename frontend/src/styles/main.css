@@ -3686,3 +3686,68 @@ body {
   color: #92400e;
   font-weight: 800;
 }
+
+.access-reports-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.access-report-metric {
+  min-height: 96px;
+  border-left: 4px solid #64748b;
+}
+
+.access-report-metric .app-card__body {
+  display: grid;
+  gap: 8px;
+}
+
+.access-report-metric span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.access-report-metric strong {
+  color: #0f172a;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.access-report-metric--in {
+  border-left-color: #16a34a;
+}
+
+.access-report-metric--out {
+  border-left-color: #2563eb;
+}
+
+.access-report-metric--denied {
+  border-left-color: #dc2626;
+}
+
+.access-report-metric--inside {
+  border-left-color: #7c3aed;
+}
+
+@media (max-width: 1440px) {
+  .access-reports-summary {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .access-reports-summary {
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .access-reports-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
