@@ -69,7 +69,7 @@ const navGroups = [
     ],
   },
   {
-    label: 'Identity',
+    label: 'Идентификация',
     items: [
       { label: 'Цифровые пропуска', to: '/identity/digital-passes', icon: QrCode, permission: 'manage_dictionaries' },
     ],

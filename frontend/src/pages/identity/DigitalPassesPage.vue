@@ -52,16 +52,16 @@ onMounted(async () => { await store.load(); if (store.identities[0]) await store
 
 <template>
   <AppPage>
-    <PageHeader title="Цифровые пропуска" subtitle="Digital Identity, QR-пропуска студентов и преподавателей. QR содержит только технический token.">
+    <PageHeader title="Цифровые пропуска" subtitle="Цифровая идентификация студентов и преподавателей. QR-код содержит только технический токен.">
       <template #actions>
-        <q-btn color="primary" @click="openIssueDialog()"><Plus :size="16" /><span>Выпустить пропуск</span></q-btn>
+        <q-btn color="primary" @click="openIssueDialog()"><Plus :size="16" class="q-mr-xs" /><span>Выпустить пропуск</span></q-btn>
       </template>
     </PageHeader>
     <AppToolbar>
       <span>{{ tableSubtitle }}</span>
       <template #actions>
         <AppLoading v-if="store.loading" label="Загрузка пропусков..." />
-        <q-btn flat :disable="store.loading" @click="store.load"><RefreshCw :size="16" /><span>Обновить</span></q-btn>
+        <q-btn flat :disable="store.loading" @click="store.load"><RefreshCw :size="16" class="q-mr-xs" /><span>Обновить</span></q-btn>
       </template>
     </AppToolbar>
     <AppErrorBanner :message="store.error" />
@@ -83,14 +83,14 @@ onMounted(async () => { await store.load(); if (store.identities[0]) await store
           <div v-else class="digital-pass-details">
             <div class="digital-pass-details__hero"><div><h2>{{ ownerName(store.selectedIdentity) }}</h2><p>{{ entityTypeLabel(store.selectedIdentity.entity_type) }}</p></div><AppStatusBadge :label="statusLabel(store.selectedIdentity.status)" :tone="statusTone(store.selectedIdentity.status)" /></div>
             <div class="digital-pass-qr" v-html="store.qrSvg" />
-            <dl class="digital-pass-details__list"><div><dt>Token</dt><dd>{{ tokenPreview(store.selectedIdentity.token) }}</dd></div><div><dt>Выдан</dt><dd>{{ formatDateTime(store.selectedIdentity.issued_at) }}</dd></div><div><dt>Действует до</dt><dd>{{ formatDateTime(store.selectedIdentity.expires_at) }}</dd></div><div v-if="store.selectedIdentity.revoked_at"><dt>Отозван</dt><dd>{{ formatDateTime(store.selectedIdentity.revoked_at) }}</dd></div></dl>
-            <div class="digital-pass-details__notice">QR-код содержит только token цифрового пропуска. ФИО, телефон, email и другие персональные данные в QR не записываются.</div>
-            <div class="digital-pass-details__actions"><q-btn v-if="ownerRoute" flat no-caps class="entity-link-action" :to="ownerRoute"><ExternalLink :size="15" /> Открыть владельца</q-btn><q-btn color="negative" no-caps :disable="store.selectedIdentity.status === 'revoked' || store.saving" @click="requestRevoke(store.selectedIdentity)"><ShieldX :size="16" /> Отозвать</q-btn></div>
+            <dl class="digital-pass-details__list"><div><dt>Токен</dt><dd>{{ tokenPreview(store.selectedIdentity.token) }}</dd></div><div><dt>Выдан</dt><dd>{{ formatDateTime(store.selectedIdentity.issued_at) }}</dd></div><div><dt>Действует до</dt><dd>{{ formatDateTime(store.selectedIdentity.expires_at) }}</dd></div><div v-if="store.selectedIdentity.revoked_at"><dt>Отозван</dt><dd>{{ formatDateTime(store.selectedIdentity.revoked_at) }}</dd></div></dl>
+            <div class="digital-pass-details__notice">QR-код содержит только токен цифрового пропуска. ФИО, телефон, email и другие персональные данные в QR не записываются.</div>
+            <div class="digital-pass-details__actions"><q-btn v-if="ownerRoute" flat no-caps class="entity-link-action" :to="ownerRoute"><ExternalLink :size="15" class="q-mr-xs" /> Открыть владельца</q-btn><q-btn color="negative" no-caps :disable="store.selectedIdentity.status === 'revoked' || store.saving" @click="requestRevoke(store.selectedIdentity)"><ShieldX :size="16" class="q-mr-xs" /> Отозвать</q-btn></div>
           </div>
         </AppCard>
       </aside>
     </div>
-    <q-dialog v-model="issueDialogVisible" persistent><q-card class="digital-pass-issue-dialog"><q-card-section><div class="text-h6">Выпустить цифровой пропуск</div><p class="digital-pass-dialog-text">Новый выпуск отзовет активный пропуск этого владельца и создаст новый token.</p></q-card-section><q-card-section class="digital-pass-issue-dialog__body"><q-select v-model="issueForm.entity_type" dense outlined emit-value map-options label="Тип владельца" :options="ENTITY_OPTIONS" @update:model-value="issueForm.entity_id = ''" /><q-select v-model="issueForm.entity_id" dense outlined emit-value map-options use-input input-debounce="0" label="Владелец" :options="currentOwnerOptions" /><q-input v-model="issueForm.expires_at" dense outlined type="datetime-local" label="Срок действия" clearable /></q-card-section><q-card-actions align="right"><q-btn flat label="Отмена" :disable="store.saving" @click="issueDialogVisible = false" /><q-btn color="primary" label="Выпустить" :loading="store.saving" :disable="!issueForm.entity_id" @click="issuePass"><BadgeCheck :size="16" /><span>Выпустить</span></q-btn></q-card-actions></q-card></q-dialog>
+    <q-dialog v-model="issueDialogVisible" persistent><q-card class="digital-pass-issue-dialog"><q-card-section><div class="text-h6">Выпустить цифровой пропуск</div><p class="digital-pass-dialog-text">Новый выпуск отзовет активный пропуск этого владельца и создаст новый токен.</p></q-card-section><q-card-section class="digital-pass-issue-dialog__body"><q-select v-model="issueForm.entity_type" dense outlined emit-value map-options label="Тип владельца" :options="ENTITY_OPTIONS" @update:model-value="issueForm.entity_id = ''" /><q-select v-model="issueForm.entity_id" dense outlined emit-value map-options use-input input-debounce="0" label="Владелец" :options="currentOwnerOptions" /><q-input v-model="issueForm.expires_at" dense outlined type="datetime-local" label="Срок действия" clearable /></q-card-section><q-card-actions align="right"><q-btn flat label="Отмена" :disable="store.saving" @click="issueDialogVisible = false" /><q-btn color="primary" :loading="store.saving" :disable="!issueForm.entity_id" @click="issuePass"><BadgeCheck :size="16" class="q-mr-xs" /><span>Выпустить</span></q-btn></q-card-actions></q-card></q-dialog>
     <AppConfirmDialog v-model="revokeDialogVisible" title="Отозвать цифровой пропуск?" :message="revokingIdentity ? `Будет отозван пропуск: ${ownerName(revokingIdentity)}.` : 'Будет отозван выбранный пропуск.'" confirm-label="Отозвать" tone="negative" @confirm="confirmRevoke" />
   </AppPage>
 </template>
