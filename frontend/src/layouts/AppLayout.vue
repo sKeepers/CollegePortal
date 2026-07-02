@@ -12,6 +12,7 @@ import {
   GraduationCap,
   LogOut,
   Menu,
+  QrCode,
   Settings,
   School,
   UserRound,
@@ -65,6 +66,12 @@ const navGroups = [
     items: [
       { label: 'Отчеты', to: '/reports', icon: FileText, permission: 'manage_journal' },
       { label: 'Приемная комиссия', to: '/admissions', icon: School, permission: 'manage_dictionaries' },
+    ],
+  },
+  {
+    label: 'Identity',
+    items: [
+      { label: 'Цифровые пропуска', to: '/identity/digital-passes', icon: QrCode, permission: 'manage_dictionaries' },
     ],
   },
   {

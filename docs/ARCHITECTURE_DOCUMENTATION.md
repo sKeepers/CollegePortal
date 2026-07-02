@@ -16,6 +16,7 @@
 - `docs/ARCHITECTURE_DECISIONS.md` — ADR и ключевые архитектурные решения.
 - `docs/DOMAIN_MODEL.md` — доменная модель CollegePortal Platform.
 - `docs/IDENTITY_DOMAIN.md` — архитектура Identity Domain, Person, Digital Identity и Access Control.
+- `docs/DIGITAL_PASSES.md` — QR-001, MVP цифровых пропусков и QR-token.
 - `docs/GLOBAL_SEARCH.md` — архитектура глобального поиска.
 - `docs/DASHBOARD.md` — концепция Dashboard и виджетов.
 

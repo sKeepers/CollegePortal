@@ -12,6 +12,7 @@ import SchedulePage from '../pages/schedule/SchedulePage.vue'
 import JournalPage from '../pages/journal/JournalPage.vue'
 import ReportsPage from '../pages/reports/ReportsPage.vue'
 import AdmissionsPage from '../pages/admissions/AdmissionsPage.vue'
+import DigitalPassesPage from '../pages/identity/DigitalPassesPage.vue'
 import ApplicantPublicPage from '../pages/public/ApplicantPublicPage.vue'
 import UiFoundationPage from '../pages/system/UiFoundationPage.vue'
 
@@ -115,6 +116,12 @@ export const routes = [
         name: 'admissions',
         component: AdmissionsPage,
         meta: { title: 'Приемная комиссия', permission: 'manage_dictionaries' },
+      },
+      {
+        path: 'identity/digital-passes',
+        name: 'identity-digital-passes',
+        component: DigitalPassesPage,
+        meta: { title: 'Цифровые пропуска', permission: 'manage_dictionaries' },
       },
       {
         path: 'system/ui-foundation',

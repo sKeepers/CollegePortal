@@ -68,6 +68,7 @@
 - [x] INFRA-005: документировать обязательный Git checkpoint после каждой задачи
 - [x] DESIGN-001: создать единую дизайн-систему CollegePortal
 - [x] ARCH-001: спроектировать Identity Domain Architecture
+- [x] QR-001: Digital Identity и QR-пропуска Phase 1
 - [x] GUI-012: перенести раздел «Преподаватели» в новый Quasar GUI
 - [x] GUI-013: перенести раздел «Дисциплины» в новый Quasar GUI
 - [x] GUI-014: перенести раздел «Аудитории» в новый Quasar GUI
@@ -125,10 +126,18 @@
 - [x] Обновить docs/ARCHITECTURE_DOCUMENTATION.md
 - [x] Зафиксировать Person, Digital Identity, QR/Mobile Pass и Access Control
 
+## Цифровые пропуска
+
+- [x] Создать таблицу `digital_identities`
+- [x] Реализовать API выпуска, списка, отзыва и QR
+- [x] Создать раздел `/identity/digital-passes`
+- [x] Добавить пункт меню `Identity / Цифровые пропуска`
+- [x] Проверить, что QR не содержит персональные данные
+
 ## Следующие задачи
 
 - [ ] GUI-015: Учебные планы
-- [ ] QR-001: Проходная / QR-пропуска Phase 1
+- [ ] QR-002: Проходная / проверка QR-token
 - [ ] MOB-001: Mobile Student Cabinet Phase 1
 - [ ] GRAD-001: Выпускники и дипломы
 - [ ] FRDO-001: Подготовка данных ФРДО

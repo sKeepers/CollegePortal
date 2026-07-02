@@ -109,6 +109,7 @@ Frontend:
 - `docs/ARCHITECTURE_DECISIONS.md` — зафиксированные архитектурные решения, включая выбор frontend UI-платформы.
 - `docs/ACCESS_CONTROL_CONCEPT.md` — концепция Person, Digital Identity, QR-пропусков и будущего модуля присутствия.
 - `docs/IDENTITY_DOMAIN.md` — архитектура Identity Domain: Person, Digital Identity, роли, учетные данные, QR/Mobile Pass, Access Control, Authentication и Authorization.
+- `docs/DIGITAL_PASSES.md` — MVP цифровых QR-пропусков: таблица `digital_identities`, API, SVG QR и правила безопасности token.
 - `docs/DOMAIN_MODEL.md` — доменная модель CollegePortal Platform: Identity, Academic, Learning, Administration, Integrations, Analytics.
 - `docs/LAYOUT_GUIDELINES.md` — правила раскладки рабочих страниц, включая таблицу слева и карточку справа без overlay.
 - `docs/RESPONSIVE_WORKSPACE.md` — правила адаптивного рабочего пространства, breakpoints, плотность и workspace-режимы.
@@ -183,6 +184,16 @@ CollegePortal Platform рассматривается как набор связ
 Документ фиксирует, какие домены уже реализованы частично, какие находятся в разработке, а какие запланированы. Это архитектурный ориентир для будущих модулей: новые разделы нужно проектировать в рамках доменов, не смешивая учебный процесс, администрирование, интеграции и аналитику в одном слое.
 
 ### Person, Digital Identity и присутствие
+
+В QR-001 реализован MVP цифровых пропусков:
+
+- backend-таблица `digital_identities`;
+- API `GET /api/digital-identities`, `POST /api/digital-identities/issue`, `POST /api/digital-identities/{id}/revoke`, `GET /api/digital-identities/{id}/qr`;
+- QR содержит только token, без ФИО и персональных данных;
+- frontend-раздел `/identity/digital-passes`;
+- поддержаны владельцы `student` и `teacher`;
+- выпуск и отзыв цифровых пропусков через существующую авторизацию.
+
 
 Архитектурная концепция будущего модуля описана в `docs/ACCESS_CONTROL_CONCEPT.md`.
 

@@ -432,6 +432,7 @@ body {
 .workspace-right-panel-hidden .subjects-layout,
 .workspace-right-panel-hidden .classrooms-layout,
 .workspace-right-panel-hidden .admissions-layout,
+.workspace-right-panel-hidden .digital-passes-layout,
 .workspace-right-panel-hidden .schedule-layout,
 .workspace-right-panel-hidden .journal-layout {
   grid-template-columns: minmax(0, 1fr);
@@ -891,6 +892,7 @@ body {
 .subjects-layout,
 .classrooms-layout,
 .admissions-layout,
+.digital-passes-layout,
 .schedule-layout,
 .journal-layout {
   display: grid;
@@ -909,6 +911,7 @@ body {
 .subjects-main,
 .classrooms-main,
 .admissions-main,
+.digital-passes-main,
 .schedule-main,
 .journal-main {
   display: grid;
@@ -924,6 +927,7 @@ body {
 .subjects-side,
 .classrooms-side,
 .admissions-side,
+.digital-passes-side,
 .schedule-side,
 .journal-side {
   display: grid;
@@ -2978,6 +2982,7 @@ body {
   .admission-form__grid,
   .admission-details__list div,
   .admission-details__metrics,
+  .digital-pass-details__list div,
   .classroom-details__list div,
   .classroom-details__metrics,
   .group-details__list div,
@@ -3344,3 +3349,25 @@ body {
   table-layout: fixed;
   width: 100%;
 }
+
+
+.digital-passes-row-link { appearance: none; border: 0; padding: 0; background: transparent; color: #1d4ed8; font: inherit; font-weight: 800; text-align: left; cursor: pointer; }
+.digital-passes-row--selected td { background: #eff6ff !important; }
+.digital-passes-secondary-cell { display: grid; gap: 2px; min-width: 0; }
+.digital-passes-secondary-cell small { color: #64748b; overflow-wrap: anywhere; }
+.digital-passes-row-actions { display: inline-flex; gap: 2px; }
+.digital-pass-card, .digital-pass-details { min-width: 0; }
+.digital-pass-details { display: grid; gap: 12px; }
+.digital-pass-details__hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.digital-pass-details__hero h2 { margin: 0; color: #0f172a; font-size: 24px; font-weight: 800; line-height: 1.12; overflow-wrap: anywhere; }
+.digital-pass-details__hero p, .digital-pass-dialog-text { margin: 4px 0 0; color: #64748b; font-size: 13px; line-height: 1.35; }
+.digital-pass-qr { display: grid; place-items: center; border: 1px solid #dbe4f0; border-radius: 8px; padding: 14px; background: #ffffff; }
+.digital-pass-qr svg { width: min(260px, 100%); height: auto; }
+.digital-pass-details__list { display: grid; gap: 8px; margin: 0; }
+.digital-pass-details__list div { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 8px; }
+.digital-pass-details__list dt { color: #64748b; }
+.digital-pass-details__list dd { margin: 0; color: #0f172a; overflow-wrap: anywhere; }
+.digital-pass-details__notice { border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px; background: #eff6ff; color: #1e3a8a; font-size: 13px; line-height: 1.35; }
+.digital-pass-details__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.digital-pass-issue-dialog { width: min(560px, calc(100vw - 32px)); }
+.digital-pass-issue-dialog__body { display: grid; gap: 10px; }

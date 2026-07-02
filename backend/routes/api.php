@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\ApplicantApplicationController;
 use App\Http\Controllers\Api\GroupController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\ClassroomController;
+use App\Http\Controllers\Api\DigitalIdentityController;
 use App\Http\Controllers\Api\EducationProgramController;
 use App\Http\Controllers\Api\GradeController;
 use App\Http\Controllers\Api\StudentController;
@@ -27,6 +28,10 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('classrooms/export', [ClassroomController::class, 'export']);
         Route::post('classrooms/import', [ClassroomController::class, 'import']);
         Route::apiResource('classrooms', ClassroomController::class);
+        Route::get('digital-identities', [DigitalIdentityController::class, 'index']);
+        Route::post('digital-identities/issue', [DigitalIdentityController::class, 'issue']);
+        Route::post('digital-identities/{digitalIdentity}/revoke', [DigitalIdentityController::class, 'revoke']);
+        Route::get('digital-identities/{digitalIdentity}/qr', [DigitalIdentityController::class, 'qr']);
         Route::get('applicant-applications/export', [ApplicantApplicationController::class, 'export']);
         Route::post('applicant-applications/import', [ApplicantApplicationController::class, 'import']);
         Route::post('applicant-applications/{applicantApplication}/enroll', [ApplicantApplicationController::class, 'enroll']);
