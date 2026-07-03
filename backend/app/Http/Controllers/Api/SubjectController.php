@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateSubjectRequest;
 use App\Http\Resources\SubjectResource;
 use App\Models\Subject;
 use App\Services\SubjectCsvService;
+use App\Services\AutoCodeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -16,8 +17,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SubjectController extends Controller
 {
-    public function __construct(private readonly SubjectCsvService $subjectCsvService)
-    {
+    public function __construct(
+        private readonly SubjectCsvService $subjectCsvService,
+        private readonly AutoCodeService $autoCodeService,
+    ) {
     }
 
     public function index(Request $request): AnonymousResourceCollection
@@ -45,6 +48,7 @@ class SubjectController extends Controller
         $data = $request->validated();
         $teacherIds = $data['teacher_ids'] ?? [];
         unset($data['teacher_ids']);
+        $data['code'] = $data['code'] ?: $this->autoCodeService->subjectCode($data['name'] ?? null);
 
         $subject = Subject::create($data);
         $subject->teachers()->sync($teacherIds);
@@ -64,6 +68,9 @@ class SubjectController extends Controller
         $data = $request->validated();
         $teacherIds = $data['teacher_ids'] ?? null;
         unset($data['teacher_ids']);
+        if (array_key_exists('code', $data) && ! $data['code']) {
+            $data['code'] = $this->autoCodeService->subjectCode($data['name'] ?? $subject->name);
+        }
 
         $subject->update($data);
 

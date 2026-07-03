@@ -7,6 +7,7 @@ use App\Models\Student;
 use App\Models\Teacher;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class AccessEventResource extends JsonResource
 {
@@ -48,6 +49,7 @@ class AccessEventResource extends JsonResource
             'middle_name' => $owner->middle_name,
             'phone' => $owner->phone,
             'email' => $owner->email,
+            'photo_url' => $owner->photo_path ? $request->getSchemeAndHttpHost().Storage::disk('public')->url($owner->photo_path) : null,
             'group' => $owner instanceof Student && $owner->relationLoaded('group') && $owner->group
                 ? ['id' => $owner->group->id, 'name' => $owner->group->name]
                 : null,

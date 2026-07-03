@@ -11,6 +11,7 @@ class UpdateCurriculumRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'code' => ['sometimes', 'nullable', 'string', 'max:100', Rule::unique('curricula', 'code')->ignore($this->route('curriculum'))],
             'education_program_id' => ['sometimes', 'required', 'integer', 'exists:education_programs,id'],
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'year_start' => ['sometimes', 'required', 'integer', 'min:2000', 'max:2100'],

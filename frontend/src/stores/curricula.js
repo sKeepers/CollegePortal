@@ -14,6 +14,7 @@ export function statusLabel(status) { return CURRICULUM_STATUS_OPTIONS.find((ite
 export function statusTone(status) { return CURRICULUM_STATUS_OPTIONS.find((item) => item.value === status)?.tone || 'neutral' }
 function cleanCurriculum(payload) {
   return {
+    code: payload.code?.trim() || '',
     education_program_id: Number(payload.education_program_id),
     name: payload.name?.trim() || '',
     year_start: Number(payload.year_start),

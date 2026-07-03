@@ -15,7 +15,7 @@ onMounted(() => store.load())
     <template v-else>
       <section class="mobile-student-pass-hero">
         <IdCard :size="30" />
-        <div><h1>Мой QR-пропуск</h1><p>{{ store.studentName }} · {{ store.groupName }}</p></div>
+        <q-avatar size="48px" class="mobile-student-pass-photo"><img v-if="store.student?.photo_url" :src="store.student.photo_url" alt="Фото" /><IdCard v-else :size="26" /></q-avatar><div><h1>Мой QR-пропуск</h1><p>{{ store.studentName }} · {{ store.groupName }}</p></div>
       </section>
 
       <q-banner v-if="!store.hasStudent" class="mobile-student-banner">{{ store.message || 'Текущий пользователь не связан с карточкой студента.' }}</q-banner>

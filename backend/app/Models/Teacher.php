@@ -16,6 +16,7 @@ class Teacher extends Model
         'middle_name',
         'phone',
         'email',
+        'photo_path',
         'position',
         'department',
         'is_active',

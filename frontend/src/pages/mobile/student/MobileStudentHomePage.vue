@@ -14,7 +14,7 @@ onMounted(() => store.load())
 
     <template v-else>
       <section class="mobile-student-hero">
-        <div class="mobile-student-avatar"><UserRound :size="32" /></div>
+        <div class="mobile-student-avatar"><img v-if="store.student?.photo_url" :src="store.student.photo_url" alt="Фото" /><UserRound v-else :size="32" /></div>
         <div>
           <p>Добро пожаловать</p>
           <h1>{{ store.studentName }}</h1>

@@ -1,6 +1,7 @@
 <script setup>
-import { reactive, watch } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import AppCard from '../../components/ui/AppCard.vue'
+import { Edit3 } from '@lucide/vue'
 import AppFormSection from '../../components/ui/AppFormSection.vue'
 
 const props = defineProps({
@@ -19,6 +20,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['save', 'cancel'])
+const codeEditable = ref(false)
 
 const form = reactive({
   name: '',
@@ -38,6 +40,7 @@ watch(
       description: subject?.description || '',
       teacher_ids: Array.isArray(subject?.teachers) ? subject.teachers.map((teacher) => teacher.id) : [],
     })
+    codeEditable.value = false
   },
   { immediate: true },
 )
@@ -56,7 +59,7 @@ function submitForm() {
       <AppFormSection title="Основные данные">
         <div class="subject-form__grid">
           <q-input v-model="form.name" dense outlined label="Название дисциплины" required />
-          <q-input v-model="form.code" dense outlined label="Код" />
+          <q-input v-model="form.code" dense outlined label="Код" placeholder="Будет создан автоматически" :readonly="!codeEditable"><template #append><q-btn flat round dense title="Разрешить ручное редактирование" @click="codeEditable = true"><Edit3 :size="15" /></q-btn></template></q-input>
           <q-input v-model="form.department" dense outlined label="Отделение / кафедра" />
         </div>
       </AppFormSection>

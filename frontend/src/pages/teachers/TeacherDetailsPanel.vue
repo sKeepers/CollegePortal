@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import AppCard from '../../components/ui/AppCard.vue'
 import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
+import PersonPhotoManager from '../../components/person/PersonPhotoManager.vue'
 
 const props = defineProps({
   teacher: {
@@ -29,6 +30,8 @@ const statusTone = computed(() => (props.teacher?.is_active ? 'success' : 'neutr
 const scheduleLink = computed(() => ({ path: '/schedule', query: { teacher: props.teacher?.id } }))
 const journalLink = computed(() => ({ path: '/journal', query: { teacher: props.teacher?.id } }))
 const subjectsLink = computed(() => ({ path: '/subjects', query: { teacher: props.teacher?.id } }))
+function updatePhoto(payload) { if (props.teacher) { props.teacher.photo_url = payload.photo_url; props.teacher.photo_path = payload.photo_path } }
+function removePhoto() { if (props.teacher) { props.teacher.photo_url = null; props.teacher.photo_path = null } }
 </script>
 
 <template>
@@ -40,7 +43,9 @@ const subjectsLink = computed(() => ({ path: '/subjects', query: { teacher: prop
     />
 
     <div v-else class="teacher-details">
-      <div class="teacher-details__hero">
+      <div class="teacher-details__hero teacher-details__hero--with-photo">
+        <PersonPhotoManager type="teachers" :person="teacher" compact @updated="updatePhoto" @removed="removePhoto" />
+        <div class="teacher-details__hero-text">
         <div class="teacher-details__title-row">
           <div class="teacher-details__title-block">
             <h2>{{ teacherName }}</h2>
@@ -51,6 +56,7 @@ const subjectsLink = computed(() => ({ path: '/subjects', query: { teacher: prop
           </div>
         </div>
         <p>{{ teacher.position || 'Должность не указана' }}</p>
+        </div>
       </div>
 
       <div class="teacher-details__metrics">

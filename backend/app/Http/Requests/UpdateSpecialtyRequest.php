@@ -15,7 +15,7 @@ class UpdateSpecialtyRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code' => ['sometimes', 'required', 'string', 'max:50', Rule::unique('specialties', 'code')->ignore($this->route('specialty'))],
+            'code' => ['sometimes', 'nullable', 'string', 'max:50', Rule::unique('specialties', 'code')->ignore($this->route('specialty'))],
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'education_level' => ['sometimes', 'required', 'string', 'max:255'],
             'qualification' => ['sometimes', 'nullable', 'string', 'max:255'],

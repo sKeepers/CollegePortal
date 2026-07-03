@@ -15,7 +15,7 @@ class UpdateGroupRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['sometimes', 'required', 'string', 'max:255', Rule::unique('groups', 'name')->ignore($this->route('group'))],
+            'name' => ['sometimes', 'nullable', 'string', 'max:255', Rule::unique('groups', 'name')->ignore($this->route('group'))],
             'specialty' => ['sometimes', 'required', 'string', 'max:255'],
             'education_program_id' => ['sometimes', 'nullable', 'integer', 'exists:education_programs,id'],
             'course' => ['sometimes', 'required', 'integer', 'min:1', 'max:6'],

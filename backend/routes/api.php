@@ -6,10 +6,12 @@ use App\Http\Controllers\Api\AccessReportController;
 use App\Http\Controllers\Api\ApplicantApplicationController;
 use App\Http\Controllers\Api\GroupController;
 use App\Http\Controllers\Api\MobileStudentController;
+use App\Http\Controllers\Api\PersonPhotoController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\ClassroomController;
 use App\Http\Controllers\Api\CurriculumController;
 use App\Http\Controllers\Api\DigitalIdentityController;
+use App\Http\Controllers\Api\DemoDataController;
 use App\Http\Controllers\Api\ExamController;
 use App\Http\Controllers\Api\FrdoPackageController;
 use App\Http\Controllers\Api\FisPackageController;
@@ -35,6 +37,13 @@ Route::middleware('api.token')->group(function (): void {
     Route::get('mobile/student', [MobileStudentController::class, 'show']);
 
     Route::middleware('permission:manage_dictionaries')->group(function (): void {
+        Route::get('admin/demo-data', [DemoDataController::class, 'status']);
+        Route::post('admin/demo-data/create', [DemoDataController::class, 'create']);
+        Route::post('admin/demo-data/clear', [DemoDataController::class, 'clear']);
+        Route::post('admin/demo-data/import', [DemoDataController::class, 'import']);
+        Route::get('admin/demo-data/export', [DemoDataController::class, 'export']);
+        Route::post('person-photos/{type}/{id}', [PersonPhotoController::class, 'store']);
+        Route::delete('person-photos/{type}/{id}', [PersonPhotoController::class, 'destroy']);
         Route::get('classrooms/export', [ClassroomController::class, 'export']);
         Route::post('classrooms/import', [ClassroomController::class, 'import']);
         Route::apiResource('classrooms', ClassroomController::class);

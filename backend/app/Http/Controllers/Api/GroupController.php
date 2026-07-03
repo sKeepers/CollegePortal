@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateGroupRequest;
 use App\Http\Resources\GroupResource;
 use App\Models\Group;
 use App\Services\GroupCsvService;
+use App\Services\AutoCodeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -16,8 +17,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class GroupController extends Controller
 {
-    public function __construct(private readonly GroupCsvService $groupCsvService)
-    {
+    public function __construct(
+        private readonly GroupCsvService $groupCsvService,
+        private readonly AutoCodeService $autoCodeService,
+    ) {
     }
 
     public function index(): AnonymousResourceCollection
@@ -34,7 +37,9 @@ class GroupController extends Controller
 
     public function store(StoreGroupRequest $request): JsonResponse
     {
-        $group = Group::create($request->validated());
+        $data = $request->validated();
+        $data['name'] = $data['name'] ?: $this->autoCodeService->groupName($data['specialty'] ?? null, (int) ($data['year_start'] ?? now()->year), (int) ($data['course'] ?? 1));
+        $group = Group::create($data);
 
         return (new GroupResource($group->load(['curator', 'educationProgram.specialty'])->loadCount('students')))
             ->response()
@@ -48,7 +53,11 @@ class GroupController extends Controller
 
     public function update(UpdateGroupRequest $request, Group $group): GroupResource
     {
-        $group->update($request->validated());
+        $data = $request->validated();
+        if (array_key_exists('name', $data) && ! $data['name']) {
+            $data['name'] = $this->autoCodeService->groupName($data['specialty'] ?? $group->specialty, (int) ($data['year_start'] ?? $group->year_start), (int) ($data['course'] ?? $group->course));
+        }
+        $group->update($data);
 
         return new GroupResource($group->load(['curator', 'educationProgram.specialty'])->loadCount('students'));
     }

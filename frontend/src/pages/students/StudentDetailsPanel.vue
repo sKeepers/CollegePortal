@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import AppCard from '../../components/ui/AppCard.vue'
 import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
+import PersonPhotoManager from '../../components/person/PersonPhotoManager.vue'
 
 const props = defineProps({
   student: {
@@ -66,6 +67,20 @@ watch(
 function fullName(student) {
   return [student?.last_name, student?.first_name, student?.middle_name].filter(Boolean).join(' ')
 }
+
+function updatePhoto(payload) {
+  if (props.student) {
+    props.student.photo_url = payload.photo_url
+    props.student.photo_path = payload.photo_path
+  }
+}
+
+function removePhoto() {
+  if (props.student) {
+    props.student.photo_url = null
+    props.student.photo_path = null
+  }
+}
 </script>
 
 <template>
@@ -77,7 +92,9 @@ function fullName(student) {
     />
 
     <div v-else class="student-details">
-      <div class="student-details__hero">
+      <div class="student-details__hero student-details__hero--with-photo">
+        <PersonPhotoManager type="students" :person="student" compact @updated="updatePhoto" @removed="removePhoto" />
+        <div class="student-details__hero-text">
         <div class="student-details__title-row">
           <h2>{{ fullName(student) }}</h2>
           <AppStatusBadge
@@ -89,6 +106,7 @@ function fullName(student) {
           <span>{{ student.group?.name || 'Группа не указана' }}</span>
           <span>{{ programName }}</span>
           <span>{{ specialtyName }}</span>
+        </div>
         </div>
       </div>
 

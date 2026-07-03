@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateSpecialtyRequest;
 use App\Http\Resources\SpecialtyResource;
 use App\Models\Specialty;
 use App\Services\SpecialtyCsvService;
+use App\Services\AutoCodeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -16,8 +17,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SpecialtyController extends Controller
 {
-    public function __construct(private readonly SpecialtyCsvService $specialtyCsvService)
-    {
+    public function __construct(
+        private readonly SpecialtyCsvService $specialtyCsvService,
+        private readonly AutoCodeService $autoCodeService,
+    ) {
     }
 
     public function index(Request $request): AnonymousResourceCollection
@@ -41,7 +44,9 @@ class SpecialtyController extends Controller
 
     public function store(StoreSpecialtyRequest $request): JsonResponse
     {
-        $specialty = Specialty::create($request->validated());
+        $data = $request->validated();
+        $data['code'] = $data['code'] ?: $this->autoCodeService->specialtyCode($data['name'] ?? null);
+        $specialty = Specialty::create($data);
 
         return (new SpecialtyResource($specialty))
             ->response()
@@ -55,7 +60,11 @@ class SpecialtyController extends Controller
 
     public function update(UpdateSpecialtyRequest $request, Specialty $specialty): SpecialtyResource
     {
-        $specialty->update($request->validated());
+        $data = $request->validated();
+        if (array_key_exists('code', $data) && ! $data['code']) {
+            $data['code'] = $this->autoCodeService->specialtyCode($data['name'] ?? $specialty->name);
+        }
+        $specialty->update($data);
 
         return new SpecialtyResource($specialty);
     }

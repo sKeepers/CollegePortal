@@ -85,7 +85,7 @@ onMounted(async () => {
               </div>
             </div>
             <div class="access-gate-person">
-              <div class="access-gate-person__photo"><UserRound :size="58" /></div>
+              <div class="access-gate-person__photo"><img v-if="store.lastEvent.owner?.photo_url" :src="store.lastEvent.owner.photo_url" alt="Фото" /><UserRound v-else :size="58" /></div>
               <div class="access-gate-person__info">
                 <h2>{{ ownerName(store.lastEvent) }}</h2>
                 <p>{{ entityTypeLabel(store.lastEvent.entity_type) }}</p>

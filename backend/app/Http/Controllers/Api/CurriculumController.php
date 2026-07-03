@@ -12,6 +12,7 @@ use App\Models\Curriculum;
 use App\Models\CurriculumItem;
 use App\Models\EducationProgram;
 use App\Models\Subject;
+use App\Services\AutoCodeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -22,6 +23,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CurriculumController extends Controller
 {
+    public function __construct(private readonly AutoCodeService $autoCodeService)
+    {
+    }
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $curricula = Curriculum::query()
@@ -98,12 +103,13 @@ class CurriculumController extends Controller
 
         return response()->streamDownload(function () use ($curricula): void {
             $output = fopen('php://output', 'w');
-            fputcsv($output, ['id', 'education_program_id', 'program_name', 'specialty', 'year_start', 'name', 'status', 'description', 'subject_id', 'subject_code', 'subject_name', 'course', 'semester', 'hours_total', 'control_form', 'sort_order'], ';');
+            fputcsv($output, ['id', 'code', 'education_program_id', 'program_name', 'specialty', 'year_start', 'name', 'status', 'description', 'subject_id', 'subject_code', 'subject_name', 'course', 'semester', 'hours_total', 'control_form', 'sort_order'], ';');
             foreach ($curricula as $curriculum) {
                 $items = $curriculum->items->isNotEmpty() ? $curriculum->items : collect([null]);
                 foreach ($items as $item) {
                     fputcsv($output, [
                         $curriculum->id,
+                        $curriculum->code,
                         $curriculum->education_program_id,
                         $curriculum->educationProgram?->name,
                         $curriculum->educationProgram?->specialty?->name,
@@ -137,6 +143,7 @@ class CurriculumController extends Controller
             $line++;
             $data = array_combine($headers, array_pad($row, count($headers), '')) ?: [];
             $validator = Validator::make($data, [
+                'code' => ['nullable', 'string', 'max:100'],
                 'education_program_id' => ['nullable', 'integer', 'exists:education_programs,id'],
                 'program_name' => ['nullable', 'string'],
                 'year_start' => ['required', 'integer', 'min:2000', 'max:2100'],
@@ -156,6 +163,7 @@ class CurriculumController extends Controller
                     $programId = $this->resolveProgramId($data);
                     if (!$programId) { throw new \RuntimeException('Образовательная программа не найдена.'); }
                     $payload = $this->validatedCurriculumData([
+                        'code' => $data['code'] ?? null,
                         'education_program_id' => $programId,
                         'name' => $data['name'],
                         'year_start' => (int) $data['year_start'],
@@ -188,7 +196,7 @@ class CurriculumController extends Controller
     private function normalizedCurriculumPatch(array $data): array
     {
         $patch = [];
-        foreach (['education_program_id', 'name', 'year_start', 'status', 'description'] as $field) {
+        foreach (['code', 'education_program_id', 'name', 'year_start', 'status', 'description'] as $field) {
             if (array_key_exists($field, $data)) {
                 $patch[$field] = $field === 'name' ? trim($data[$field]) : $data[$field];
             }
@@ -196,12 +204,14 @@ class CurriculumController extends Controller
         if (array_key_exists('education_program_id', $patch)) { $patch['education_program_id'] = (int) $patch['education_program_id']; }
         if (array_key_exists('year_start', $patch)) { $patch['year_start'] = (int) $patch['year_start']; }
         if (array_key_exists('status', $patch) && !$patch['status']) { $patch['status'] = 'draft'; }
+        if (array_key_exists('code', $patch) && ! $patch['code']) { $patch['code'] = $this->autoCodeService->curriculumCode($patch['name'] ?? null); }
         return $patch;
     }
 
     private function validatedCurriculumData(array $data): array
     {
         return [
+            'code' => ($data['code'] ?? null) ?: $this->autoCodeService->curriculumCode($data['name'] ?? null),
             'education_program_id' => (int) $data['education_program_id'],
             'name' => trim($data['name']),
             'year_start' => (int) $data['year_start'],

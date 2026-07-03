@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Curriculum extends Model
 {
-    protected $fillable = ['education_program_id', 'name', 'year_start', 'status', 'description'];
+    protected $fillable = ['code', 'education_program_id', 'name', 'year_start', 'status', 'description'];
 
     protected function casts(): array
     {

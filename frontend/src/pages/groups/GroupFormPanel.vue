@@ -1,5 +1,6 @@
 <script setup>
-import { reactive, watch } from 'vue'
+import { reactive, ref, watch } from 'vue'
+import { Edit3 } from '@lucide/vue'
 import AppCard from '../../components/ui/AppCard.vue'
 import AppFormSection from '../../components/ui/AppFormSection.vue'
 
@@ -23,6 +24,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['save', 'cancel'])
+const nameEditable = ref(false)
 
 const form = reactive({
   name: '',
@@ -44,6 +46,7 @@ watch(
       year_start: group?.year_start || '',
       curator_id: group?.curator_id || '',
     })
+    nameEditable.value = false
   },
   { immediate: true },
 )
@@ -61,7 +64,7 @@ function submitForm() {
     <form class="group-form" @submit.prevent="submitForm">
       <AppFormSection title="Основные данные">
         <div class="group-form__grid">
-          <q-input v-model="form.name" dense outlined label="Название группы" required />
+          <q-input v-model="form.name" dense outlined label="Название группы" placeholder="Будет создано автоматически" :readonly="!nameEditable"><template #append><q-btn flat round dense title="Разрешить ручное редактирование" @click="nameEditable = true"><Edit3 :size="15" /></q-btn></template></q-input>
           <q-input v-model="form.specialty" dense outlined label="Специальность" required />
           <q-input v-model="form.course" dense outlined type="number" min="1" max="6" label="Курс" required />
           <q-input v-model="form.year_start" dense outlined type="number" min="2000" max="2100" label="Год набора" required />

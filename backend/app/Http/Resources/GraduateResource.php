@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class GraduateResource extends JsonResource
 {
@@ -17,6 +18,8 @@ class GraduateResource extends JsonResource
             'specialty_id' => $this->specialty_id,
             'graduation_year' => $this->graduation_year,
             'qualification' => $this->qualification,
+            'photo_path' => $this->photo_path,
+            'photo_url' => $this->photo_path ? $request->getSchemeAndHttpHost().Storage::disk('public')->url($this->photo_path) : null,
             'status' => $this->status,
             'note' => $this->note,
             'student' => new StudentResource($this->whenLoaded('student')),

@@ -4814,3 +4814,139 @@ body {
 @media (max-width: 1439px) { .fis-workspace { grid-template-columns: minmax(0, 1fr) 430px; } }
 @media (max-width: 1180px) { .fis-workspace { grid-template-columns: 1fr; } .fis-side { position: static; } }
 @media (max-width: 720px) { .fis-dialog__body, .fis-details__metrics { grid-template-columns: 1fr; } }
+
+
+.person-photo-manager {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+
+.person-photo-manager--compact {
+  align-items: flex-start;
+}
+
+.person-photo-manager__avatar {
+  flex: 0 0 auto;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 800;
+}
+
+.person-photo-manager__avatar img,
+.access-gate-person__photo img,
+.mobile-student-avatar img,
+.mobile-student-pass-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.person-photo-manager__actions {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.person-photo-manager__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.student-details__hero--with-photo,
+.teacher-details__hero--with-photo,
+.graduation-details__hero--with-photo {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.student-details__hero-text,
+.teacher-details__hero-text,
+.graduation-details__hero-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.access-gate-person__photo {
+  overflow: hidden;
+}
+
+.data-management-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 14px;
+  align-items: start;
+}
+
+.data-management-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.data-management-summary {
+  display: grid;
+  gap: 8px;
+}
+
+.data-management-summary__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 8px 0;
+}
+
+.data-management-summary__item span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.data-management-summary__item strong {
+  color: #172033;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.data-management-status {
+  margin-top: 12px;
+}
+
+.data-management-warning {
+  margin-top: 12px;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.data-management-info {
+  margin-top: 12px;
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.mobile-student-avatar {
+  overflow: hidden;
+}
+
+.mobile-student-pass-photo {
+  flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+@media (max-width: 1439px) {
+  .data-management-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

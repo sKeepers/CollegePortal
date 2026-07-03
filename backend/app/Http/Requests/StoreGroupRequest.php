@@ -14,7 +14,7 @@ class StoreGroupRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255', 'unique:groups,name'],
+            'name' => ['nullable', 'string', 'max:255', 'unique:groups,name'],
             'specialty' => ['required', 'string', 'max:255'],
             'education_program_id' => ['nullable', 'integer', 'exists:education_programs,id'],
             'course' => ['required', 'integer', 'min:1', 'max:6'],

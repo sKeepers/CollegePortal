@@ -6,6 +6,7 @@ import {
   Building2,
   CalendarDays,
   ClipboardList,
+  Database,
   DoorOpen,
   FileText,
   Gauge,
@@ -85,6 +86,7 @@ const navGroups = [
   {
     label: 'Система',
     items: [
+      { label: 'Управление данными', to: '/admin/data-management', icon: Database, permission: 'manage_dictionaries' },
       { label: 'UI Foundation', to: '/system/ui-foundation', icon: Settings, adminOnly: true },
     ],
   },

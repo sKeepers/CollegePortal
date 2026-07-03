@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Graduate extends Model
 {
-    protected $fillable = ['student_id', 'group_id', 'education_program_id', 'specialty_id', 'graduation_year', 'qualification', 'status', 'note'];
+    protected $fillable = ['student_id', 'group_id', 'education_program_id', 'specialty_id', 'graduation_year', 'qualification', 'photo_path', 'status', 'note'];
 
     protected function casts(): array
     {
