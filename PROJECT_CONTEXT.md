@@ -22,6 +22,7 @@ CollegePortal — веб-портал для колледжа искусств. 
 - учебные планы;
 - нагрузка преподавателей;
 - экзамены и ГИА;
+- выпускники, дипломы и приложения к диплому;
 - публичный раздел для абитуриентов;
 - будущие интеграции с Moodle, LDAP/Active Directory, ФРДО и ФИС ГИА/Приема.
 
@@ -141,12 +142,13 @@ Frontend:
 - `frontend/src/App.vue` — старый монолитный GUI, сохранен как legacy до полной миграции.
 - `frontend/src/app/App.vue` — root-компонент нового Quasar GUI.
 - `frontend/src/layouts` — `AppLayout`, `AuthLayout`, `PublicLayout`.
-- `frontend/src/pages` — страницы нового GUI; перенесены авторизация, системная страница UI Foundation и разделы `students`, `groups`, `teachers`, `subjects`, `classrooms`, `schedule`, `journal`, `admissions`, `curricula`, `teaching-load`, `exams`, остальные разделы постепенно переносятся из legacy.
+- `frontend/src/pages` — страницы нового GUI; перенесены авторизация, системная страница UI Foundation и разделы `students`, `groups`, `teachers`, `subjects`, `classrooms`, `schedule`, `journal`, `admissions`, `curricula`, `teaching-load`, `exams`, `graduation`, остальные разделы постепенно переносятся из legacy.
 - `frontend/src/pages/legacy/LegacyPage.vue` — временный доступ к старому GUI по маршруту `/legacy`.
 - `frontend/src/pages/system/UiFoundationPage.vue` — демонстрация базовых UI-компонентов нового GUI.
 - `frontend/src/router` — Vue Router и маршруты нового GUI.
-- `frontend/src/stores` — Pinia stores: `auth`, `students`, `groups`, `teachers`, `subjects`, `classrooms`, `schedule`, `journal`, `admissions`, `curricula`, `teachingLoad`, `exams`, `search`, `workspace`.
+- `frontend/src/stores` — Pinia stores: `auth`, `students`, `groups`, `teachers`, `subjects`, `classrooms`, `schedule`, `journal`, `admissions`, `curricula`, `teachingLoad`, `exams`, `graduation`, `search`, `workspace`.
 - `frontend/src/styles` — стили нового GUI.
+- `frontend/src/pages/graduation/GraduationPage.vue` — новый раздел выпускников и дипломов с вкладками карточки.
 - `frontend/src/pages/exams/ExamsPage.vue` — новый раздел экзаменов и ГИА с результатами студентов.
 - `frontend/src/services/api.js` — клиент API, токен авторизации, обработка ошибок.
 - `frontend/src/services/tableSettings.js` — общий helper для сохранения пользовательских настроек таблиц.
@@ -221,6 +223,7 @@ ARCH-001: Identity Domain Architecture зафиксировал отдельны
 
 Ключевые backend-модули:
 
+- `GraduateController` — выпускники, дипломы, приложения к диплому, CSV import/export; таблицы `graduates`, `diplomas`, `diploma_supplements`.
 - `ExamController` — экзамены, зачеты, ГИА, результаты студентов, CSV import/export; таблицы `exams` и `exam_results`.
 - `TeachingLoadController` — нагрузка преподавателей и строки нагрузки.
 - `CurriculumController` — учебные планы и строки учебного плана.

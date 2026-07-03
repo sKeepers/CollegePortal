@@ -14,6 +14,7 @@ import SchedulePage from '../pages/schedule/SchedulePage.vue'
 import JournalPage from '../pages/journal/JournalPage.vue'
 import TeachingLoadPage from '../pages/teaching-load/TeachingLoadPage.vue'
 import ExamsPage from '../pages/exams/ExamsPage.vue'
+import GraduationPage from '../pages/graduation/GraduationPage.vue'
 import ReportsPage from '../pages/reports/ReportsPage.vue'
 import AdmissionsPage from '../pages/admissions/AdmissionsPage.vue'
 import DigitalPassesPage from '../pages/identity/DigitalPassesPage.vue'
@@ -149,6 +150,12 @@ export const routes = [
         name: 'exams',
         component: ExamsPage,
         meta: { title: 'Экзамены и ГИА', permission: 'manage_dictionaries' },
+      },
+      {
+        path: 'graduation',
+        name: 'graduation',
+        component: GraduationPage,
+        meta: { title: 'Выпускники и дипломы', permission: 'manage_dictionaries' },
       },
       {
         path: 'reports',
