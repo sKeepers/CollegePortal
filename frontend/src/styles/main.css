@@ -4177,3 +4177,165 @@ body {
   }
 }
 
+.curricula-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: 14px;
+  align-items: start;
+}
+
+.curricula-main,
+.curricula-side {
+  min-width: 0;
+}
+
+.curricula-side {
+  position: sticky;
+  top: 74px;
+}
+
+.curricula-row-link {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #0f172a;
+  cursor: pointer;
+  font-weight: 900;
+  text-align: left;
+}
+
+.curricula-row-link:hover {
+  color: #1d4ed8;
+}
+
+.curricula-secondary-cell,
+.curricula-muted {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.curricula-row--selected > td {
+  background: #eff6ff !important;
+}
+
+.curricula-card {
+  min-height: 520px;
+}
+
+.curricula-details {
+  display: grid;
+  gap: 14px;
+}
+
+.curricula-details__hero {
+  display: grid;
+  gap: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 12px;
+}
+
+.curricula-details__hero h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.curricula-details__hero p {
+  margin: 0;
+  color: #64748b;
+  font-weight: 800;
+}
+
+.curricula-details__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.curricula-details__metrics div {
+  display: grid;
+  gap: 5px;
+  border-radius: 8px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.curricula-details__metrics span,
+.curricula-details__list dt {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.curricula-details__metrics strong {
+  color: #0f172a;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.curricula-details section {
+  display: grid;
+  gap: 10px;
+}
+
+.curricula-details h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.curricula-details__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.curricula-details__list div {
+  display: grid;
+  gap: 2px;
+}
+
+.curricula-details__list dd {
+  margin: 0;
+  color: #0f172a;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.curricula-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.curricula-dialog {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.curricula-dialog__body {
+  display: grid;
+  gap: 12px;
+}
+
+@media (max-width: 1366px) {
+  .curricula-workspace {
+    grid-template-columns: minmax(0, 1fr) 390px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .curricula-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .curricula-side {
+    position: static;
+  }
+}
+

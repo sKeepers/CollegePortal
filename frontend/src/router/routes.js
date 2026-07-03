@@ -9,6 +9,7 @@ import GroupsPage from '../pages/groups/GroupsPage.vue'
 import TeachersPage from '../pages/teachers/TeachersPage.vue'
 import SubjectsPage from '../pages/subjects/SubjectsPage.vue'
 import ClassroomsPage from '../pages/classrooms/ClassroomsPage.vue'
+import CurriculaPage from '../pages/curricula/CurriculaPage.vue'
 import SchedulePage from '../pages/schedule/SchedulePage.vue'
 import JournalPage from '../pages/journal/JournalPage.vue'
 import ReportsPage from '../pages/reports/ReportsPage.vue'
@@ -110,6 +111,12 @@ export const routes = [
         name: 'subjects',
         component: SubjectsPage,
         meta: { title: 'Дисциплины', permission: 'manage_dictionaries' },
+      },
+      {
+        path: 'curricula',
+        name: 'curricula',
+        component: CurriculaPage,
+        meta: { title: 'Учебные планы', permission: 'manage_dictionaries' },
       },
       {
         path: 'classrooms',

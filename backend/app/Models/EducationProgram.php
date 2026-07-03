@@ -41,4 +41,9 @@ class EducationProgram extends Model
     {
         return $this->hasMany(ApplicantApplication::class);
     }
+
+    public function curricula(): HasMany
+    {
+        return $this->hasMany(Curriculum::class);
+    }
 }
