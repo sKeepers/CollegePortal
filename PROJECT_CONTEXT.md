@@ -896,3 +896,15 @@ docker compose exec -T backend php artisan migrate:fresh --seed
 - backend-тесты: `130 passed (589 assertions)`;
 - frontend-сборка: успешно;
 - известное предупреждение: основной frontend chunk больше 500 kB, в следующих этапах желательно добавить code splitting.
+
+## UAT-001: подготовка пользовательского тестирования
+
+Для первого цикла пользовательского тестирования подготовлены документы:
+
+- `docs/UAT_PLAN.md` — план UAT, роли, порядок проверки и приоритеты ошибок;
+- `docs/UAT_CHECKLIST.md` — чек-листы по ролям колледжа;
+- `docs/KNOWN_LIMITATIONS.md` — известные ограничения MVP;
+- `docs/RELEASE_NOTES_MILESTONE_002.md` — release notes по MILESTONE-002;
+- `docs/TEST_SCENARIOS.md` — сквозные сценарии проверки.
+
+UAT проводится только в DEV. PROD не используется для тестирования без отдельного решения.

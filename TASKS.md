@@ -204,3 +204,14 @@
 - [x] Зафиксировать результаты `php artisan test` и `npm run build`
 - [x] Обновить `PROJECT_CONTEXT.md`, `ROADMAP.md` и `TASKS.md`
 - [x] Сделать Git checkpoint
+
+## UAT-001
+
+- [x] UAT-001: подготовить CollegePortal к первому циклу пользовательского тестирования
+- [x] Создать `docs/UAT_PLAN.md`
+- [x] Создать `docs/UAT_CHECKLIST.md`
+- [x] Создать `docs/KNOWN_LIMITATIONS.md`
+- [x] Создать `docs/RELEASE_NOTES_MILESTONE_002.md`
+- [x] Создать `docs/TEST_SCENARIOS.md`
+- [x] Обновить `PROJECT_CONTEXT.md`, `ROADMAP.md`, `TASKS.md`
+- [x] Сделать Git checkpoint
