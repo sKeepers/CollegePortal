@@ -229,3 +229,14 @@
 - [x] Создать `docs/UAT_IMPROVEMENTS.md`
 - [x] Добавить backend feature-тесты для UAT-002
 - [x] Сделать Git checkpoint
+
+## UAT-002.1
+
+- [x] Проверить и отполировать улучшения UAT-002
+- [x] Проверить `/admin/data-management`: создание, импорт, экспорт, очистка демо-данных
+- [x] Исправить безопасную очистку demo-записей со связанными данными
+- [x] Проверить автокоды дисциплины, специальности, учебного плана и группы
+- [x] Проверить загрузку, замену, удаление и валидацию фото
+- [x] Проверить маршруты `/admin/data-management`, `/students`, `/teachers`, `/graduation`, `/m/student`, `/access/gate`, `/legacy`
+- [x] Прогнать `php artisan test` и `npm run build`
+- [x] Сделать Git checkpoint

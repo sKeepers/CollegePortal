@@ -64,21 +64,29 @@ class DemoDataController extends Controller
                 'grades' => Grade::query()->whereIn('schedule_lesson_id', $lessonIds)->delete(),
                 'attendance' => Attendance::query()->whereIn('schedule_lesson_id', $lessonIds)->delete(),
                 'schedule_lessons' => ScheduleLesson::query()->whereIn('id', $lessonIds)->delete(),
-                'students' => Student::query()->whereIn('id', $studentIds)->delete(),
-                'subjects' => Subject::query()->whereIn('id', $subjectIds)->delete(),
-                'groups' => Group::query()->whereIn('id', $groupIds)->delete(),
-                'teachers' => Teacher::query()->whereIn('id', $teacherIds)->delete(),
-                'classrooms' => Classroom::query()->where('number', '201')->where('building', 'Главный корпус')->delete(),
+                'students' => $this->deleteOnlyUnreferencedStudents($studentIds),
+                'subjects' => $this->deleteOnlyUnreferencedSubjects($subjectIds),
+                'groups' => $this->deleteOnlyUnreferencedGroups($groupIds),
+                'teachers' => $this->deleteOnlyUnreferencedTeachers($teacherIds),
+                'classrooms' => $this->deleteOnlyUnreferencedClassrooms(),
                 'applications' => ApplicantApplication::query()->whereIn('email', $applicationEmails)->delete(),
                 'users' => User::query()->whereIn('email', [...$studentEmails, ...$teacherEmails])->delete(),
             ];
 
-            return $deleted;
+            return [
+                'deleted' => $deleted,
+                'skipped' => [
+                    'students' => $studentIds->count() - $deleted['students'],
+                    'subjects' => $subjectIds->count() - $deleted['subjects'],
+                    'groups' => $groupIds->count() - $deleted['groups'],
+                    'teachers' => $teacherIds->count() - $deleted['teachers'],
+                ],
+            ];
         });
 
         return response()->json([
             'message' => 'Демо-данные очищены. Администратор не удаляется.',
-            'data' => ['deleted' => $summary, 'summary' => $this->summary()],
+            'data' => [...$summary, 'summary' => $this->summary()],
         ]);
     }
 
@@ -107,6 +115,58 @@ class DemoDataController extends Controller
                 'size' => $request->file('file')->getSize(),
             ],
         ]);
+    }
+
+
+    private function deleteOnlyUnreferencedStudents($studentIds): int
+    {
+        return Student::query()
+            ->whereIn('id', $studentIds)
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('graduates')->whereColumn('graduates.student_id', 'students.id'))
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('exam_results')->whereColumn('exam_results.student_id', 'students.id'))
+            ->delete();
+    }
+
+    private function deleteOnlyUnreferencedSubjects($subjectIds): int
+    {
+        return Subject::query()
+            ->whereIn('id', $subjectIds)
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('curriculum_items')->whereColumn('curriculum_items.subject_id', 'subjects.id'))
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('teaching_load_items')->whereColumn('teaching_load_items.subject_id', 'subjects.id'))
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('exams')->whereColumn('exams.subject_id', 'subjects.id'))
+            ->delete();
+    }
+
+    private function deleteOnlyUnreferencedGroups($groupIds): int
+    {
+        return Group::query()
+            ->whereIn('id', $groupIds)
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('students')->whereColumn('students.group_id', 'groups.id'))
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('teaching_load_items')->whereColumn('teaching_load_items.group_id', 'groups.id'))
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('exams')->whereColumn('exams.group_id', 'groups.id'))
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('graduates')->whereColumn('graduates.group_id', 'groups.id'))
+            ->delete();
+    }
+
+    private function deleteOnlyUnreferencedTeachers($teacherIds): int
+    {
+        return Teacher::query()
+            ->whereIn('id', $teacherIds)
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('groups')->whereColumn('groups.curator_id', 'teachers.id'))
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('schedule_lessons')->whereColumn('schedule_lessons.teacher_id', 'teachers.id'))
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('teaching_loads')->whereColumn('teaching_loads.teacher_id', 'teachers.id'))
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('exams')->whereColumn('exams.teacher_id', 'teachers.id'))
+            ->delete();
+    }
+
+    private function deleteOnlyUnreferencedClassrooms(): int
+    {
+        return Classroom::query()
+            ->where('number', '201')
+            ->where('building', 'Главный корпус')
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('schedule_lessons')->whereColumn('schedule_lessons.classroom_id', 'classrooms.id'))
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('exams')->whereColumn('exams.classroom_id', 'classrooms.id'))
+            ->delete();
     }
 
     private function summary(): array

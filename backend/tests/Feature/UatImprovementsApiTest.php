@@ -2,6 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Curriculum;
+use App\Models\CurriculumItem;
+use App\Models\EducationProgram;
+use App\Models\Specialty;
 use App\Models\Group;
 use App\Models\Role;
 use App\Models\Student;
@@ -38,6 +42,23 @@ class UatImprovementsApiTest extends TestCase
 
         $this->assertNotEmpty($response->json('data.code'));
         $this->assertDatabaseHas('subjects', ['name' => 'История искусств']);
+    }
+
+
+
+    public function test_it_generates_specialty_code_when_code_is_empty(): void
+    {
+        $response = $this->postJson('/api/specialties', [
+            'code' => '',
+            'name' => 'Декоративно-прикладное искусство',
+            'education_level' => 'Среднее профессиональное образование',
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('data.name', 'Декоративно-прикладное искусство');
+
+        $this->assertNotEmpty($response->json('data.code'));
     }
 
     public function test_it_generates_group_name_when_name_is_empty(): void
@@ -87,6 +108,28 @@ class UatImprovementsApiTest extends TestCase
         $this->assertDatabaseHas('students', ['id' => $student->id, 'photo_path' => null]);
     }
 
+
+
+    public function test_it_rejects_invalid_photo_file(): void
+    {
+        $group = Group::create([
+            'name' => 'ИСП-102',
+            'specialty' => 'Инструментальное исполнительство',
+            'course' => 1,
+            'year_start' => 2026,
+        ]);
+        $student = Student::create([
+            'group_id' => $group->id,
+            'last_name' => 'Петров',
+            'first_name' => 'Илья',
+            'status' => 'active',
+        ]);
+
+        $this->post('/api/person-photos/students/'.$student->id, [
+            'photo' => UploadedFile::fake()->create('not-image.txt', 16, 'text/plain'),
+        ])->assertUnprocessable()->assertJsonValidationErrors('photo');
+    }
+
     public function test_demo_data_management_creates_and_clears_demo_records(): void
     {
         Role::query()->firstOrCreate(['code' => 'teacher'], ['name' => 'Teacher']);
@@ -105,6 +148,38 @@ class UatImprovementsApiTest extends TestCase
 
         $this->assertDatabaseMissing('students', ['email' => 'student@college-portal.local']);
         $this->assertDatabaseMissing('teachers', ['email' => 'teacher@college-portal.local']);
+    }
+
+
+
+    public function test_demo_data_clear_skips_referenced_demo_subjects(): void
+    {
+        Role::query()->firstOrCreate(['code' => 'teacher'], ['name' => 'Teacher']);
+        Role::query()->firstOrCreate(['code' => 'student'], ['name' => 'Student']);
+
+        $this->postJson('/api/admin/demo-data/create')->assertOk();
+
+        $subject = Subject::query()->where('code', 'MUS-101')->firstOrFail();
+        $program = EducationProgram::query()->firstOrFail();
+        $curriculum = Curriculum::create([
+            'education_program_id' => $program->id,
+            'name' => 'Тестовый учебный план',
+            'year_start' => 2026,
+            'status' => 'draft',
+        ]);
+        CurriculumItem::create([
+            'curriculum_id' => $curriculum->id,
+            'subject_id' => $subject->id,
+            'course' => 1,
+            'semester' => 1,
+            'hours_total' => 72,
+        ]);
+
+        $this->postJson('/api/admin/demo-data/clear')
+            ->assertOk()
+            ->assertJsonPath('data.skipped.subjects', 1);
+
+        $this->assertDatabaseHas('subjects', ['id' => $subject->id]);
     }
 
     public function test_demo_data_clear_is_forbidden_in_production(): void

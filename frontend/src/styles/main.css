@@ -4950,3 +4950,11 @@ body {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+
+.person-photo-manager__error {
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 12px;
+  font-weight: 700;
+}

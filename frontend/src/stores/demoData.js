@@ -11,6 +11,7 @@ export const useDemoDataStore = defineStore('demoData', () => {
   const error = ref('')
   const lastMessage = ref('')
   const importResult = ref(null)
+  const lastClearResult = ref(null)
   const isProduction = computed(() => getCurrentEnvironment().key === 'production')
 
   async function load() {
@@ -49,6 +50,7 @@ export const useDemoDataStore = defineStore('demoData', () => {
     error.value = ''
     try {
       const payload = await api.create('admin/demo-data/clear', {})
+      lastClearResult.value = payload?.data || null
       summary.value = payload?.data?.summary || summary.value
       lastMessage.value = payload?.message || 'Демо-данные очищены'
       return payload
@@ -91,5 +93,5 @@ export const useDemoDataStore = defineStore('demoData', () => {
     window.URL.revokeObjectURL(url)
   }
 
-  return { summary, loading, error, lastMessage, importResult, isProduction, load, createDemoData, clearDemoData, importData, exportData }
+  return { summary, loading, error, lastMessage, importResult, lastClearResult, isProduction, load, createDemoData, clearDemoData, importData, exportData }
 })

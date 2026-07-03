@@ -11,11 +11,13 @@ const props = defineProps({
 const emit = defineEmits(['updated', 'removed', 'error'])
 const file = ref(null)
 const loading = ref(false)
+const localError = ref('')
 const photoUrl = computed(() => props.person?.photo_url || '')
 const initials = computed(() => [props.person?.last_name, props.person?.first_name].filter(Boolean).map((part) => part[0]).join('').toUpperCase() || 'CP')
 
 async function uploadPhoto(nextFile) {
   if (!nextFile || !props.person?.id) return
+  localError.value = ''
   loading.value = true
   try {
     const formData = new FormData()
@@ -23,7 +25,9 @@ async function uploadPhoto(nextFile) {
     const payload = await api.upload(`/person-photos/${props.type}/${props.person.id}`, formData)
     emit('updated', payload?.data || {})
     file.value = null
+    localError.value = ''
   } catch (err) {
+    localError.value = err.message || 'Не удалось удалить фото'
     emit('error', err)
   } finally {
     loading.value = false
@@ -32,15 +36,23 @@ async function uploadPhoto(nextFile) {
 
 async function removePhoto() {
   if (!props.person?.id || !photoUrl.value) return
+  localError.value = ''
   loading.value = true
   try {
     await api.delete(`person-photos/${props.type}`, props.person.id)
     emit('removed')
+    localError.value = ''
   } catch (err) {
+    localError.value = err.message || 'Не удалось удалить фото'
     emit('error', err)
   } finally {
     loading.value = false
   }
+}
+
+function rejectPhoto() {
+  file.value = null
+  localError.value = 'Можно загрузить JPG, PNG или WebP до 4 МБ.'
 }
 </script>
 
@@ -51,13 +63,14 @@ async function removePhoto() {
       <span v-else>{{ initials }}</span>
     </q-avatar>
     <div class="person-photo-manager__actions">
-      <q-file v-model="file" dense outlined accept="image/png,image/jpeg,image/webp" label="Фото" :loading="loading" @update:model-value="uploadPhoto">
+      <q-file v-model="file" dense outlined accept="image/png,image/jpeg,image/webp" label="Фото" :loading="loading" :max-file-size="4194304" @rejected="rejectPhoto" @update:model-value="uploadPhoto">
         <template #prepend><Upload :size="15" /></template>
       </q-file>
       <q-btn v-if="photoUrl" flat dense no-caps color="negative" :loading="loading" @click="removePhoto">
         <Trash2 :size="15" class="q-mr-xs" /> Удалить
       </q-btn>
-      <div v-else class="person-photo-manager__hint"><Camera :size="14" /> Фото не загружено</div>
+      <div v-else class="person-photo-manager__hint"><Camera :size="14" /> JPG, PNG или WebP до 4 МБ</div>
+      <q-banner v-if="localError" dense rounded class="person-photo-manager__error">{{ localError }}</q-banner>
     </div>
   </div>
 </template>
