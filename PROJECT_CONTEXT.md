@@ -19,6 +19,9 @@ CollegePortal — веб-портал для колледжа искусств. 
 - оценки;
 - отчеты;
 - приемная комиссия;
+- учебные планы;
+- нагрузка преподавателей;
+- экзамены и ГИА;
 - публичный раздел для абитуриентов;
 - будущие интеграции с Moodle, LDAP/Active Directory, ФРДО и ФИС ГИА/Приема.
 
@@ -138,12 +141,13 @@ Frontend:
 - `frontend/src/App.vue` — старый монолитный GUI, сохранен как legacy до полной миграции.
 - `frontend/src/app/App.vue` — root-компонент нового Quasar GUI.
 - `frontend/src/layouts` — `AppLayout`, `AuthLayout`, `PublicLayout`.
-- `frontend/src/pages` — страницы нового GUI; перенесены авторизация, системная страница UI Foundation и разделы `students`, `groups`, `teachers`, `subjects`, `classrooms`, `schedule`, `journal`, `admissions`, остальные разделы постепенно переносятся из legacy.
+- `frontend/src/pages` — страницы нового GUI; перенесены авторизация, системная страница UI Foundation и разделы `students`, `groups`, `teachers`, `subjects`, `classrooms`, `schedule`, `journal`, `admissions`, `curricula`, `teaching-load`, `exams`, остальные разделы постепенно переносятся из legacy.
 - `frontend/src/pages/legacy/LegacyPage.vue` — временный доступ к старому GUI по маршруту `/legacy`.
 - `frontend/src/pages/system/UiFoundationPage.vue` — демонстрация базовых UI-компонентов нового GUI.
 - `frontend/src/router` — Vue Router и маршруты нового GUI.
-- `frontend/src/stores` — Pinia stores: `auth`, `students`, `groups`, `teachers`, `subjects`, `classrooms`, `schedule`, `journal`, `admissions`, `search`, `workspace`.
+- `frontend/src/stores` — Pinia stores: `auth`, `students`, `groups`, `teachers`, `subjects`, `classrooms`, `schedule`, `journal`, `admissions`, `curricula`, `teachingLoad`, `exams`, `search`, `workspace`.
 - `frontend/src/styles` — стили нового GUI.
+- `frontend/src/pages/exams/ExamsPage.vue` — новый раздел экзаменов и ГИА с результатами студентов.
 - `frontend/src/services/api.js` — клиент API, токен авторизации, обработка ошибок.
 - `frontend/src/services/tableSettings.js` — общий helper для сохранения пользовательских настроек таблиц.
 - `frontend/src/services/layoutService.js` — общий сервис breakpoints, размера viewport, mobile/ultrawide-признаков.
@@ -216,6 +220,10 @@ ARCH-001: Identity Domain Architecture зафиксировал отдельны
 - ошибки API для маршрутов `/api/*` возвращаются как JSON.
 
 Ключевые backend-модули:
+
+- `ExamController` — экзамены, зачеты, ГИА, результаты студентов, CSV import/export; таблицы `exams` и `exam_results`.
+- `TeachingLoadController` — нагрузка преподавателей и строки нагрузки.
+- `CurriculumController` — учебные планы и строки учебного плана.
 
 - `AuthController` — вход, профиль, выход.
 - `StudentController` — студенты, импорт/экспорт.
