@@ -23,6 +23,7 @@ CollegePortal — веб-портал для колледжа искусств. 
 - нагрузка преподавателей;
 - экзамены и ГИА;
 - выпускники, дипломы и приложения к диплому;
+- подготовка данных ФРДО;
 - публичный раздел для абитуриентов;
 - будущие интеграции с Moodle, LDAP/Active Directory, ФРДО и ФИС ГИА/Приема.
 
@@ -114,6 +115,7 @@ Frontend:
 - `docs/ACCESS_CONTROL_CONCEPT.md` — концепция Person, Digital Identity, QR-пропусков и будущего модуля присутствия.
 - `docs/IDENTITY_DOMAIN.md` — архитектура Identity Domain: Person, Digital Identity, роли, учетные данные, QR/Mobile Pass, Access Control, Authentication и Authorization.
 - `docs/DIGITAL_PASSES.md` — MVP цифровых QR-пропусков: таблица `digital_identities`, API, SVG QR и правила безопасности token.
+- `docs/FRDO.md` — MVP подготовки данных ФРДО без реальной отправки: проверки полноты, выгрузка и будущая интеграция.
 - `docs/DOMAIN_MODEL.md` — доменная модель CollegePortal Platform: Identity, Academic, Learning, Administration, Integrations, Analytics.
 - `docs/LAYOUT_GUIDELINES.md` — правила раскладки рабочих страниц, включая таблицу слева и карточку справа без overlay.
 - `docs/RESPONSIVE_WORKSPACE.md` — правила адаптивного рабочего пространства, breakpoints, плотность и workspace-режимы.
@@ -142,12 +144,13 @@ Frontend:
 - `frontend/src/App.vue` — старый монолитный GUI, сохранен как legacy до полной миграции.
 - `frontend/src/app/App.vue` — root-компонент нового Quasar GUI.
 - `frontend/src/layouts` — `AppLayout`, `AuthLayout`, `PublicLayout`.
-- `frontend/src/pages` — страницы нового GUI; перенесены авторизация, системная страница UI Foundation и разделы `students`, `groups`, `teachers`, `subjects`, `classrooms`, `schedule`, `journal`, `admissions`, `curricula`, `teaching-load`, `exams`, `graduation`, остальные разделы постепенно переносятся из legacy.
+- `frontend/src/pages` — страницы нового GUI; перенесены авторизация, системная страница UI Foundation и разделы `students`, `groups`, `teachers`, `subjects`, `classrooms`, `schedule`, `journal`, `admissions`, `curricula`, `teaching-load`, `exams`, `graduation`, `frdo`, остальные разделы постепенно переносятся из legacy.
 - `frontend/src/pages/legacy/LegacyPage.vue` — временный доступ к старому GUI по маршруту `/legacy`.
 - `frontend/src/pages/system/UiFoundationPage.vue` — демонстрация базовых UI-компонентов нового GUI.
 - `frontend/src/router` — Vue Router и маршруты нового GUI.
-- `frontend/src/stores` — Pinia stores: `auth`, `students`, `groups`, `teachers`, `subjects`, `classrooms`, `schedule`, `journal`, `admissions`, `curricula`, `teachingLoad`, `exams`, `graduation`, `search`, `workspace`.
+- `frontend/src/stores` — Pinia stores: `auth`, `students`, `groups`, `teachers`, `subjects`, `classrooms`, `schedule`, `journal`, `admissions`, `curricula`, `teachingLoad`, `exams`, `graduation`, `frdo`, `search`, `workspace`.
 - `frontend/src/styles` — стили нового GUI.
+- `frontend/src/pages/frdo/FrdoPage.vue` — новый раздел подготовки данных ФРДО: пакеты, записи, ошибки проверки, CSV/JSON export.
 - `frontend/src/pages/graduation/GraduationPage.vue` — новый раздел выпускников и дипломов с вкладками карточки.
 - `frontend/src/pages/exams/ExamsPage.vue` — новый раздел экзаменов и ГИА с результатами студентов.
 - `frontend/src/services/api.js` — клиент API, токен авторизации, обработка ошибок.
@@ -223,6 +226,7 @@ ARCH-001: Identity Domain Architecture зафиксировал отдельны
 
 Ключевые backend-модули:
 
+- `FrdoPackageController` — подготовка пакетов ФРДО, проверка полноты, CSV/JSON export, статусы; таблицы `frdo_packages`, `frdo_records`, `frdo_validation_errors`.
 - `GraduateController` — выпускники, дипломы, приложения к диплому, CSV import/export; таблицы `graduates`, `diplomas`, `diploma_supplements`.
 - `ExamController` — экзамены, зачеты, ГИА, результаты студентов, CSV import/export; таблицы `exams` и `exam_results`.
 - `TeachingLoadController` — нагрузка преподавателей и строки нагрузки.

@@ -4743,3 +4743,41 @@ body {
 @media (max-width: 1439px) { .graduation-workspace { grid-template-columns: minmax(0, 1fr) 400px; } }
 @media (max-width: 1180px) { .graduation-workspace { grid-template-columns: 1fr; } .graduation-side { position: static; } }
 @media (max-width: 720px) { .graduation-dialog__body, .graduation-details__metrics { grid-template-columns: 1fr; } }
+
+.frdo-workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(430px, 480px); gap: 16px; align-items: start; }
+.frdo-main, .frdo-side { min-width: 0; }
+.frdo-side { position: sticky; top: 76px; }
+.frdo-card { min-height: 620px; }
+.frdo-row--selected td { background: #eff6ff !important; }
+.frdo-row-link { border: 0; padding: 0; background: transparent; color: #0f172a; font-weight: 700; cursor: pointer; }
+.frdo-row-link:hover { color: #2563eb; }
+.frdo-secondary-cell, .frdo-muted { color: #64748b; font-size: 12px; overflow-wrap: anywhere; }
+.frdo-strong-cell { max-width: 220px; overflow-wrap: anywhere; font-weight: 700; color: #0f172a; }
+.frdo-details { display: grid; gap: 14px; }
+.frdo-details__hero { display: grid; gap: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 14px; }
+.frdo-details__hero h2 { margin: 0; color: #0f172a; font-size: 20px; line-height: 1.25; overflow-wrap: anywhere; }
+.frdo-details__hero p { margin: 0; color: #64748b; font-size: 13px; }
+.frdo-details__metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.frdo-details__metrics div { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; background: #f8fafc; }
+.frdo-details__metrics span { display: block; color: #64748b; font-size: 11px; text-transform: uppercase; }
+.frdo-details__metrics strong { display: block; color: #0f172a; font-size: 16px; overflow-wrap: anywhere; }
+.frdo-details section { display: grid; gap: 10px; }
+.frdo-details h3 { margin: 0; color: #0f172a; font-size: 14px; }
+.frdo-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.frdo-errors { display: grid; gap: 8px; max-height: 180px; overflow: auto; }
+.frdo-errors div { display: grid; gap: 2px; border: 1px solid #fecaca; border-radius: 8px; padding: 8px; background: #fef2f2; color: #7f1d1d; }
+.frdo-errors span { color: #991b1b; font-size: 12px; }
+.frdo-dialog { width: min(720px, 96vw); }
+.frdo-dialog__body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.frdo-records-table .q-table { table-layout: fixed; width: 100%; }
+.frdo-records-table .q-table th, .frdo-records-table .q-table td { padding-left: 8px; padding-right: 8px; font-size: 12px; }
+@media (max-width: 1439px) { .frdo-workspace { grid-template-columns: minmax(0, 1fr) 430px; } }
+@media (max-width: 1180px) { .frdo-workspace { grid-template-columns: 1fr; } .frdo-side { position: static; } }
+@media (max-width: 720px) { .frdo-dialog__body, .frdo-details__metrics { grid-template-columns: 1fr; } }
+
+.frdo-record-list { display: grid; gap: 8px; max-height: 460px; overflow: auto; padding-right: 2px; }
+.frdo-record-item { display: grid; gap: 8px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; background: #ffffff; }
+.frdo-record-item > div { min-width: 0; }
+.frdo-record-item span { display: block; color: #64748b; font-size: 12px; overflow-wrap: anywhere; }
+.frdo-record-item strong, .frdo-record-title { display: block; overflow-wrap: anywhere; color: #0f172a; font-weight: 700; }
+.frdo-record-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

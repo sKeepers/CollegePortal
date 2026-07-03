@@ -15,6 +15,7 @@ import JournalPage from '../pages/journal/JournalPage.vue'
 import TeachingLoadPage from '../pages/teaching-load/TeachingLoadPage.vue'
 import ExamsPage from '../pages/exams/ExamsPage.vue'
 import GraduationPage from '../pages/graduation/GraduationPage.vue'
+import FrdoPage from '../pages/frdo/FrdoPage.vue'
 import ReportsPage from '../pages/reports/ReportsPage.vue'
 import AdmissionsPage from '../pages/admissions/AdmissionsPage.vue'
 import DigitalPassesPage from '../pages/identity/DigitalPassesPage.vue'
@@ -156,6 +157,12 @@ export const routes = [
         name: 'graduation',
         component: GraduationPage,
         meta: { title: 'Выпускники и дипломы', permission: 'manage_dictionaries' },
+      },
+      {
+        path: 'frdo',
+        name: 'frdo',
+        component: FrdoPage,
+        meta: { title: 'ФРДО', permission: 'manage_dictionaries' },
       },
       {
         path: 'reports',

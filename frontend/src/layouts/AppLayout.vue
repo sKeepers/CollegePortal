@@ -55,6 +55,7 @@ const navGroups = [
       { label: 'Нагрузка', to: '/teaching-load', icon: ClipboardList, permission: 'manage_dictionaries' },
       { label: 'Экзамены и ГИА', to: '/exams', icon: ClipboardList, permission: 'manage_dictionaries' },
       { label: 'Выпускники и дипломы', to: '/graduation', icon: GraduationCap, permission: 'manage_dictionaries' },
+      { label: 'ФРДО', to: '/frdo', icon: FileText, permission: 'manage_dictionaries' },
     ],
   },
   {
