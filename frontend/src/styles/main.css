@@ -3751,3 +3751,419 @@ body {
   }
 }
 
+.mobile-student-layout {
+  min-height: 100vh;
+  background: #eef2f7;
+}
+
+.mobile-student-header {
+  background: #ffffff;
+  color: #0f172a;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.mobile-student-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.mobile-student-brand img {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  object-fit: contain;
+  background: #ffffff;
+}
+
+.mobile-student-brand strong,
+.mobile-student-brand span {
+  display: block;
+  line-height: 1.15;
+}
+
+.mobile-student-brand strong {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.mobile-student-brand span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mobile-student-page {
+  width: min(100%, 430px);
+  min-height: calc(100vh - 112px);
+  margin: 0 auto;
+  padding: 14px 12px 150px;
+  color: #0f172a;
+}
+
+.mobile-student-loading {
+  display: grid;
+  min-height: 300px;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  color: #475569;
+  font-weight: 800;
+}
+
+.mobile-student-hero,
+.mobile-student-pass-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 18px;
+  padding: 18px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 58%, #334155 100%);
+  color: #ffffff;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18);
+}
+
+.mobile-student-avatar {
+  display: grid;
+  flex: 0 0 58px;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.mobile-student-hero p,
+.mobile-student-pass-hero p,
+.mobile-student-hero h1,
+.mobile-student-pass-hero h1 {
+  margin: 0;
+}
+
+.mobile-student-hero p,
+.mobile-student-pass-hero p {
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mobile-student-hero h1,
+.mobile-student-pass-hero h1 {
+  margin: 3px 0;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+
+.mobile-student-hero span {
+  color: #e2e8f0;
+  font-weight: 800;
+}
+
+.mobile-student-banner {
+  margin-top: 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #1e40af;
+  font-weight: 800;
+}
+
+.mobile-student-banner--error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.mobile-student-pass-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+  border-radius: 16px;
+  padding: 15px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 900;
+  text-decoration: none;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
+}
+
+.mobile-student-pass-button span {
+  flex: 1;
+}
+
+.mobile-student-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.mobile-student-metrics article,
+.mobile-student-card,
+.mobile-student-qr-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.mobile-student-metrics article {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+}
+
+.mobile-student-metrics span,
+.mobile-student-empty {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.mobile-student-metrics strong {
+  font-size: 26px;
+  font-weight: 900;
+}
+
+.mobile-student-card {
+  margin-top: 12px;
+  padding: 14px;
+}
+
+.mobile-student-card header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.mobile-student-card h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.mobile-student-next-lesson {
+  display: grid;
+  gap: 4px;
+  border-radius: 14px;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 10px;
+}
+
+.mobile-student-next-lesson span,
+.mobile-student-next-lesson p,
+.mobile-student-list-item span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mobile-student-next-lesson strong {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.mobile-student-next-lesson p {
+  margin: 0;
+}
+
+.mobile-student-list {
+  display: grid;
+  gap: 8px;
+}
+
+.mobile-student-list-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 8px;
+}
+
+.mobile-student-list-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.mobile-student-list-item time {
+  flex: 0 0 82px;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.mobile-student-list-item div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.mobile-student-list-item strong {
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.mobile-student-grade-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mobile-student-grade-grid article {
+  display: grid;
+  gap: 5px;
+  border-radius: 14px;
+  padding: 10px;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.mobile-student-grade-grid strong {
+  color: #047857;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.mobile-student-grade-grid span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.mobile-student-attendance-summary {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  margin-bottom: 8px;
+  color: #334155;
+  font-weight: 800;
+}
+
+.mobile-student-bottom-nav {
+  background: rgba(255, 255, 255, 0.96);
+  color: #475569;
+  border-top: 1px solid #e2e8f0;
+  backdrop-filter: blur(10px);
+}
+
+.mobile-student-bottom-nav nav {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  width: min(100%, 430px);
+  margin: 0 auto;
+  padding: 6px 8px 8px;
+}
+
+.mobile-student-nav-item {
+  display: grid;
+  place-items: center;
+  gap: 3px;
+  border-radius: 12px;
+  padding: 7px 4px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.mobile-student-nav-item--active {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.mobile-student-pass-page {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.mobile-student-qr-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.mobile-student-qr {
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.mobile-student-qr svg {
+  width: min(100%, 270px);
+  height: auto;
+}
+
+.mobile-student-qr-card dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.mobile-student-qr-card dl div {
+  display: grid;
+  gap: 2px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 8px;
+}
+
+.mobile-student-qr-card dt {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.mobile-student-qr-card dd {
+  margin: 0;
+  color: #0f172a;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.mobile-student-qr-card p,
+.mobile-student-no-pass p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.mobile-student-no-pass {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+}
+
+.mobile-student-no-pass h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+@media (max-width: 380px) {
+  .mobile-student-page {
+    padding-inline: 10px;
+  }
+
+  .mobile-student-hero,
+  .mobile-student-pass-hero {
+    padding: 15px;
+  }
+
+  .mobile-student-hero h1,
+  .mobile-student-pass-hero h1 {
+    font-size: 20px;
+  }
+}
+

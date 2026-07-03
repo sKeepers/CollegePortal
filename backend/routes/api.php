@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AccessGateController;
 use App\Http\Controllers\Api\AccessReportController;
 use App\Http\Controllers\Api\ApplicantApplicationController;
 use App\Http\Controllers\Api\GroupController;
+use App\Http\Controllers\Api\MobileStudentController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\ClassroomController;
 use App\Http\Controllers\Api\DigitalIdentityController;
@@ -25,6 +26,7 @@ Route::get('public/education-programs', [EducationProgramController::class, 'ind
 Route::middleware('api.token')->group(function (): void {
     Route::get('auth/me', [AuthController::class, 'me']);
     Route::post('auth/logout', [AuthController::class, 'logout']);
+    Route::get('mobile/student', [MobileStudentController::class, 'show']);
 
     Route::middleware('permission:manage_dictionaries')->group(function (): void {
         Route::get('classrooms/export', [ClassroomController::class, 'export']);

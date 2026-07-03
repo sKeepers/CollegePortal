@@ -1,6 +1,7 @@
 import AuthLayout from '../layouts/AuthLayout.vue'
 import AppLayout from '../layouts/AppLayout.vue'
 import PublicLayout from '../layouts/PublicLayout.vue'
+import MobileStudentLayout from '../layouts/MobileStudentLayout.vue'
 import LoginPage from '../pages/auth/LoginPage.vue'
 import DashboardPage from '../pages/dashboard/DashboardPage.vue'
 import StudentsPage from '../pages/students/StudentsPage.vue'
@@ -17,6 +18,8 @@ import AccessGatePage from '../pages/access/AccessGatePage.vue'
 import AccessReportsPage from '../pages/access/AccessReportsPage.vue'
 import ApplicantPublicPage from '../pages/public/ApplicantPublicPage.vue'
 import UiFoundationPage from '../pages/system/UiFoundationPage.vue'
+import MobileStudentHomePage from '../pages/mobile/student/MobileStudentHomePage.vue'
+import MobileStudentPassPage from '../pages/mobile/student/MobileStudentPassPage.vue'
 
 export const routes = [
   {
@@ -42,6 +45,25 @@ export const routes = [
         name: 'public-applicant',
         component: ApplicantPublicPage,
         meta: { title: 'Абитуриенту' },
+      },
+    ],
+  },
+
+  {
+    path: '/m/student',
+    component: MobileStudentLayout,
+    children: [
+      {
+        path: '',
+        name: 'mobile-student-home',
+        component: MobileStudentHomePage,
+        meta: { title: 'Кабинет студента' },
+      },
+      {
+        path: 'pass',
+        name: 'mobile-student-pass',
+        component: MobileStudentPassPage,
+        meta: { title: 'QR-пропуск студента' },
       },
     ],
   },
