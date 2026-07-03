@@ -195,3 +195,12 @@
 - [ ] Интеграция с Moodle
 - [ ] Экспорт Excel/PDF для отчетов
 - [ ] Расширенная аналитика Dashboard
+
+## MILESTONE-002
+
+- [x] MILESTONE-002: подготовить ревизию текущего состояния CollegePortal после QR, Mobile, Graduation, FRDO и FIS
+- [x] Создать `docs/MILESTONE_002_REVIEW.md`
+- [x] Зафиксировать реализованные модули, маршруты и backend-сущности
+- [x] Зафиксировать результаты `php artisan test` и `npm run build`
+- [x] Обновить `PROJECT_CONTEXT.md`, `ROADMAP.md` и `TASKS.md`
+- [x] Сделать Git checkpoint
