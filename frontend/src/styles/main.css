@@ -3798,7 +3798,7 @@ body {
   width: min(100%, 430px);
   min-height: calc(100vh - 112px);
   margin: 0 auto;
-  padding: 14px 12px 150px;
+  padding: 14px 12px calc(160px + env(safe-area-inset-bottom));
   color: #0f172a;
 }
 
@@ -4083,32 +4083,33 @@ body {
 .mobile-student-pass-page {
   display: grid;
   align-content: start;
-  gap: 12px;
+  gap: 10px;
 }
 
 .mobile-student-qr-card {
   display: grid;
-  gap: 14px;
-  padding: 16px;
+  gap: 12px;
+  padding: 14px;
 }
 
 .mobile-student-qr {
   display: grid;
   place-items: center;
   border-radius: 18px;
-  padding: 16px;
+  padding: 10px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
 }
 
 .mobile-student-qr svg {
-  width: min(100%, 270px);
+  width: min(100%, 236px);
   height: auto;
 }
 
 .mobile-student-qr-card dl {
   display: grid;
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
   margin: 0;
 }
 
@@ -4117,6 +4118,10 @@ body {
   gap: 2px;
   border-top: 1px solid #f1f5f9;
   padding-top: 8px;
+}
+
+.mobile-student-qr-card dl div:first-child {
+  grid-column: 1 / -1;
 }
 
 .mobile-student-qr-card dt {
@@ -4136,7 +4141,8 @@ body {
 .mobile-student-no-pass p {
   margin: 0;
   color: #64748b;
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 1.35;
   font-weight: 800;
 }
 
@@ -4159,6 +4165,10 @@ body {
   .mobile-student-hero,
   .mobile-student-pass-hero {
     padding: 15px;
+  }
+
+  .mobile-student-qr svg {
+    width: min(100%, 220px);
   }
 
   .mobile-student-hero h1,
