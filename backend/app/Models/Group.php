@@ -44,4 +44,9 @@ class Group extends Model
     {
         return $this->hasMany(ScheduleLesson::class);
     }
+
+    public function teachingLoadItems(): HasMany
+    {
+        return $this->hasMany(TeachingLoadItem::class);
+    }
 }

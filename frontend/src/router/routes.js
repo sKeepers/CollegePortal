@@ -12,6 +12,7 @@ import ClassroomsPage from '../pages/classrooms/ClassroomsPage.vue'
 import CurriculaPage from '../pages/curricula/CurriculaPage.vue'
 import SchedulePage from '../pages/schedule/SchedulePage.vue'
 import JournalPage from '../pages/journal/JournalPage.vue'
+import TeachingLoadPage from '../pages/teaching-load/TeachingLoadPage.vue'
 import ReportsPage from '../pages/reports/ReportsPage.vue'
 import AdmissionsPage from '../pages/admissions/AdmissionsPage.vue'
 import DigitalPassesPage from '../pages/identity/DigitalPassesPage.vue'
@@ -135,6 +136,12 @@ export const routes = [
         name: 'journal',
         component: JournalPage,
         meta: { title: 'Журнал', permission: 'manage_journal' },
+      },
+      {
+        path: 'teaching-load',
+        name: 'teaching-load',
+        component: TeachingLoadPage,
+        meta: { title: 'Нагрузка преподавателей', permission: 'manage_dictionaries' },
       },
       {
         path: 'reports',

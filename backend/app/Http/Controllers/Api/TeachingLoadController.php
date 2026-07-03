@@ -1,0 +1,229 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreTeachingLoadItemRequest;
+use App\Http\Requests\StoreTeachingLoadRequest;
+use App\Http\Requests\UpdateTeachingLoadRequest;
+use App\Http\Resources\TeachingLoadItemResource;
+use App\Http\Resources\TeachingLoadResource;
+use App\Models\Group;
+use App\Models\Subject;
+use App\Models\Teacher;
+use App\Models\TeachingLoad;
+use App\Models\TeachingLoadItem;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
+class TeachingLoadController extends Controller
+{
+    public function index(Request $request): AnonymousResourceCollection
+    {
+        $loads = TeachingLoad::query()
+            ->with(['teacher', 'items.subject', 'items.group'])
+            ->withCount('items')
+            ->when($request->string('academic_year')->toString(), fn ($query, string $year) => $query->where('academic_year', $year))
+            ->when($request->integer('teacher_id'), fn ($query, int $id) => $query->where('teacher_id', $id))
+            ->when($request->integer('group_id'), fn ($query, int $id) => $query->whereHas('items', fn ($itemQuery) => $itemQuery->where('group_id', $id)))
+            ->when($request->integer('subject_id'), fn ($query, int $id) => $query->whereHas('items', fn ($itemQuery) => $itemQuery->where('subject_id', $id)))
+            ->orderByDesc('academic_year')
+            ->orderBy('teacher_id')
+            ->paginate(50);
+
+        return TeachingLoadResource::collection($loads);
+    }
+
+    public function store(StoreTeachingLoadRequest $request): JsonResponse
+    {
+        $load = TeachingLoad::create($this->normalizeLoadData($request->validated()));
+
+        return (new TeachingLoadResource($load->load(['teacher', 'items.subject', 'items.group'])->loadCount('items')))
+            ->response()
+            ->setStatusCode(Response::HTTP_CREATED);
+    }
+
+    public function show(TeachingLoad $teachingLoad): TeachingLoadResource
+    {
+        return new TeachingLoadResource($teachingLoad->load(['teacher', 'items.subject', 'items.group'])->loadCount('items'));
+    }
+
+    public function update(UpdateTeachingLoadRequest $request, TeachingLoad $teachingLoad): TeachingLoadResource
+    {
+        $teachingLoad->update($this->normalizeLoadPatch($request->validated()));
+
+        return new TeachingLoadResource($teachingLoad->load(['teacher', 'items.subject', 'items.group'])->loadCount('items'));
+    }
+
+    public function destroy(TeachingLoad $teachingLoad): Response
+    {
+        $teachingLoad->delete();
+
+        return response()->noContent();
+    }
+
+    public function storeItem(StoreTeachingLoadItemRequest $request, TeachingLoad $teachingLoad): JsonResponse
+    {
+        $item = $teachingLoad->items()->create($request->validated());
+
+        return (new TeachingLoadItemResource($item->load(['subject', 'group'])))
+            ->response()
+            ->setStatusCode(Response::HTTP_CREATED);
+    }
+
+    public function destroyItem(TeachingLoadItem $teachingLoadItem): Response
+    {
+        $teachingLoadItem->delete();
+
+        return response()->noContent();
+    }
+
+    public function export(): StreamedResponse
+    {
+        $loads = TeachingLoad::query()->with(['teacher', 'items.subject', 'items.group'])->orderBy('id')->get();
+        $filename = 'teaching-loads-'.now()->format('Ymd-His').'.csv';
+
+        return response()->streamDownload(function () use ($loads): void {
+            $output = fopen('php://output', 'w');
+            fputcsv($output, ['id', 'academic_year', 'teacher_id', 'teacher', 'status', 'description', 'subject_id', 'subject_code', 'subject_name', 'group_id', 'group_name', 'semester', 'hours_total', 'load_type', 'sort_order'], ';');
+            foreach ($loads as $load) {
+                $items = $load->items->isNotEmpty() ? $load->items : collect([null]);
+                foreach ($items as $item) {
+                    fputcsv($output, [
+                        $load->id,
+                        $load->academic_year,
+                        $load->teacher_id,
+                        $this->teacherName($load->teacher),
+                        $load->status,
+                        $load->description,
+                        $item?->subject_id,
+                        $item?->subject?->code,
+                        $item?->subject?->name,
+                        $item?->group_id,
+                        $item?->group?->name,
+                        $item?->semester,
+                        $item?->hours_total,
+                        $item?->load_type,
+                        $item?->sort_order,
+                    ], ';');
+                }
+            }
+            fclose($output);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    public function import(Request $request): JsonResponse
+    {
+        $request->validate(['file' => ['required', 'file', 'mimes:csv,txt', 'max:5120']]);
+        $handle = fopen($request->file('file')->getRealPath(), 'r');
+        $headers = fgetcsv($handle, 0, ';') ?: [];
+        $created = 0; $updated = 0; $itemsCreated = 0; $errors = []; $line = 1;
+
+        while (($row = fgetcsv($handle, 0, ';')) !== false) {
+            $line++;
+            $data = array_combine($headers, array_pad($row, count($headers), '')) ?: [];
+            $validator = Validator::make($data, [
+                'academic_year' => ['required', 'string', 'max:20'],
+                'teacher_id' => ['nullable', 'integer', 'exists:teachers,id'],
+                'teacher' => ['nullable', 'string'],
+                'status' => ['nullable', 'in:draft,active,archived'],
+                'subject_id' => ['nullable', 'integer', 'exists:subjects,id'],
+                'subject_code' => ['nullable', 'string'],
+                'subject_name' => ['nullable', 'string'],
+                'group_id' => ['nullable', 'integer', 'exists:groups,id'],
+                'group_name' => ['nullable', 'string'],
+                'semester' => ['nullable', 'integer', 'min:1', 'max:12'],
+                'hours_total' => ['nullable', 'integer', 'min:0', 'max:5000'],
+                'load_type' => ['nullable', 'string', 'max:100'],
+            ]);
+            if ($validator->fails()) { $errors[] = ['line' => $line, 'errors' => $validator->errors()->all()]; continue; }
+
+            try {
+                DB::transaction(function () use ($data, &$created, &$updated, &$itemsCreated): void {
+                    $teacherId = $this->resolveTeacherId($data);
+                    if (!$teacherId) { throw new \RuntimeException('Преподаватель не найден.'); }
+                    $payload = $this->normalizeLoadData([
+                        'academic_year' => $data['academic_year'],
+                        'teacher_id' => $teacherId,
+                        'status' => $data['status'] ?: 'draft',
+                        'description' => $data['description'] ?? null,
+                    ]);
+                    $load = !empty($data['id']) ? TeachingLoad::find($data['id']) : null;
+                    if ($load) { $load->update($payload); $updated++; }
+                    else { $load = TeachingLoad::create($payload); $created++; }
+
+                    $subjectId = $this->resolveSubjectId($data);
+                    $groupId = $this->resolveGroupId($data);
+                    if ($subjectId && $groupId && !empty($data['semester'])) {
+                        $item = $load->items()->updateOrCreate(
+                            ['subject_id' => $subjectId, 'group_id' => $groupId, 'semester' => (int) $data['semester'], 'load_type' => $data['load_type'] ?: 'Аудиторная'],
+                            ['hours_total' => (int) ($data['hours_total'] ?: 0), 'sort_order' => (int) ($data['sort_order'] ?: 0)]
+                        );
+                        if ($item->wasRecentlyCreated) { $itemsCreated++; }
+                    }
+                });
+            } catch (\Throwable $exception) {
+                $errors[] = ['line' => $line, 'errors' => [$exception->getMessage()]];
+            }
+        }
+        fclose($handle);
+
+        return response()->json(['data' => compact('created', 'updated', 'itemsCreated', 'errors')]);
+    }
+
+    private function normalizeLoadData(array $data): array
+    {
+        return [
+            'academic_year' => trim($data['academic_year']),
+            'teacher_id' => (int) $data['teacher_id'],
+            'status' => $data['status'] ?: 'draft',
+            'description' => $data['description'] ?? null,
+        ];
+    }
+
+    private function normalizeLoadPatch(array $data): array
+    {
+        $patch = [];
+        foreach (['academic_year', 'teacher_id', 'status', 'description'] as $field) {
+            if (array_key_exists($field, $data)) { $patch[$field] = $field === 'academic_year' ? trim($data[$field]) : $data[$field]; }
+        }
+        if (array_key_exists('teacher_id', $patch)) { $patch['teacher_id'] = (int) $patch['teacher_id']; }
+        if (array_key_exists('status', $patch) && !$patch['status']) { $patch['status'] = 'draft'; }
+        return $patch;
+    }
+
+    private function teacherName(?Teacher $teacher): string
+    {
+        return trim(implode(' ', array_filter([$teacher?->last_name, $teacher?->first_name, $teacher?->middle_name])));
+    }
+
+    private function resolveTeacherId(array $data): ?int
+    {
+        if (!empty($data['teacher_id'])) { return (int) $data['teacher_id']; }
+        if (!empty($data['teacher'])) {
+            $name = mb_strtolower(trim($data['teacher']));
+            return Teacher::query()->get()->first(fn (Teacher $teacher) => mb_strtolower($this->teacherName($teacher)) === $name)?->id;
+        }
+        return null;
+    }
+
+    private function resolveSubjectId(array $data): ?int
+    {
+        if (!empty($data['subject_id'])) { return (int) $data['subject_id']; }
+        if (!empty($data['subject_code'])) { return Subject::where('code', $data['subject_code'])->value('id'); }
+        if (!empty($data['subject_name'])) { return Subject::where('name', $data['subject_name'])->value('id'); }
+        return null;
+    }
+
+    private function resolveGroupId(array $data): ?int
+    {
+        if (!empty($data['group_id'])) { return (int) $data['group_id']; }
+        if (!empty($data['group_name'])) { return Group::where('name', $data['group_name'])->value('id'); }
+        return null;
+    }
+}

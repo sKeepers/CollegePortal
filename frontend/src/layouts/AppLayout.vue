@@ -52,6 +52,7 @@ const navGroups = [
       { label: 'Расписание', to: '/schedule', icon: CalendarDays, permission: 'manage_schedule' },
       { label: 'Журнал', to: '/journal', icon: ClipboardList, permission: 'manage_journal' },
       { label: 'Учебные планы', to: '/curricula', icon: BookOpen, permission: 'manage_dictionaries' },
+      { label: 'Нагрузка', to: '/teaching-load', icon: ClipboardList, permission: 'manage_dictionaries' },
     ],
   },
   {

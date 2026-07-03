@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\ScheduleLessonController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SpecialtyController;
 use App\Http\Controllers\Api\TeacherController;
+use App\Http\Controllers\Api\TeachingLoadController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('auth/login', [AuthController::class, 'login']);
@@ -66,6 +67,11 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('subjects/export', [SubjectController::class, 'export']);
         Route::post('subjects/import', [SubjectController::class, 'import']);
         Route::apiResource('subjects', SubjectController::class);
+        Route::get('teaching-loads/export', [TeachingLoadController::class, 'export']);
+        Route::post('teaching-loads/import', [TeachingLoadController::class, 'import']);
+        Route::post('teaching-loads/{teachingLoad}/items', [TeachingLoadController::class, 'storeItem']);
+        Route::delete('teaching-load-items/{teachingLoadItem}', [TeachingLoadController::class, 'destroyItem']);
+        Route::apiResource('teaching-loads', TeachingLoadController::class);
         Route::get('teachers/export', [TeacherController::class, 'export']);
         Route::post('teachers/import', [TeacherController::class, 'import']);
         Route::apiResource('teachers', TeacherController::class);
