@@ -43,6 +43,20 @@ class UniversalImportService
         ];
     }
 
+
+    public function templateCsv(string $dataType): array
+    {
+        $this->assertKnownType($dataType);
+
+        $headers = $this->templateHeaders($dataType);
+        $example = $this->templateExample($dataType);
+
+        return [
+            'filename' => "collegeportal_{$dataType}_template.csv",
+            'content' => $this->csvContent([$headers, $example]),
+        ];
+    }
+
     public function createPreview(UploadedFile $file, string $dataType, ?User $user): ImportJob
     {
         $this->assertKnownType($dataType);
@@ -195,16 +209,36 @@ class UniversalImportService
 
     private function targetsForFrontend(): array
     {
-        return collect($this->targets())->map(fn ($target, $key) => [
-            'value' => $key,
-            'label' => $target['label'],
-            'key_fields' => $target['key'],
-            'fields' => collect($target['fields'])->map(fn ($field, $fieldKey) => [
-                'value' => $fieldKey,
-                'label' => $field['label'],
-                'required' => $field['required'],
-            ])->values()->all(),
-        ])->values()->all();
+        return collect($this->targets())->map(function ($target, $key) {
+            $requiredFields = collect($target['fields'])
+                ->filter(fn ($field) => $field['required'])
+                ->map(fn ($field, $fieldKey) => ['value' => $fieldKey, 'label' => $field['label']])
+                ->values()
+                ->all();
+            $fieldLabels = collect($target['fields'])->mapWithKeys(fn ($field, $fieldKey) => [$fieldKey => $field['label']])->all();
+            $headers = $this->templateHeaders($key);
+            $example = $this->templateExample($key);
+
+            return [
+                'value' => $key,
+                'label' => $target['label'],
+                'key_fields' => $target['key'],
+                'key_field_labels' => array_values(array_map(fn ($field) => $fieldLabels[$field] ?? $field, $target['key'])),
+                'required_fields' => $requiredFields,
+                'template' => [
+                    'format' => 'csv',
+                    'filename' => "collegeportal_{$key}_template.csv",
+                    'headers' => $headers,
+                    'example' => array_combine($headers, $example),
+                ],
+                'fields' => collect($target['fields'])->map(fn ($field, $fieldKey) => [
+                    'value' => $fieldKey,
+                    'label' => $field['label'],
+                    'required' => $field['required'],
+                    'example' => $this->fieldExample($key, $fieldKey),
+                ])->values()->all(),
+            ];
+        })->values()->all();
     }
 
     private function assertKnownType(string $dataType): void
@@ -404,8 +438,10 @@ class UniversalImportService
             $validator = Validator::make($prepared, $this->rules($dataType));
             if ($validator->fails()) {
                 $errorCount++;
-                if (count($errors) < $limit) {
-                    $errors[] = ['row' => $index + 2, 'errors' => $validator->errors()->all(), 'data' => $prepared];
+                foreach ($this->rowValidationErrors($dataType, $validator, $mapping, $row, $prepared, $index + 2) as $error) {
+                    if (count($errors) < $limit) {
+                        $errors[] = $error;
+                    }
                 }
             }
         }
@@ -419,7 +455,7 @@ class UniversalImportService
             $prepared = $this->prepareData($dataType, $this->mappedRow($mapping, $row));
             $validator = Validator::make($prepared, $this->rules($dataType));
             if ($validator->fails()) {
-                $errors[] = ['row' => $index + 2, 'errors' => $validator->errors()->all(), 'data' => $prepared];
+                array_push($errors, ...$this->rowValidationErrors($dataType, $validator, $mapping, $row, $prepared, $index + 2));
                 continue;
             }
             try {
@@ -432,14 +468,14 @@ class UniversalImportService
                 }
                 if ($existing) {
                     if ($mode === self::MODE_SKIP_DUPLICATES) { $skipped++; continue; }
-                    $errors[] = ['row' => $index + 2, 'errors' => ['Дубликат по ключевому полю.'], 'data' => $prepared];
+                    $errors[] = $this->rowError($dataType, $mapping, $row, $prepared, $index + 2, 'Дубликат по ключевому полю.', $this->targets()[$dataType]['key'][0] ?? null);
                     continue;
                 }
                 $modelClass = $this->targets()[$dataType]['model'];
                 $modelClass::create($this->payload($dataType, $prepared));
                 $created++;
             } catch (\Throwable $exception) {
-                $errors[] = ['row' => $index + 2, 'errors' => [$exception->getMessage()], 'data' => $prepared];
+                $errors[] = $this->rowError($dataType, $mapping, $row, $prepared, $index + 2, $exception->getMessage());
             }
         }
 
@@ -451,6 +487,90 @@ class UniversalImportService
             'error_count' => count($errors),
             'errors' => array_slice($errors, 0, 200),
         ];
+    }
+
+
+    private function rowValidationErrors(string $dataType, $validator, array $mapping, array $sourceRow, array $prepared, int $rowNumber): array
+    {
+        $errors = [];
+        foreach ($validator->errors()->messages() as $field => $messages) {
+            $errors[] = $this->rowError($dataType, $mapping, $sourceRow, $prepared, $rowNumber, implode('; ', $messages), $field, $messages);
+        }
+        return $errors;
+    }
+
+    private function rowError(string $dataType, array $mapping, array $sourceRow, array $prepared, int $rowNumber, string $reason, ?string $field = null, array $messages = []): array
+    {
+        $target = $this->targets()[$dataType];
+        $header = $field ? ($mapping[$field] ?? null) : null;
+        $column = $header ?: ($field ? ($target['fields'][$field]['label'] ?? $field) : 'Строка');
+        $value = $header ? ($sourceRow[$header] ?? null) : ($field ? ($prepared[$field] ?? null) : null);
+
+        return [
+            'row' => $rowNumber,
+            'field' => $field,
+            'column' => $column,
+            'reason' => $reason,
+            'value' => $value,
+            'errors' => $messages ?: [$reason],
+            'data' => $prepared,
+        ];
+    }
+
+    private function csvContent(array $rows): string
+    {
+        $handle = fopen('php://temp', 'r+');
+        fwrite($handle, "\xEF\xBB\xBF");
+        foreach ($rows as $row) {
+            fputcsv($handle, $row, ';');
+        }
+        rewind($handle);
+        return stream_get_contents($handle) ?: '';
+    }
+
+    private function templateHeaders(string $dataType): array
+    {
+        return match ($dataType) {
+            'students' => ['Фамилия', 'Имя', 'Отчество', 'Группа', 'Дата рождения', 'Телефон', 'Email', 'Статус', 'Дата зачисления'],
+            'groups' => ['Группа', 'Специальность', 'Курс', 'Год набора', 'Образовательная программа'],
+            'teachers' => ['Фамилия', 'Имя', 'Отчество', 'Телефон', 'Email', 'Должность', 'Отделение', 'Активен'],
+            'subjects' => ['Дисциплина', 'Код', 'Отделение', 'Описание'],
+            'classrooms' => ['Аудитория', 'Корпус', 'Этаж', 'Вместимость', 'Тип', 'Описание'],
+            'applicants' => ['Фамилия', 'Имя', 'Отчество', 'Образовательная программа', 'Дата рождения', 'Телефон', 'Email', 'База', 'Статус', 'Дата подачи', 'Комментарий'],
+            default => [],
+        };
+    }
+
+    private function templateExample(string $dataType): array
+    {
+        return match ($dataType) {
+            'students' => ['Иванов', 'Дмитрий', 'Сергеевич', 'ИСП-101', '12.05.2009', '+79990000002', 'student@example.test', 'active', '01.09.2026'],
+            'groups' => ['ИСП-101', 'Инструментальное исполнительство', '1', '2026', 'Фортепиано'],
+            'teachers' => ['Петрова', 'Анна', 'Викторовна', '+79990000010', 'teacher@example.test', 'Преподаватель', 'Музыкальное отделение', 'да'],
+            'subjects' => ['История музыки', 'MUS-101', 'Музыкальное отделение', 'Базовая дисциплина'],
+            'classrooms' => ['201', 'Главный корпус', '2', '24', 'Учебная аудитория', 'Фортепианный класс'],
+            'applicants' => ['Смирнова', 'Алина', 'Олеговна', 'Фортепиано', '03.04.2010', '+79990000020', 'applicant@example.test', '9 классов', 'new', '20.06.2026', 'Оригиналы документов ожидаются'],
+            default => [],
+        };
+    }
+
+    private function fieldExample(string $dataType, string $field): ?string
+    {
+        $headers = $this->templateHeaders($dataType);
+        $example = $this->templateExample($dataType);
+        $target = $this->targets()[$dataType];
+        $label = $target['fields'][$field]['label'] ?? null;
+        $index = array_search($label, $headers, true);
+        if ($index === false && $field === 'name') {
+            $index = array_search($dataType === 'groups' ? 'Группа' : ($dataType === 'subjects' ? 'Дисциплина' : 'Аудитория'), $headers, true);
+        }
+        if ($index === false && $field === 'number') {
+            $index = array_search('Аудитория', $headers, true);
+        }
+        if ($index === false) {
+            return null;
+        }
+        return $example[$index] ?? null;
     }
 
     private function mappedRow(array $mapping, array $row): array

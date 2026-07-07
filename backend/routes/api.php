@@ -40,6 +40,7 @@ Route::middleware('api.token')->group(function (): void {
     Route::middleware('permission:manage_dictionaries')->group(function (): void {
         Route::get('admin/import/config', [UniversalImportController::class, 'config']);
         Route::get('admin/import/history', [UniversalImportController::class, 'history']);
+        Route::get('admin/import/templates/{dataType}.csv', [UniversalImportController::class, 'template']);
         Route::post('admin/import/preview', [UniversalImportController::class, 'preview']);
         Route::post('admin/import/{importJob}/validate', [UniversalImportController::class, 'validateJob']);
         Route::post('admin/import/{importJob}/confirm', [UniversalImportController::class, 'confirm']);

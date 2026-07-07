@@ -92,7 +92,21 @@ export const useUniversalImportStore = defineStore('universalImport', () => {
     }
   }
 
+  async function downloadTemplate(dataType) {
+    if (!dataType) return null
+    saving.value = true
+    error.value = ''
+    try {
+      return await api.download(`/admin/import/templates/${dataType}.csv`)
+    } catch (err) {
+      error.value = err.message || 'Не удалось скачать шаблон'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
   function resetJob() { currentJob.value = null }
 
-  return { config, history, currentJob, loading, saving, error, typeOptions, modeOptions, selectedTypeConfig, loadConfig, loadHistory, preview, validate, confirm, resetJob }
+  return { config, history, currentJob, loading, saving, error, typeOptions, modeOptions, selectedTypeConfig, loadConfig, loadHistory, preview, validate, confirm, downloadTemplate, resetJob }
 })

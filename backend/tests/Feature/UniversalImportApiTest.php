@@ -29,6 +29,18 @@ class UniversalImportApiTest extends TestCase
             ->assertJsonPath('data.formats.1', 'xlsx');
     }
 
+
+    public function test_it_downloads_csv_template_with_russian_headers(): void
+    {
+        $response = $this->get('/api/admin/import/templates/students.csv')
+            ->assertOk()
+            ->assertHeader('content-type', 'text/csv; charset=UTF-8');
+
+        $content = $response->getContent();
+        $this->assertStringContainsString('Фамилия;Имя;Отчество;Группа', $content);
+        $this->assertStringContainsString('Иванов;Дмитрий;Сергеевич;ИСП-101', $content);
+    }
+
     public function test_it_previews_and_confirms_subject_import(): void
     {
         $file = $this->csvFile('subjects.csv', "name;code;department
@@ -73,7 +85,10 @@ class UniversalImportApiTest extends TestCase
         ])
             ->assertOk()
             ->assertJsonPath('data.status', 'validation_failed')
-            ->assertJsonPath('data.error_count', 1);
+            ->assertJsonPath('data.error_count', 1)
+            ->assertJsonPath('data.validation_errors.0.row', 2)
+            ->assertJsonPath('data.validation_errors.0.column', 'ID группы')
+            ->assertJsonPath('data.validation_errors.0.value', null);
     }
 
     public function test_it_updates_existing_group_by_key(): void

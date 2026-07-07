@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
-import { CheckCircle2, FileSpreadsheet, History, RefreshCw, Upload, Wand2 } from '@lucide/vue'
+import { CheckCircle2, Download, FileSpreadsheet, History, RefreshCw, Upload, Wand2 } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -26,12 +26,16 @@ const historyColumns = [
   { name: 'status', label: 'Статус', field: 'status', align: 'left' },
   { name: 'result', label: 'Результат', field: 'result', align: 'left' },
 ]
-const fieldOptions = computed(() => (store.selectedTypeConfig?.fields || []).map((field) => ({ label: field.label + (field.required ? ' *' : ''), value: field.value, required: field.required })))
+const selectedTypeConfig = computed(() => store.typeOptions.find((type) => type.value === dataType.value) || null)
+const fieldOptions = computed(() => (selectedTypeConfig.value?.fields || []).map((field) => ({ label: field.label + (field.required ? ' *' : ''), value: field.value, required: field.required, example: field.example })))
 const headerOptions = computed(() => (store.currentJob?.headers || []).map((header) => ({ label: header, value: header })))
 const result = computed(() => store.currentJob?.result || null)
 const errors = computed(() => store.currentJob?.validation_errors || [])
 const canPreview = computed(() => Boolean(dataType.value && file.value))
 const canConfirm = computed(() => Boolean(store.currentJob?.id && Object.keys(mapping).length))
+const requiredLabels = computed(() => selectedTypeConfig.value?.required_fields?.map((field) => field.label) || [])
+const keyLabels = computed(() => selectedTypeConfig.value?.key_field_labels || selectedTypeConfig.value?.key_fields || [])
+const exampleEntries = computed(() => Object.entries(selectedTypeConfig.value?.template?.example || {}))
 
 function formatDate(value) {
   if (!value) return '—'
@@ -52,6 +56,20 @@ function syncMappingFromJob() {
   Object.keys(mapping).forEach((key) => delete mapping[key])
   Object.entries(store.currentJob?.mapping || {}).forEach(([field, header]) => { mapping[field] = header || '' })
 }
+async function handleDownloadTemplate() {
+  const blob = await store.downloadTemplate(dataType.value)
+  if (!blob) return
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = selectedTypeConfig.value?.template?.filename || `collegeportal_${dataType.value}_template.csv`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+  $q.notify({ type: 'positive', message: 'Шаблон CSV скачан', position: 'top-right' })
+}
+
 async function handlePreview() {
   await store.preview(dataType.value, file.value)
   syncMappingFromJob()
@@ -90,9 +108,34 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
             <q-select v-model="dataType" outlined dense emit-value map-options label="Тип данных" :options="store.typeOptions" />
             <q-select v-model="mode" outlined dense emit-value map-options label="Режим" :options="store.modeOptions" option-value="value" option-label="label" />
             <q-file v-model="file" outlined dense accept=".csv,.txt,.xlsx" label="CSV или XLSX"><template #prepend><Upload :size="16" /></template></q-file>
+            <q-btn outline color="primary" :loading="store.saving" @click="handleDownloadTemplate"><Download :size="16" class="q-mr-xs" /> Шаблон CSV</q-btn>
             <q-btn color="primary" :disable="!canPreview" :loading="store.saving" @click="handlePreview"><FileSpreadsheet :size="16" class="q-mr-xs" /> Предпросмотр</q-btn>
           </div>
           <q-banner rounded class="universal-import-hint">Поддерживаются студенты, группы, преподаватели, дисциплины, аудитории и абитуриенты. Импорт выполняется только после подтверждения.</q-banner>
+          <div v-if="selectedTypeConfig" class="universal-import-reference">
+            <div>
+              <strong>Обязательные поля</strong>
+              <div class="universal-import-chips">
+                <q-chip v-for="label in requiredLabels" :key="label" dense color="red-1" text-color="red-9">{{ label }}</q-chip>
+                <q-chip v-if="!requiredLabels.length" dense>Нет обязательных полей</q-chip>
+              </div>
+            </div>
+            <div>
+              <strong>Ключ обновления</strong>
+              <div class="universal-import-chips">
+                <q-chip v-for="label in keyLabels" :key="label" dense color="blue-1" text-color="blue-9">{{ label }}</q-chip>
+              </div>
+            </div>
+            <div>
+              <strong>Пример строки</strong>
+              <dl class="universal-import-example">
+                <template v-for="([column, value]) in exampleEntries" :key="column">
+                  <dt>{{ column }}</dt>
+                  <dd>{{ value }}</dd>
+                </template>
+              </dl>
+            </div>
+          </div>
         </AppCard>
 
         <AppCard v-if="store.currentJob" title="2. Сопоставление колонок" subtitle="Проверьте, какие колонки файла соответствуют полям CollegePortal.">
@@ -128,9 +171,10 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
 
         <AppCard v-if="errors.length" title="Ошибки проверки" subtitle="Показаны первые ошибки. Исправьте файл или сопоставление колонок.">
           <div class="universal-import-errors">
-            <article v-for="error in errors.slice(0, 8)" :key="error.row">
-              <strong>Строка {{ error.row }}</strong>
-              <span>{{ error.errors.join('; ') }}</span>
+            <article v-for="(error, index) in errors.slice(0, 8)" :key="`${error.row}-${error.field || index}`">
+              <strong>Строка {{ error.row }} · {{ error.column || 'Колонка не определена' }}</strong>
+              <span>{{ error.reason || error.errors?.join('; ') }}</span>
+              <small v-if="error.value !== null && error.value !== undefined && error.value !== ''">Исходное значение: {{ error.value }}</small>
             </article>
           </div>
         </AppCard>
@@ -149,3 +193,151 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
     </div>
   </AppPage>
 </template>
+
+
+<style scoped>
+.universal-import-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  gap: 16px;
+  align-items: start;
+}
+
+.universal-import-main,
+.universal-import-side {
+  display: grid;
+  gap: 16px;
+}
+
+.universal-import-controls {
+  display: grid;
+  grid-template-columns: minmax(170px, 220px) minmax(220px, 280px) minmax(240px, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.universal-import-hint {
+  margin-top: 12px;
+  background: #f8fafc;
+  color: #475569;
+}
+
+.universal-import-reference {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.universal-import-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.universal-import-example {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) 1fr;
+  gap: 6px 12px;
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.universal-import-example dt {
+  color: #64748b;
+}
+
+.universal-import-example dd {
+  margin: 0;
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+
+.universal-import-mapping {
+  display: grid;
+  gap: 10px;
+}
+
+.universal-import-mapping__row {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) minmax(220px, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.universal-import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.universal-import-report {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.universal-import-report div {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.universal-import-report span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.universal-import-report strong {
+  color: #0f172a;
+  font-size: 20px;
+}
+
+.universal-import-errors {
+  display: grid;
+  gap: 10px;
+}
+
+.universal-import-errors article {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border-left: 3px solid #f59e0b;
+  border-radius: 6px;
+  background: #fffbeb;
+}
+
+.universal-import-errors span {
+  color: #92400e;
+}
+
+.universal-import-errors small {
+  color: #64748b;
+}
+
+.universal-import-history-title {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+  color: #475569;
+  font-weight: 600;
+}
+
+@media (max-width: 1439px) {
+  .universal-import-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .universal-import-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+</style>

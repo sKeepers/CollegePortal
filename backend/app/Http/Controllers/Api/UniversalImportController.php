@@ -23,6 +23,21 @@ class UniversalImportController extends Controller
         return ['data' => $this->importService->config()];
     }
 
+
+    public function template(string $dataType): Response|JsonResponse
+    {
+        try {
+            $template = $this->importService->templateCsv($dataType);
+        } catch (RuntimeException $exception) {
+            return response()->json(['message' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        return response($template['content'], Response::HTTP_OK, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$template['filename'].'"',
+        ]);
+    }
+
     public function history(Request $request): AnonymousResourceCollection
     {
         $jobs = ImportJob::query()
