@@ -156,6 +156,28 @@ export const useUsersStore = defineStore('users', () => {
     }
   }
 
+
+  async function assignRoles(user, roleIds, primaryRoleId = null) {
+    if (!user?.id || !roleIds?.length) return null
+    saving.value = true
+    error.value = ''
+
+    try {
+      const payload = await api.create(`admin/users/${user.id}/roles`, {
+        role_ids: roleIds,
+        primary_role_id: primaryRoleId || roleIds[0],
+      })
+      await load()
+      selectedId.value = payload?.data?.id || user.id
+      return payload?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось назначить роли'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
   function resetFilters() {
     filters.value = { ...initialFilters }
   }
@@ -177,6 +199,7 @@ export const useUsersStore = defineStore('users', () => {
     remove,
     block,
     unblock,
+    assignRoles,
     resetFilters,
   }
 })

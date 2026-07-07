@@ -12,11 +12,15 @@ class RoleSeeder extends Seeder
     {
         $roles = [
             ['code' => 'admin', 'name' => 'Администратор', 'description' => 'Полный доступ к системе.'],
-            ['code' => 'academic_office', 'name' => 'Учебная часть', 'description' => 'Ведение студентов, групп, расписания и журнала.'],
+            ['code' => 'director', 'name' => 'Директор', 'description' => 'Управленческий просмотр отчетов и сводок.'],
+            ['code' => 'deputy', 'name' => 'Заместитель директора', 'description' => 'Контроль учебного процесса, отчетов и справочников.'],
+            ['code' => 'study', 'name' => 'Учебная часть', 'description' => 'Ведение студентов, групп, расписания и журнала.'],
+            ['code' => 'admission', 'name' => 'Приемная комиссия', 'description' => 'Работа с абитуриентами и приемными кампаниями.'],
             ['code' => 'teacher', 'name' => 'Преподаватель', 'description' => 'Работа с расписанием, посещаемостью и оценками.'],
-            ['code' => 'curator', 'name' => 'Куратор группы', 'description' => 'Сопровождение закрепленной учебной группы.'],
             ['code' => 'student', 'name' => 'Студент', 'description' => 'Просмотр личного расписания, посещаемости и оценок.'],
-            ['code' => 'director', 'name' => 'Руководитель', 'description' => 'Просмотр отчетов и управленческих сводок.'],
+            ['code' => 'security', 'name' => 'Сотрудник проходной', 'description' => 'Работа с проходной и событиями доступа.'],
+            ['code' => 'academic_office', 'name' => 'Учебная часть (legacy)', 'description' => 'Legacy-роль для совместимости.'],
+            ['code' => 'curator', 'name' => 'Куратор группы', 'description' => 'Сопровождение закрепленной учебной группы.'],
         ];
 
         foreach ($roles as $role) {
@@ -36,21 +40,20 @@ class RoleSeeder extends Seeder
             Permission::updateOrCreate(['code' => $permission['code']], $permission);
         }
 
-        Role::where('code', 'admin')->first()?->permissions()->sync(Permission::query()->pluck('id'));
-        Role::where('code', 'academic_office')->first()?->permissions()->sync(
-            Permission::whereIn('code', ['manage_dictionaries', 'manage_schedule', 'manage_journal', 'view_reports'])->pluck('id')
-        );
-        Role::where('code', 'teacher')->first()?->permissions()->sync(
-            Permission::whereIn('code', ['manage_journal', 'view_own_data'])->pluck('id')
-        );
-        Role::where('code', 'curator')->first()?->permissions()->sync(
-            Permission::whereIn('code', ['manage_journal', 'view_reports', 'view_own_data'])->pluck('id')
-        );
-        Role::where('code', 'student')->first()?->permissions()->sync(
-            Permission::whereIn('code', ['view_own_data'])->pluck('id')
-        );
-        Role::where('code', 'director')->first()?->permissions()->sync(
-            Permission::whereIn('code', ['view_reports'])->pluck('id')
-        );
+        $this->syncPermissions('admin', Permission::query()->pluck('id'));
+        $this->syncPermissions('director', Permission::whereIn('code', ['view_reports'])->pluck('id'));
+        $this->syncPermissions('deputy', Permission::whereIn('code', ['manage_dictionaries', 'manage_schedule', 'manage_journal', 'view_reports'])->pluck('id'));
+        $this->syncPermissions('study', Permission::whereIn('code', ['manage_dictionaries', 'manage_schedule', 'manage_journal', 'view_reports'])->pluck('id'));
+        $this->syncPermissions('admission', Permission::whereIn('code', ['manage_dictionaries', 'view_reports'])->pluck('id'));
+        $this->syncPermissions('teacher', Permission::whereIn('code', ['manage_journal', 'view_own_data'])->pluck('id'));
+        $this->syncPermissions('student', Permission::whereIn('code', ['view_own_data'])->pluck('id'));
+        $this->syncPermissions('security', Permission::whereIn('code', ['manage_dictionaries', 'view_reports'])->pluck('id'));
+        $this->syncPermissions('academic_office', Permission::whereIn('code', ['manage_dictionaries', 'manage_schedule', 'manage_journal', 'view_reports'])->pluck('id'));
+        $this->syncPermissions('curator', Permission::whereIn('code', ['manage_journal', 'view_reports', 'view_own_data'])->pluck('id'));
+    }
+
+    private function syncPermissions(string $roleCode, $permissionIds): void
+    {
+        Role::where('code', $roleCode)->first()?->permissions()->sync($permissionIds);
     }
 }

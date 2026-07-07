@@ -34,16 +34,39 @@
 
 Они нужны для будущего Identity Domain, где один Person сможет иметь разные роли: студент, преподаватель, сотрудник, абитуриент, гость, выпускник.
 
+
+
+## CORE-001B: управление ролями
+
+Добавлен MVP раздела `/admin/roles`.
+
+Возможности:
+
+- список ролей;
+- поиск по названию, коду и описанию;
+- создание роли;
+- редактирование роли;
+- удаление роли, если она не назначена пользователям;
+- просмотр количества пользователей в роли;
+- назначение одной или нескольких ролей пользователю;
+- выбор основной роли пользователя.
+
+Текущая авторизация остается совместимой с `users.role_id`: это основная роль пользователя. Для будущего расширения добавлена таблица `role_user`, где можно хранить несколько ролей и флаг `is_primary`.
+
 ## Роли
 
 Роли уже существуют в проекте и используются как простая основа RBAC:
 
 - `admin` — полный доступ;
-- `director` — руководитель, просмотр отчетов;
-- `academic_office` — учебная часть и справочники;
+- `director` — директор, просмотр отчетов;
+- `deputy` — заместитель директора, контроль учебного процесса и отчетов;
+- `study` — учебная часть, справочники, расписание и журнал;
+- `admission` — приемная комиссия, абитуриенты и отчеты;
 - `teacher` — журнал и личные данные;
-- `curator` — журнал, отчеты и личные данные;
-- `student` — личные данные.
+- `student` — личные данные;
+- `security` — проходная и отчеты по проходам.
+
+Legacy-роли `academic_office` и `curator` сохраняются для совместимости старых данных.
 
 На этапе CORE-001A роли в интерфейсе считаются подготовительной основой. Сложные сценарии RBAC пока не внедряются.
 
@@ -57,12 +80,12 @@ Seeder `UatUserSeeder` создает demo-пользователей тольк
 |---|---|---|
 | admin | `admin.uat@college-portal.local` | admin |
 | director | `director.uat@college-portal.local` | director |
-| deputy | `deputy.uat@college-portal.local` | director |
-| study | `study.uat@college-portal.local` | academic_office |
-| admission | `admission.uat@college-portal.local` | academic_office |
+| deputy | `deputy.uat@college-portal.local` | deputy |
+| study | `study.uat@college-portal.local` | study |
+| admission | `admission.uat@college-portal.local` | admission |
 | teacher1 | `teacher1.uat@college-portal.local` | teacher |
 | student1 | `student1.uat@college-portal.local` | student |
-| security | `security.uat@college-portal.local` | academic_office |
+| security | `security.uat@college-portal.local` | security |
 
 ## Production-защита
 
@@ -72,6 +95,10 @@ Seeder `UatUserSeeder` создает demo-пользователей тольк
 
 Доступ к API требует `api.token` и permission `manage_users`.
 
+- `GET /api/admin/roles`;
+- `POST /api/admin/roles`;
+- `PUT /api/admin/roles/{id}`;
+- `DELETE /api/admin/roles/{id}`;
 - `GET /api/admin/users`;
 - `POST /api/admin/users`;
 - `GET /api/admin/users/{id}`;
@@ -80,7 +107,8 @@ Seeder `UatUserSeeder` создает demo-пользователей тольк
 - `POST /api/admin/users/{id}/block`;
 - `POST /api/admin/users/{id}/unblock`;
 - `GET /api/admin/users/roles`;
-- `GET /api/admin/users/people`.
+- `GET /api/admin/users/people`;
+- `POST /api/admin/users/{id}/roles`.
 
 ## Дальнейший план RBAC
 

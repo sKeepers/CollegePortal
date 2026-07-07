@@ -31,7 +31,8 @@ class AdminUserApiTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.email', 'test.user@example.test')
             ->assertJsonPath('data.person_type', 'teacher')
-            ->assertJsonPath('data.status', 'active');
+            ->assertJsonPath('data.status', 'active')
+            ->assertJsonCount(1, 'data.roles');
 
         $user = User::where('email', 'test.user@example.test')->firstOrFail();
 
@@ -80,10 +81,13 @@ class AdminUserApiTest extends TestCase
     public function test_uat_user_seeder_creates_demo_users_outside_production(): void
     {
         Role::create(['name' => 'Администратор', 'code' => 'admin']);
-        Role::create(['name' => 'Учебная часть', 'code' => 'academic_office']);
+        Role::create(['name' => 'Директор', 'code' => 'director']);
+        Role::create(['name' => 'Заместитель директора', 'code' => 'deputy']);
+        Role::create(['name' => 'Учебная часть', 'code' => 'study']);
+        Role::create(['name' => 'Приемная комиссия', 'code' => 'admission']);
         Role::create(['name' => 'Преподаватель', 'code' => 'teacher']);
         Role::create(['name' => 'Студент', 'code' => 'student']);
-        Role::create(['name' => 'Руководитель', 'code' => 'director']);
+        Role::create(['name' => 'Сотрудник проходной', 'code' => 'security']);
 
         $this->seed(UatUserSeeder::class);
 

@@ -6,6 +6,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -64,6 +65,11 @@ class User extends Authenticatable
         return $this->belongsTo(Role::class);
     }
 
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class)->withPivot('is_primary')->withTimestamps();
+    }
+
     public function student(): HasOne
     {
         return $this->hasOne(Student::class);
@@ -76,13 +82,17 @@ class User extends Authenticatable
 
     public function hasPermission(string $permissionCode): bool
     {
-        return $this->role()
+        return $this->roles()
             ->whereHas('permissions', fn ($query) => $query->where('code', $permissionCode))
-            ->exists();
+            ->exists()
+            || $this->role()
+                ->whereHas('permissions', fn ($query) => $query->where('code', $permissionCode))
+                ->exists();
     }
 
     public function hasRole(string $roleCode): bool
     {
-        return $this->role()->where('code', $roleCode)->exists();
+        return $this->roles()->where('code', $roleCode)->exists()
+            || $this->role()->where('code', $roleCode)->exists();
     }
 }

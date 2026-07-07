@@ -19,6 +19,11 @@ class Role extends Model
         return $this->hasMany(User::class);
     }
 
+    public function assignedUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class)->withPivot('is_primary')->withTimestamps();
+    }
+
     public function permissions(): BelongsToMany
     {
         return $this->belongsToMany(Permission::class);

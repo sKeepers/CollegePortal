@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
-import { Ban, CheckCircle2, Edit, Plus, RefreshCw, Trash2, UserRound } from '@lucide/vue'
+import { Ban, CheckCircle2, Edit, Plus, RefreshCw, ShieldCheck, Trash2, UserRound } from '@lucide/vue'
 import AppPage from '../../../components/ui/AppPage.vue'
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import AppToolbar from '../../../components/ui/AppToolbar.vue'
@@ -24,8 +24,10 @@ const editingUser = ref(null)
 const deleteDialog = ref(false)
 const blockDialog = ref(false)
 const unblockDialog = ref(false)
+const rolesDialog = ref(false)
 const pendingUser = ref(null)
 const pagination = ref(createTablePagination(rowsPerPageKey, { rowsPerPage: 20 }))
+const rolesForm = reactive({ role_ids: [], primary_role_id: null })
 const form = reactive({
   name: '',
   email: '',
@@ -61,6 +63,18 @@ function formatDate(value) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return String(value)
   return date.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+function rolesLabel(user) {
+  return user?.roles?.length ? user.roles.map((role) => role.name).join(', ') : (user?.role?.name || 'Роль не указана')
+}
+
+function roleChipTone(role, user) {
+  return Number(role.id) === Number(user?.role_id) ? 'primary' : 'blue-1'
+}
+
+function roleChipText(role, user) {
+  return Number(role.id) === Number(user?.role_id) ? 'white' : 'blue-9'
 }
 
 function personTypeLabel(type) {
@@ -133,6 +147,19 @@ async function confirmBlock() {
 async function confirmUnblock() {
   await store.unblock(pendingUser.value)
   $q.notify({ type: 'positive', message: 'Пользователь разблокирован', position: 'top-right' })
+}
+
+function openRolesDialog(user = selectedUser.value) {
+  pendingUser.value = user
+  rolesForm.role_ids = user?.roles?.length ? user.roles.map((role) => role.id) : (user?.role_id ? [user.role_id] : [])
+  rolesForm.primary_role_id = user?.role_id || rolesForm.role_ids[0] || null
+  rolesDialog.value = true
+}
+
+async function saveRoles() {
+  await store.assignRoles(pendingUser.value, rolesForm.role_ids, rolesForm.primary_role_id)
+  rolesDialog.value = false
+  $q.notify({ type: 'positive', message: 'Роли пользователя обновлены', position: 'top-right' })
 }
 
 function applyFilters() {
@@ -209,7 +236,7 @@ onMounted(async () => {
             </q-td>
           </template>
           <template #body-cell-role="props">
-            <q-td :props="props">{{ props.row.role?.name || 'Роль не указана' }}</q-td>
+            <q-td :props="props">{{ rolesLabel(props.row) }}</q-td>
           </template>
           <template #body-cell-status="props">
             <q-td :props="props"><AppStatusBadge :label="statusLabel(props.row)" :tone="statusTone(props.row)" /></q-td>
@@ -240,7 +267,8 @@ onMounted(async () => {
           </div>
           <div class="users-card-status">
             <AppStatusBadge :label="statusLabel(selectedUser)" :tone="statusTone(selectedUser)" />
-            <q-chip dense color="blue-1" text-color="blue-9">{{ selectedUser.role?.name || 'Роль не указана' }}</q-chip>
+            <q-chip v-for="role in selectedUser.roles || []" :key="role.id" dense :color="roleChipTone(role, selectedUser)" :text-color="roleChipText(role, selectedUser)">{{ role.name }}</q-chip>
+            <q-chip v-if="!selectedUser.roles?.length" dense color="blue-1" text-color="blue-9">{{ selectedUser.role?.name || 'Роль не указана' }}</q-chip>
           </div>
 
           <dl class="users-fields">
@@ -258,6 +286,7 @@ onMounted(async () => {
 
           <div class="users-card-actions">
             <q-btn outline color="primary" @click="openEdit(selectedUser)"><Edit :size="16" class="q-mr-xs" /> Редактировать</q-btn>
+            <q-btn outline color="primary" @click="openRolesDialog(selectedUser)"><ShieldCheck :size="16" class="q-mr-xs" /> Роли</q-btn>
             <q-btn v-if="selectedUser.is_active" outline color="warning" @click="askBlock(selectedUser)"><Ban :size="16" class="q-mr-xs" /> Заблокировать</q-btn>
             <q-btn v-else outline color="positive" @click="askUnblock(selectedUser)"><CheckCircle2 :size="16" class="q-mr-xs" /> Разблокировать</q-btn>
             <q-btn v-if="openPerson(selectedUser)" flat color="primary" :to="openPerson(selectedUser)">Открыть связанную карточку</q-btn>
@@ -284,6 +313,24 @@ onMounted(async () => {
         <q-card-actions align="right">
           <q-btn flat label="Отмена" v-close-popup />
           <q-btn color="primary" :loading="store.saving" label="Сохранить" @click="saveUser" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+
+    <q-dialog v-model="rolesDialog">
+      <q-card class="users-dialog">
+        <q-card-section>
+          <div class="text-h6">Назначить роли</div>
+          <p class="users-dialog-subtitle">{{ pendingUser?.name }}</p>
+        </q-card-section>
+        <q-card-section class="users-form">
+          <q-select v-model="rolesForm.role_ids" outlined dense emit-value map-options multiple use-chips label="Роли" :options="store.roleOptions" />
+          <q-select v-model="rolesForm.primary_role_id" outlined dense emit-value map-options label="Основная роль" :options="store.roleOptions" />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Отмена" v-close-popup />
+          <q-btn color="primary" :disable="!rolesForm.role_ids.length" :loading="store.saving" label="Сохранить роли" @click="saveRoles" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -391,6 +438,11 @@ onMounted(async () => {
 .users-form {
   display: grid;
   gap: 12px;
+}
+
+.users-dialog-subtitle {
+  margin: 4px 0 0;
+  color: #64748b;
 }
 
 :deep(.cp-selected-row) {

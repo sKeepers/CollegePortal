@@ -20,7 +20,7 @@ class AdminUserController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $users = User::query()
-            ->with('role.permissions')
+            ->with(['role.permissions', 'roles'])
             ->when($request->string('search')->toString(), function ($query, string $search) {
                 $query->where(function ($inner) use ($search) {
                     $inner->where('name', 'like', "%{$search}%")
@@ -50,13 +50,14 @@ class AdminUserController extends Controller
             'password' => Hash::make($data['password'] ?? 'demo12345'),
             'is_active' => $data['is_active'] ?? true,
         ]);
+        $this->syncPrimaryRole($user);
 
-        return new UserResource($user->load('role.permissions'));
+        return new UserResource($user->load(['role.permissions', 'roles']));
     }
 
     public function show(User $user): UserResource
     {
-        return new UserResource($user->load('role.permissions'));
+        return new UserResource($user->load(['role.permissions', 'roles']));
     }
 
     public function update(Request $request, User $user): UserResource
@@ -70,8 +71,9 @@ class AdminUserController extends Controller
         }
 
         $user->update($data);
+        $this->syncPrimaryRole($user);
 
-        return new UserResource($user->refresh()->load('role.permissions'));
+        return new UserResource($user->refresh()->load(['role.permissions', 'roles']));
     }
 
     public function destroy(Request $request, User $user): JsonResponse
@@ -93,14 +95,37 @@ class AdminUserController extends Controller
 
         $user->forceFill(['is_active' => false, 'api_token_hash' => null])->save();
 
-        return new UserResource($user->refresh()->load('role.permissions'));
+        return new UserResource($user->refresh()->load(['role.permissions', 'roles']));
     }
 
     public function unblock(User $user): UserResource
     {
         $user->forceFill(['is_active' => true])->save();
 
-        return new UserResource($user->refresh()->load('role.permissions'));
+        return new UserResource($user->refresh()->load(['role.permissions', 'roles']));
+    }
+
+
+    public function assignRoles(Request $request, User $user): UserResource
+    {
+        $data = $request->validate([
+            'role_ids' => ['required', 'array', 'min:1'],
+            'role_ids.*' => ['integer', 'exists:roles,id'],
+            'primary_role_id' => ['nullable', 'integer', 'exists:roles,id'],
+        ]);
+
+        $roleIds = collect($data['role_ids'])->map(fn ($id) => (int) $id)->unique()->values();
+        $primaryRoleId = (int) ($data['primary_role_id'] ?? $roleIds->first());
+
+        if (! $roleIds->contains($primaryRoleId)) {
+            $roleIds->prepend($primaryRoleId);
+        }
+
+        $sync = $roleIds->mapWithKeys(fn ($roleId) => [$roleId => ['is_primary' => $roleId === $primaryRoleId]])->all();
+        $user->roles()->sync($sync);
+        $user->forceFill(['role_id' => $primaryRoleId])->save();
+
+        return new UserResource($user->refresh()->load(['role.permissions', 'roles']));
     }
 
     public function roles(): JsonResponse
@@ -143,6 +168,19 @@ class AdminUserController extends Controller
         };
 
         return response()->json(['data' => $items->values()]);
+    }
+
+
+    private function syncPrimaryRole(User $user): void
+    {
+        if (! $user->role_id) {
+            return;
+        }
+
+        $currentRoleIds = $user->roles()->pluck('roles.id')->map(fn ($id) => (int) $id)->all();
+        $roleIds = collect([$user->role_id, ...$currentRoleIds])->unique()->values();
+        $sync = $roleIds->mapWithKeys(fn ($roleId) => [$roleId => ['is_primary' => (int) $roleId === (int) $user->role_id]])->all();
+        $user->roles()->sync($sync);
     }
 
     private function validated(Request $request, ?User $user = null): array

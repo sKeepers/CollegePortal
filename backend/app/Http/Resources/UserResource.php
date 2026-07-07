@@ -38,6 +38,7 @@ class UserResource extends JsonResource
             'is_active' => $this->is_active,
             'status' => $this->is_active ? 'active' : 'blocked',
             'role' => new RoleResource($this->whenLoaded('role')),
+            'roles' => RoleResource::collection($this->whenLoaded('roles')),
             'last_login_at' => $this->last_login_at?->toISOString(),
             'person_type' => $this->person_type,
             'person_id' => $this->person_id,

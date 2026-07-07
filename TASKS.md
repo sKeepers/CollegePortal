@@ -277,3 +277,18 @@
 - [x] Создать `docs/USERS_AND_ROLES.md`
 - [x] Проверить `php artisan test` и `npm run build`
 - [x] Сделать Git checkpoint
+
+
+## CORE-001B
+
+- [x] Добавить таблицу `role_user`
+- [x] Поддержать роли `admin`, `director`, `deputy`, `study`, `admission`, `teacher`, `student`, `security`
+- [x] Добавить API `/api/admin/roles`
+- [x] Добавить API назначения ролей пользователю
+- [x] Создать раздел `/admin/roles`
+- [x] Добавить пункт меню `Система -> Роли`
+- [x] Показывать реальные роли в карточке пользователя `/admin/users`
+- [x] Обновить UAT seeder назначениями ролей
+- [x] Обновить `docs/USERS_AND_ROLES.md`
+- [x] Проверить `php artisan test` и `npm run build`
+- [x] Сделать Git checkpoint
