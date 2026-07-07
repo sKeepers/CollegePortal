@@ -1,0 +1,182 @@
+import { computed, ref } from 'vue'
+import { defineStore } from 'pinia'
+import { api } from '../services/api'
+
+const initialFilters = {
+  search: '',
+  status: '',
+}
+
+function extractRows(payload) {
+  return Array.isArray(payload?.data) ? payload.data : []
+}
+
+function cleanPayload(payload) {
+  return {
+    name: payload.name?.trim() || '',
+    email: payload.email?.trim() || '',
+    password: payload.password?.trim() || undefined,
+    role_id: payload.role_id || null,
+    is_active: Boolean(payload.is_active),
+    person_type: payload.person_type || null,
+    person_id: payload.person_id || null,
+  }
+}
+
+export const useUsersStore = defineStore('users', () => {
+  const users = ref([])
+  const roles = ref([])
+  const filters = ref({ ...initialFilters })
+  const selectedId = ref(null)
+  const loading = ref(false)
+  const saving = ref(false)
+  const error = ref('')
+
+  const selectedUser = computed(() => users.value.find((user) => Number(user.id) === Number(selectedId.value)) || null)
+
+  const roleOptions = computed(() => roles.value.map((role) => ({
+    label: role.name,
+    value: role.id,
+    code: role.code,
+  })))
+
+  const statusOptions = [
+    { label: 'Активные', value: 'active' },
+    { label: 'Заблокированные', value: 'blocked' },
+  ]
+
+  const personTypeOptions = [
+    { label: 'Не связана', value: null },
+    { label: 'Студент', value: 'student' },
+    { label: 'Преподаватель', value: 'teacher' },
+    { label: 'Сотрудник', value: 'employee' },
+    { label: 'Абитуриент', value: 'applicant' },
+    { label: 'Гость', value: 'guest' },
+    { label: 'Выпускник', value: 'alumni' },
+  ]
+
+  async function load() {
+    loading.value = true
+    error.value = ''
+
+    try {
+      const [usersPayload, rolesPayload] = await Promise.all([
+        api.list('admin/users', { search: filters.value.search, status: filters.value.status, per_page: 200 }),
+        api.list('admin/users/roles'),
+      ])
+      users.value = extractRows(usersPayload)
+      roles.value = extractRows(rolesPayload)
+
+      if (selectedId.value && !selectedUser.value) {
+        selectedId.value = null
+      }
+    } catch (err) {
+      error.value = err.message || 'Не удалось загрузить пользователей'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function save(payload, id = null) {
+    saving.value = true
+    error.value = ''
+
+    try {
+      const data = cleanPayload(payload)
+      if (id && !data.password) {
+        delete data.password
+      }
+      const response = id
+        ? await api.update('admin/users', id, data)
+        : await api.create('admin/users', data)
+
+      await load()
+      selectedId.value = response?.data?.id || id
+      return response?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось сохранить пользователя'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function remove(user) {
+    if (!user?.id) return
+    saving.value = true
+    error.value = ''
+
+    try {
+      await api.delete('admin/users', user.id)
+      if (Number(selectedId.value) === Number(user.id)) {
+        selectedId.value = null
+      }
+      await load()
+    } catch (err) {
+      error.value = err.message || 'Не удалось удалить пользователя'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function block(user) {
+    if (!user?.id) return null
+    saving.value = true
+    error.value = ''
+
+    try {
+      const payload = await api.create(`admin/users/${user.id}/block`, {})
+      await load()
+      selectedId.value = payload?.data?.id || user.id
+      return payload?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось заблокировать пользователя'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function unblock(user) {
+    if (!user?.id) return null
+    saving.value = true
+    error.value = ''
+
+    try {
+      const payload = await api.create(`admin/users/${user.id}/unblock`, {})
+      await load()
+      selectedId.value = payload?.data?.id || user.id
+      return payload?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось разблокировать пользователя'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  function resetFilters() {
+    filters.value = { ...initialFilters }
+  }
+
+  return {
+    users,
+    roles,
+    filters,
+    selectedId,
+    loading,
+    saving,
+    error,
+    selectedUser,
+    roleOptions,
+    statusOptions,
+    personTypeOptions,
+    load,
+    save,
+    remove,
+    block,
+    unblock,
+    resetFilters,
+  }
+})

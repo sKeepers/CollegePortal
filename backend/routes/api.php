@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AccessGateController;
 use App\Http\Controllers\Api\AccessReportController;
+use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\ApplicantApplicationController;
 use App\Http\Controllers\Api\GroupController;
 use App\Http\Controllers\Api\MobileStudentController;
@@ -36,6 +37,14 @@ Route::middleware('api.token')->group(function (): void {
     Route::get('auth/me', [AuthController::class, 'me']);
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('mobile/student', [MobileStudentController::class, 'show']);
+
+    Route::middleware('permission:manage_users')->group(function (): void {
+        Route::get('admin/users/roles', [AdminUserController::class, 'roles']);
+        Route::get('admin/users/people', [AdminUserController::class, 'people']);
+        Route::post('admin/users/{user}/block', [AdminUserController::class, 'block']);
+        Route::post('admin/users/{user}/unblock', [AdminUserController::class, 'unblock']);
+        Route::apiResource('admin/users', AdminUserController::class);
+    });
 
     Route::middleware('permission:manage_dictionaries')->group(function (): void {
         Route::get('admin/import/config', [UniversalImportController::class, 'config']);

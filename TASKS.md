@@ -264,3 +264,16 @@
 - [x] Улучшить ошибки импорта: строка, колонка, причина, исходное значение
 - [x] Проверить `php artisan test` и `npm run build`
 - [x] Сделать Git checkpoint
+
+
+## CORE-001A
+
+- [x] Создать раздел `/admin/users`
+- [x] Добавить пункт меню `Система -> Пользователи`
+- [x] Добавить поля `person_type` и `person_id` в `users`
+- [x] Добавить API управления пользователями, блокировки и разблокировки
+- [x] Создать frontend page и Pinia store
+- [x] Добавить UAT demo-пользователей через seeder с production-защитой
+- [x] Создать `docs/USERS_AND_ROLES.md`
+- [x] Проверить `php artisan test` и `npm run build`
+- [x] Сделать Git checkpoint

@@ -28,6 +28,8 @@ class User extends Authenticatable
         'is_active',
         'api_token_hash',
         'last_login_at',
+        'person_type',
+        'person_id',
     ];
 
     /**
@@ -53,6 +55,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',
+            'person_id' => 'integer',
         ];
     }
 

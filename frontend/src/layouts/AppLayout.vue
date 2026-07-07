@@ -17,6 +17,7 @@ import {
   QrCode,
   Settings,
   School,
+  UserCog,
   UserRound,
   UsersRound,
 } from '@lucide/vue'
@@ -87,6 +88,7 @@ const navGroups = [
   {
     label: 'Система',
     items: [
+      { label: 'Пользователи', to: '/admin/users', icon: UserCog, permission: 'manage_users' },
       { label: 'Импорт данных', to: '/admin/import', icon: FileSpreadsheet, permission: 'manage_dictionaries' },
       { label: 'Управление данными', to: '/admin/data-management', icon: Database, permission: 'manage_dictionaries' },
       { label: 'UI Foundation', to: '/system/ui-foundation', icon: Settings, adminOnly: true },
