@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AccessGateController;
 use App\Http\Controllers\Api\AccessReportController;
 use App\Http\Controllers\Api\AdminRoleController;
+use App\Http\Controllers\Api\AdminSettingController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\ApplicantApplicationController;
@@ -32,6 +33,7 @@ use App\Http\Controllers\Api\TeachingLoadController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('auth/login', [AuthController::class, 'login']);
+Route::get('settings/public', [AdminSettingController::class, 'publicSettings']);
 Route::get('public/specialties', [SpecialtyController::class, 'index']);
 Route::get('public/education-programs', [EducationProgramController::class, 'index']);
 
@@ -42,6 +44,8 @@ Route::middleware('api.token')->group(function (): void {
 
     Route::middleware('permission:manage_users')->group(function (): void {
         Route::get('admin/audit', [AuditLogController::class, 'index']);
+        Route::get('admin/settings', [AdminSettingController::class, 'index']);
+        Route::put('admin/settings', [AdminSettingController::class, 'update']);
         Route::get('admin/audit/{auditLog}', [AuditLogController::class, 'show']);
         Route::apiResource('admin/roles', AdminRoleController::class)->except(['show']);
         Route::get('admin/users/roles', [AdminUserController::class, 'roles']);

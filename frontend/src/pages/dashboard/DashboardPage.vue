@@ -15,6 +15,7 @@ import PageHeader from '../../components/ui/PageHeader.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import { api } from '../../services/api'
 import { useAuthStore } from '../../stores/auth'
+import { useSettingsStore } from '../../stores/settings'
 import StatsWidget from './widgets/StatsWidget.vue'
 import QuickActionsWidget from './widgets/QuickActionsWidget.vue'
 import RecentActivityWidget from './widgets/RecentActivityWidget.vue'
@@ -22,6 +23,7 @@ import NotificationsWidget from './widgets/NotificationsWidget.vue'
 import TasksWidget from './widgets/TasksWidget.vue'
 
 const auth = useAuthStore()
+const settingsStore = useSettingsStore()
 const loading = ref(false)
 const error = ref('')
 const totals = ref({
@@ -111,6 +113,7 @@ const currentDate = computed(() => new Intl.DateTimeFormat('ru-RU', {
 }).format(new Date()))
 
 const userName = computed(() => auth.user?.name || 'пользователь')
+const dashboardSubtitle = computed(() => `Рабочая сводка ${settingsStore.publicValue('general', 'college_short_name', 'CollegePortal')}`)
 
 const statItems = computed(() => [
   {
@@ -215,6 +218,7 @@ async function loadDashboard() {
 }
 
 onMounted(() => {
+  settingsStore.loadPublic().catch(() => {})
   loadDashboard()
 })
 </script>
@@ -223,7 +227,7 @@ onMounted(() => {
   <AppPage>
     <PageHeader
       title="Панель"
-      subtitle="Рабочая сводка CollegePortal"
+      :subtitle="dashboardSubtitle"
     >
       <template #actions>
         <q-btn flat :loading="loading" @click="loadDashboard">

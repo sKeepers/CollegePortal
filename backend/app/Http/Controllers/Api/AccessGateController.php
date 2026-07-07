@@ -7,12 +7,11 @@ use App\Http\Requests\ScanAccessPassRequest;
 use App\Http\Resources\AccessEventResource;
 use App\Models\AccessEvent;
 use App\Models\DigitalIdentity;
+use App\Services\SettingService;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class AccessGateController extends Controller
 {
-    private const DUPLICATE_SCAN_WINDOW_SECONDS = 2;
-
     public function scan(ScanAccessPassRequest $request): AccessEventResource
     {
         $validated = $request->validated();
@@ -61,7 +60,7 @@ class AccessGateController extends Controller
     {
         return AccessEvent::query()
             ->where('digital_identity_id', $identity->id)
-            ->where('event_time', '>=', now()->subSeconds(self::DUPLICATE_SCAN_WINDOW_SECONDS))
+            ->where('event_time', '>=', now()->subSeconds((int) SettingService::value('identity', 'duplicate_scan_window_seconds', 2)))
             ->orderByDesc('event_time')
             ->first();
     }

@@ -29,6 +29,7 @@ import UniversalImportPage from '../pages/admin/UniversalImportPage.vue'
 import UsersPage from '../pages/admin/users/UsersPage.vue'
 import RolesPage from '../pages/admin/roles/RolesPage.vue'
 import AuditPage from '../pages/admin/audit/AuditPage.vue'
+import SettingsPage from '../pages/admin/settings/SettingsPage.vue'
 import MobileStudentHomePage from '../pages/mobile/student/MobileStudentHomePage.vue'
 import MobileStudentPassPage from '../pages/mobile/student/MobileStudentPassPage.vue'
 
@@ -211,6 +212,12 @@ export const routes = [
         name: 'admin-audit',
         component: AuditPage,
         meta: { title: 'Аудит', permission: 'manage_users' },
+      },
+      {
+        path: 'admin/settings',
+        name: 'admin-settings',
+        component: SettingsPage,
+        meta: { title: 'Настройки колледжа', permission: 'manage_users' },
       },
       {
         path: 'admin/roles',

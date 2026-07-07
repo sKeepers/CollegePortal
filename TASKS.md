@@ -305,3 +305,16 @@
 - [x] Создать `docs/AUDIT_LOG.md`
 - [x] Проверить `php artisan migrate`, `php artisan test`, `npm run build`
 - [x] Сделать Git checkpoint
+
+
+## CORE-003
+
+- [x] Создать таблицу `settings`
+- [x] Создать `Setting`, `SettingService`, `AdminSettingController`, `SettingResource`
+- [x] Добавить API `/api/admin/settings` и `/api/settings/public`
+- [x] Создать frontend-раздел `/admin/settings`
+- [x] Добавить пункт меню `Система -> Настройки колледжа`
+- [x] Подключить публичные настройки к интерфейсу и проходной
+- [x] Создать `docs/SETTINGS.md`
+- [x] Проверить `php artisan migrate`, `php artisan test`, `npm run build`
+- [x] Сделать Git checkpoint

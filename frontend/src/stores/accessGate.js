@@ -1,8 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
-
-const DUPLICATE_SCAN_WINDOW_MS = 2000
+import { useSettingsStore } from './settings'
 
 function extractRows(payload) { return Array.isArray(payload?.data) ? payload.data : [] }
 function fullName(person) { return [person?.last_name, person?.first_name, person?.middle_name].filter(Boolean).join(' ') }
@@ -33,6 +32,10 @@ export const useAccessGateStore = defineStore('accessGate', () => {
   const warning = ref('')
   const lastToken = ref('')
   const lastTokenScannedAt = ref(0)
+  const settingsStore = useSettingsStore()
+
+  const duplicateScanWindowSeconds = computed(() => Number(settingsStore.publicValue('identity', 'duplicate_scan_window_seconds', 2)) || 2)
+  const duplicateScanWindowMs = computed(() => duplicateScanWindowSeconds.value * 1000)
 
   const allowedCount = computed(() => events.value.filter((event) => event.result === 'allowed').length)
   const deniedCount = computed(() => events.value.filter((event) => event.result === 'denied').length)
@@ -56,8 +59,12 @@ export const useAccessGateStore = defineStore('accessGate', () => {
     if (!normalizedToken) return null
 
     const now = Date.now()
-    if (normalizedToken === lastToken.value && now - lastTokenScannedAt.value < DUPLICATE_SCAN_WINDOW_MS) {
-      warning.value = 'Повторное сканирование проигнорировано. Подождите 2 секунды.'
+    if (!settingsStore.publicLoaded) {
+      await settingsStore.loadPublic().catch(() => {})
+    }
+
+    if (normalizedToken === lastToken.value && now - lastTokenScannedAt.value < duplicateScanWindowMs.value) {
+      warning.value = `Повторное сканирование проигнорировано. Подождите ${duplicateScanWindowSeconds.value} сек.`
       return lastEvent.value
     }
 

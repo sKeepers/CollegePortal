@@ -78,6 +78,7 @@ export function moduleLabel(value) {
     import: 'Импорт',
     digital_identity: 'Цифровые пропуска',
     demo_data: 'Демо-данные',
+    settings: 'Настройки',
   }
   return labels[value] || value || '—'
 }
@@ -100,6 +101,7 @@ export function actionLabel(value) {
     revoke_qr: 'Отзыв QR',
     create_demo: 'Создание демо',
     clear_demo: 'Очистка демо',
+    reset_defaults: 'Сброс настроек',
     import: 'Импорт',
     export: 'Экспорт',
   }

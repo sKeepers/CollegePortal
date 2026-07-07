@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   BookOpen,
@@ -25,6 +25,7 @@ import {
 } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import { useWorkspaceStore } from '../stores/workspace'
+import { useSettingsStore } from '../stores/settings'
 import { useLayoutService } from '../services/layoutService'
 import { getEnvironmentCssVars } from '../services/environmentService'
 import GlobalSearch from '../components/search/GlobalSearch.vue'
@@ -34,6 +35,7 @@ const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 const workspace = useWorkspaceStore()
+const settingsStore = useSettingsStore()
 useLayoutService()
 const drawerOpen = ref(true)
 
@@ -93,6 +95,7 @@ const navGroups = [
       { label: 'Пользователи', to: '/admin/users', icon: UserCog, permission: 'manage_users' },
       { label: 'Роли', to: '/admin/roles', icon: ShieldCheck, permission: 'manage_users' },
       { label: 'Аудит', to: '/admin/audit', icon: ScrollText, permission: 'manage_users' },
+      { label: 'Настройки колледжа', to: '/admin/settings', icon: Settings, permission: 'manage_users' },
       { label: 'Импорт данных', to: '/admin/import', icon: FileSpreadsheet, permission: 'manage_dictionaries' },
       { label: 'Управление данными', to: '/admin/data-management', icon: Database, permission: 'manage_dictionaries' },
       { label: 'UI Foundation', to: '/system/ui-foundation', icon: Settings, adminOnly: true },
@@ -116,6 +119,9 @@ const visibleNavGroups = computed(() =>
 )
 
 const pageTitle = computed(() => route.meta.title || 'CollegePortal')
+const collegeShortName = computed(() => settingsStore.publicValue('general', 'college_short_name', 'Колледж искусств'))
+const collegeFullName = computed(() => settingsStore.publicValue('general', 'college_full_name', 'Рабочее место колледжа'))
+const logoPath = computed(() => settingsStore.publicValue('branding', 'logo_path', '/brand/logo-skki-bw.jpg'))
 const layoutStyle = computed(() => ({
   '--cp-sidebar-width': `${workspace.sidebarWidth}px`,
   '--cp-viewport-width': `${workspace.viewportWidth}px`,
@@ -127,6 +133,10 @@ async function logout() {
   await auth.logout()
   router.push('/login')
 }
+
+onMounted(() => {
+  settingsStore.loadPublic().catch(() => {})
+})
 
 watch(
   () => workspace.isMobile,
@@ -157,7 +167,7 @@ watch(
 
         <q-toolbar-title>
           <div class="cp-page-title">{{ pageTitle }}</div>
-          <div class="cp-page-subtitle">Рабочее место колледжа</div>
+          <div class="cp-page-subtitle">{{ collegeFullName }}</div>
         </q-toolbar-title>
 
         <div class="cp-topbar-tools">
@@ -199,11 +209,11 @@ watch(
     >
       <div class="cp-brand">
         <div class="cp-brand-mark">
-          <img src="/brand/logo-skki-bw.jpg" alt="" aria-hidden="true" />
+          <img :src="logoPath" alt="" aria-hidden="true" />
         </div>
         <div>
           <strong>CollegePortal</strong>
-          <span>Колледж искусств</span>
+          <span>{{ collegeShortName }}</span>
         </div>
       </div>
 

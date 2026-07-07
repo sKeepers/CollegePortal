@@ -955,3 +955,8 @@ IMPORT-001.1 добавил CSV-шаблоны с русскими колонк�
 Добавлена централизованная платформа аудита действий пользователей. Backend получил таблицу `audit_logs`, модель, сервис `AuditLogService`, API `/api/admin/audit` и ресурс. Frontend получил раздел `/admin/audit` с фильтрами, таблицей событий и карточкой события с pretty JSON. В CORE-002 логируются auth, users, roles, universal import, QR/digital identity и demo-data actions.
 
 Документация: `docs/AUDIT_LOG.md`.
+
+
+## CORE-003: Settings Center
+
+Добавлен единый центр настроек колледжа: backend-таблица `settings`, `SettingService`, административный API `/api/admin/settings`, публичный API `/api/settings/public` и frontend-раздел `/admin/settings`. Публичные настройки используются в рабочем интерфейсе и проходной; секреты в модуле не хранятся.
