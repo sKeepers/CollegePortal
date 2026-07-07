@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Database,
   DoorOpen,
+  FileSpreadsheet,
   FileText,
   Gauge,
   GraduationCap,
@@ -86,6 +87,7 @@ const navGroups = [
   {
     label: 'Система',
     items: [
+      { label: 'Импорт данных', to: '/admin/import', icon: FileSpreadsheet, permission: 'manage_dictionaries' },
       { label: 'Управление данными', to: '/admin/data-management', icon: Database, permission: 'manage_dictionaries' },
       { label: 'UI Foundation', to: '/system/ui-foundation', icon: Settings, adminOnly: true },
     ],

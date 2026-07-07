@@ -4958,3 +4958,127 @@ body {
   font-size: 12px;
   font-weight: 700;
 }
+
+
+.universal-import-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: 14px;
+  align-items: start;
+}
+
+.universal-import-main,
+.universal-import-side {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.universal-import-controls {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(220px, 1fr) minmax(220px, 1.2fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.universal-import-hint {
+  margin-top: 12px;
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 700;
+}
+
+.universal-import-mapping {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+
+.universal-import-mapping__row {
+  display: grid;
+  gap: 5px;
+}
+
+.universal-import-mapping__row span {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.universal-import-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.universal-import-report {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.universal-import-report > div {
+  display: grid;
+  gap: 3px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.universal-import-report span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.universal-import-report strong {
+  color: #172033;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.universal-import-errors {
+  display: grid;
+  gap: 8px;
+}
+
+.universal-import-errors article {
+  display: grid;
+  gap: 4px;
+  border-left: 3px solid #f59e0b;
+  padding: 8px 10px;
+  background: #fffbeb;
+}
+
+.universal-import-errors strong {
+  color: #92400e;
+  font-size: 12px;
+}
+
+.universal-import-errors span {
+  color: #78350f;
+  font-size: 12px;
+}
+
+.universal-import-history-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+@media (max-width: 1439px) {
+  .universal-import-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .universal-import-controls,
+  .universal-import-mapping {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

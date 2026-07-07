@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\ScheduleLessonController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SpecialtyController;
 use App\Http\Controllers\Api\TeacherController;
+use App\Http\Controllers\Api\UniversalImportController;
 use App\Http\Controllers\Api\TeachingLoadController;
 use Illuminate\Support\Facades\Route;
 
@@ -37,6 +38,11 @@ Route::middleware('api.token')->group(function (): void {
     Route::get('mobile/student', [MobileStudentController::class, 'show']);
 
     Route::middleware('permission:manage_dictionaries')->group(function (): void {
+        Route::get('admin/import/config', [UniversalImportController::class, 'config']);
+        Route::get('admin/import/history', [UniversalImportController::class, 'history']);
+        Route::post('admin/import/preview', [UniversalImportController::class, 'preview']);
+        Route::post('admin/import/{importJob}/validate', [UniversalImportController::class, 'validateJob']);
+        Route::post('admin/import/{importJob}/confirm', [UniversalImportController::class, 'confirm']);
         Route::get('admin/demo-data', [DemoDataController::class, 'status']);
         Route::post('admin/demo-data/create', [DemoDataController::class, 'create']);
         Route::post('admin/demo-data/clear', [DemoDataController::class, 'clear']);
