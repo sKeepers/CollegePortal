@@ -8,6 +8,7 @@ use App\Http\Resources\DigitalIdentityResource;
 use App\Models\DigitalIdentity;
 use App\Models\Student;
 use App\Models\Teacher;
+use App\Services\AuditLogService;
 use App\Services\QrSvgService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -56,6 +57,8 @@ class DigitalIdentityController extends Controller
             ]);
         });
 
+        AuditLogService::log('digital_identity', 'issue_qr', $identity, null, $identity->toArray(), $request);
+
         return (new DigitalIdentityResource($identity))
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
@@ -64,10 +67,12 @@ class DigitalIdentityController extends Controller
     public function revoke(DigitalIdentity $digitalIdentity): DigitalIdentityResource
     {
         if ($digitalIdentity->status !== DigitalIdentity::STATUS_REVOKED) {
+            $old = $digitalIdentity->getAttributes();
             $digitalIdentity->update([
                 'status' => DigitalIdentity::STATUS_REVOKED,
                 'revoked_at' => now(),
             ]);
+            AuditLogService::log('digital_identity', 'revoke_qr', $digitalIdentity, $old, $digitalIdentity->fresh()->getAttributes(), request());
         }
 
         return new DigitalIdentityResource($digitalIdentity->fresh());

@@ -28,6 +28,7 @@ import DataManagementPage from '../pages/admin/DataManagementPage.vue'
 import UniversalImportPage from '../pages/admin/UniversalImportPage.vue'
 import UsersPage from '../pages/admin/users/UsersPage.vue'
 import RolesPage from '../pages/admin/roles/RolesPage.vue'
+import AuditPage from '../pages/admin/audit/AuditPage.vue'
 import MobileStudentHomePage from '../pages/mobile/student/MobileStudentHomePage.vue'
 import MobileStudentPassPage from '../pages/mobile/student/MobileStudentPassPage.vue'
 
@@ -204,6 +205,12 @@ export const routes = [
         name: 'identity-digital-passes',
         component: DigitalPassesPage,
         meta: { title: 'Цифровые пропуска', permission: 'manage_dictionaries' },
+      },
+      {
+        path: 'admin/audit',
+        name: 'admin-audit',
+        component: AuditPage,
+        meta: { title: 'Аудит', permission: 'manage_users' },
       },
       {
         path: 'admin/roles',

@@ -8,6 +8,7 @@ use App\Models\Role;
 use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -51,6 +52,7 @@ class AdminUserController extends Controller
             'is_active' => $data['is_active'] ?? true,
         ]);
         $this->syncPrimaryRole($user);
+        AuditLogService::log('users', 'create', $user, null, $user->fresh()->toArray(), $request);
 
         return new UserResource($user->load(['role.permissions', 'roles']));
     }
@@ -62,6 +64,7 @@ class AdminUserController extends Controller
 
     public function update(Request $request, User $user): UserResource
     {
+        $old = $user->getAttributes();
         $data = $this->validated($request, $user);
 
         if (! empty($data['password'])) {
@@ -72,6 +75,7 @@ class AdminUserController extends Controller
 
         $user->update($data);
         $this->syncPrimaryRole($user);
+        AuditLogService::log('users', 'update', $user, $old, $user->fresh()->getAttributes(), $request);
 
         return new UserResource($user->refresh()->load(['role.permissions', 'roles']));
     }
@@ -82,7 +86,9 @@ class AdminUserController extends Controller
             return response()->json(['message' => 'Нельзя удалить текущего пользователя.'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
+        $old = $user->getAttributes();
         $user->delete();
+        AuditLogService::log('users', 'delete', ['type' => 'User', 'id' => $old['id'] ?? null], $old, null, $request);
 
         return response()->json(null, Response::HTTP_NO_CONTENT);
     }
@@ -93,14 +99,18 @@ class AdminUserController extends Controller
             return response()->json(['message' => 'Нельзя заблокировать текущего пользователя.'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
+        $old = $user->getAttributes();
         $user->forceFill(['is_active' => false, 'api_token_hash' => null])->save();
+        AuditLogService::log('users', 'block', $user, $old, $user->fresh()->getAttributes(), $request);
 
         return new UserResource($user->refresh()->load(['role.permissions', 'roles']));
     }
 
     public function unblock(User $user): UserResource
     {
+        $old = $user->getAttributes();
         $user->forceFill(['is_active' => true])->save();
+        AuditLogService::log('users', 'unblock', $user, $old, $user->fresh()->getAttributes(), request());
 
         return new UserResource($user->refresh()->load(['role.permissions', 'roles']));
     }
@@ -122,8 +132,10 @@ class AdminUserController extends Controller
         }
 
         $sync = $roleIds->mapWithKeys(fn ($roleId) => [$roleId => ['is_primary' => $roleId === $primaryRoleId]])->all();
+        $old = ['role_id' => $user->role_id, 'role_ids' => $user->roles()->pluck('roles.id')->values()->all()];
         $user->roles()->sync($sync);
         $user->forceFill(['role_id' => $primaryRoleId])->save();
+        AuditLogService::log('users', 'assign_roles', $user, $old, ['role_id' => $primaryRoleId, 'role_ids' => $roleIds->all()], $request);
 
         return new UserResource($user->refresh()->load(['role.permissions', 'roles']));
     }

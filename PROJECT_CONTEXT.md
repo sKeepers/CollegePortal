@@ -948,3 +948,10 @@ IMPORT-001.1 добавил CSV-шаблоны с русскими колонк�
 Добавлен MVP раздела `/admin/roles` для управления ролями пользователей. Сохранена совместимость с текущей авторизацией через `users.role_id`, добавлена таблица `role_user` для будущего множественного назначения ролей. Пользовательская карточка `/admin/users` теперь показывает реальные роли и позволяет назначать роли пользователю.
 
 Документация: `docs/USERS_AND_ROLES.md`.
+
+
+## CORE-002: Audit Log Platform
+
+Добавлена централизованная платформа аудита действий пользователей. Backend получил таблицу `audit_logs`, модель, сервис `AuditLogService`, API `/api/admin/audit` и ресурс. Frontend получил раздел `/admin/audit` с фильтрами, таблицей событий и карточкой события с pretty JSON. В CORE-002 логируются auth, users, roles, universal import, QR/digital identity и demo-data actions.
+
+Документация: `docs/AUDIT_LOG.md`.

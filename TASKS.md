@@ -292,3 +292,16 @@
 - [x] Обновить `docs/USERS_AND_ROLES.md`
 - [x] Проверить `php artisan test` и `npm run build`
 - [x] Сделать Git checkpoint
+
+
+## CORE-002
+
+- [x] Создать таблицу `audit_logs`
+- [x] Создать `AuditLog`, `AuditLogService`, `AuditLogResource`, `AuditLogController`
+- [x] Добавить единый метод `AuditLogService::log(...)`
+- [x] Подключить логирование auth, users, roles, import, QR и demo-data
+- [x] Добавить API `/api/admin/audit` и `/api/admin/audit/{id}`
+- [x] Создать frontend-раздел `/admin/audit`
+- [x] Создать `docs/AUDIT_LOG.md`
+- [x] Проверить `php artisan migrate`, `php artisan test`, `npm run build`
+- [x] Сделать Git checkpoint

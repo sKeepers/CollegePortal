@@ -13,6 +13,7 @@ use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Services\AuditLogService;
 use Database\Seeders\DemoDataSeeder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -35,9 +36,12 @@ class DemoDataController extends Controller
             '--force' => true,
         ]);
 
+        $summary = $this->summary();
+        AuditLogService::log('demo_data', 'create_demo', ['type' => 'demo_data', 'id' => null], null, $summary, request());
+
         return response()->json([
             'message' => 'Демо-данные созданы или обновлены.',
-            'data' => $this->summary(),
+            'data' => $summary,
         ]);
     }
 
@@ -84,15 +88,20 @@ class DemoDataController extends Controller
             ];
         });
 
+        $result = [...$summary, 'summary' => $this->summary()];
+        AuditLogService::log('demo_data', 'clear_demo', ['type' => 'demo_data', 'id' => null], null, $result, request());
+
         return response()->json([
             'message' => 'Демо-данные очищены. Администратор не удаляется.',
-            'data' => [...$summary, 'summary' => $this->summary()],
+            'data' => $result,
         ]);
     }
 
     public function export(): StreamedResponse
     {
         $filename = 'demo-data-summary-'.now()->format('Ymd-His').'.csv';
+
+        AuditLogService::log('demo_data', 'export', ['type' => 'demo_data', 'id' => null], null, ['filename' => $filename], request());
 
         return response()->streamDownload(function (): void {
             $output = fopen('php://output', 'w');
@@ -108,12 +117,15 @@ class DemoDataController extends Controller
     {
         $request->validate(['file' => ['required', 'file', 'mimes:csv,txt', 'max:5120']]);
 
+        $data = [
+            'filename' => $request->file('file')->getClientOriginalName(),
+            'size' => $request->file('file')->getSize(),
+        ];
+        AuditLogService::log('demo_data', 'import', ['type' => 'demo_data', 'id' => null], null, $data, $request);
+
         return response()->json([
             'message' => 'Файл принят. Расширенный импорт демо-данных будет подключен после согласования формата.',
-            'data' => [
-                'filename' => $request->file('file')->getClientOriginalName(),
-                'size' => $request->file('file')->getSize(),
-            ],
+            'data' => $data,
         ]);
     }
 

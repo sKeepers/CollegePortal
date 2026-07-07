@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ImportJobResource;
 use App\Models\ImportJob;
+use App\Services\AuditLogService;
 use App\Services\UniversalImportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -31,6 +32,8 @@ class UniversalImportController extends Controller
         } catch (RuntimeException $exception) {
             return response()->json(['message' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
+
+        AuditLogService::log('import', 'export_template', ['type' => 'import_template', 'id' => null], null, ['data_type' => $dataType, 'filename' => $template['filename']], request());
 
         return response($template['content'], Response::HTTP_OK, [
             'Content-Type' => 'text/csv; charset=UTF-8',
@@ -62,6 +65,8 @@ class UniversalImportController extends Controller
             return response()->json(['message' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
+        AuditLogService::log('import', 'preview', $job, null, ['data_type' => $job->data_type, 'filename' => $job->original_filename, 'total_rows' => $job->total_rows], $request);
+
         return (new ImportJobResource($job->load('user')))
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
@@ -80,6 +85,8 @@ class UniversalImportController extends Controller
             return response()->json(['message' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
+        AuditLogService::log('import', 'validate', $job, null, ['status' => $job->status, 'error_count' => $job->error_count], $request);
+
         return new ImportJobResource($job->load('user'));
     }
 
@@ -95,6 +102,8 @@ class UniversalImportController extends Controller
         } catch (RuntimeException $exception) {
             return response()->json(['message' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
+
+        AuditLogService::log('import', 'confirm', $job, null, ['status' => $job->status, 'result' => $job->result], $request);
 
         return new ImportJobResource($job->load('user'));
     }

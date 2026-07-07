@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AccessGateController;
 use App\Http\Controllers\Api\AccessReportController;
 use App\Http\Controllers\Api\AdminRoleController;
+use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\ApplicantApplicationController;
 use App\Http\Controllers\Api\GroupController;
@@ -40,6 +41,8 @@ Route::middleware('api.token')->group(function (): void {
     Route::get('mobile/student', [MobileStudentController::class, 'show']);
 
     Route::middleware('permission:manage_users')->group(function (): void {
+        Route::get('admin/audit', [AuditLogController::class, 'index']);
+        Route::get('admin/audit/{auditLog}', [AuditLogController::class, 'show']);
         Route::apiResource('admin/roles', AdminRoleController::class)->except(['show']);
         Route::get('admin/users/roles', [AdminUserController::class, 'roles']);
         Route::get('admin/users/people', [AdminUserController::class, 'people']);

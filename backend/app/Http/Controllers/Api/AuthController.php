@@ -8,6 +8,7 @@ use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Services\AuditLogService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
@@ -38,6 +39,8 @@ class AuthController extends Controller
             'last_login_at' => now(),
         ])->save();
 
+        AuditLogService::log('auth', 'login', $user, null, ['email' => $user->email], $request, $user);
+
         return response()->json([
             'token' => $token,
             'token_type' => 'Bearer',
@@ -52,7 +55,9 @@ class AuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->forceFill(['api_token_hash' => null])->save();
+        $user = $request->user();
+        AuditLogService::log('auth', 'logout', $user, null, ['email' => $user->email], $request, $user);
+        $user->forceFill(['api_token_hash' => null])->save();
 
         return response()->json(['message' => 'Logged out.']);
     }

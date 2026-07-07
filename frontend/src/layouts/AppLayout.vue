@@ -15,6 +15,7 @@ import {
   LogOut,
   Menu,
   QrCode,
+  ScrollText,
   Settings,
   School,
   ShieldCheck,
@@ -91,6 +92,7 @@ const navGroups = [
     items: [
       { label: 'Пользователи', to: '/admin/users', icon: UserCog, permission: 'manage_users' },
       { label: 'Роли', to: '/admin/roles', icon: ShieldCheck, permission: 'manage_users' },
+      { label: 'Аудит', to: '/admin/audit', icon: ScrollText, permission: 'manage_users' },
       { label: 'Импорт данных', to: '/admin/import', icon: FileSpreadsheet, permission: 'manage_dictionaries' },
       { label: 'Управление данными', to: '/admin/data-management', icon: Database, permission: 'manage_dictionaries' },
       { label: 'UI Foundation', to: '/system/ui-foundation', icon: Settings, adminOnly: true },

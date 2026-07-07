@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RoleResource;
 use App\Models\Role;
+use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -33,13 +34,16 @@ class AdminRoleController extends Controller
     public function store(Request $request): RoleResource
     {
         $role = Role::create($this->validated($request));
+        AuditLogService::log('roles', 'create', $role, null, $role->toArray(), $request);
 
         return new RoleResource($role->loadCount('assignedUsers'));
     }
 
     public function update(Request $request, Role $role): RoleResource
     {
+        $old = $role->getAttributes();
         $role->update($this->validated($request, $role));
+        AuditLogService::log('roles', 'update', $role, $old, $role->fresh()->getAttributes(), $request);
 
         return new RoleResource($role->refresh()->loadCount('assignedUsers'));
     }
@@ -50,7 +54,9 @@ class AdminRoleController extends Controller
             return response()->json(['message' => 'Нельзя удалить роль, назначенную пользователям.'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
+        $old = $role->getAttributes();
         $role->delete();
+        AuditLogService::log('roles', 'delete', ['type' => 'Role', 'id' => $old['id'] ?? null], $old, null, request());
 
         return response()->json(null, Response::HTTP_NO_CONTENT);
     }
