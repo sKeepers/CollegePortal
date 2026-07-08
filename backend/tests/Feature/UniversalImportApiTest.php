@@ -2,9 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Models\Classroom;
+use App\Models\Curriculum;
+use App\Models\EducationProgram;
 use App\Models\Group;
 use App\Models\ImportJob;
+use App\Models\ScheduleLesson;
+use App\Models\Specialty;
 use App\Models\Subject;
+use App\Models\Teacher;
+use App\Models\TeachingLoad;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
@@ -23,10 +30,15 @@ class UniversalImportApiTest extends TestCase
 
     public function test_it_returns_import_config(): void
     {
-        $this->getJson('/api/admin/import/config')
+        $response = $this->getJson('/api/admin/import/config')
             ->assertOk()
             ->assertJsonPath('data.types.0.value', 'students')
             ->assertJsonPath('data.formats.1', 'xlsx');
+
+        $types = collect($response->json('data.types'))->pluck('value')->all();
+        $this->assertContains('curricula', $types);
+        $this->assertContains('teaching-load', $types);
+        $this->assertContains('schedule', $types);
     }
 
 
@@ -39,6 +51,25 @@ class UniversalImportApiTest extends TestCase
         $content = $response->getContent();
         $this->assertStringContainsString('Фамилия;Имя;Отчество;Группа', $content);
         $this->assertStringContainsString('Иванов;Дмитрий;Сергеевич;ИСП-101', $content);
+    }
+
+
+    public function test_it_downloads_curricula_teaching_load_and_schedule_templates(): void
+    {
+        $this->get('/api/admin/import/templates/curricula.csv')
+            ->assertOk()
+            ->assertSee('Учебный план')
+            ->assertSee('Форма контроля');
+
+        $this->get('/api/admin/import/templates/teaching-load.csv')
+            ->assertOk()
+            ->assertSee('Учебный год')
+            ->assertSee('Тип нагрузки');
+
+        $this->get('/api/admin/import/templates/schedule.csv')
+            ->assertOk()
+            ->assertSee('Время начала')
+            ->assertSee('Тип занятия');
     }
 
     public function test_it_previews_and_confirms_subject_import(): void
@@ -128,6 +159,157 @@ class UniversalImportApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.original_filename', 'subjects.csv')
             ->assertJsonPath('data.0.created_count', 2);
+    }
+
+
+    public function test_it_imports_curricula_rows_through_universal_import(): void
+    {
+        $program = $this->createProgram();
+        Subject::create(['name' => 'Специальность', 'code' => 'SPEC-001']);
+        $file = $this->csvFile('curricula.csv', "Код учебного плана;Учебный план;Образовательная программа;Год начала;Статус;Дисциплина;Код дисциплины;Курс;Семестр;Часы;Форма контроля;Порядок
+УП-ФО-2026;Учебный план Фортепиано 2026;{$program->name};2026;draft;Специальность;SPEC-001;1;1;144;Экзамен;10
+");
+
+        $jobId = $this->post('/api/admin/import/preview', [
+            'data_type' => 'curricula',
+            'file' => $file,
+        ])->assertCreated()->assertJsonPath('data.total_rows', 1)->json('data.id');
+
+        $this->postJson("/api/admin/import/{$jobId}/confirm", [
+            'mode' => 'skip_duplicates',
+            'mapping' => [
+                'curriculum_code' => 'Код учебного плана',
+                'curriculum_name' => 'Учебный план',
+                'education_program_name' => 'Образовательная программа',
+                'year_start' => 'Год начала',
+                'status' => 'Статус',
+                'subject_name' => 'Дисциплина',
+                'subject_code' => 'Код дисциплины',
+                'course' => 'Курс',
+                'semester' => 'Семестр',
+                'hours_total' => 'Часы',
+                'control_form' => 'Форма контроля',
+                'sort_order' => 'Порядок',
+            ],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'completed')
+            ->assertJsonPath('data.created_count', 1)
+            ->assertJsonPath('data.error_count', 0);
+
+        $curriculum = Curriculum::where('code', 'УП-ФО-2026')->firstOrFail();
+        $this->assertDatabaseHas('curriculum_items', [
+            'curriculum_id' => $curriculum->id,
+            'course' => 1,
+            'semester' => 1,
+            'hours_total' => 144,
+            'control_form' => 'Экзамен',
+        ]);
+    }
+
+    public function test_it_imports_teaching_load_rows_through_universal_import(): void
+    {
+        $teacher = Teacher::create(['last_name' => 'Петрова', 'first_name' => 'Анна', 'middle_name' => 'Викторовна', 'is_active' => true]);
+        Subject::create(['name' => 'Специальность', 'code' => 'SPEC-001']);
+        Group::create(['name' => 'ИСП-101', 'specialty' => 'Инструментальное исполнительство', 'course' => 1, 'year_start' => 2026]);
+        $file = $this->csvFile('teaching-load.csv', "Учебный год;Преподаватель;Статус;Дисциплина;Код дисциплины;Группа;Семестр;Часы;Тип нагрузки;Порядок
+2026/2027;Петрова Анна Викторовна;draft;Специальность;SPEC-001;ИСП-101;1;72;Аудиторная;10
+");
+
+        $jobId = $this->post('/api/admin/import/preview', [
+            'data_type' => 'teaching-load',
+            'file' => $file,
+        ])->assertCreated()->json('data.id');
+
+        $this->postJson("/api/admin/import/{$jobId}/confirm", [
+            'mode' => 'skip_duplicates',
+            'mapping' => [
+                'academic_year' => 'Учебный год',
+                'teacher_name' => 'Преподаватель',
+                'status' => 'Статус',
+                'subject_name' => 'Дисциплина',
+                'subject_code' => 'Код дисциплины',
+                'group_name' => 'Группа',
+                'semester' => 'Семестр',
+                'hours_total' => 'Часы',
+                'load_type' => 'Тип нагрузки',
+                'sort_order' => 'Порядок',
+            ],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.created_count', 1)
+            ->assertJsonPath('data.error_count', 0);
+
+        $load = TeachingLoad::where('academic_year', '2026/2027')->where('teacher_id', $teacher->id)->firstOrFail();
+        $this->assertDatabaseHas('teaching_load_items', [
+            'teaching_load_id' => $load->id,
+            'semester' => 1,
+            'hours_total' => 72,
+            'load_type' => 'Аудиторная',
+        ]);
+    }
+
+    public function test_it_imports_schedule_rows_through_universal_import(): void
+    {
+        $teacher = Teacher::create(['last_name' => 'Петрова', 'first_name' => 'Анна', 'middle_name' => 'Викторовна', 'is_active' => true]);
+        Subject::create(['name' => 'Специальность', 'code' => 'SPEC-001']);
+        Group::create(['name' => 'ИСП-101', 'specialty' => 'Инструментальное исполнительство', 'course' => 1, 'year_start' => 2026]);
+        Classroom::create(['number' => '201', 'building' => 'Главный корпус']);
+        $file = $this->csvFile('schedule.csv', "Дата;Время начала;Время окончания;Группа;Преподаватель;Дисциплина;Код дисциплины;Аудитория;Корпус;Тип занятия;Тема
+01.09.2026;09:00;10:30;ИСП-101;Петрова Анна Викторовна;Специальность;SPEC-001;201;Главный корпус;Практическое;Вводное занятие
+");
+
+        $jobId = $this->post('/api/admin/import/preview', [
+            'data_type' => 'schedule',
+            'file' => $file,
+        ])->assertCreated()->json('data.id');
+
+        $this->postJson("/api/admin/import/{$jobId}/confirm", [
+            'mode' => 'skip_duplicates',
+            'mapping' => [
+                'lesson_date' => 'Дата',
+                'starts_at' => 'Время начала',
+                'ends_at' => 'Время окончания',
+                'group_name' => 'Группа',
+                'teacher_name' => 'Преподаватель',
+                'subject_name' => 'Дисциплина',
+                'subject_code' => 'Код дисциплины',
+                'classroom_number' => 'Аудитория',
+                'classroom_building' => 'Корпус',
+                'lesson_type' => 'Тип занятия',
+                'topic' => 'Тема',
+            ],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.created_count', 1)
+            ->assertJsonPath('data.error_count', 0);
+
+        $this->assertDatabaseHas('schedule_lessons', [
+            'teacher_id' => $teacher->id,
+            'lesson_date' => '2026-09-01 00:00:00',
+            'starts_at' => '09:00',
+            'ends_at' => '10:30',
+            'lesson_type' => 'Практическое',
+            'topic' => 'Вводное занятие',
+        ]);
+    }
+
+
+    private function createProgram(): EducationProgram
+    {
+        $specialty = Specialty::create([
+            'code' => '53.02.03',
+            'name' => 'Инструментальное исполнительство',
+            'education_level' => 'Среднее профессиональное образование',
+        ]);
+
+        return EducationProgram::create([
+            'specialty_id' => $specialty->id,
+            'name' => 'Фортепиано',
+            'year_start' => 2026,
+            'study_form' => 'Очная',
+            'is_active' => true,
+        ]);
     }
 
     private function csvFile(string $name, string $content): UploadedFile

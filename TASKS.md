@@ -372,3 +372,15 @@
 - [x] Обновить `TASKS.md`
 - [x] Сделать Git checkpoint
 
+## DATA-002
+
+- [x] Добавить в универсальный импорт тип `curricula`
+- [x] Добавить в универсальный импорт тип `teaching-load`
+- [x] Добавить в универсальный импорт тип `schedule`
+- [x] Поддержать preview, mapping, validation и confirm import для трех новых типов
+- [x] Добавить CSV-шаблоны для учебных планов, нагрузки и расписания
+- [x] Обновить `docs/DATA_IMPORT.md`
+- [x] Обновить `docs/import-templates/*.md`
+- [x] Проверить `php artisan test` и `npm run build`
+- [x] Сделать Git checkpoint
+
