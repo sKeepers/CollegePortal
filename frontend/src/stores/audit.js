@@ -79,6 +79,7 @@ export function moduleLabel(value) {
     digital_identity: 'Цифровые пропуска',
     demo_data: 'Демо-данные',
     settings: 'Настройки',
+    reference_data: 'Справочники',
   }
   return labels[value] || value || '—'
 }
@@ -102,6 +103,12 @@ export function actionLabel(value) {
     create_demo: 'Создание демо',
     clear_demo: 'Очистка демо',
     reset_defaults: 'Сброс настроек',
+    delete_item: 'Удаление элемента справочника',
+    update_item: 'Редактирование элемента справочника',
+    create_item: 'Создание элемента справочника',
+    delete_catalog: 'Удаление справочника',
+    update_catalog: 'Редактирование справочника',
+    create_catalog: 'Создание справочника',
     import: 'Импорт',
     export: 'Экспорт',
   }

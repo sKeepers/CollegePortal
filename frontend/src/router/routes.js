@@ -30,6 +30,7 @@ import UsersPage from '../pages/admin/users/UsersPage.vue'
 import RolesPage from '../pages/admin/roles/RolesPage.vue'
 import AuditPage from '../pages/admin/audit/AuditPage.vue'
 import SettingsPage from '../pages/admin/settings/SettingsPage.vue'
+import ReferenceDataPage from '../pages/admin/reference/ReferenceDataPage.vue'
 import MobileStudentHomePage from '../pages/mobile/student/MobileStudentHomePage.vue'
 import MobileStudentPassPage from '../pages/mobile/student/MobileStudentPassPage.vue'
 
@@ -218,6 +219,12 @@ export const routes = [
         name: 'admin-settings',
         component: SettingsPage,
         meta: { title: 'Настройки колледжа', permission: 'manage_users' },
+      },
+      {
+        path: 'admin/reference',
+        name: 'admin-reference',
+        component: ReferenceDataPage,
+        meta: { title: 'Справочники', permission: 'manage_dictionaries' },
       },
       {
         path: 'admin/roles',

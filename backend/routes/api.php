@@ -26,6 +26,8 @@ use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\SubjectController;
 use App\Http\Controllers\Api\ScheduleLessonController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\ReferenceCatalogController;
+use App\Http\Controllers\Api\ReferenceItemController;
 use App\Http\Controllers\Api\SpecialtyController;
 use App\Http\Controllers\Api\TeacherController;
 use App\Http\Controllers\Api\UniversalImportController;
@@ -57,6 +59,8 @@ Route::middleware('api.token')->group(function (): void {
     });
 
     Route::middleware('permission:manage_dictionaries')->group(function (): void {
+        Route::apiResource('admin/reference/catalogs', ReferenceCatalogController::class)->parameters(['catalogs' => 'catalog'])->except(['show']);
+        Route::apiResource('admin/reference/items', ReferenceItemController::class)->parameters(['items' => 'item'])->except(['show']);
         Route::get('admin/import/config', [UniversalImportController::class, 'config']);
         Route::get('admin/import/history', [UniversalImportController::class, 'history']);
         Route::get('admin/import/templates/{dataType}.csv', [UniversalImportController::class, 'template']);

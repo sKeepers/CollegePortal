@@ -960,3 +960,8 @@ IMPORT-001.1 добавил CSV-шаблоны с русскими колонк�
 ## CORE-003: Settings Center
 
 Добавлен единый центр настроек колледжа: backend-таблица `settings`, `SettingService`, административный API `/api/admin/settings`, публичный API `/api/settings/public` и frontend-раздел `/admin/settings`. Публичные настройки используются в рабочем интерфейсе и проходной; секреты в модуле не хранятся.
+
+
+## CORE-004A: Reference Data Platform
+
+Добавлен единый модуль нормативно-справочной информации: таблицы `reference_catalogs` и `reference_items`, системный `ReferenceDataSeeder`, API `/api/admin/reference/catalogs` и `/api/admin/reference/items`, frontend-раздел `/admin/reference` и документация `docs/REFERENCE_DATA.md`. MVP позволяет создавать пользовательские справочники и элементы, а системные значения защищены от удаления.

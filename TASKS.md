@@ -318,3 +318,15 @@
 - [x] Создать `docs/SETTINGS.md`
 - [x] Проверить `php artisan migrate`, `php artisan test`, `npm run build`
 - [x] Сделать Git checkpoint
+
+
+## CORE-004A
+
+- [x] Создать таблицы `reference_catalogs` и `reference_items`
+- [x] Создать модели, ресурсы и API справочников
+- [x] Добавить системный `ReferenceDataSeeder`
+- [x] Создать frontend-раздел `/admin/reference`
+- [x] Добавить пункт меню `Система -> Справочники`
+- [x] Создать `docs/REFERENCE_DATA.md`
+- [x] Проверить `php artisan migrate`, `php artisan test`, `npm run build`
+- [x] Сделать Git checkpoint
