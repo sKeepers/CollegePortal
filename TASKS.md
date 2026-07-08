@@ -359,3 +359,16 @@
 - [x] Обновить `TASKS.md`
 - [x] Сделать Git checkpoint
 
+## DATA-001
+
+- [x] Создать `docs/PILOT_DATA_IMPORT_PLAN.md`
+- [x] Описать порядок загрузки реальных данных
+- [x] Создать папку `docs/import-templates/`
+- [x] Подготовить описания шаблонов `students`, `groups`, `teachers`, `subjects`, `classrooms`, `admissions`, `curricula`, `teaching-load`, `schedule`
+- [x] Для каждого шаблона указать обязательные поля, рекомендуемые поля, ключ обновления, пример строки и частые ошибки
+- [x] Создать `docs/REAL_DATA_CHECKLIST.md`
+- [x] Обновить `PROJECT_CONTEXT.md`
+- [x] Обновить `ROADMAP.md`
+- [x] Обновить `TASKS.md`
+- [x] Сделать Git checkpoint
+
