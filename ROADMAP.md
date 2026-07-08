@@ -282,3 +282,18 @@ Roadmap фиксирует порядок развития проекта пос
 - проверить реальные конфликты расписания на данных колледжа;
 - по результатам пилота сформировать DATA-003/IMPORT-002 с улучшениями mapping и ошибок.
 
+## EPIC-001: Architecture Review & Technical Debt
+
+- [x] Проведена ревизия backend/frontend архитектуры после Release 0.7.
+- [x] Зафиксирован технический долг: крупный `UniversalImportService`, legacy `App.vue`, большие CRUD-страницы, широкие permissions.
+- [x] Подготовлены performance и security reviews.
+- [x] Подготовлен refactor plan без изменения функциональности.
+
+### Ближайший технический фокус
+
+- REF-001: characterization tests для универсального импорта;
+- REF-002: разделить `UniversalImportService` на parser, registry и target handlers;
+- REF-010: lazy loading frontend routes;
+- REF-020: детализировать permission matrix;
+- REF-030: подготовить owner/person resolver foundation.
+

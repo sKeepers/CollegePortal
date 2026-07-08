@@ -384,3 +384,16 @@
 - [x] Проверить `php artisan test` и `npm run build`
 - [x] Сделать Git checkpoint
 
+## EPIC-001
+
+- [x] Создать `docs/ARCHITECTURE_REVIEW.md`
+- [x] Создать `docs/TECHNICAL_DEBT.md`
+- [x] Создать `docs/PERFORMANCE_REVIEW.md`
+- [x] Создать `docs/SECURITY_REVIEW.md`
+- [x] Создать `docs/REFACTOR_PLAN.md`
+- [x] Оценить backend, frontend, сервисы, модели, импорт, Identity, QR, Mobile, Audit, Settings и Reference Data
+- [x] Обновить `PROJECT_CONTEXT.md`
+- [x] Обновить `ROADMAP.md`
+- [x] Обновить `TASKS.md`
+- [x] Сделать Git checkpoint
+
