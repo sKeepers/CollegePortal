@@ -161,3 +161,14 @@
 3. REF-010: router lazy loading.
 4. REF-020: permission matrix.
 5. REF-030: owner/person resolver foundation.
+
+## Выполнено: REFACTOR-001
+
+`UniversalImportService` разделен на фасад/координатор и набор `ImportHandler` классов. Старый public workflow `/admin/import` сохранен: preview, mapping, validation, confirm и `ImportJob` работают через тот же API.
+
+Следующие безопасные шаги:
+
+- вынести CSV/XLSX parser в отдельный `ImportFileParser`;
+- вынести template generation в `ImportTemplateService`;
+- добавить отдельные tests для каждого handler;
+- постепенно подключить старые module CSV endpoints к тем же handlers.

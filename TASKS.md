@@ -397,3 +397,15 @@
 - [x] Обновить `TASKS.md`
 - [x] Сделать Git checkpoint
 
+## REFACTOR-001
+
+- [x] Зафиксировать текущее поведение тестами `UniversalImportApiTest`
+- [x] Создать `ImportHandlerInterface`
+- [x] Создать handler-ы для students, groups, teachers, subjects, classrooms, admissions, curricula, teaching-load, schedule
+- [x] Оставить `UniversalImportService` фасадом/координатором
+- [x] Сохранить API и поведение `/admin/import`
+- [x] Проверить `php artisan test`
+- [x] Проверить `npm run build`
+- [x] Обновить документацию
+- [x] Сделать Git checkpoint
+

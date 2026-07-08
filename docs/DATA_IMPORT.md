@@ -179,3 +179,21 @@
 - Раздел доступен только пользователям с правом `manage_dictionaries`.
 - Production-очистка демо-данных остается запрещенной.
 - Реальные персональные данные перед загрузкой нужно согласовать с требованиями безопасности и регламентом обработки ПДн.
+
+## Архитектура после REFACTOR-001
+
+Универсальный импорт разделен на координатор и обработчики типов данных. `UniversalImportService` отвечает за общий workflow: чтение CSV/XLSX, preview, mapping, validation, запуск импорта и запись `ImportJob`.
+
+Бизнес-логика типов данных вынесена в handler-классы:
+
+- `StudentImportHandler`;
+- `GroupImportHandler`;
+- `TeacherImportHandler`;
+- `SubjectImportHandler`;
+- `ClassroomImportHandler`;
+- `AdmissionImportHandler`;
+- `CurriculumImportHandler`;
+- `TeachingLoadImportHandler`;
+- `ScheduleImportHandler`.
+
+Все обработчики реализуют `ImportHandlerInterface`. Поведение `/admin/import`, API и формат ответов не изменялись.
