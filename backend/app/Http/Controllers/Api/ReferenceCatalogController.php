@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\ReferenceCatalogResource;
 use App\Models\ReferenceCatalog;
 use App\Services\AuditLogService;
+use App\Services\ReferenceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -38,6 +39,7 @@ class ReferenceCatalogController extends Controller
     public function store(Request $request): ReferenceCatalogResource
     {
         $catalog = ReferenceCatalog::create($this->validated($request));
+        ReferenceService::forgetCatalog($catalog);
         AuditLogService::log('reference_data', 'create_catalog', $catalog, null, $catalog->toArray(), $request);
 
         return new ReferenceCatalogResource($catalog->loadCount('items'));
@@ -53,6 +55,7 @@ class ReferenceCatalogController extends Controller
         }
 
         $catalog->update($data);
+        ReferenceService::forgetCatalog($catalog);
         AuditLogService::log('reference_data', 'update_catalog', $catalog, $old, $catalog->fresh()->getAttributes(), $request);
 
         return new ReferenceCatalogResource($catalog->refresh()->loadCount('items'));
@@ -69,6 +72,7 @@ class ReferenceCatalogController extends Controller
         }
 
         $old = $catalog->getAttributes();
+        ReferenceService::forgetCatalog($catalog);
         $catalog->delete();
         AuditLogService::log('reference_data', 'delete_catalog', ['type' => 'ReferenceCatalog', 'id' => $old['id'] ?? null], $old, null, request());
 

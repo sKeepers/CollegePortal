@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ReferenceCatalog;
 use App\Models\ReferenceItem;
+use App\Services\ReferenceService;
 use Database\Seeders\ReferenceDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -28,6 +29,18 @@ class ReferenceDataApiTest extends TestCase
         ]);
 
         $this->assertSame(11, ReferenceCatalog::query()->count());
+    }
+
+    public function test_reference_service_returns_cached_catalog_options(): void
+    {
+        $this->seed(ReferenceDataSeeder::class);
+
+        $items = ReferenceService::catalog('exam_types');
+        $options = ReferenceService::options('exam_types');
+
+        $this->assertGreaterThanOrEqual(4, $items->count());
+        $this->assertContains('exam', array_column($options, 'value'));
+        $this->assertSame('Экзамен', collect($options)->firstWhere('value', 'exam')['label']);
     }
 
     public function test_admin_can_manage_custom_catalog_and_items(): void

@@ -16,6 +16,7 @@ import StudentDetailsPanel from './StudentDetailsPanel.vue'
 import StudentFilters from './StudentFilters.vue'
 import StudentFormPanel from './StudentFormPanel.vue'
 import { useStudentsStore } from '../../stores/students'
+import { useReferenceOptionsStore } from '../../stores/referenceOptions'
 import {
   TABLE_ROWS_PER_PAGE_OPTIONS,
   createTablePagination,
@@ -23,6 +24,7 @@ import {
 } from '../../services/tableSettings'
 
 const store = useStudentsStore()
+const referenceOptions = useReferenceOptionsStore()
 const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
@@ -39,21 +41,9 @@ const tablePagination = ref(createTablePagination(STUDENTS_ROWS_PER_PAGE_KEY, {
   rowsPerPage: 20,
 }))
 
-const statusLabels = {
-  active: 'Обучается',
-  academic_leave: 'Академический отпуск',
-  graduated: 'Выпускник',
-  expelled: 'Отчислен',
-}
-
-const statusTones = {
-  active: 'success',
-  academic_leave: 'warning',
-  graduated: 'info',
-  expelled: 'danger',
-}
-
-const statusOptions = Object.entries(statusLabels).map(([value, label]) => ({ label, value }))
+const statusOptions = computed(() => referenceOptions.options('student_statuses'))
+const statusLabels = computed(() => Object.fromEntries(statusOptions.value.map((option) => [option.value, option.label])))
+const statusTones = computed(() => Object.fromEntries(statusOptions.value.map((option) => [option.value, option.tone || 'neutral'])))
 
 const columns = [
   {
@@ -247,6 +237,7 @@ watch(
 )
 
 onMounted(async () => {
+  await referenceOptions.loadCatalog('student_statuses')
   store.setFilters({
     group_id: routeGroupId(),
     search: routeSearchText(),

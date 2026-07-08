@@ -330,3 +330,17 @@
 - [x] Создать `docs/REFERENCE_DATA.md`
 - [x] Проверить `php artisan migrate`, `php artisan test`, `npm run build`
 - [x] Сделать Git checkpoint
+
+
+## CORE-004B
+
+- [x] Добавить backend `ReferenceService` с кэшированием
+- [x] Подключить frontend-store `referenceOptions`
+- [x] Перевести Students на `student_statuses`
+- [x] Перевести Admissions на `applicant_application_statuses`
+- [x] Перевести Exams на `exam_types`
+- [x] Перевести Teaching Load на `teaching_load_types`
+- [x] Перевести Graduation на `diploma_statuses`
+- [x] Обновить `docs/REFERENCE_DATA.md`
+- [x] Проверить `php artisan test`, `npm run build`
+- [x] Сделать Git checkpoint

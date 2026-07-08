@@ -2,7 +2,7 @@
 import { reactive, watch } from 'vue'
 import AppCard from '../../components/ui/AppCard.vue'
 import AppFormSection from '../../components/ui/AppFormSection.vue'
-import { EDUCATION_BASE_OPTIONS, STATUS_OPTIONS } from '../../stores/admissions'
+import { EDUCATION_BASE_OPTIONS } from '../../stores/admissions'
 
 const props = defineProps({
   application: {
@@ -10,6 +10,10 @@ const props = defineProps({
     default: null,
   },
   educationProgramOptions: {
+    type: Array,
+    default: () => [],
+  },
+  statusOptions: {
     type: Array,
     default: () => [],
   },
@@ -106,7 +110,7 @@ function submitForm() {
             emit-value
             map-options
             label="Статус"
-            :options="STATUS_OPTIONS"
+            :options="statusOptions"
             required
           />
           <q-input v-model="form.submitted_at" dense outlined type="date" label="Дата подачи" required />

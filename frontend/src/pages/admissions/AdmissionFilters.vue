@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive, watch } from 'vue'
 import AppFilterBar from '../../components/ui/AppFilterBar.vue'
-import { COMPLETENESS_OPTIONS, STATUS_OPTIONS, formatDate } from '../../stores/admissions'
+import { COMPLETENESS_OPTIONS, formatDate } from '../../stores/admissions'
 
 const props = defineProps({
   modelValue: {
@@ -13,6 +13,10 @@ const props = defineProps({
     default: () => [],
   },
   educationProgramOptions: {
+    type: Array,
+    default: () => [],
+  },
+  statusOptions: {
     type: Array,
     default: () => [],
   },
@@ -35,7 +39,7 @@ const localFilters = reactive({
 
 const activeChips = computed(() => {
   const chips = []
-  const selectedStatus = STATUS_OPTIONS.find((status) => status.value === localFilters.status)
+  const selectedStatus = props.statusOptions.find((status) => status.value === localFilters.status)
   const selectedSpecialty = props.specialtyOptions.find((specialty) => Number(specialty.value) === Number(localFilters.specialtyId))
   const selectedProgram = props.educationProgramOptions.find((program) => Number(program.value) === Number(localFilters.educationProgramId))
   const selectedCompleteness = COMPLETENESS_OPTIONS.find((option) => option.value === localFilters.completeness)
@@ -125,7 +129,7 @@ function removeChip(key) {
       emit-value
       map-options
       label="Статус"
-      :options="STATUS_OPTIONS"
+      :options="statusOptions"
     />
     <q-select
       v-model="localFilters.specialtyId"

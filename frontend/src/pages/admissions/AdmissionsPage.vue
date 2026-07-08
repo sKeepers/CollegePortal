@@ -15,6 +15,7 @@ import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import AdmissionDetailsPanel from './AdmissionDetailsPanel.vue'
 import AdmissionFilters from './AdmissionFilters.vue'
 import AdmissionFormPanel from './AdmissionFormPanel.vue'
+import { useReferenceOptionsStore } from '../../stores/referenceOptions'
 import {
   applicantName,
   documentsCompleteness,
@@ -33,6 +34,7 @@ import {
 } from '../../services/tableSettings'
 
 const store = useAdmissionsStore()
+const referenceOptions = useReferenceOptionsStore()
 const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
@@ -58,6 +60,7 @@ const columns = [
 ]
 
 const tableSubtitle = computed(() => `Найдено заявлений: ${store.filteredApplications.length}`)
+const statusOptions = computed(() => referenceOptions.options('applicant_application_statuses'))
 
 function notifySuccess(message) {
   $q.notify({
@@ -259,6 +262,7 @@ watch(
 )
 
 onMounted(async () => {
+  await referenceOptions.loadCatalog('applicant_application_statuses')
   store.setFilters({
     search: routeSearchText(),
     status: routeStatus(),
@@ -307,6 +311,7 @@ onMounted(async () => {
       :model-value="store.filters"
       :specialty-options="store.specialtyOptions"
       :education-program-options="store.educationProgramOptions"
+      :status-options="statusOptions"
       :loading="store.loading"
       @apply="applyFilters"
       @reset="resetFilters"
@@ -452,6 +457,7 @@ onMounted(async () => {
         <AdmissionFormPanel
           :application="editingApplication"
           :education-program-options="store.educationProgramOptions"
+          :status-options="statusOptions"
           :saving="store.saving"
           @save="saveApplication"
           @cancel="formVisible = false"

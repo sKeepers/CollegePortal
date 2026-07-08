@@ -7,6 +7,7 @@ use App\Http\Resources\ReferenceItemResource;
 use App\Models\ReferenceCatalog;
 use App\Models\ReferenceItem;
 use App\Services\AuditLogService;
+use App\Services\ReferenceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -17,6 +18,12 @@ class ReferenceItemController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
+        if ($request->string('catalog_code')->toString() && ! $request->integer('catalog_id')) {
+            $items = ReferenceService::catalog($request->string('catalog_code')->toString(), ! $request->has('is_active') || $request->boolean('is_active'));
+
+            return ReferenceItemResource::collection($items);
+        }
+
         $items = ReferenceItem::query()
             ->with('catalog')
             ->when($request->integer('catalog_id'), fn ($query, int $catalogId) => $query->where('catalog_id', $catalogId))
@@ -40,6 +47,7 @@ class ReferenceItemController extends Controller
     public function store(Request $request): ReferenceItemResource
     {
         $item = ReferenceItem::create($this->validated($request));
+        ReferenceService::forgetCatalog($item->catalog);
         AuditLogService::log('reference_data', 'create_item', $item, null, $item->toArray(), $request);
 
         return new ReferenceItemResource($item->load('catalog'));
@@ -55,6 +63,7 @@ class ReferenceItemController extends Controller
         }
 
         $item->update($data);
+        ReferenceService::forgetCatalog($item->catalog);
         AuditLogService::log('reference_data', 'update_item', $item, $old, $item->fresh()->getAttributes(), $request);
 
         return new ReferenceItemResource($item->refresh()->load('catalog'));
@@ -67,6 +76,7 @@ class ReferenceItemController extends Controller
         }
 
         $old = $item->getAttributes();
+        ReferenceService::forgetCatalog($item->catalog);
         $item->delete();
         AuditLogService::log('reference_data', 'delete_item', ['type' => 'ReferenceItem', 'id' => $old['id'] ?? null], $old, null, request());
 
