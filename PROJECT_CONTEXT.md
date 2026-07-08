@@ -970,3 +970,18 @@ IMPORT-001.1 добавил CSV-шаблоны с русскими колонк�
 ## CORE-004B: Reference Data Integration
 
 Добавлен `ReferenceService` с кэшированием справочников и frontend-store `referenceOptions`. Первые модули переведены на Reference Data для безопасных выпадающих списков: Students, Admissions, Exams, Teaching Load и Graduation. Бизнес-логика и формат существующих данных не менялись.
+
+## RELEASE-007: Freeze Review перед пилотной загрузкой данных
+
+Зафиксировано состояние Release 0.7 в DEV перед пилотной загрузкой реальных данных колледжа. Код, backend, frontend, БД и API не менялись: выполнены проверки и обновлена документация.
+
+Проверки DEV:
+
+- `php artisan test`: `161 passed (742 assertions)`;
+- `npm run build`: успешно, с предупреждением о крупном frontend chunk;
+- smoke-check ключевых маршрутов: все маршруты из freeze checklist вернули HTTP 200.
+
+Основной вывод: DEV готов к пилотной загрузке реальных данных при условии предварительной сверки справочников, шаблонов импорта и правил обновления дублей. PROD не изменялся.
+
+Документ: `docs/RELEASE_0_7_FREEZE_REVIEW.md`.
+

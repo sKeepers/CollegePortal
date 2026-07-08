@@ -344,3 +344,18 @@
 - [x] Обновить `docs/REFERENCE_DATA.md`
 - [x] Проверить `php artisan test`, `npm run build`
 - [x] Сделать Git checkpoint
+
+## RELEASE-007
+
+- [x] Создать `docs/RELEASE_0_7_FREEZE_REVIEW.md`
+- [x] Описать реализованные модули Release 0.7
+- [x] Зафиксировать состояние тестов и frontend build
+- [x] Зафиксировать состояние DEV/PROD
+- [x] Проверить ключевые маршруты DEV
+- [x] Описать готовность к пилотной эксплуатации
+- [x] Описать известные ограничения и риски перед загрузкой реальных данных
+- [x] Обновить `PROJECT_CONTEXT.md`
+- [x] Обновить `ROADMAP.md`
+- [x] Обновить `TASKS.md`
+- [x] Сделать Git checkpoint
+
