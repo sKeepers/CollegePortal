@@ -132,3 +132,12 @@ Audit уже есть, это сильная сторона. Следующие 
 - проверить backup encryption;
 - проверить политику персональных данных;
 - согласовать retention для import files, audit logs и access events.
+
+## Выполнено: REFACTOR-003
+
+Подготовлены production-документы безопасности:
+
+- `docs/PRODUCTION_SECURITY_CHECKLIST.md` — обязательные проверки перед PROD;
+- `docs/PRODUCTION_DEPLOYMENT_READINESS.md` — оценка готовности, ручные проверки, блокеры и rollback plan.
+
+Ключевой вывод: перенос в PROD должен быть заблокирован до проверки `APP_ENV=production`, `APP_DEBUG=false`, HTTPS, backup/restore, ролей, demo-паролей, retention import-файлов и public settings.

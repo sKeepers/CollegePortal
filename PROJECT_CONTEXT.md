@@ -1021,3 +1021,12 @@ Frontend маршруты переведены на dynamic import. Page-ком�
 
 Результат: основной frontend JS chunk уменьшился примерно с `824 KB` до `179 KB`, warning Vite о chunk больше 500 KB исчез. Маршруты `/dashboard`, `/students`, `/admissions`, `/admin/import`, `/admin/settings`, `/access/gate`, `/m/student`, `/legacy` проверены.
 
+## REFACTOR-003: Production Security Checklist
+
+Подготовлены документы для будущего безопасного переноса CollegePortal в PROD:
+
+- `docs/PRODUCTION_SECURITY_CHECKLIST.md`;
+- `docs/PRODUCTION_DEPLOYMENT_READINESS.md`.
+
+Код приложения, backend, frontend, БД и API не менялись. PROD не трогался. Документы фиксируют обязательные проверки окружения, backup, HTTPS, CORS, token lifetime, upload limits, audit, import retention, QR token safety, roles/users и public settings.
+

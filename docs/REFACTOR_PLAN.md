@@ -190,3 +190,7 @@ Router переведен на lazy loading для frontend page-компоне�
 - `/legacy`.
 
 Основной JS chunk уменьшился примерно с `824 KB` до `179 KB`; предупреждение Vite о chunk больше 500 KB исчезло.
+
+## Выполнено: REFACTOR-003
+
+Добавлен production security/readiness пакет без изменения backend, frontend, БД и API. Следующий безопасный шаг перед реальным PROD-deploy — пройти checklist вручную и зафиксировать go/no-go решение отдельной задачей.

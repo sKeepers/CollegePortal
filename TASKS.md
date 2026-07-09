@@ -420,3 +420,17 @@
 - [x] Обновить документацию
 - [x] Сделать Git checkpoint
 
+## REFACTOR-003
+
+- [x] Создать `docs/PRODUCTION_SECURITY_CHECKLIST.md`
+- [x] Создать `docs/PRODUCTION_DEPLOYMENT_READINESS.md`
+- [x] Описать обязательные production security checks
+- [x] Описать готовность, ручные проверки, блокеры и rollback plan
+- [x] Обновить `docs/SECURITY_REVIEW.md`
+- [x] Обновить `docs/REFACTOR_PLAN.md`
+- [x] Обновить `PROJECT_CONTEXT.md`
+- [x] Обновить `TASKS.md`
+- [x] Проверить `php artisan test`
+- [x] Проверить `npm run build`
+- [x] Сделать Git checkpoint
+
