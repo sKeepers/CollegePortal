@@ -409,3 +409,14 @@
 - [x] Обновить документацию
 - [x] Сделать Git checkpoint
 
+## REFACTOR-002
+
+- [x] Проанализировать `frontend/src/router/routes.js`
+- [x] Перевести page-компоненты на lazy loading через dynamic import
+- [x] Оставить критичные layout-компоненты синхронными
+- [x] Проверить `npm run build`
+- [x] Проверить маршруты `/dashboard`, `/students`, `/admissions`, `/admin/import`, `/admin/settings`, `/access/gate`, `/m/student`, `/legacy`
+- [x] Зафиксировать результат по chunk warning
+- [x] Обновить документацию
+- [x] Сделать Git checkpoint
+

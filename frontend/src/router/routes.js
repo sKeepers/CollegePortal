@@ -2,37 +2,37 @@ import AuthLayout from '../layouts/AuthLayout.vue'
 import AppLayout from '../layouts/AppLayout.vue'
 import PublicLayout from '../layouts/PublicLayout.vue'
 import MobileStudentLayout from '../layouts/MobileStudentLayout.vue'
-import LoginPage from '../pages/auth/LoginPage.vue'
-import DashboardPage from '../pages/dashboard/DashboardPage.vue'
-import StudentsPage from '../pages/students/StudentsPage.vue'
-import GroupsPage from '../pages/groups/GroupsPage.vue'
-import TeachersPage from '../pages/teachers/TeachersPage.vue'
-import SubjectsPage from '../pages/subjects/SubjectsPage.vue'
-import ClassroomsPage from '../pages/classrooms/ClassroomsPage.vue'
-import CurriculaPage from '../pages/curricula/CurriculaPage.vue'
-import SchedulePage from '../pages/schedule/SchedulePage.vue'
-import JournalPage from '../pages/journal/JournalPage.vue'
-import TeachingLoadPage from '../pages/teaching-load/TeachingLoadPage.vue'
-import ExamsPage from '../pages/exams/ExamsPage.vue'
-import GraduationPage from '../pages/graduation/GraduationPage.vue'
-import FrdoPage from '../pages/frdo/FrdoPage.vue'
-import FisPage from '../pages/fis/FisPage.vue'
-import ReportsPage from '../pages/reports/ReportsPage.vue'
-import AdmissionsPage from '../pages/admissions/AdmissionsPage.vue'
-import DigitalPassesPage from '../pages/identity/DigitalPassesPage.vue'
-import AccessGatePage from '../pages/access/AccessGatePage.vue'
-import AccessReportsPage from '../pages/access/AccessReportsPage.vue'
-import ApplicantPublicPage from '../pages/public/ApplicantPublicPage.vue'
-import UiFoundationPage from '../pages/system/UiFoundationPage.vue'
-import DataManagementPage from '../pages/admin/DataManagementPage.vue'
-import UniversalImportPage from '../pages/admin/UniversalImportPage.vue'
-import UsersPage from '../pages/admin/users/UsersPage.vue'
-import RolesPage from '../pages/admin/roles/RolesPage.vue'
-import AuditPage from '../pages/admin/audit/AuditPage.vue'
-import SettingsPage from '../pages/admin/settings/SettingsPage.vue'
-import ReferenceDataPage from '../pages/admin/reference/ReferenceDataPage.vue'
-import MobileStudentHomePage from '../pages/mobile/student/MobileStudentHomePage.vue'
-import MobileStudentPassPage from '../pages/mobile/student/MobileStudentPassPage.vue'
+const LoginPage = () => import('../pages/auth/LoginPage.vue')
+const DashboardPage = () => import('../pages/dashboard/DashboardPage.vue')
+const StudentsPage = () => import('../pages/students/StudentsPage.vue')
+const GroupsPage = () => import('../pages/groups/GroupsPage.vue')
+const TeachersPage = () => import('../pages/teachers/TeachersPage.vue')
+const SubjectsPage = () => import('../pages/subjects/SubjectsPage.vue')
+const ClassroomsPage = () => import('../pages/classrooms/ClassroomsPage.vue')
+const CurriculaPage = () => import('../pages/curricula/CurriculaPage.vue')
+const SchedulePage = () => import('../pages/schedule/SchedulePage.vue')
+const JournalPage = () => import('../pages/journal/JournalPage.vue')
+const TeachingLoadPage = () => import('../pages/teaching-load/TeachingLoadPage.vue')
+const ExamsPage = () => import('../pages/exams/ExamsPage.vue')
+const GraduationPage = () => import('../pages/graduation/GraduationPage.vue')
+const FrdoPage = () => import('../pages/frdo/FrdoPage.vue')
+const FisPage = () => import('../pages/fis/FisPage.vue')
+const ReportsPage = () => import('../pages/reports/ReportsPage.vue')
+const AdmissionsPage = () => import('../pages/admissions/AdmissionsPage.vue')
+const DigitalPassesPage = () => import('../pages/identity/DigitalPassesPage.vue')
+const AccessGatePage = () => import('../pages/access/AccessGatePage.vue')
+const AccessReportsPage = () => import('../pages/access/AccessReportsPage.vue')
+const ApplicantPublicPage = () => import('../pages/public/ApplicantPublicPage.vue')
+const UiFoundationPage = () => import('../pages/system/UiFoundationPage.vue')
+const DataManagementPage = () => import('../pages/admin/DataManagementPage.vue')
+const UniversalImportPage = () => import('../pages/admin/UniversalImportPage.vue')
+const UsersPage = () => import('../pages/admin/users/UsersPage.vue')
+const RolesPage = () => import('../pages/admin/roles/RolesPage.vue')
+const AuditPage = () => import('../pages/admin/audit/AuditPage.vue')
+const SettingsPage = () => import('../pages/admin/settings/SettingsPage.vue')
+const ReferenceDataPage = () => import('../pages/admin/reference/ReferenceDataPage.vue')
+const MobileStudentHomePage = () => import('../pages/mobile/student/MobileStudentHomePage.vue')
+const MobileStudentPassPage = () => import('../pages/mobile/student/MobileStudentPassPage.vue')
 
 export const routes = [
   {

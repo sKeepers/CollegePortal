@@ -172,3 +172,21 @@
 - вынести template generation в `ImportTemplateService`;
 - добавить отдельные tests для каждого handler;
 - постепенно подключить старые module CSV endpoints к тем же handlers.
+
+## Выполнено: REFACTOR-002
+
+Router переведен на lazy loading для frontend page-компонентов. Синхронными оставлены layout-компоненты, чтобы не менять базовую структуру приложения.
+
+Проверено:
+
+- `npm run build`;
+- `/dashboard`;
+- `/students`;
+- `/admissions`;
+- `/admin/import`;
+- `/admin/settings`;
+- `/access/gate`;
+- `/m/student`;
+- `/legacy`.
+
+Основной JS chunk уменьшился примерно с `824 KB` до `179 KB`; предупреждение Vite о chunk больше 500 KB исчезло.

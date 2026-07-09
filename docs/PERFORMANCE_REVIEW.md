@@ -117,3 +117,14 @@ FRDO, FIS, access reports, attendance/grades reports могут стать тя�
 3. Audit/import index payload optimization.
 4. Профиль Access Reports на реальных данных.
 5. Индексы после анализа реальных фильтров.
+
+## Выполнено: REFACTOR-002
+
+Frontend routes переведены на lazy loading через dynamic import. Layout-компоненты оставлены синхронными, page-компоненты загружаются отдельными chunks.
+
+Результат build:
+
+- до REFACTOR-002: основной `index-*.js` около `824 KB`, Vite предупреждал о chunk больше 500 KB;
+- после REFACTOR-002: основной `index-*.js` около `179 KB`, страницы вынесены в отдельные chunks, warning о chunk больше 500 KB исчез.
+
+Следующий performance-фокус: lazy loading внутренних тяжелых виджетов и дальнейшее разделение legacy, если появятся новые bundle warnings.

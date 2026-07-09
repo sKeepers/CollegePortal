@@ -1015,3 +1015,9 @@ IMPORT-001.1 добавил CSV-шаблоны с русскими колонк�
 
 Создан общий контракт `ImportHandlerInterface`; добавлены обработчики для студентов, групп, преподавателей, дисциплин, аудиторий, абитуриентов, учебных планов, нагрузки и расписания.
 
+## REFACTOR-002: lazy loading frontend routes
+
+Frontend маршруты переведены на dynamic import. Page-компоненты теперь собираются отдельными chunks, layout-компоненты остаются синхронными.
+
+Результат: основной frontend JS chunk уменьшился примерно с `824 KB` до `179 KB`, warning Vite о chunk больше 500 KB исчез. Маршруты `/dashboard`, `/students`, `/admissions`, `/admin/import`, `/admin/settings`, `/access/gate`, `/m/student`, `/legacy` проверены.
+
