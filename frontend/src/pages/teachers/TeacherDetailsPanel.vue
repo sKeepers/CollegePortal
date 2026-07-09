@@ -1,23 +1,14 @@
 <script setup>
 import { computed } from 'vue'
-import AppCard from '../../components/ui/AppCard.vue'
 import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import PersonPhotoManager from '../../components/person/PersonPhotoManager.vue'
+import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
 
 const props = defineProps({
-  teacher: {
-    type: Object,
-    default: null,
-  },
-  subjects: {
-    type: Array,
-    default: () => [],
-  },
-  lessons: {
-    type: Array,
-    default: () => [],
-  },
+  teacher: { type: Object, default: null },
+  subjects: { type: Array, default: () => [] },
+  lessons: { type: Array, default: () => [] },
 })
 
 function fullName(teacher) {
@@ -30,115 +21,89 @@ const statusTone = computed(() => (props.teacher?.is_active ? 'success' : 'neutr
 const scheduleLink = computed(() => ({ path: '/schedule', query: { teacher: props.teacher?.id } }))
 const journalLink = computed(() => ({ path: '/journal', query: { teacher: props.teacher?.id } }))
 const subjectsLink = computed(() => ({ path: '/subjects', query: { teacher: props.teacher?.id } }))
-function updatePhoto(payload) { if (props.teacher) { props.teacher.photo_url = payload.photo_url; props.teacher.photo_path = payload.photo_path } }
-function removePhoto() { if (props.teacher) { props.teacher.photo_url = null; props.teacher.photo_path = null } }
+const loadLink = computed(() => ({ path: '/teaching-load', query: { teacher: props.teacher?.id } }))
+const passLink = computed(() => ({ path: '/identity/digital-passes', query: { owner: 'teacher', selected: props.teacher?.id } }))
+const accessLink = computed(() => ({ path: '/access/reports', query: { type: 'teacher', q: teacherName.value } }))
+const teacherMetrics = computed(() => [
+  { label: 'Отделение', value: props.teacher?.department || '—' },
+  { label: 'Дисциплин', value: props.subjects.length },
+  { label: 'Часов нагрузки', value: '—' },
+  { label: 'Занятий', value: props.lessons.length },
+])
+const teacherActions = computed(() => [
+  { label: 'Расписание', to: scheduleLink.value },
+  { label: 'Нагрузка', to: loadLink.value },
+  { label: 'Журнал', to: journalLink.value },
+  { label: 'QR-пропуск', to: passLink.value },
+  { label: 'История проходов', to: accessLink.value },
+])
+const teacherEvents = computed(() => props.lessons.slice(0, 3).map((lesson) => ({
+  id: lesson.id,
+  title: lesson.subject?.name || 'Занятие',
+  description: [lesson.group?.name, lesson.date, lesson.start_time].filter(Boolean).join(' · ') || 'Детали занятия не указаны',
+})))
+
+function updatePhoto(payload) {
+  if (props.teacher) {
+    props.teacher.photo_url = payload.photo_url
+    props.teacher.photo_path = payload.photo_path
+  }
+}
+function removePhoto() {
+  if (props.teacher) {
+    props.teacher.photo_url = null
+    props.teacher.photo_path = null
+  }
+}
 </script>
 
 <template>
-  <AppCard class="teacher-details-card">
-    <AppEmptyState
-      v-if="!teacher"
-      title="Преподаватель не выбран"
-      description="Выберите строку в таблице, чтобы открыть карточку преподавателя."
-    />
+  <AppEmptyState v-if="!teacher" title="Преподаватель не выбран" description="Выберите строку в таблице, чтобы открыть карточку преподавателя." />
 
-    <div v-else class="teacher-details">
-      <div class="teacher-details__hero teacher-details__hero--with-photo">
-        <PersonPhotoManager type="teachers" :person="teacher" compact @updated="updatePhoto" @removed="removePhoto" />
-        <div class="teacher-details__hero-text">
-        <div class="teacher-details__title-row">
-          <div class="teacher-details__title-block">
-            <h2>{{ teacherName }}</h2>
-            <div class="teacher-details__badges">
-              <AppStatusBadge :label="statusLabel" :tone="statusTone" />
-              <AppStatusBadge :label="teacher.department || 'Отделение не указано'" tone="info" />
-            </div>
-          </div>
-        </div>
-        <p>{{ teacher.position || 'Должность не указана' }}</p>
-        </div>
-      </div>
+  <WorkspacePanel
+    v-else
+    class="teacher-details-card"
+    :title="teacherName"
+    :subtitle="teacher.position || 'Должность не указана'"
+    :metrics="teacherMetrics"
+    :events="teacherEvents"
+    :actions="teacherActions"
+  >
+    <template #photo><PersonPhotoManager type="teachers" :person="teacher" compact @updated="updatePhoto" @removed="removePhoto" /></template>
+    <template #status>
+      <AppStatusBadge :label="statusLabel" :tone="statusTone" />
+      <AppStatusBadge :label="teacher.department || 'Отделение не указано'" tone="info" />
+    </template>
 
-      <div class="teacher-details__metrics">
-        <div>
-          <span>Дисциплин</span>
-          <strong>{{ subjects.length }}</strong>
-        </div>
-        <div>
-          <span>Занятий</span>
-          <strong>{{ lessons.length }}</strong>
-        </div>
-        <div>
-          <span>Телефон</span>
-          <strong>{{ teacher.phone || '—' }}</strong>
-        </div>
-        <div>
-          <span>Email</span>
-          <strong>{{ teacher.email || '—' }}</strong>
-        </div>
-      </div>
-
+    <div class="teacher-details">
       <section class="teacher-details__section">
         <h3>Контакты</h3>
         <dl class="teacher-details__list">
-          <div>
-            <dt>Телефон</dt>
-            <dd>{{ teacher.phone || '—' }}</dd>
-          </div>
-          <div>
-            <dt>Email</dt>
-            <dd>{{ teacher.email || '—' }}</dd>
-          </div>
-          <div>
-            <dt>Отделение</dt>
-            <dd>{{ teacher.department || '—' }}</dd>
-          </div>
-          <div>
-            <dt>Должность</dt>
-            <dd>{{ teacher.position || '—' }}</dd>
-          </div>
+          <div><dt>Телефон</dt><dd>{{ teacher.phone || '—' }}</dd></div>
+          <div><dt>Email</dt><dd>{{ teacher.email || '—' }}</dd></div>
+          <div><dt>Отделение</dt><dd>{{ teacher.department || '—' }}</dd></div>
+          <div><dt>Должность</dt><dd>{{ teacher.position || '—' }}</dd></div>
         </dl>
       </section>
 
       <section class="teacher-details__section">
         <h3>Дисциплины</h3>
         <div v-if="subjects.length" class="teacher-details__tags">
-          <q-chip v-for="subject in subjects.slice(0, 6)" :key="subject.id" dense>
-            {{ subject.name }}
-          </q-chip>
+          <q-chip v-for="subject in subjects.slice(0, 6)" :key="subject.id" dense>{{ subject.name }}</q-chip>
         </div>
         <p v-else class="teacher-details__muted">Связанные дисциплины пока не найдены.</p>
       </section>
 
       <section class="teacher-details__section">
         <h3>Группы и занятия</h3>
-        <div class="teacher-details__lesson-list" v-if="lessons.length">
+        <div v-if="lessons.length" class="teacher-details__lesson-list">
           <div v-for="lesson in lessons.slice(0, 4)" :key="lesson.id">
             <strong>{{ lesson.subject?.name || 'Занятие' }}</strong>
-            <span>
-              {{ lesson.group?.name || 'Группа не указана' }} ·
-              {{ lesson.date || 'Дата не указана' }} ·
-              {{ lesson.start_time || '—' }}
-            </span>
+            <span>{{ lesson.group?.name || 'Группа не указана' }} · {{ lesson.date || 'Дата не указана' }} · {{ lesson.start_time || '—' }}</span>
           </div>
         </div>
         <p v-else class="teacher-details__muted">Связанные занятия пока не найдены.</p>
       </section>
-
-      <section class="teacher-details__section">
-        <h3>Быстрые переходы</h3>
-        <div class="teacher-details__actions">
-          <q-btn unelevated no-caps class="entity-link-action" :to="scheduleLink">
-            Открыть расписание преподавателя
-          </q-btn>
-          <q-btn flat no-caps class="entity-link-action" :to="journalLink">
-            Открыть журнал
-          </q-btn>
-          <q-btn flat no-caps class="entity-link-action" :to="subjectsLink">
-            Открыть связанные дисциплины
-          </q-btn>
-        </div>
-      </section>
     </div>
-  </AppCard>
+  </WorkspacePanel>
 </template>

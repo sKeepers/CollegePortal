@@ -111,6 +111,7 @@ Frontend:
 - `EXTERNAL_SERVICES_NOTES.md` — заметки по ФРДО, ФИС ГИА/Приема и материалам для абитуриентов.
 - `docs/ARCHITECTURE_DOCUMENTATION.md` — единое оглавление архитектурной и проектной документации.
 - `docs/DESIGN_SYSTEM.md` — единая дизайн-система CollegePortal: логотип, цвета, типографика, компоненты и адаптивность.
+- `docs/WORKSPACE_GUIDELINES.md` — правила единой правой Workspace-панели: hero, KPI, быстрые действия и дополнительные сведения.
 - `docs/PRODUCT_VISION.md` — продуктовая цель, пользователи, границы MVP и критерии успеха CollegePortal.
 - `docs/PHILOSOPHY.md` — принципы развития системы, рабочего интерфейса, данных и безопасности.
 - `docs/ARCHITECTURE_DECISIONS.md` — зафиксированные архитектурные решения, включая выбор frontend UI-платформы.
@@ -1032,3 +1033,7 @@ Frontend маршруты переведены на dynamic import. Page-ком�
 
 Код приложения, backend, frontend, БД и API не менялись. PROD не трогался. Документы фиксируют обязательные проверки окружения, backup, HTTPS, CORS, token lifetime, upload limits, audit, import retention, QR token safety, roles/users и public settings.
 
+
+Frontend Workspace:
+
+- `frontend/src/components/workspace/WorkspacePanel.vue` — единый каркас правой рабочей панели объекта с KPI, быстрыми действиями и слотами для подробной информации.
