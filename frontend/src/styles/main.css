@@ -298,6 +298,12 @@ body {
   color: #f8fafc;
 }
 
+.cp-sidebar .q-drawer__content {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+}
+
 .cp-brand {
   display: flex;
   align-items: center;
@@ -334,6 +340,18 @@ body {
   font-size: 13px;
 }
 
+.cp-sidebar-body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.cp-sidebar-scroll {
+  min-height: 0;
+  flex: 1;
+}
+
 .cp-nav-list {
   padding: 4px 10px 18px;
 }
@@ -357,6 +375,127 @@ body {
 .cp-nav-active {
   background: #243044;
   color: #ffffff;
+}
+
+.system-info-panel {
+  padding: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.system-info-panel__summary {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 8px;
+  padding: 9px;
+  background: rgba(15, 23, 42, 0.42);
+  color: #e2e8f0;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.system-info-panel__summary:hover,
+.system-info-panel__summary:focus-visible {
+  border-color: rgba(226, 232, 240, 0.42);
+  background: rgba(30, 41, 59, 0.82);
+  outline: none;
+}
+
+.system-info-panel__icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  place-items: center;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+.system-info-panel__text {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 1px;
+}
+
+.system-info-panel__text strong,
+.system-info-panel__text span,
+.system-info-panel__text small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.system-info-panel__text strong {
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.system-info-panel__text span,
+.system-info-panel__text small {
+  color: #cbd5e1;
+  font-size: 11px;
+}
+
+.system-info-panel__env {
+  flex: 0 0 auto;
+  border: 1px solid;
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.q-drawer--mini .system-info-panel__text,
+.q-drawer--mini .system-info-panel__env,
+.q-drawer--mini .cp-brand div:last-child {
+  display: none;
+}
+
+.q-drawer--mini .system-info-panel__summary {
+  justify-content: center;
+  padding: 9px 0;
+}
+
+.system-info-dialog {
+  width: min(480px, calc(100vw - 32px));
+  border-radius: 8px;
+}
+
+.system-info-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.system-info-dialog__list {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.65fr) minmax(0, 1fr);
+  gap: 10px 18px;
+  margin: 0;
+}
+
+.system-info-dialog__list dt {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.system-info-dialog__list dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #172033;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .cp-page {

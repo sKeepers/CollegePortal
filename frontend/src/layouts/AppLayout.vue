@@ -31,6 +31,7 @@ import { useLayoutService } from '../services/layoutService'
 import { getEnvironmentCssVars } from '../services/environmentService'
 import GlobalSearch from '../components/search/GlobalSearch.vue'
 import EnvironmentBadge from '../components/system/EnvironmentBadge.vue'
+import SystemInfoPanel from '../components/system/SystemInfoPanel.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -219,8 +220,9 @@ watch(
         </div>
       </div>
 
-      <q-scroll-area class="fit">
-        <q-list class="cp-nav-list">
+      <div class="cp-sidebar-body">
+        <q-scroll-area class="cp-sidebar-scroll">
+          <q-list class="cp-nav-list">
           <template v-for="group in visibleNavGroups" :key="group.label">
             <q-item-label header>{{ group.label }}</q-item-label>
             <q-item
@@ -237,8 +239,10 @@ watch(
               <q-item-section>{{ item.label }}</q-item-section>
             </q-item>
           </template>
-        </q-list>
-      </q-scroll-area>
+          </q-list>
+        </q-scroll-area>
+        <SystemInfoPanel />
+      </div>
     </q-drawer>
 
     <q-page-container>

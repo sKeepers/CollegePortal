@@ -61,6 +61,7 @@
 - [x] GUI-011A: заменить Quasar favicon и подготовить брендовые иконки CollegePortal
 - [x] GUI-011A.1: заменить сгенерированный знак на официальный черно-белый логотип СККИ
 - [x] GUI-011B: добавить визуальную индикацию DEV/TEST/PROD и title браузера по окружению
+- [x] VER-001: добавить отображение версии и build-информации в sidebar и окно `О системе`
 - [x] INFRA-001: создать отдельное DEV-окружение `/srv/college-dev` рядом с текущим PROD
 - [x] INFRA-002: подготовить безопасный документированный процесс деплоя DEV → PROD без изменения PROD
 - [x] INFRA-003: подготовить Git workflow для DEV/PROD без изменения PROD
@@ -434,3 +435,11 @@
 - [x] Проверить `npm run build`
 - [x] Сделать Git checkpoint
 
+
+## Versioning
+
+- [x] Создать `frontend/public/version.json` как единый frontend-источник версии.
+- [x] Создать `frontend/src/services/versionService.js` для чтения версии.
+- [x] Показать версию, build hash и DEV/TEST/PROD в нижней части sidebar.
+- [x] Добавить модальное окно `О системе`.
+- [x] Создать `docs/VERSIONING.md`.

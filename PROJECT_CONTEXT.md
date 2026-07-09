@@ -62,6 +62,7 @@ Frontend:
 - новые стили находятся в `frontend/src/styles/main.css`;
 - брендовые favicon/PWA-иконки собраны из официального черно-белого логотипа СККИ `docs/logo/Logo_SKKI_чб.jpg`; frontend-копия находится в `frontend/public/brand/logo-skki-bw.jpg`, favicon/PWA-файлы — в `frontend/public/favicon.svg`, `frontend/public/favicon.ico`, `frontend/public/apple-touch-icon.png`, `frontend/public/icons/`;
 - окружение frontend определяется через `VITE_APP_ENV`; визуальная индикация DEV/TEST/PROD описана в `docs/ENVIRONMENTS.md`;
+- версия frontend-сборки хранится в `frontend/public/version.json`, читается через `frontend/src/services/versionService.js` и отображается внизу sidebar; правила обновления описаны в `docs/VERSIONING.md`;
 - Quasar подключен с русской локалью `quasar/lang/ru`;
 - старые стили находятся в `frontend/src/style.css` и будут удаляться только после полного переноса разделов.
 
@@ -124,6 +125,7 @@ Frontend:
 - `docs/DEV_ENVIRONMENT.md` — разделение PROD/DEV на Ubuntu, порты и команды обслуживания DEV-окружения.
 - `docs/DEPLOYMENT.md` — безопасный процесс проверки DEV, backup PROD, деплоя и rollback.
 - `docs/GIT_WORKFLOW.md` — рекомендуемые ветки `main`/`develop`/`feature/*`, формат коммитов и работа DEV/PROD через Git.
+- `docs/VERSIONING.md` — схема версионирования, структура `version.json`, правила обновления build hash и будущие версии 0.8/0.9/1.0.
 - `docker-compose.yml` — локальная инфраструктура.
 - `.env.example` — пример переменных окружения.
 
