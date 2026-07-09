@@ -1,9 +1,9 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
-import { BookOpen, CheckCircle2, ClipboardList, FileText, GraduationCap, History, Mail, Phone, UserPlus } from '@lucide/vue'
-import AppCard from '../../components/ui/AppCard.vue'
+import { CheckCircle2, ClipboardList, FileText, History, Mail, Phone } from '@lucide/vue'
 import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
+import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
 import {
   applicantName,
   documentsCompleteness,
@@ -63,6 +63,23 @@ const scheduleLink = computed(() => ({ path: '/schedule', query: { program: prop
 const journalLink = computed(() => ({ path: '/journal', query: { program: props.application?.education_program_id } }))
 const studentsLink = computed(() => ({ path: '/students', query: { search: fullName.value } }))
 
+const admissionSubtitle = computed(() => [
+  programLabel(selectedProgram.value) || 'Программа не указана',
+  specialtyText.value,
+])
+const admissionMetrics = computed(() => [
+  { label: 'Дата подачи', value: formatDate(props.application?.submitted_at) },
+  { label: 'База', value: educationBaseLabel(props.application?.education_base) },
+  { label: 'Документы', value: `${props.documents.filter((document) => document.is_received).length}/${props.documents.length}` },
+  { label: 'Событий', value: props.events.length },
+])
+const admissionActions = computed(() => [
+  { label: 'Документы', to: { path: '/admissions', query: { selected: props.application?.id, tab: 'documents' } } },
+  { label: 'Зачислить', disabled: !canEnroll.value || props.saving },
+  { label: 'Студент', to: studentsLink.value },
+  { label: 'История', to: { path: '/admissions', query: { selected: props.application?.id, tab: 'history' } } },
+])
+
 watch(
   () => props.application?.id,
   () => {
@@ -103,45 +120,35 @@ function toggleDocument(document) {
 </script>
 
 <template>
-  <AppCard class="admission-details-card">
-    <AppEmptyState
-      v-if="!application"
-      title="Заявление не выбрано"
-      description="Выберите строку в таблице, чтобы открыть карточку абитуриента."
-    />
+  <AppEmptyState
+    v-if="!application"
+    title="Заявление не выбрано"
+    description="Выберите строку в таблице, чтобы открыть карточку абитуриента."
+  />
 
-    <div v-else class="admission-details">
-      <div class="admission-details__hero">
-        <div class="admission-details__title-row">
-          <div class="admission-details__title-block">
-            <h2>{{ fullName }}</h2>
-            <div class="admission-details__badges">
-              <AppStatusBadge :label="statusLabel(application.status)" :tone="statusTone(application.status)" />
-              <AppStatusBadge :label="documentsCompletenessLabel(application)" :tone="completeness === 'complete' ? 'success' : 'warning'" />
-            </div>
-          </div>
-        </div>
-        <p class="admission-details__program">{{ programLabel(selectedProgram) || 'Программа не указана' }}</p>
-      </div>
+  <WorkspacePanel
+    v-else
+    class="admission-details-card"
+    :title="fullName"
+    :subtitle="admissionSubtitle"
+    :metrics="admissionMetrics"
+    :actions="admissionActions"
+  >
+    <template #status>
+      <AppStatusBadge :label="statusLabel(application.status)" :tone="statusTone(application.status)" />
+      <AppStatusBadge :label="documentsCompletenessLabel(application)" :tone="completeness === 'complete' ? 'success' : 'warning'" />
+    </template>
 
-      <div class="admission-details__metrics">
-        <div>
-          <span>Дата подачи</span>
-          <strong>{{ formatDate(application.submitted_at) }}</strong>
-        </div>
-        <div>
-          <span>База</span>
-          <strong>{{ educationBaseLabel(application.education_base) }}</strong>
-        </div>
-        <div>
-          <span>Документы</span>
-          <strong>{{ documents.filter((document) => document.is_received).length }}/{{ documents.length }}</strong>
-        </div>
-        <div>
-          <span>Событий</span>
-          <strong>{{ events.length }}</strong>
-        </div>
+    <template #actions>
+      <div class="workspace-panel__actions">
+        <q-btn no-caps unelevated class="workspace-panel__action" @click="activeTab = 'documents'">Документы</q-btn>
+        <q-btn no-caps unelevated class="workspace-panel__action" :disable="!canEnroll || saving" @click="openEnrollDialog">Зачислить</q-btn>
+        <q-btn no-caps unelevated class="workspace-panel__action" :to="studentsLink">Студент</q-btn>
+        <q-btn no-caps unelevated class="workspace-panel__action" @click="activeTab = 'history'">История</q-btn>
       </div>
+    </template>
+
+    <div class="admission-details">
 
       <q-tabs v-model="activeTab" dense no-caps outside-arrows mobile-arrows class="admission-details__tabs">
         <q-tab name="overview" label="Сведения" />
@@ -290,5 +297,5 @@ function toggleDocument(document) {
         </q-card>
       </q-dialog>
     </div>
-  </AppCard>
+  </WorkspacePanel>
 </template>
