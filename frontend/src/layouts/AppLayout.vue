@@ -220,9 +220,8 @@ watch(
         </div>
       </div>
 
-      <div class="cp-sidebar-body">
-        <q-scroll-area class="cp-sidebar-scroll">
-          <q-list class="cp-nav-list">
+      <q-scroll-area class="cp-sidebar-scroll">
+        <q-list class="cp-nav-list">
           <template v-for="group in visibleNavGroups" :key="group.label">
             <q-item-label header>{{ group.label }}</q-item-label>
             <q-item
@@ -239,10 +238,10 @@ watch(
               <q-item-section>{{ item.label }}</q-item-section>
             </q-item>
           </template>
-          </q-list>
-        </q-scroll-area>
-        <SystemInfoPanel />
-      </div>
+        </q-list>
+      </q-scroll-area>
+
+      <SystemInfoPanel />
     </q-drawer>
 
     <q-page-container>

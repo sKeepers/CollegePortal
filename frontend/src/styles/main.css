@@ -299,9 +299,11 @@ body {
 }
 
 .cp-sidebar .q-drawer__content {
-  display: flex;
-  min-height: 100%;
-  flex-direction: column;
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
 }
 
 .cp-brand {
@@ -340,20 +342,18 @@ body {
   font-size: 13px;
 }
 
-.cp-sidebar-body {
-  display: flex;
-  min-height: 0;
-  flex: 1;
-  flex-direction: column;
-}
-
 .cp-sidebar-scroll {
   min-height: 0;
-  flex: 1;
+  height: 100%;
 }
 
 .cp-nav-list {
   padding: 4px 10px 18px;
+}
+
+.q-drawer--mini .cp-nav-list {
+  padding-right: 8px;
+  padding-left: 8px;
 }
 
 .cp-nav-list .q-item__label--header {
@@ -378,8 +378,10 @@ body {
 }
 
 .system-info-panel {
+  align-self: stretch;
   padding: 10px;
   border-top: 1px solid rgba(148, 163, 184, 0.22);
+  background: #111827;
 }
 
 .system-info-panel__summary {
