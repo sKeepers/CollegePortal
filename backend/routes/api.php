@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\ClassroomController;
 use App\Http\Controllers\Api\CurriculumController;
 use App\Http\Controllers\Api\DigitalIdentityController;
 use App\Http\Controllers\Api\DemoDataController;
+use App\Http\Controllers\Api\DashboardAnalyticsController;
 use App\Http\Controllers\Api\ExamController;
 use App\Http\Controllers\Api\FrdoPackageController;
 use App\Http\Controllers\Api\FisPackageController;
@@ -43,6 +44,10 @@ Route::middleware('api.token')->group(function (): void {
     Route::get('auth/me', [AuthController::class, 'me']);
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('mobile/student', [MobileStudentController::class, 'show']);
+
+    Route::middleware('permission:view_reports')->group(function (): void {
+        Route::get('dashboard/analytics/executive', [DashboardAnalyticsController::class, 'executive']);
+    });
 
     Route::middleware('permission:manage_users')->group(function (): void {
         Route::get('admin/audit', [AuditLogController::class, 'index']);
