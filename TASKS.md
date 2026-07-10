@@ -504,3 +504,16 @@
 - [x] Добавить диагностику HID-сканера на `/access/gate`.
 - [x] Добавить DEV-страницу `/access/scanner-test` только для admin.
 - [x] Добавить backend-тесты token/CP1/CR/LF/PNG/SVG/no PII.
+
+## QR-005: Mobile Camera Scanner
+
+- [x] Создать маршрут `/access/mobile-scanner`.
+- [x] Ограничить route ролями `admin` и `security`.
+- [x] Использовать существующий `/api/access/scan`.
+- [x] Добавить native `BarcodeDetector` и fallback `jsQR`.
+- [x] Добавить запуск/переключение камеры и фонарик при поддержке.
+- [x] Добавить allowed/denied результат, вибрацию, звук, паузу и повторный скан.
+- [x] Добавить ручной ввод token.
+- [x] Добавить пункт меню `Мобильный сканер` в `Идентификация`.
+- [x] Создать `docs/MOBILE_ACCESS_SCANNER.md`.
+- [x] Добавить тест доступа security/teacher/student к scan API.

@@ -30,6 +30,10 @@ router.beforeEach(async (to) => {
     return { name: 'dashboard' }
   }
 
+  if (to.meta.roles && !auth.hasRole(to.meta.roles)) {
+    return { name: 'dashboard' }
+  }
+
   const permission = to.meta.permission
 
   if (permission && !auth.can(permission)) {

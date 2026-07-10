@@ -87,6 +87,7 @@ const navGroups = [
     label: 'Идентификация',
     items: [
       { label: 'Проходная', to: '/access/gate', icon: DoorOpen, permission: 'manage_dictionaries' },
+      { label: 'Мобильный сканер', to: '/access/mobile-scanner', icon: QrCode, roles: ['admin', 'security'] },
       { label: 'Отчеты по проходам', to: '/access/reports', icon: FileText, permission: 'manage_dictionaries' },
       { label: 'Тест QR-сканера', to: '/access/scanner-test', icon: QrCode, adminOnly: true },
       { label: 'Цифровые пропуска', to: '/identity/digital-passes', icon: QrCode, permission: 'manage_dictionaries' },
@@ -113,6 +114,10 @@ const visibleNavGroups = computed(() =>
       ...group,
       items: group.items.filter((item) => {
         if (item.adminOnly && !auth.isAdmin) {
+          return false
+        }
+
+        if (item.roles && !auth.hasRole(item.roles)) {
           return false
         }
 

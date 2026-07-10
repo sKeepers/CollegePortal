@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\AccessEvent;
 use App\Models\DigitalIdentity;
 use App\Models\Group;
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\Student;
 use App\Models\Teacher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -124,6 +126,31 @@ class AccessGateApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.result', AccessEvent::RESULT_ALLOWED)
             ->assertJsonPath('data.direction', AccessEvent::DIRECTION_OUT);
+    }
+
+
+
+    public function test_access_scan_permissions_allow_security_and_block_teacher_student(): void
+    {
+        $identity = $this->createStudentIdentity();
+        $permission = Permission::query()->firstOrCreate(['code' => 'manage_dictionaries'], ['name' => 'Управление справочниками']);
+        Role::query()->firstOrCreate(['code' => 'security'], ['name' => 'Сотрудник проходной'])->permissions()->sync([$permission->id]);
+        $security = $this->createApiUser(roleCode: 'security');
+        $teacher = $this->createApiUser(roleCode: 'teacher');
+        $student = $this->createApiUser(roleCode: 'student');
+
+        $this->withApiAuth($security)
+            ->postJson('/api/access/scan', ['token' => $identity->token])
+            ->assertOk()
+            ->assertJsonPath('data.result', AccessEvent::RESULT_ALLOWED);
+
+        $this->withApiAuth($teacher)
+            ->postJson('/api/access/scan', ['token' => $identity->token])
+            ->assertForbidden();
+
+        $this->withApiAuth($student)
+            ->postJson('/api/access/scan', ['token' => $identity->token])
+            ->assertForbidden();
     }
 
     private function createStudentIdentity(array $overrides = []): DigitalIdentity

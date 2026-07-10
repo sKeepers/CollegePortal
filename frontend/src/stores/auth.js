@@ -11,9 +11,20 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => Boolean(user.value && api.token()))
   const isAdmin = computed(() => user.value?.role?.code === 'admin')
   const permissions = computed(() => user.value?.role?.permissions || [])
+  const roleCodes = computed(() => {
+    const codes = new Set()
+    if (user.value?.role?.code) codes.add(user.value.role.code)
+    ;(user.value?.roles || []).forEach((role) => { if (role?.code) codes.add(role.code) })
+    return Array.from(codes)
+  })
 
   function can(permission) {
     return isAdmin.value || permissions.value.includes(permission)
+  }
+
+  function hasRole(codes) {
+    const allowed = Array.isArray(codes) ? codes : [codes]
+    return allowed.some((code) => roleCodes.value.includes(code))
   }
 
   async function login(credentials) {
@@ -78,8 +89,10 @@ export const useAuthStore = defineStore('auth', () => {
     error,
     isAuthenticated,
     permissions,
+    roleCodes,
     isAdmin,
     can,
+    hasRole,
     login,
     restore,
     logout,

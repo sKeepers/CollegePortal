@@ -21,6 +21,7 @@ const ReportsPage = () => import('../pages/reports/ReportsPage.vue')
 const AdmissionsPage = () => import('../pages/admissions/AdmissionsPage.vue')
 const DigitalPassesPage = () => import('../pages/identity/DigitalPassesPage.vue')
 const AccessGatePage = () => import('../pages/access/AccessGatePage.vue')
+const MobileScannerPage = () => import('../pages/access/MobileScannerPage.vue')
 const AccessReportsPage = () => import('../pages/access/AccessReportsPage.vue')
 const ScannerTestPage = () => import('../pages/access/ScannerTestPage.vue')
 const ApplicantPublicPage = () => import('../pages/public/ApplicantPublicPage.vue')
@@ -196,6 +197,12 @@ export const routes = [
         name: 'access-gate',
         component: AccessGatePage,
         meta: { title: 'Проходная', permission: 'manage_dictionaries' },
+      },
+      {
+        path: 'access/mobile-scanner',
+        name: 'access-mobile-scanner',
+        component: MobileScannerPage,
+        meta: { title: 'Мобильный сканер', roles: ['admin', 'security'] },
       },
       {
         path: 'access/reports',
