@@ -517,3 +517,17 @@
 - [x] Добавить пункт меню `Мобильный сканер` в `Идентификация`.
 - [x] Создать `docs/MOBILE_ACCESS_SCANNER.md`.
 - [x] Добавить тест доступа security/teacher/student к scan API.
+
+## INFRA-006: HTTPS для DEV и мобильного сканера
+
+- [x] Выбрать схему DEV HTTPS без Let's Encrypt для приватного IP.
+- [x] Добавить отдельный Nginx HTTPS proxy на порт `5443`.
+- [x] Сохранить HTTP DEV порты `5174` и `8001`.
+- [x] Выпустить локальный CA и серверный сертификат для `192.168.34.104` и `college-dev.local`.
+- [x] Исключить сертификаты и приватные ключи из git.
+- [x] Настроить proxy для frontend, `/api`, `/storage` и WebSocket/HMR.
+- [x] Перевести frontend API fallback на same-origin `/api` для защиты от mixed content.
+- [x] Создать `docs/DEV_HTTPS.md` с инструкциями установки CA на Windows, Android и iOS.
+- [x] Проверить `php artisan test`.
+- [x] Проверить `npm run build`.
+- [x] Проверить HTTPS `/dashboard`, `/access/mobile-scanner`, `/access/gate`, `/api/settings/public`, `/version.json`.

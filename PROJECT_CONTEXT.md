@@ -1065,3 +1065,11 @@ QR-пропуска адаптированы для обычных USB HID-ск�
 Добавлен мобильный режим проходной `/access/mobile-scanner` для ролей `admin` и `security`. Сканер использует native `BarcodeDetector`, а при отсутствии поддержки — локальный fallback `jsQR` через canvas. Кадры камеры не отправляются на сервер; в `/api/access/scan` передается только считанная строка QR.
 
 Страница поддерживает запуск камеры, заднюю камеру по умолчанию, переключение камеры, фонарик при поддержке устройства, вибрацию/звук результата, паузу после скана, защиту от повторного считывания и ручной ввод token. Документация: `docs/MOBILE_ACCESS_SCANNER.md`.
+
+## INFRA-006: DEV HTTPS для мобильного сканера
+
+Для DEV-среды добавлен локальный HTTPS endpoint `https://192.168.34.104:5443` через отдельный контейнер `college_dev_https_proxy`. Старые диагностические HTTP-порты сохранены: frontend `5174`, backend/API `8001`, PostgreSQL `5433`.
+
+Сертификаты выпускаются локальным CA скриптом `scripts/dev-https/create-dev-ca.sh` для `college-dev.local` и `192.168.34.104`. Папка `infra/dev-https/certs/` исключена из git; приватные ключи не коммитятся. Frontend API base переведен на same-origin `/api`, а Vite DEV получил proxy для `/api` и `/storage`, чтобы избежать mixed content при HTTPS.
+
+Документация: `docs/DEV_HTTPS.md`.
