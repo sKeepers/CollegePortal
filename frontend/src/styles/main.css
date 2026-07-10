@@ -5420,3 +5420,62 @@ body {
     width: 88px;
   }
 }
+
+.access-reports-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 400px);
+  gap: 12px;
+  align-items: start;
+}
+
+.access-reports-main,
+.access-reports-side {
+  min-width: 0;
+}
+
+.access-reports-workspace__section {
+  display: grid;
+  gap: 8px;
+}
+
+.access-reports-workspace__section h3 {
+  margin: 0;
+  color: #172033;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.access-reports-workspace__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.access-reports-workspace__list div {
+  display: grid;
+  gap: 2px;
+  border-radius: 8px;
+  padding: 9px 10px;
+  background: #f8fafc;
+}
+
+.access-reports-workspace__list dt {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.access-reports-workspace__list dd {
+  margin: 0;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1180px) {
+  .access-reports-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
