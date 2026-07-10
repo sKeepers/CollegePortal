@@ -1073,3 +1073,9 @@ QR-пропуска адаптированы для обычных USB HID-ск�
 Сертификаты выпускаются локальным CA скриптом `scripts/dev-https/create-dev-ca.sh` для `college-dev.local` и `192.168.34.104`. Папка `infra/dev-https/certs/` исключена из git; приватные ключи не коммитятся. Frontend API base переведен на same-origin `/api`, а Vite DEV получил proxy для `/api` и `/storage`, чтобы избежать mixed content при HTTPS.
 
 Документация: `docs/DEV_HTTPS.md`.
+
+## ATTENDANCE-001A: аналитический движок посещаемости
+
+Добавлен read-only движок сопоставления событий проходной с расписанием. Backend сервис `AttendanceAnalysisService` рассчитывает статусы преподавателей и студентов за текущий день по данным `access_events` и `schedule_lessons`, не изменяя существующие процессы проходной, расписания и журнала.
+
+API: `/api/attendance/teachers/today`, `/api/attendance/students/today`. Frontend страница: `/attendance`. Документация: `docs/ATTENDANCE_ENGINE.md`.

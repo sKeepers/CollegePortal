@@ -60,6 +60,7 @@ const navGroups = [
     items: [
       { label: 'Расписание', to: '/schedule', icon: CalendarDays, permission: 'manage_schedule' },
       { label: 'Журнал', to: '/journal', icon: ClipboardList, permission: 'manage_journal' },
+      { label: 'Посещаемость', to: '/attendance', icon: ClipboardList, permission: 'view_reports' },
       { label: 'Учебные планы', to: '/curricula', icon: BookOpen, permission: 'manage_dictionaries' },
       { label: 'Нагрузка', to: '/teaching-load', icon: ClipboardList, permission: 'manage_dictionaries' },
       { label: 'Экзамены и ГИА', to: '/exams', icon: ClipboardList, permission: 'manage_dictionaries' },

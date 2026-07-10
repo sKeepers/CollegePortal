@@ -531,3 +531,15 @@
 - [x] Проверить `php artisan test`.
 - [x] Проверить `npm run build`.
 - [x] Проверить HTTPS `/dashboard`, `/access/mobile-scanner`, `/access/gate`, `/api/settings/public`, `/version.json`.
+
+## ATTENDANCE-001A: Attendance Analysis Engine
+
+- [x] Создать `AttendanceAnalysisService`.
+- [x] Рассчитывать статусы преподавателей за текущий день.
+- [x] Рассчитывать статусы студентов за текущий день.
+- [x] Использовать `access_events` и `schedule_lessons` без изменения процессов проходной.
+- [x] Добавить read-only API `/api/attendance/teachers/today`.
+- [x] Добавить read-only API `/api/attendance/students/today`.
+- [x] Создать страницу `/attendance` с таблицей.
+- [x] Создать `docs/ATTENDANCE_ENGINE.md`.
+- [x] Добавить feature-тесты аналитики посещаемости.

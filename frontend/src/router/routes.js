@@ -18,6 +18,7 @@ const GraduationPage = () => import('../pages/graduation/GraduationPage.vue')
 const FrdoPage = () => import('../pages/frdo/FrdoPage.vue')
 const FisPage = () => import('../pages/fis/FisPage.vue')
 const ReportsPage = () => import('../pages/reports/ReportsPage.vue')
+const AttendancePage = () => import('../pages/attendance/AttendancePage.vue')
 const AdmissionsPage = () => import('../pages/admissions/AdmissionsPage.vue')
 const DigitalPassesPage = () => import('../pages/identity/DigitalPassesPage.vue')
 const AccessGatePage = () => import('../pages/access/AccessGatePage.vue')
@@ -185,6 +186,12 @@ export const routes = [
         name: 'reports',
         component: ReportsPage,
         meta: { title: 'Отчеты', permission: 'manage_journal' },
+      },
+      {
+        path: 'attendance',
+        name: 'attendance',
+        component: AttendancePage,
+        meta: { title: 'Посещаемость', permission: 'view_reports' },
       },
       {
         path: 'admissions',
