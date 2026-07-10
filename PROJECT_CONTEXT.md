@@ -1046,3 +1046,10 @@ Frontend Workspace:
 Для ролей `admin` и `director` создан аналитический Dashboard руководителя. Backend добавил read-only `DashboardAnalyticsService` и endpoint `/api/dashboard/analytics/executive`, который агрегирует данные контингента, преподавателей, учебного процесса, проходной, приемной комиссии, ФРДО, ФИС, версии системы и аудита.
 
 Frontend Dashboard использует KPI-карточки, быстрые действия, блок “Что требует внимания”, CSS mini charts без сторонних библиотек и системный блок версии/build. Архитектура описана в `docs/EXECUTIVE_DASHBOARD.md`.
+
+
+## UX-003: Personal Dashboard Layout
+
+Добавлена персональная настройка Dashboard. Пользователь может переключаться между стандартным ролевым Dashboard и профилем `Мой Dashboard`, менять порядок виджетов drag & drop, размер, скрывать блоки и сохранять расположение в БД через `dashboard_layouts`.
+
+Backend предоставляет персональный API `/api/dashboard/layouts`; пользователь может изменять только собственные layout-профили. Frontend использует общий компонент `PersonalDashboardLayout` для административного, преподавательского и общего Dashboard. Документация: `docs/PERSONAL_DASHBOARD.md`.

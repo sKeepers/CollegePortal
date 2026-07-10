@@ -94,6 +94,13 @@ export const api = {
     })
   },
 
+  async put(resource, data) {
+    return request(`/${resource}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+
   async delete(resource, id) {
     return request(`/${resource}/${id}`, {
       method: 'DELETE',

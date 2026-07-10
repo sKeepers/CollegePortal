@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\CurriculumController;
 use App\Http\Controllers\Api\DigitalIdentityController;
 use App\Http\Controllers\Api\DemoDataController;
 use App\Http\Controllers\Api\DashboardAnalyticsController;
+use App\Http\Controllers\Api\DashboardLayoutController;
 use App\Http\Controllers\Api\ExamController;
 use App\Http\Controllers\Api\FrdoPackageController;
 use App\Http\Controllers\Api\FisPackageController;
@@ -44,6 +45,12 @@ Route::middleware('api.token')->group(function (): void {
     Route::get('auth/me', [AuthController::class, 'me']);
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('mobile/student', [MobileStudentController::class, 'show']);
+    Route::get('dashboard/layouts', [DashboardLayoutController::class, 'index']);
+    Route::post('dashboard/layouts', [DashboardLayoutController::class, 'store']);
+    Route::post('dashboard/layouts/reset', [DashboardLayoutController::class, 'reset']);
+    Route::put('dashboard/layouts/{dashboardLayout}', [DashboardLayoutController::class, 'update']);
+    Route::delete('dashboard/layouts/{dashboardLayout}', [DashboardLayoutController::class, 'destroy']);
+    Route::post('dashboard/layouts/{dashboardLayout}/activate', [DashboardLayoutController::class, 'activate']);
 
     Route::middleware('permission:view_reports')->group(function (): void {
         Route::get('dashboard/analytics/executive', [DashboardAnalyticsController::class, 'executive']);

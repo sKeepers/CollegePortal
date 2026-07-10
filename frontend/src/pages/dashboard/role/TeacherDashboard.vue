@@ -12,6 +12,7 @@ import StatsWidget from '../widgets/StatsWidget.vue'
 import QuickActionsWidget from '../widgets/QuickActionsWidget.vue'
 import RecentActivityWidget from '../widgets/RecentActivityWidget.vue'
 import NotificationsWidget from '../widgets/NotificationsWidget.vue'
+import PersonalDashboardLayout from '../../../components/dashboard/PersonalDashboardLayout.vue'
 import { currentDateRu, extractRows, extractTotal, groupName, teacherName, todayIso } from './dashboardData'
 
 const auth = useAuthStore()
@@ -28,6 +29,13 @@ const teacherGroups = ref([])
 const currentDate = computed(currentDateRu)
 const userName = computed(() => teacherName(teacher.value) || auth.user?.name || 'преподаватель')
 const dashboardSubtitle = computed(() => `Рабочий стол преподавателя · ${settingsStore.publicValue('general', 'college_short_name', 'CollegePortal')}`)
+const dashboardWidgets = [
+  { id: 'stats', title: 'Ключевые показатели', defaultSize: 'full' },
+  { id: 'actions', title: 'Быстрые действия', defaultSize: 'medium' },
+  { id: 'notifications', title: 'Уведомления', defaultSize: 'medium' },
+  { id: 'activity', title: 'Сегодняшние занятия', defaultSize: 'medium' },
+  { id: 'nearest', title: 'Ближайшее занятие', defaultSize: 'medium' },
+]
 const teacherId = computed(() => teacher.value?.id || auth.user?.person_id || null)
 const nearestLesson = computed(() => todayLessons.value[0] || null)
 const statItems = computed(() => [
@@ -127,6 +135,31 @@ onMounted(() => {
     <PageHeader title="Панель" :subtitle="dashboardSubtitle"><template #actions><q-btn flat :loading="loading" @click="loadDashboard">Обновить</q-btn></template></PageHeader>
     <section class="dashboard-hero dashboard-hero--teacher"><div><span>{{ currentDate }}</span><h2>Добро пожаловать, {{ userName }}</h2><p>Персональная преподавательская сводка: занятия, журнал, нагрузка, группы и экзамены.</p></div></section>
     <AppErrorBanner :message="error" />
-    <div class="dashboard-grid dashboard-grid--role"><section class="dashboard-grid__full"><StatsWidget :items="statItems" :loading="loading" /></section><QuickActionsWidget :actions="quickActions" /><NotificationsWidget :items="notifications" /><RecentActivityWidget :items="lessonActivity" /><section class="dashboard-role-card"><h3>Ближайшее занятие</h3><div v-if="nearestLesson" class="dashboard-role-next"><strong>{{ nearestLesson.subject?.name || 'Занятие' }}</strong><span>{{ groupName(nearestLesson.group) }}</span><span>{{ nearestLesson.starts_at || '—' }}–{{ nearestLesson.ends_at || '—' }}</span><AppStatusBadge label="Сегодня" tone="info" /></div><p v-else class="dashboard-role-empty">На сегодня ближайшее занятие не найдено.</p></section></div>
+    <PersonalDashboardLayout dashboard-type="teacher" :widgets="dashboardWidgets">
+      <template #stats>
+        <StatsWidget :items="statItems" :loading="loading" />
+      </template>
+      <template #actions>
+        <QuickActionsWidget :actions="quickActions" />
+      </template>
+      <template #notifications>
+        <NotificationsWidget :items="notifications" />
+      </template>
+      <template #activity>
+        <RecentActivityWidget :items="lessonActivity" />
+      </template>
+      <template #nearest>
+        <section class="dashboard-role-card">
+          <h3>Ближайшее занятие</h3>
+          <div v-if="nearestLesson" class="dashboard-role-next">
+            <strong>{{ nearestLesson.subject?.name || 'Занятие' }}</strong>
+            <span>{{ groupName(nearestLesson.group) }}</span>
+            <span>{{ nearestLesson.starts_at || '—' }}–{{ nearestLesson.ends_at || '—' }}</span>
+            <AppStatusBadge label="Сегодня" tone="info" />
+          </div>
+          <p v-else class="dashboard-role-empty">На сегодня ближайшее занятие не найдено.</p>
+        </section>
+      </template>
+    </PersonalDashboardLayout>
   </AppPage>
 </template>

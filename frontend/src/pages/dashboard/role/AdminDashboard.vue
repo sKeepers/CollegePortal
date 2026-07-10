@@ -23,6 +23,7 @@ import { useSettingsStore } from '../../../stores/settings'
 import StatsWidget from '../widgets/StatsWidget.vue'
 import QuickActionsWidget from '../widgets/QuickActionsWidget.vue'
 import RecentActivityWidget from '../widgets/RecentActivityWidget.vue'
+import PersonalDashboardLayout from '../../../components/dashboard/PersonalDashboardLayout.vue'
 import { currentDateRu } from './dashboardData'
 
 const auth = useAuthStore()
@@ -35,6 +36,18 @@ const roleLabel = computed(() => auth.user?.role?.code === 'director' ? 'дир�
 const currentDate = computed(currentDateRu)
 const userName = computed(() => auth.user?.name || 'пользователь')
 const dashboardSubtitle = computed(() => `Рабочий стол ${roleLabel.value} · ${settingsStore.publicValue('general', 'college_short_name', 'CollegePortal')}`)
+const adminDashboardType = computed(() => auth.user?.role?.code === 'director' ? 'director' : 'admin')
+const dashboardWidgets = [
+  { id: 'stats', title: 'Ключевые показатели', defaultSize: 'full' },
+  { id: 'actions', title: 'Быстрые действия', defaultSize: 'medium' },
+  { id: 'attention', title: 'Что требует внимания', defaultSize: 'medium' },
+  { id: 'charts', title: 'Мини-графики', defaultSize: 'medium' },
+  { id: 'admissions', title: 'Приемная комиссия', defaultSize: 'small' },
+  { id: 'integrations', title: 'ФРДО / ФИС', defaultSize: 'medium' },
+  { id: 'system', title: 'Система', defaultSize: 'medium' },
+  { id: 'audit', title: 'Последние действия', defaultSize: 'medium' },
+  { id: 'access', title: 'Проходная', defaultSize: 'small' },
+]
 const payload = computed(() => analytics.value?.data || {})
 const kpi = computed(() => payload.value.kpi || {})
 const contingent = computed(() => kpi.value.contingent || {})
@@ -155,13 +168,16 @@ onMounted(() => {
 
     <AppErrorBanner :message="error" />
 
-    <div class="dashboard-grid dashboard-grid--role executive-dashboard">
-      <section class="dashboard-grid__full">
+    <PersonalDashboardLayout :dashboard-type="adminDashboardType" :widgets="dashboardWidgets">
+      <template #stats>
         <StatsWidget :items="statItems" :loading="loading" />
-      </section>
+      </template>
 
-      <section class="dashboard-grid__full executive-dashboard__split">
+      <template #actions>
         <QuickActionsWidget :actions="quickActions" />
+      </template>
+
+      <template #attention>
         <AppCard title="Что требует внимания" subtitle="Контроль качества данных и критичных процессов">
           <div class="executive-attention">
             <button
@@ -179,73 +195,85 @@ onMounted(() => {
             </button>
           </div>
         </AppCard>
-      </section>
+      </template>
 
-      <AppCard title="Мини-графики" subtitle="Динамика по доступным данным">
-        <div class="executive-chart-list">
-          <div v-for="chart in chartGroups" :key="chart.title" class="executive-chart">
-            <div class="executive-chart__header">
-              <strong>{{ chart.title }}</strong>
-              <small>{{ chart.subtitle }}</small>
-            </div>
-            <div class="executive-chart__bars">
-              <div v-for="point in chart.items" :key="`${chart.title}-${point.date}`" class="executive-chart__point">
-                <span class="executive-chart__bar" :style="{ height: chartHeight(point, chart.items) }" />
-                <small>{{ formatChartDate(point.date) }}</small>
+      <template #charts>
+        <AppCard title="Мини-графики" subtitle="Динамика по доступным данным">
+          <div class="executive-chart-list">
+            <div v-for="chart in chartGroups" :key="chart.title" class="executive-chart">
+              <div class="executive-chart__header">
+                <strong>{{ chart.title }}</strong>
+                <small>{{ chart.subtitle }}</small>
               </div>
+              <div class="executive-chart__bars">
+                <div v-for="point in chart.items" :key="`${chart.title}-${point.date}`" class="executive-chart__point">
+                  <span class="executive-chart__bar" :style="{ height: chartHeight(point, chart.items) }" />
+                  <small>{{ formatChartDate(point.date) }}</small>
+                </div>
+              </div>
+              <AppStatusBadge v-if="chart.items.some((point) => point.is_demo)" label="DEV" tone="warning" />
             </div>
-            <AppStatusBadge v-if="chart.items.some((point) => point.is_demo)" label="DEV" tone="warning" />
           </div>
-        </div>
-      </AppCard>
+        </AppCard>
+      </template>
 
-      <AppCard title="Приемная комиссия" subtitle="Состояние заявлений">
-        <div class="dashboard-role-list dashboard-role-list--compact">
-          <div><span>Новые</span><strong>{{ admissions.new_applications || 0 }}</strong></div>
-          <div><span>Ожидают проверки</span><strong>{{ admissions.pending_review || 0 }}</strong></div>
-          <div><span>Зачислено</span><strong>{{ admissions.enrolled || 0 }}</strong></div>
-        </div>
-      </AppCard>
-
-      <AppCard title="ФРДО / ФИС" subtitle="Пакеты, готовность и ошибки проверки">
-        <div class="executive-integration-grid">
-          <div v-for="row in integrationRows" :key="row.label" class="executive-integration-card">
-            <span>{{ row.label }}</span>
-            <strong>{{ row.value }}</strong>
-            <AppStatusBadge :label="row.value > 0 ? 'Есть данные' : 'Нет'" :tone="row.tone" />
+      <template #admissions>
+        <AppCard title="Приемная комиссия" subtitle="Состояние заявлений">
+          <div class="dashboard-role-list dashboard-role-list--compact">
+            <div><span>Новые</span><strong>{{ admissions.new_applications || 0 }}</strong></div>
+            <div><span>Ожидают проверки</span><strong>{{ admissions.pending_review || 0 }}</strong></div>
+            <div><span>Зачислено</span><strong>{{ admissions.enrolled || 0 }}</strong></div>
           </div>
-        </div>
-        <div v-if="latestPackages.length" class="executive-package-list">
-          <div v-for="pkg in latestPackages" :key="pkg.id">
-            <strong>{{ pkg.name }}</strong>
-            <small>{{ pkg.updated_at }}</small>
-            <AppStatusBadge :label="pkg.status" tone="info" />
+        </AppCard>
+      </template>
+
+      <template #integrations>
+        <AppCard title="ФРДО / ФИС" subtitle="Пакеты, готовность и ошибки проверки">
+          <div class="executive-integration-grid">
+            <div v-for="row in integrationRows" :key="row.label" class="executive-integration-card">
+              <span>{{ row.label }}</span>
+              <strong>{{ row.value }}</strong>
+              <AppStatusBadge :label="row.value > 0 ? 'Есть данные' : 'Нет'" :tone="row.tone" />
+            </div>
           </div>
-        </div>
-      </AppCard>
+          <div v-if="latestPackages.length" class="executive-package-list">
+            <div v-for="pkg in latestPackages" :key="pkg.id">
+              <strong>{{ pkg.name }}</strong>
+              <small>{{ pkg.updated_at }}</small>
+              <AppStatusBadge :label="pkg.status" tone="info" />
+            </div>
+          </div>
+        </AppCard>
+      </template>
 
-      <AppCard title="Система" subtitle="Версия, сборка и состояние платформы">
-        <dl class="executive-system-list">
-          <div><dt>Версия</dt><dd>{{ version.version || '0.7.0-dev' }}</dd></div>
-          <div><dt>Релиз</dt><dd>{{ version.release || 'Release 0.7' }}</dd></div>
-          <div><dt>Build</dt><dd>{{ version.build || 'unknown' }}</dd></div>
-          <div><dt>Дата сборки</dt><dd>{{ version.buildDate || '—' }}</dd></div>
-          <div><dt>Окружение</dt><dd>{{ version.environment || 'development' }}</dd></div>
-          <div><dt>Статус</dt><dd><AppStatusBadge label="Работает" tone="success" /></dd></div>
-        </dl>
-      </AppCard>
+      <template #system>
+        <AppCard title="Система" subtitle="Версия, сборка и состояние платформы">
+          <dl class="executive-system-list">
+            <div><dt>Версия</dt><dd>{{ version.version || '0.7.0-dev' }}</dd></div>
+            <div><dt>Релиз</dt><dd>{{ version.release || 'Release 0.7' }}</dd></div>
+            <div><dt>Build</dt><dd>{{ version.build || 'unknown' }}</dd></div>
+            <div><dt>Дата сборки</dt><dd>{{ version.buildDate || '—' }}</dd></div>
+            <div><dt>Окружение</dt><dd>{{ version.environment || 'development' }}</dd></div>
+            <div><dt>Статус</dt><dd><AppStatusBadge label="Работает" tone="success" /></dd></div>
+          </dl>
+        </AppCard>
+      </template>
 
-      <RecentActivityWidget :items="auditActivity" />
+      <template #audit>
+        <RecentActivityWidget :items="auditActivity" />
+      </template>
 
-      <section class="dashboard-role-card">
-        <h3>Проходная</h3>
-        <div class="dashboard-role-list">
-          <div><span>Сейчас в колледже</span><strong>{{ access.inside_now || 0 }}</strong></div>
-          <div><span>Входов сегодня</span><strong>{{ access.entries_today || 0 }}</strong></div>
-          <div><span>Отказов</span><strong>{{ access.denied_today || 0 }}</strong></div>
-        </div>
-        <AppStatusBadge label="Контроль доступа" tone="info" />
-      </section>
-    </div>
+      <template #access>
+        <section class="dashboard-role-card">
+          <h3>Проходная</h3>
+          <div class="dashboard-role-list">
+            <div><span>Сейчас в колледже</span><strong>{{ access.inside_now || 0 }}</strong></div>
+            <div><span>Входов сегодня</span><strong>{{ access.entries_today || 0 }}</strong></div>
+            <div><span>Отказов</span><strong>{{ access.denied_today || 0 }}</strong></div>
+          </div>
+          <AppStatusBadge label="Контроль доступа" tone="info" />
+        </section>
+      </template>
+    </PersonalDashboardLayout>
   </AppPage>
 </template>

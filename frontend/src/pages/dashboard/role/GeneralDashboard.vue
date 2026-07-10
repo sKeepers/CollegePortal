@@ -12,6 +12,7 @@ import QuickActionsWidget from '../widgets/QuickActionsWidget.vue'
 import RecentActivityWidget from '../widgets/RecentActivityWidget.vue'
 import NotificationsWidget from '../widgets/NotificationsWidget.vue'
 import TasksWidget from '../widgets/TasksWidget.vue'
+import PersonalDashboardLayout from '../../../components/dashboard/PersonalDashboardLayout.vue'
 import { currentDateRu, extractTotal, todayIso } from './dashboardData'
 
 const auth = useAuthStore()
@@ -39,6 +40,13 @@ const mockTasks = [
 const currentDate = computed(currentDateRu)
 const userName = computed(() => auth.user?.name || 'пользователь')
 const dashboardSubtitle = computed(() => `Рабочая сводка ${settingsStore.publicValue('general', 'college_short_name', 'CollegePortal')}`)
+const dashboardWidgets = [
+  { id: 'stats', title: 'Ключевые показатели', defaultSize: 'full' },
+  { id: 'actions', title: 'Быстрые действия', defaultSize: 'medium' },
+  { id: 'tasks', title: 'Мои задачи', defaultSize: 'medium' },
+  { id: 'activity', title: 'Последние действия', defaultSize: 'medium' },
+  { id: 'notifications', title: 'Уведомления', defaultSize: 'medium' },
+]
 const statItems = computed(() => [
   { label: 'Студенты', value: totals.value.students, icon: GraduationCap },
   { label: 'Группы', value: totals.value.groups, icon: UsersRound },
@@ -88,6 +96,22 @@ onMounted(() => {
     <PageHeader title="Панель" :subtitle="dashboardSubtitle"><template #actions><q-btn flat :loading="loading" @click="loadDashboard">Обновить</q-btn></template></PageHeader>
     <section class="dashboard-hero"><div><span>{{ currentDate }}</span><h2>Добро пожаловать, {{ userName }}</h2><p>Здесь собраны основные показатели, быстрые действия и рабочие уведомления.</p></div></section>
     <AppErrorBanner :message="error" />
-    <div class="dashboard-grid"><section class="dashboard-grid__full"><StatsWidget :items="statItems" :loading="loading" /></section><QuickActionsWidget :actions="quickActions" /><TasksWidget :items="mockTasks" /><RecentActivityWidget :items="mockRecentActivity" /><NotificationsWidget :items="mockNotifications" /></div>
+    <PersonalDashboardLayout dashboard-type="general" :widgets="dashboardWidgets">
+      <template #stats>
+        <StatsWidget :items="statItems" :loading="loading" />
+      </template>
+      <template #actions>
+        <QuickActionsWidget :actions="quickActions" />
+      </template>
+      <template #tasks>
+        <TasksWidget :items="mockTasks" />
+      </template>
+      <template #activity>
+        <RecentActivityWidget :items="mockRecentActivity" />
+      </template>
+      <template #notifications>
+        <NotificationsWidget :items="mockNotifications" />
+      </template>
+    </PersonalDashboardLayout>
   </AppPage>
 </template>

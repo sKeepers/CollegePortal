@@ -479,3 +479,15 @@
 - [x] Создать `docs/EXECUTIVE_DASHBOARD.md`.
 - [ ] Добавить полноценную 30-дневную динамику после проверки реальных данных.
 - [ ] Добавить отдельный показатель конфликтов расписания в блок внимания.
+
+
+## UX-003: Personal Dashboard Layout
+
+- [x] Создать таблицу `dashboard_layouts`.
+- [x] Добавить персональный API `/api/dashboard/layouts`.
+- [x] Ограничить изменение layouts только владельцем.
+- [x] Создать `PersonalDashboardLayout`.
+- [x] Добавить режим настройки Dashboard: drag & drop, размер, скрытие, сохранение, отмена, сброс.
+- [x] Подключить персональный layout к admin/director, teacher и general Dashboard.
+- [x] Создать `docs/PERSONAL_DASHBOARD.md`.
+- [ ] В будущих этапах добавить несколько именованных пользовательских профилей.
