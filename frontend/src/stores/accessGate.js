@@ -4,6 +4,11 @@ import { api } from '../services/api'
 import { useSettingsStore } from './settings'
 
 function extractRows(payload) { return Array.isArray(payload?.data) ? payload.data : [] }
+export function normalizeQrToken(value) {
+  let token = String(value || '').trim()
+  if (token.startsWith('CP1:')) token = token.slice(4).trim()
+  return token
+}
 function fullName(person) { return [person?.last_name, person?.first_name, person?.middle_name].filter(Boolean).join(' ') }
 export function ownerName(event) { return fullName(event?.owner) || 'Неизвестный пропуск' }
 export function entityTypeLabel(type) {
@@ -55,7 +60,7 @@ export const useAccessGateStore = defineStore('accessGate', () => {
   }
 
   async function scan(token, metadata = {}) {
-    const normalizedToken = String(token || '').trim()
+    const normalizedToken = normalizeQrToken(token)
     if (!normalizedToken) return null
 
     const now = Date.now()

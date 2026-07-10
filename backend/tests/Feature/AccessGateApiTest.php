@@ -102,6 +102,30 @@ class AccessGateApiTest extends TestCase
             ->assertJsonPath('data.0.owner.last_name', 'Иванов');
     }
 
+
+
+    public function test_scan_accepts_cp1_prefix_and_trimmed_hid_suffixes(): void
+    {
+        $identity = $this->createStudentIdentity();
+
+        $this->postJson('/api/access/scan', [
+            'token' => " CP1:{$identity->token}\r\n",
+            'access_point' => 'Главный вход',
+            'device_name' => 'USB QR Scanner',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.result', AccessEvent::RESULT_ALLOWED)
+            ->assertJsonPath('data.direction', AccessEvent::DIRECTION_IN)
+            ->assertJsonPath('data.owner.last_name', 'Иванов');
+
+        $this->travel(3)->seconds();
+
+        $this->postJson('/api/access/scan', ['token' => "\t{$identity->token}\n"])
+            ->assertOk()
+            ->assertJsonPath('data.result', AccessEvent::RESULT_ALLOWED)
+            ->assertJsonPath('data.direction', AccessEvent::DIRECTION_OUT);
+    }
+
     private function createStudentIdentity(array $overrides = []): DigitalIdentity
     {
         $group = Group::create([

@@ -22,6 +22,7 @@ const AdmissionsPage = () => import('../pages/admissions/AdmissionsPage.vue')
 const DigitalPassesPage = () => import('../pages/identity/DigitalPassesPage.vue')
 const AccessGatePage = () => import('../pages/access/AccessGatePage.vue')
 const AccessReportsPage = () => import('../pages/access/AccessReportsPage.vue')
+const ScannerTestPage = () => import('../pages/access/ScannerTestPage.vue')
 const ApplicantPublicPage = () => import('../pages/public/ApplicantPublicPage.vue')
 const UiFoundationPage = () => import('../pages/system/UiFoundationPage.vue')
 const DataManagementPage = () => import('../pages/admin/DataManagementPage.vue')
@@ -201,6 +202,12 @@ export const routes = [
         name: 'access-reports',
         component: AccessReportsPage,
         meta: { title: 'Отчеты по проходам', permission: 'manage_dictionaries' },
+      },
+      {
+        path: 'access/scanner-test',
+        name: 'access-scanner-test',
+        component: ScannerTestPage,
+        meta: { title: 'Тест QR-сканера', adminOnly: true },
       },
       {
         path: 'identity/digital-passes',

@@ -78,11 +78,22 @@ class DigitalIdentityController extends Controller
         return new DigitalIdentityResource($digitalIdentity->fresh());
     }
 
-    public function qr(DigitalIdentity $digitalIdentity, QrSvgService $qrSvgService): Response
+    public function qr(Request $request, DigitalIdentity $digitalIdentity, QrSvgService $qrSvgService): Response
     {
+        $format = strtolower($request->query('format', 'svg'));
+
+        if ($format === 'png') {
+            return response($qrSvgService->renderPng($digitalIdentity->token), Response::HTTP_OK, [
+                'Content-Type' => 'image/png',
+                'Cache-Control' => 'no-store, private',
+                'X-QR-Content' => 'token',
+            ]);
+        }
+
         return response($qrSvgService->renderSvg($digitalIdentity->token), Response::HTTP_OK, [
             'Content-Type' => 'image/svg+xml; charset=UTF-8',
             'Cache-Control' => 'no-store, private',
+            'X-QR-Content' => 'token',
         ]);
     }
 

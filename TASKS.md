@@ -491,3 +491,16 @@
 - [x] Подключить персональный layout к admin/director, teacher и general Dashboard.
 - [x] Создать `docs/PERSONAL_DASHBOARD.md`.
 - [ ] В будущих этапах добавить несколько именованных пользовательских профилей.
+
+## QR-004: совместимость QR с физическим сканером
+
+- [x] Проверить и зафиксировать содержимое QR.
+- [x] Сохранить QR payload как чистый ASCII token.
+- [x] Поддержать входные форматы `token` и `CP1:<token>`.
+- [x] Перевести QR на Error Correction Level M, quiet zone 4 и черно-белый профиль.
+- [x] Добавить PNG endpoint `format=png` рядом с SVG.
+- [x] Улучшить `/identity/digital-passes`: крупный QR, PNG download, показ значения QR.
+- [x] Улучшить `/m/student/pass` для чтения QR с телефона.
+- [x] Добавить диагностику HID-сканера на `/access/gate`.
+- [x] Добавить DEV-страницу `/access/scanner-test` только для admin.
+- [x] Добавить backend-тесты token/CP1/CR/LF/PNG/SVG/no PII.

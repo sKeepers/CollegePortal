@@ -6,9 +6,9 @@ class QrSvgService
 {
     private const VERSION = 3;
     private const SIZE = 29;
-    private const DATA_CODEWORDS = 55;
-    private const ECC_CODEWORDS = 15;
-    private const FORMAT_L_MASK_0 = 0x77c4;
+    private const DATA_CODEWORDS = 44;
+    private const ECC_CODEWORDS = 26;
+    private const FORMAT_M_MASK_0 = 0x5412;
 
     /** @var array<int, int> */
     private array $gfExp = [];
@@ -16,11 +16,33 @@ class QrSvgService
     /** @var array<int, int> */
     private array $gfLog = [];
 
+    public function qrPayload(string $token): string
+    {
+        $payload = trim($token, " \t\r\n");
+
+        if (! preg_match('/^[\x21-\x7E]+$/', $payload)) {
+            throw new \InvalidArgumentException('QR token must be printable ASCII without spaces.');
+        }
+
+        return $payload;
+    }
+
+    public function normalizeScannedToken(string $value): string
+    {
+        $token = trim($value, " \t\r\n");
+
+        if (str_starts_with($token, 'CP1:')) {
+            $token = substr($token, 4);
+        }
+
+        return trim($token, " \t\r\n");
+    }
+
     public function renderSvg(string $token): string
     {
-        $matrix = $this->buildMatrix($token);
+        $matrix = $this->buildMatrix($this->qrPayload($token));
         $quiet = 4;
-        $module = 8;
+        $module = 10;
         $size = self::SIZE + ($quiet * 2);
         $pixels = $size * $module;
         $rects = [];
@@ -36,10 +58,49 @@ class QrSvgService
         }
 
         return sprintf(
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %1$d %1$d" width="%1$d" height="%1$d" role="img" aria-label="Digital pass QR"><rect width="100%%" height="100%%" fill="#fff"/><g fill="#0f172a">%2$s</g></svg>',
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %1$d %1$d" width="%1$d" height="%1$d" role="img" aria-label="Digital pass QR"><rect width="100%%" height="100%%" fill="#ffffff"/><g fill="#000000">%2$s</g></svg>',
             $pixels,
             implode('', $rects),
         );
+    }
+
+    public function renderPng(string $token): string
+    {
+        $matrix = $this->buildMatrix($this->qrPayload($token));
+        $quiet = 4;
+        $module = 10;
+        $modules = self::SIZE + ($quiet * 2);
+        $pixels = $modules * $module;
+        $rows = [];
+
+        for ($y = 0; $y < $pixels; $y++) {
+            $moduleY = intdiv($y, $module) - $quiet;
+            $row = "\x00";
+
+            for ($x = 0; $x < $pixels; $x++) {
+                $moduleX = intdiv($x, $module) - $quiet;
+                $black = $moduleY >= 0 && $moduleY < self::SIZE
+                    && $moduleX >= 0 && $moduleX < self::SIZE
+                    && $matrix[$moduleY][$moduleX];
+                $row .= $black ? "\x00\x00\x00" : "\xff\xff\xff";
+            }
+
+            $rows[] = $row;
+        }
+
+        $header = pack('NNCCCCC', $pixels, $pixels, 8, 2, 0, 0, 0);
+        $data = gzcompress(implode('', $rows), 9);
+
+        return "\x89PNG\r\n\x1a\n"
+            . $this->pngChunk('IHDR', $header)
+            . $this->pngChunk('IDAT', $data)
+            . $this->pngChunk('IEND', '');
+    }
+
+    private function pngChunk(string $type, string $data): string
+    {
+        $chunk = $type . $data;
+        return pack('N', strlen($data)) . $chunk . pack('N', crc32($chunk));
     }
 
     /** @return array<int, array<int, bool>> */
@@ -169,7 +230,7 @@ class QrSvgService
 
     private function addFormat(array &$matrix, array &$reserved): void
     {
-        $format = self::FORMAT_L_MASK_0;
+        $format = self::FORMAT_M_MASK_0;
 
         for ($i = 0; $i < 15; $i++) {
             $bit = (($format >> $i) & 1) === 1;

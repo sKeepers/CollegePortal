@@ -5900,3 +5900,187 @@ body {
     flex-direction: column;
   }
 }
+
+.digital-pass-qr-shell,
+.scanner-test-qr-shell {
+  display: grid;
+  place-items: center;
+  border: 1px solid #dbe4f0;
+  border-radius: 8px;
+  padding: 18px;
+  background: #ffffff;
+}
+
+.digital-pass-qr {
+  display: grid;
+  place-items: center;
+  width: min(320px, 100%);
+  min-height: 280px;
+  border: 0;
+  padding: 0;
+  background: #ffffff;
+}
+
+.digital-pass-qr svg,
+.scanner-test-qr svg {
+  display: block;
+  width: min(320px, 100%);
+  min-width: min(280px, 100%);
+  height: auto;
+  background: #ffffff;
+}
+
+.digital-pass-qr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.digital-pass-token-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.digital-pass-large-dialog {
+  width: min(520px, calc(100vw - 32px));
+}
+
+.digital-pass-large-qr {
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  padding: 24px;
+  background: #ffffff;
+}
+
+.digital-pass-large-qr svg {
+  display: block;
+  width: min(420px, 100%);
+  height: auto;
+  background: #ffffff;
+}
+
+.access-gate-diagnostics-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.access-gate-diagnostics-card h3 {
+  margin: 0 0 10px;
+  color: #172033;
+  font-size: 16px;
+  font-weight: 850;
+}
+
+.access-gate-diagnostics-grid,
+.scanner-test-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.access-gate-diagnostics-grid div,
+.scanner-test-list div {
+  display: grid;
+  gap: 3px;
+  border-radius: 8px;
+  padding: 9px 10px;
+  background: #f8fafc;
+}
+
+.access-gate-diagnostics-grid dt,
+.scanner-test-list dt {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.access-gate-diagnostics-grid dd,
+.scanner-test-list dd {
+  margin: 0;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.scanner-test-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.scanner-test-qr {
+  display: grid;
+  place-items: center;
+  width: min(340px, 100%);
+  margin: 0 auto 14px;
+  padding: 18px;
+  background: #ffffff;
+}
+
+.scanner-test-empty {
+  border-radius: 8px;
+  padding: 18px;
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 750;
+}
+
+.scanner-test-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+  border-radius: 8px;
+  padding: 12px;
+  font-weight: 900;
+}
+
+.scanner-test-result--ok {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.scanner-test-result--bad {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.scanner-test-list--compact {
+  margin-top: 10px;
+}
+
+.mobile-student-qr-card {
+  background: #ffffff;
+}
+
+.mobile-student-qr {
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  padding: 18px;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.mobile-student-qr svg {
+  display: block;
+  width: min(320px, 100%);
+  min-width: min(280px, 100%);
+  height: auto;
+  background: #ffffff;
+}
+
+@media (max-width: 1023px) {
+  .scanner-test-layout {
+    grid-template-columns: 1fr;
+  }
+}

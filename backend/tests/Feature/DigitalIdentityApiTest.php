@@ -88,6 +88,44 @@ class DigitalIdentityApiTest extends TestCase
         $this->assertStringNotContainsString('+79990000001', $svg);
     }
 
+
+
+    public function test_qr_svg_and_png_are_plain_token_payloads_without_personal_data(): void
+    {
+        $student = $this->createStudent();
+
+        $response = $this->postJson('/api/digital-identities/issue', [
+            'entity_type' => 'student',
+            'entity_id' => $student->id,
+        ])->assertCreated();
+
+        $identityId = $response->json('data.id');
+        $token = $response->json('data.token');
+
+        $svg = $this->get("/api/digital-identities/{$identityId}/qr?format=svg")
+            ->assertOk()
+            ->assertHeader('Content-Type', 'image/svg+xml; charset=UTF-8')
+            ->assertHeader('X-QR-Content', 'token')
+            ->getContent();
+
+        $png = $this->get("/api/digital-identities/{$identityId}/qr?format=png")
+            ->assertOk()
+            ->assertHeader('Content-Type', 'image/png')
+            ->assertHeader('X-QR-Content', 'token')
+            ->getContent();
+
+        $this->assertMatchesRegularExpression('/^[\x21-\x7E]+$/', $token);
+        $this->assertStringStartsWith('<svg', $svg);
+        $this->assertStringStartsWith("\x89PNG\r\n\x1a\n", $png);
+        $this->assertStringContainsString('fill="#000000"', $svg);
+        $this->assertStringContainsString('fill="#ffffff"', $svg);
+
+        foreach (['Иванов', 'Дмитрий', 'student@example.test', '+79990000001'] as $personalData) {
+            $this->assertStringNotContainsString($personalData, $svg);
+            $this->assertStringNotContainsString($personalData, $png);
+        }
+    }
+
     private function createStudent(): Student
     {
         $group = Group::create([

@@ -8,13 +8,18 @@ import AppCard from '../../components/ui/AppCard.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
-import { directionLabel, entityTypeLabel, formatEventTime, ownerName, resultLabel, resultTone, useAccessGateStore } from '../../stores/accessGate'
+import { directionLabel, entityTypeLabel, formatEventTime, normalizeQrToken, ownerName, resultLabel, resultTone, useAccessGateStore } from '../../stores/accessGate'
 
 const store = useAccessGateStore()
 const scanInputRef = ref(null)
 const token = ref('')
 const accessPoint = ref('Главный вход')
 const deviceName = ref('HID QR Scanner')
+const diagnosticsMode = ref(false)
+const submitOnTab = ref(false)
+const keyTimings = ref([])
+const lastKeyAt = ref(null)
+const diagnostic = ref({ raw: '', normalized: '', length: 0, first: '—', last: '—', hasCr: false, hasLf: false, hasTab: false, hadEnter: false, intervals: [] })
 const statusPanelClass = computed(() => store.lastEvent?.result === 'allowed' ? 'access-gate-result--allowed' : 'access-gate-result--denied')
 const resultIcon = computed(() => store.lastEvent?.result === 'allowed' ? CheckCircle2 : XCircle)
 const directionIcon = computed(() => store.lastEvent?.direction === 'out' ? LogOut : LogIn)
@@ -24,9 +29,52 @@ async function focusScanner() {
   scanInputRef.value?.focus?.()
 }
 
-async function submitScan() {
+function describeChar(char) {
+  if (!char) return '—'
+  const code = char.charCodeAt(0)
+  if (char === '\r') return 'CR (13)'
+  if (char === '\n') return 'LF (10)'
+  if (char === '\t') return 'Tab (9)'
+  return `${char} (${code})`
+}
+
+function updateDiagnostic(raw, hadEnter = false) {
+  const value = String(raw || '')
+  diagnostic.value = {
+    raw: value,
+    normalized: normalizeQrToken(value),
+    length: value.length,
+    first: describeChar(value[0]),
+    last: describeChar(value[value.length - 1]),
+    hasCr: value.includes('\r'),
+    hasLf: value.includes('\n'),
+    hasTab: value.includes('\t'),
+    hadEnter,
+    intervals: keyTimings.value.slice(-12),
+  }
+}
+
+function recordScanKey(event) {
+  if (!diagnosticsMode.value) return
+  const now = performance.now()
+  if (lastKeyAt.value !== null) keyTimings.value.push(Math.round(now - lastKeyAt.value))
+  lastKeyAt.value = now
+  if (event.key === 'Enter' || event.key === 'NumpadEnter') updateDiagnostic(token.value, true)
+  if (event.key === 'Tab') {
+    updateDiagnostic(token.value + '\t', false)
+    if (submitOnTab.value) {
+      event.preventDefault()
+      submitScan(true)
+    }
+  }
+}
+
+async function submitScan(fromTab = false) {
   const value = token.value
+  updateDiagnostic(value, !fromTab)
   token.value = ''
+  keyTimings.value = []
+  lastKeyAt.value = null
   await store.scan(value, { access_point: accessPoint.value, device_name: deviceName.value })
   await focusScanner()
 }
@@ -64,7 +112,7 @@ onMounted(async () => {
           </div>
 
           <q-form class="access-gate-scan-form" @submit.prevent="submitScan">
-            <q-input ref="scanInputRef" v-model="token" outlined autofocus input-class="access-gate-scan-input" label="Поле сканирования" placeholder="Ожидание QR-сканера..." :disable="store.scanning">
+            <q-input ref="scanInputRef" v-model="token" outlined autofocus input-class="access-gate-scan-input" label="Поле сканирования" placeholder="Ожидание QR-сканера..." :disable="store.scanning" @keydown="recordScanKey">
               <template #prepend><ScanLine :size="24" /></template>
             </q-input>
             <div class="access-gate-scan-form__meta">
@@ -72,7 +120,29 @@ onMounted(async () => {
               <q-input v-model="deviceName" dense outlined label="Устройство" />
               <q-btn color="primary" type="submit" :loading="store.scanning" :disable="!token.trim()">Сканировать</q-btn>
             </div>
+            <div class="access-gate-diagnostics-toggle">
+              <q-toggle v-model="diagnosticsMode" label="Диагностика сканера" />
+              <q-checkbox v-model="submitOnTab" label="Tab завершает скан" :disable="!diagnosticsMode" />
+            </div>
           </q-form>
+        </AppCard>
+
+        <AppCard v-if="diagnosticsMode" class="access-gate-diagnostics-card">
+          <template #default>
+            <h3>Диагностика сканера</h3>
+            <dl class="access-gate-diagnostics-grid">
+              <div><dt>Сырое значение</dt><dd>{{ diagnostic.raw || '—' }}</dd></div>
+              <div><dt>После нормализации</dt><dd>{{ diagnostic.normalized || '—' }}</dd></div>
+              <div><dt>Длина строки</dt><dd>{{ diagnostic.length }}</dd></div>
+              <div><dt>Первый символ</dt><dd>{{ diagnostic.first }}</dd></div>
+              <div><dt>Последний символ</dt><dd>{{ diagnostic.last }}</dd></div>
+              <div><dt>CR</dt><dd>{{ diagnostic.hasCr ? 'Да' : 'Нет' }}</dd></div>
+              <div><dt>LF</dt><dd>{{ diagnostic.hasLf ? 'Да' : 'Нет' }}</dd></div>
+              <div><dt>Tab</dt><dd>{{ diagnostic.hasTab ? 'Да' : 'Нет' }}</dd></div>
+              <div><dt>Enter</dt><dd>{{ diagnostic.hadEnter ? 'Да' : 'Нет' }}</dd></div>
+              <div><dt>Интервалы, мс</dt><dd>{{ diagnostic.intervals.length ? diagnostic.intervals.join(', ') : '—' }}</dd></div>
+            </dl>
+          </template>
         </AppCard>
 
         <AppCard :class="['access-gate-result', store.lastEvent ? statusPanelClass : 'access-gate-result--idle']">

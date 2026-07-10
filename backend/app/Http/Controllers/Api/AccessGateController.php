@@ -7,15 +7,16 @@ use App\Http\Requests\ScanAccessPassRequest;
 use App\Http\Resources\AccessEventResource;
 use App\Models\AccessEvent;
 use App\Models\DigitalIdentity;
+use App\Services\QrSvgService;
 use App\Services\SettingService;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class AccessGateController extends Controller
 {
-    public function scan(ScanAccessPassRequest $request): AccessEventResource
+    public function scan(ScanAccessPassRequest $request, QrSvgService $qrSvgService): AccessEventResource
     {
         $validated = $request->validated();
-        $token = trim($validated['token']);
+        $token = $qrSvgService->normalizeScannedToken($validated['token']);
         $identity = DigitalIdentity::query()->where('token', $token)->first();
 
         if ($identity !== null) {

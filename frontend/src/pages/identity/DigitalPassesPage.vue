@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { BadgeCheck, ExternalLink, Plus, RefreshCw, ShieldX } from '@lucide/vue'
+import { BadgeCheck, Download, Eye, ExternalLink, Maximize2, Plus, RefreshCw, ShieldX } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -13,13 +13,16 @@ import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
 import { useDigitalPassesStore, ENTITY_OPTIONS, entityTypeLabel, formatDateTime, ownerName, statusLabel, statusTone } from '../../stores/digitalPasses'
+import { useAuthStore } from '../../stores/auth'
 import { TABLE_ROWS_PER_PAGE_OPTIONS, createTablePagination, persistTablePagination } from '../../services/tableSettings'
 
 const store = useDigitalPassesStore()
+const auth = useAuthStore()
 const $q = useQuasar()
 const rowsPerPageKey = 'collegePortal.digitalPasses.rowsPerPage'
 const issueDialogVisible = ref(false)
 const revokeDialogVisible = ref(false)
+const qrDialogVisible = ref(false)
 const revokingIdentity = ref(null)
 const tablePagination = ref(createTablePagination(rowsPerPageKey, { sortBy: 'issued_at', descending: true, rowsPerPage: 20 }))
 const issueForm = reactive({ entity_type: 'student', entity_id: '', expires_at: '' })
@@ -61,6 +64,19 @@ async function issuePass() { await store.issue(issueForm); issueDialogVisible.va
 function requestRevoke(identity) { revokingIdentity.value = identity; revokeDialogVisible.value = true }
 async function confirmRevoke() { await store.revoke(revokingIdentity.value); notifySuccess('Цифровой пропуск отозван'); revokingIdentity.value = null }
 function tokenPreview(token) { return token ? `${token.slice(0, 8)}...${token.slice(-6)}` : '—' }
+async function downloadQrPng() {
+  const blob = await store.downloadQrPng()
+  if (!blob || !store.selectedIdentity) return
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `collegeportal-qr-${store.selectedIdentity.id}.png`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+  notifySuccess('PNG QR-код скачан')
+}
 onMounted(async () => { await store.load(); if (store.identities[0]) await store.select(store.identities[0]) })
 </script>
 
@@ -112,14 +128,33 @@ onMounted(async () => { await store.load(); if (store.identities[0]) await store
             </div>
           </template>
           <div class="digital-pass-details">
-            <div class="digital-pass-qr" v-html="store.qrSvg" />
-            <dl class="digital-pass-details__list"><div><dt>Токен</dt><dd>{{ tokenPreview(store.selectedIdentity.token) }}</dd></div><div><dt>Выдан</dt><dd>{{ formatDateTime(store.selectedIdentity.issued_at) }}</dd></div><div><dt>Действует до</dt><dd>{{ formatDateTime(store.selectedIdentity.expires_at) }}</dd></div><div v-if="store.selectedIdentity.revoked_at"><dt>Отозван</dt><dd>{{ formatDateTime(store.selectedIdentity.revoked_at) }}</dd></div></dl>
-            <div class="digital-pass-details__notice">QR-код содержит только токен цифрового пропуска. ФИО, телефон, email и другие персональные данные в QR не записываются.</div>
+            <div class="digital-pass-qr-shell">
+              <div class="digital-pass-qr" v-html="store.qrSvg" />
+            </div>
+            <div class="digital-pass-qr-actions">
+              <q-btn outline no-caps @click="qrDialogVisible = true"><Maximize2 :size="16" class="q-mr-xs" /> Открыть QR крупно</q-btn>
+              <q-btn outline no-caps @click="downloadQrPng"><Download :size="16" class="q-mr-xs" /> Скачать PNG</q-btn>
+              <q-btn v-if="auth.isAdmin" outline no-caps @click="store.qrValueVisible = !store.qrValueVisible"><Eye :size="16" class="q-mr-xs" /> Показать значение QR</q-btn>
+            </div>
+            <dl class="digital-pass-details__list"><div v-if="store.qrValueVisible"><dt>Значение QR</dt><dd class="digital-pass-token-value">{{ store.selectedIdentity.token }}</dd></div><div><dt>Токен</dt><dd>{{ tokenPreview(store.selectedIdentity.token) }}</dd></div><div><dt>Выдан</dt><dd>{{ formatDateTime(store.selectedIdentity.issued_at) }}</dd></div><div><dt>Действует до</dt><dd>{{ formatDateTime(store.selectedIdentity.expires_at) }}</dd></div><div v-if="store.selectedIdentity.revoked_at"><dt>Отозван</dt><dd>{{ formatDateTime(store.selectedIdentity.revoked_at) }}</dd></div></dl>
+            <div class="digital-pass-details__notice">QR-код содержит только чистый ASCII token. ФИО, телефон, email и другие персональные данные в QR не записываются.</div>
           </div>
         </WorkspacePanel>
       </aside>
     </div>
     <q-dialog v-model="issueDialogVisible" persistent><q-card class="digital-pass-issue-dialog"><q-card-section><div class="text-h6">Выпустить цифровой пропуск</div><p class="digital-pass-dialog-text">Новый выпуск отзовет активный пропуск этого владельца и создаст новый токен.</p></q-card-section><q-card-section class="digital-pass-issue-dialog__body"><q-select v-model="issueForm.entity_type" dense outlined emit-value map-options label="Тип владельца" :options="ENTITY_OPTIONS" @update:model-value="issueForm.entity_id = ''" /><q-select v-model="issueForm.entity_id" dense outlined emit-value map-options use-input input-debounce="0" label="Владелец" :options="currentOwnerOptions" /><q-input v-model="issueForm.expires_at" dense outlined type="datetime-local" label="Срок действия" clearable /></q-card-section><q-card-actions align="right"><q-btn flat label="Отмена" :disable="store.saving" @click="issueDialogVisible = false" /><q-btn color="primary" :loading="store.saving" :disable="!issueForm.entity_id" @click="issuePass"><BadgeCheck :size="16" class="q-mr-xs" /><span>Выпустить</span></q-btn></q-card-actions></q-card></q-dialog>
+    <q-dialog v-model="qrDialogVisible">
+      <q-card class="digital-pass-large-dialog">
+        <q-card-section>
+          <div class="text-h6">QR-пропуск</div>
+          <p class="digital-pass-dialog-text">Покажите этот QR физическому сканеру. Содержимое: чистый token.</p>
+        </q-card-section>
+        <q-card-section>
+          <div class="digital-pass-large-qr" v-html="store.qrSvg" />
+        </q-card-section>
+        <q-card-actions align="right"><q-btn flat label="Закрыть" @click="qrDialogVisible = false" /></q-card-actions>
+      </q-card>
+    </q-dialog>
     <AppConfirmDialog v-model="revokeDialogVisible" title="Отозвать цифровой пропуск?" :message="revokingIdentity ? `Будет отозван пропуск: ${ownerName(revokingIdentity)}.` : 'Будет отозван выбранный пропуск.'" confirm-label="Отозвать" tone="negative" @confirm="confirmRevoke" />
   </AppPage>
 </template>

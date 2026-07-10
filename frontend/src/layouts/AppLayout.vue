@@ -88,6 +88,7 @@ const navGroups = [
     items: [
       { label: 'Проходная', to: '/access/gate', icon: DoorOpen, permission: 'manage_dictionaries' },
       { label: 'Отчеты по проходам', to: '/access/reports', icon: FileText, permission: 'manage_dictionaries' },
+      { label: 'Тест QR-сканера', to: '/access/scanner-test', icon: QrCode, adminOnly: true },
       { label: 'Цифровые пропуска', to: '/identity/digital-passes', icon: QrCode, permission: 'manage_dictionaries' },
     ],
   },
