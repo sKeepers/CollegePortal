@@ -57,6 +57,9 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('dashboard/analytics/executive', [DashboardAnalyticsController::class, 'executive']);
         Route::get('attendance/teachers/today', [AttendanceAnalysisController::class, 'teachersToday']);
         Route::get('attendance/students/today', [AttendanceAnalysisController::class, 'studentsToday']);
+        Route::get('attendance/history', [AttendanceAnalysisController::class, 'history']);
+        Route::get('attendance/person/{type}/{id}/summary', [AttendanceAnalysisController::class, 'personSummary']);
+        Route::get('attendance/person/{type}/{id}/days', [AttendanceAnalysisController::class, 'personDays']);
     });
 
     Route::middleware('permission:manage_users')->group(function (): void {

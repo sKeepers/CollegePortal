@@ -555,3 +555,16 @@
 - [x] Добавить карточку выбранной записи справа.
 - [x] Добавить настройки порогов `attendance.teacher_late_threshold_minutes` и `attendance.student_late_threshold_minutes`.
 - [x] Добавить тесты API-фильтров и dashboard aggregates.
+
+## ATTENDANCE-001C: История присутствия и учет времени
+
+- [x] Расширить `AttendanceAnalysisService` исторической аналитикой за период.
+- [x] Добавить расчет пар `IN -> OUT`, времени внутри, опозданий, ранних уходов, отсутствий и незакрытых сессий.
+- [x] Поддержать переход через полночь через настройку `attendance.max_open_session_hours`.
+- [x] Добавить API `/api/attendance/history`, `/api/attendance/person/{type}/{id}/summary`, `/api/attendance/person/{type}/{id}/days`.
+- [x] Добавить CSV-экспорт исторического отчета.
+- [x] Расширить `/attendance` режимами `Сегодня`, `Период`, `По человеку`.
+- [x] Добавить вкладки карточки человека: `Сводка`, `По дням`, `Проходы`, `Расписание`.
+- [x] Добавить CSS-полосу времени по дням без сторонних библиотек.
+- [x] Добавить настройки `attendance.early_leave_threshold_minutes` и `attendance.max_open_session_hours`.
+- [x] Покрыть тестами корректные пары, несколько пар, вход без выхода, выход без входа, ранний уход, опоздание, отсутствие, день без расписания, переход через полночь и CSV.

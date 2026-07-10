@@ -32,6 +32,8 @@ class SettingService
             'attendance' => [
                 'teacher_late_threshold_minutes' => ['value' => 5, 'type' => 'integer', 'is_public' => false, 'label' => 'Порог опоздания преподавателя, минут', 'description' => 'Используется в аналитике посещаемости и блоке требует внимания.'],
                 'student_late_threshold_minutes' => ['value' => 10, 'type' => 'integer', 'is_public' => false, 'label' => 'Порог опоздания студента, минут', 'description' => 'Используется в аналитике посещаемости и блоке требует внимания.'],
+                'early_leave_threshold_minutes' => ['value' => 10, 'type' => 'integer', 'is_public' => false, 'label' => 'Порог раннего ухода, минут', 'description' => 'Если последний выход раньше планового окончания на это число минут, фиксируется ранний уход.'],
+                'max_open_session_hours' => ['value' => 16, 'type' => 'integer', 'is_public' => false, 'label' => 'Максимум открытой сессии, часов', 'description' => 'Используется для проверки незакрытого входа без выхода.'],
             ],
             'admissions' => [
                 'current_admission_campaign' => ['value' => 'Прием 2026', 'type' => 'string', 'is_public' => false, 'label' => 'Текущая приемная кампания', 'description' => 'Название активной приемной кампании.'],

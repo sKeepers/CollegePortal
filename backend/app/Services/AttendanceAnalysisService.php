@@ -419,6 +419,404 @@ class AttendanceAnalysisService
         ];
     }
 
+
+    /** @param array<string, mixed> $filters */
+    public function history(array $filters = []): array
+    {
+        $type = $this->normalizeType($filters['type'] ?? DigitalIdentity::ENTITY_STUDENT);
+        [$dateFrom, $dateTo] = $this->dateRange($filters);
+        $people = $this->historyPeople($type, $filters);
+        $rows = $people->map(function (Student|Teacher $person) use ($type, $dateFrom, $dateTo): array {
+            $days = $this->personDaysPayload($type, (int) $person->id, $dateFrom, $dateTo, $person);
+            return $this->historyRow($type, $person, collect($days));
+        });
+
+        $rows = $this->filterHistoryRows($rows, $filters);
+
+        return [
+            'date_from' => $dateFrom->toDateString(),
+            'date_to' => $dateTo->toDateString(),
+            'type' => $type,
+            'data' => $rows->values()->all(),
+            'summary' => [
+                'total' => $rows->count(),
+                'present_days' => $rows->sum('present_days'),
+                'absent_days' => $rows->sum('absent_days'),
+                'late_count' => $rows->sum('late_count'),
+                'early_leave_count' => $rows->sum('early_leave_count'),
+                'minutes_inside' => $rows->sum('minutes_inside'),
+                'open_sessions' => $rows->where('has_open_session', true)->count(),
+            ],
+        ];
+    }
+
+    public function personSummary(string $type, int $id, array $filters = []): array
+    {
+        $type = $this->normalizeType($type);
+        [$dateFrom, $dateTo] = $this->dateRange($filters);
+        $person = $this->findPerson($type, $id);
+        $days = collect($this->personDaysPayload($type, $id, $dateFrom, $dateTo, $person));
+
+        return [
+            'date_from' => $dateFrom->toDateString(),
+            'date_to' => $dateTo->toDateString(),
+            'type' => $type,
+            'person' => $this->personPayload($type, $person),
+            'summary' => $this->historyRow($type, $person, $days),
+        ];
+    }
+
+    public function personDays(string $type, int $id, array $filters = []): array
+    {
+        $type = $this->normalizeType($type);
+        [$dateFrom, $dateTo] = $this->dateRange($filters);
+        $person = $this->findPerson($type, $id);
+
+        return [
+            'date_from' => $dateFrom->toDateString(),
+            'date_to' => $dateTo->toDateString(),
+            'type' => $type,
+            'person' => $this->personPayload($type, $person),
+            'data' => $this->personDaysPayload($type, $id, $dateFrom, $dateTo, $person),
+        ];
+    }
+
+    /** @param array<string, mixed> $filters */
+    public function historyCsvRows(array $filters = []): array
+    {
+        $rows = $this->history($filters)['data'];
+        return collect($rows)->map(fn (array $row) => [
+            'ФИО' => $row['full_name'],
+            'Тип' => $row['entity_type'] === DigitalIdentity::ENTITY_TEACHER ? 'Преподаватель' : 'Студент',
+            'Дней по расписанию' => $row['scheduled_days'],
+            'Присутствовал' => $row['present_days'],
+            'Отсутствовал' => $row['absent_days'],
+            'Опозданий' => $row['late_count'],
+            'Минут опоздания' => $row['late_minutes_total'],
+            'Ранних уходов' => $row['early_leave_count'],
+            'Минут раннего ухода' => $row['early_leave_minutes_total'],
+            'Время внутри, минут' => $row['minutes_inside'],
+            'Среднее в день, минут' => $row['average_minutes_per_present_day'],
+            'Незакрытая сессия' => $row['has_open_session'] ? 'Да' : 'Нет',
+        ])->all();
+    }
+
+    private function historyPeople(string $type, array $filters): Collection
+    {
+        if ($type === DigitalIdentity::ENTITY_TEACHER) {
+            return Teacher::query()
+                ->when($filters['person_id'] ?? null, fn (Builder $query, mixed $id) => $query->whereKey($id))
+                ->when($filters['teacher_id'] ?? null, fn (Builder $query, mixed $id) => $query->whereKey($id))
+                ->orderBy('last_name')->orderBy('first_name')->get();
+        }
+
+        return Student::query()
+            ->with('group')
+            ->where('status', 'active')
+            ->when($filters['person_id'] ?? null, fn (Builder $query, mixed $id) => $query->whereKey($id))
+            ->when($filters['group_id'] ?? null, fn (Builder $query, mixed $groupId) => $query->where('group_id', $groupId))
+            ->orderBy('last_name')->orderBy('first_name')->get();
+    }
+
+    private function personDaysPayload(string $type, int $id, CarbonImmutable $dateFrom, CarbonImmutable $dateTo, Student|Teacher $person): array
+    {
+        $lessons = $this->personLessons($type, $person, $dateFrom, $dateTo)->groupBy(fn (ScheduleLesson $lesson) => $lesson->lesson_date?->toDateString());
+        $events = $this->personEvents($type, $id, $dateFrom, $dateTo);
+        $days = [];
+        $cursor = $dateFrom;
+
+        while ($cursor->lessThanOrEqualTo($dateTo)) {
+            $dayLessons = $lessons->get($cursor->toDateString(), collect());
+            $dayEvents = $this->eventsForSessionDay($events, $cursor);
+            $days[] = $this->personDayPayload($type, $person, $cursor, $dayLessons, $dayEvents);
+            $cursor = $cursor->addDay();
+        }
+
+        return $days;
+    }
+
+    private function personDayPayload(string $type, Student|Teacher $person, CarbonImmutable $date, Collection $lessons, Collection $events): array
+    {
+        $sessionsPayload = $this->sessionPairs($events, $date);
+        $sessions = collect($sessionsPayload['sessions']);
+        $firstEntry = $sessions->pluck('in')->filter()->sort()->first();
+        $lastExit = $sessions->pluck('out')->filter()->sort()->last();
+        $plannedStart = $this->plannedStart($lessons, $date);
+        $plannedEnd = $this->plannedEnd($lessons, $date);
+        $lateMinutes = $this->lateMinutes($firstEntry ? CarbonImmutable::parse($firstEntry) : null, $plannedStart) ?? 0;
+        $earlyLeaveMinutes = $this->earlyLeaveMinutes($lastExit ? CarbonImmutable::parse($lastExit) : null, $plannedEnd);
+        $scheduled = $lessons->isNotEmpty();
+        $present = $firstEntry !== null;
+        $absent = $scheduled && ! $present;
+        $status = $this->historyDayStatus($scheduled, $present, $lateMinutes, $earlyLeaveMinutes, (bool) $sessionsPayload['has_open_session']);
+
+        return [
+            'date' => $date->toDateString(),
+            'entity_type' => $type,
+            'entity_id' => $person->id,
+            'full_name' => $this->fullName($person),
+            'scheduled' => $scheduled,
+            'present' => $present,
+            'absent' => $absent,
+            'status' => $status['code'],
+            'status_label' => $status['label'],
+            'status_tone' => $status['tone'],
+            'planned_start' => $plannedStart?->toISOString(),
+            'planned_end' => $plannedEnd?->toISOString(),
+            'first_entry' => $firstEntry,
+            'last_exit' => $lastExit,
+            'entries_count' => $sessionsPayload['entries_count'],
+            'exits_count' => $sessionsPayload['exits_count'],
+            'unmatched_exits_count' => $sessionsPayload['unmatched_exits_count'],
+            'minutes_inside' => $sessions->sum('minutes_inside'),
+            'late_minutes' => $lateMinutes,
+            'is_late' => $scheduled && $lateMinutes > 0,
+            'early_leave_minutes' => $earlyLeaveMinutes,
+            'is_early_leave' => $scheduled && $earlyLeaveMinutes > 0,
+            'has_open_session' => (bool) $sessionsPayload['has_open_session'],
+            'sessions' => $sessionsPayload['sessions'],
+            'lessons' => $lessons->map(fn (ScheduleLesson $lesson) => $this->lessonPayload($lesson, $date))->values()->all(),
+            'events' => $events->map(fn (AccessEvent $event) => [
+                'id' => $event->id,
+                'direction' => $event->direction,
+                'event_time' => $this->formatDateTime($event->event_time),
+            ])->values()->all(),
+        ];
+    }
+
+    private function historyRow(string $type, Student|Teacher $person, Collection $days): array
+    {
+        $scheduledDays = $days->where('scheduled', true)->count();
+        $presentDays = $days->where('present', true)->count();
+        $minutesInside = $days->sum('minutes_inside');
+        $lateCount = $days->where('is_late', true)->count();
+        $earlyLeaveCount = $days->where('is_early_leave', true)->count();
+        $status = $this->historyAggregateStatus($days);
+
+        return [
+            'id' => $type.'-'.$person->id,
+            'entity_type' => $type,
+            'entity_id' => $person->id,
+            'full_name' => $this->fullName($person),
+            'photo_url' => $this->photoUrl($person->photo_path),
+            'group_id' => $type === DigitalIdentity::ENTITY_STUDENT ? $person->group_id : null,
+            'group' => $type === DigitalIdentity::ENTITY_STUDENT ? $person->group?->name : null,
+            'department' => $type === DigitalIdentity::ENTITY_TEACHER ? $person->department : null,
+            'status' => $status['code'],
+            'status_label' => $status['label'],
+            'status_tone' => $status['tone'],
+            'scheduled_days' => $scheduledDays,
+            'present_days' => $presentDays,
+            'absent_days' => $days->where('absent', true)->count(),
+            'days_without_schedule' => $days->where('scheduled', false)->count(),
+            'entries_count' => $days->sum('entries_count'),
+            'exits_count' => $days->sum('exits_count'),
+            'late_count' => $lateCount,
+            'late_minutes_total' => $days->sum('late_minutes'),
+            'early_leave_count' => $earlyLeaveCount,
+            'early_leave_minutes_total' => $days->sum('early_leave_minutes'),
+            'minutes_inside' => $minutesInside,
+            'average_minutes_per_present_day' => $presentDays > 0 ? (int) round($minutesInside / $presentDays) : 0,
+            'first_entry' => $days->pluck('first_entry')->filter()->sort()->first(),
+            'last_exit' => $days->pluck('last_exit')->filter()->sort()->last(),
+            'has_open_session' => $days->where('has_open_session', true)->isNotEmpty(),
+        ];
+    }
+
+    private function sessionPairs(Collection $events, CarbonImmutable $date): array
+    {
+        $sessions = [];
+        $openIn = null;
+        $entries = 0;
+        $exits = 0;
+        $unmatchedExits = 0;
+
+        foreach ($events->sortBy('event_time') as $event) {
+            if ($event->direction === AccessEvent::DIRECTION_IN) {
+                $eventTime = CarbonImmutable::instance($event->event_time);
+                if ($eventTime->toDateString() !== $date->toDateString()) {
+                    continue;
+                }
+                if ($openIn === null) {
+                    $openIn = $eventTime;
+                    $entries++;
+                }
+                continue;
+            }
+
+            if ($event->direction === AccessEvent::DIRECTION_OUT) {
+                $eventTime = CarbonImmutable::instance($event->event_time);
+                $exits++;
+                if ($openIn === null) {
+                    $unmatchedExits++;
+                    continue;
+                }
+                $sessions[] = [
+                    'in' => $openIn->toISOString(),
+                    'out' => $eventTime->toISOString(),
+                    'minutes_inside' => max(0, (int) $openIn->diffInMinutes($eventTime)),
+                    'open' => false,
+                ];
+                $openIn = null;
+            }
+        }
+
+        if ($openIn !== null) {
+            $sessions[] = [
+                'in' => $openIn->toISOString(),
+                'out' => null,
+                'minutes_inside' => 0,
+                'open' => true,
+            ];
+        }
+
+        return [
+            'sessions' => $sessions,
+            'entries_count' => $entries,
+            'exits_count' => $exits,
+            'unmatched_exits_count' => $unmatchedExits,
+            'has_open_session' => $openIn !== null,
+        ];
+    }
+
+    private function eventsForSessionDay(Collection $events, CarbonImmutable $date): Collection
+    {
+        $maxHours = max(1, (int) SettingService::value('attendance', 'max_open_session_hours', 16));
+        $from = $date->startOfDay();
+        $to = $date->endOfDay()->addHours($maxHours);
+
+        return $events->filter(fn (AccessEvent $event) => CarbonImmutable::instance($event->event_time)->betweenIncluded($from, $to))->values();
+    }
+
+    private function personEvents(string $type, int $id, CarbonImmutable $dateFrom, CarbonImmutable $dateTo): Collection
+    {
+        $maxHours = max(1, (int) SettingService::value('attendance', 'max_open_session_hours', 16));
+        return AccessEvent::query()
+            ->where('entity_type', $type)
+            ->where('entity_id', $id)
+            ->where('result', AccessEvent::RESULT_ALLOWED)
+            ->whereBetween('event_time', [$dateFrom->startOfDay(), $dateTo->endOfDay()->addHours($maxHours)])
+            ->orderBy('event_time')
+            ->get();
+    }
+
+    private function personLessons(string $type, Student|Teacher $person, CarbonImmutable $dateFrom, CarbonImmutable $dateTo): Collection
+    {
+        return ScheduleLesson::query()
+            ->with(['group', 'teacher', 'subject', 'classroom'])
+            ->whereDate('lesson_date', '>=', $dateFrom->toDateString())
+            ->whereDate('lesson_date', '<=', $dateTo->toDateString())
+            ->when($type === DigitalIdentity::ENTITY_TEACHER, fn (Builder $query) => $query->where('teacher_id', $person->id))
+            ->when($type === DigitalIdentity::ENTITY_STUDENT, fn (Builder $query) => $query->where('group_id', $person->group_id))
+            ->orderBy('lesson_date')->orderBy('starts_at')->get();
+    }
+
+    private function plannedStart(Collection $lessons, CarbonImmutable $date): ?CarbonImmutable
+    {
+        $lesson = $lessons->sortBy(fn (ScheduleLesson $lesson) => $this->lessonStart($lesson, $date)?->timestamp ?? PHP_INT_MAX)->first();
+        return $lesson ? $this->lessonStart($lesson, $date) : null;
+    }
+
+    private function plannedEnd(Collection $lessons, CarbonImmutable $date): ?CarbonImmutable
+    {
+        $lesson = $lessons->sortByDesc(fn (ScheduleLesson $lesson) => $this->lessonEnd($lesson, $date)?->timestamp ?? 0)->first();
+        return $lesson ? $this->lessonEnd($lesson, $date) : null;
+    }
+
+    private function lessonEnd(ScheduleLesson $lesson, CarbonImmutable $date): ?CarbonImmutable
+    {
+        $time = $this->formatTime($lesson->ends_at);
+        $lessonDate = $lesson->lesson_date?->toDateString() ?: $date->toDateString();
+        return $time ? CarbonImmutable::parse($lessonDate.' '.$time) : null;
+    }
+
+    private function earlyLeaveMinutes(?CarbonImmutable $lastExit, ?CarbonImmutable $plannedEnd): int
+    {
+        if ($lastExit === null || $plannedEnd === null) {
+            return 0;
+        }
+        $diff = $lastExit->lessThan($plannedEnd) ? (int) $lastExit->diffInMinutes($plannedEnd) : 0;
+        $threshold = (int) SettingService::value('attendance', 'early_leave_threshold_minutes', 10);
+        return $diff >= $threshold ? $diff : 0;
+    }
+
+    private function historyDayStatus(bool $scheduled, bool $present, int $lateMinutes, int $earlyLeaveMinutes, bool $open): array
+    {
+        if (! $scheduled && ! $present) {
+            return ['code' => 'no_schedule', 'label' => 'Нет расписания', 'tone' => 'neutral'];
+        }
+        if ($scheduled && ! $present) {
+            return ['code' => 'absent', 'label' => 'Отсутствовал', 'tone' => 'danger'];
+        }
+        if ($open) {
+            return ['code' => 'open_session', 'label' => 'Незакрытый вход', 'tone' => 'warning'];
+        }
+        if ($lateMinutes > 0) {
+            return ['code' => 'late', 'label' => 'Опоздал', 'tone' => 'warning'];
+        }
+        if ($earlyLeaveMinutes > 0) {
+            return ['code' => 'early_leave', 'label' => 'Ранний уход', 'tone' => 'warning'];
+        }
+        return ['code' => 'present', 'label' => $present ? 'Присутствовал' : 'Нет данных', 'tone' => 'success'];
+    }
+
+    private function historyAggregateStatus(Collection $days): array
+    {
+        if ($days->where('has_open_session', true)->isNotEmpty()) {
+            return ['code' => 'open_session', 'label' => 'Есть незакрытый вход', 'tone' => 'warning'];
+        }
+        if ($days->where('absent', true)->isNotEmpty()) {
+            return ['code' => 'absent', 'label' => 'Есть отсутствия', 'tone' => 'danger'];
+        }
+        if ($days->where('is_late', true)->isNotEmpty()) {
+            return ['code' => 'late', 'label' => 'Есть опоздания', 'tone' => 'warning'];
+        }
+        if ($days->where('is_early_leave', true)->isNotEmpty()) {
+            return ['code' => 'early_leave', 'label' => 'Есть ранние уходы', 'tone' => 'warning'];
+        }
+        return ['code' => 'present', 'label' => 'Без отклонений', 'tone' => 'success'];
+    }
+
+    private function filterHistoryRows(Collection $rows, array $filters): Collection
+    {
+        $status = (string) ($filters['status'] ?? '');
+        if ($status === '') {
+            return $rows;
+        }
+        $statuses = match ($status) {
+            'absent' => ['absent'],
+            'late' => ['late'],
+            'early_leave' => ['early_leave'],
+            'open_session' => ['open_session'],
+            default => [$status],
+        };
+        return $rows->filter(fn (array $row) => in_array($row['status'], $statuses, true));
+    }
+
+    private function normalizeType(mixed $type): string
+    {
+        return $type === DigitalIdentity::ENTITY_TEACHER ? DigitalIdentity::ENTITY_TEACHER : DigitalIdentity::ENTITY_STUDENT;
+    }
+
+    private function findPerson(string $type, int $id): Student|Teacher
+    {
+        return $type === DigitalIdentity::ENTITY_TEACHER
+            ? Teacher::query()->findOrFail($id)
+            : Student::query()->with('group')->findOrFail($id);
+    }
+
+    private function personPayload(string $type, Student|Teacher $person): array
+    {
+        return [
+            'id' => $person->id,
+            'type' => $type,
+            'full_name' => $this->fullName($person),
+            'photo_url' => $this->photoUrl($person->photo_path),
+            'group' => $type === DigitalIdentity::ENTITY_STUDENT ? $person->group?->name : null,
+            'department' => $type === DigitalIdentity::ENTITY_TEACHER ? $person->department : null,
+        ];
+    }
+
     private function dashboardCounters(Collection $rows, string $entityType): array
     {
         $summary = $this->rowSummary($rows, $entityType);
