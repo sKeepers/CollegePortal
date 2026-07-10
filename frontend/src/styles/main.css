@@ -5479,3 +5479,63 @@ body {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.dashboard-hero--admin,
+.dashboard-hero--teacher {
+  border: 1px solid #dbeafe;
+  background: linear-gradient(135deg, #f8fafc 0%, #eef6ff 100%);
+}
+
+.dashboard-role-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  background: #ffffff;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05);
+}
+
+.dashboard-role-card h3 {
+  margin: 0;
+  color: #172033;
+  font-size: 16px;
+  font-weight: 850;
+}
+
+.dashboard-role-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.dashboard-role-list div,
+.dashboard-role-next {
+  display: grid;
+  gap: 3px;
+  border-radius: 8px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.dashboard-role-list span,
+.dashboard-role-next span,
+.dashboard-role-empty {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.dashboard-role-list strong,
+.dashboard-role-next strong {
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+  .dashboard-role-list {
+    grid-template-columns: 1fr;
+  }
+}

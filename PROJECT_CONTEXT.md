@@ -112,6 +112,7 @@ Frontend:
 - `docs/ARCHITECTURE_DOCUMENTATION.md` — единое оглавление архитектурной и проектной документации.
 - `docs/DESIGN_SYSTEM.md` — единая дизайн-система CollegePortal: логотип, цвета, типографика, компоненты и адаптивность.
 - `docs/WORKSPACE_GUIDELINES.md` — правила единой правой Workspace-панели: hero, KPI, быстрые действия и дополнительные сведения.
+- ролевые Dashboard Phase 1 описаны в `docs/ROLE_DASHBOARDS.md`: admin/director получают административную сводку, teacher — преподавательскую, остальные роли — общий Dashboard.
 - `docs/PRODUCT_VISION.md` — продуктовая цель, пользователи, границы MVP и критерии успеха CollegePortal.
 - `docs/PHILOSOPHY.md` — принципы развития системы, рабочего интерфейса, данных и безопасности.
 - `docs/ARCHITECTURE_DECISIONS.md` — зафиксированные архитектурные решения, включая выбор frontend UI-платформы.
