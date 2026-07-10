@@ -19,6 +19,10 @@ use Illuminate\Support\Facades\File;
 
 class DashboardAnalyticsService
 {
+    public function __construct(private readonly AttendanceAnalysisService $attendanceAnalysis)
+    {
+    }
+
     public function executive(): array
     {
         $today = now()->toDateString();
@@ -42,6 +46,7 @@ class DashboardAnalyticsService
             ->latest()
             ->take(5)
             ->get();
+        $attendance = $this->attendanceAnalysis->dashboardSummary();
 
         return [
             'data' => [
@@ -68,6 +73,7 @@ class DashboardAnalyticsService
                         'exits_today' => AccessEvent::query()->whereDate('event_time', $today)->where('direction', AccessEvent::DIRECTION_OUT)->where('result', AccessEvent::RESULT_ALLOWED)->count(),
                         'denied_today' => AccessEvent::query()->whereDate('event_time', $today)->where('result', AccessEvent::RESULT_DENIED)->count(),
                     ],
+                    'attendance' => $attendance,
                     'admissions' => [
                         'new_applications' => ApplicantApplication::query()->where('status', 'new')->count(),
                         'pending_review' => ApplicantApplication::query()->whereIn('status', ['pending', 'in_review', 'documents_pending'])->count(),
@@ -105,7 +111,7 @@ class DashboardAnalyticsService
                         'is_demo' => false,
                     ])->values(),
                 ],
-                'attention' => $this->attentionItems($frdoErrors, $fisErrors),
+                'attention' => $this->attentionItems($frdoErrors, $fisErrors, $attendance),
                 'audit' => AuditLog::query()
                     ->with('user')
                     ->latest('created_at')
@@ -129,14 +135,20 @@ class DashboardAnalyticsService
         return max(0, Classroom::query()->count() - $busy);
     }
 
-    private function attentionItems($frdoErrors, $fisErrors): array
+    private function attentionItems($frdoErrors, $fisErrors, array $attendance = []): array
     {
         $studentsWithoutPhoto = Student::query()->whereNull('photo_path')->count();
         $applicationsWithoutDocuments = ApplicantApplication::query()->whereDoesntHave('documents', fn ($query) => $query->where('is_received', true))->count();
         $frdoErrorCount = $frdoErrors->sum('validation_errors_count');
         $fisErrorCount = $fisErrors->sum('validation_errors_count');
 
+        $attendanceAttention = $attendance['attention'] ?? [];
+
         return collect([
+            ['title' => 'Преподаватели не пришли', 'value' => $attendanceAttention['teachers_absent']['count'] ?? 0, 'tone' => ($attendanceAttention['teachers_absent']['count'] ?? 0) > 0 ? 'danger' : 'success', 'to' => '/attendance?type=teachers&status=absent'],
+            ['title' => 'Преподаватели опоздали', 'value' => $attendanceAttention['teachers_late']['count'] ?? 0, 'tone' => ($attendanceAttention['teachers_late']['count'] ?? 0) > 0 ? 'warning' : 'success', 'to' => '/attendance?type=teachers&status=late'],
+            ['title' => 'Студенты опоздали сверх порога', 'value' => $attendanceAttention['students_late_over_threshold']['count'] ?? 0, 'tone' => ($attendanceAttention['students_late_over_threshold']['count'] ?? 0) > 0 ? 'warning' : 'success', 'to' => '/attendance?type=students&status=late'],
+            ['title' => 'Расписание без входа', 'value' => $attendanceAttention['schedule_without_entry']['count'] ?? 0, 'tone' => ($attendanceAttention['schedule_without_entry']['count'] ?? 0) > 0 ? 'danger' : 'success', 'to' => '/attendance?status=absent'],
             ['title' => 'Студенты без фото', 'value' => $studentsWithoutPhoto, 'tone' => $studentsWithoutPhoto > 0 ? 'warning' : 'success', 'to' => '/students'],
             ['title' => 'Заявления без документов', 'value' => $applicationsWithoutDocuments, 'tone' => $applicationsWithoutDocuments > 0 ? 'warning' : 'success', 'to' => '/admissions'],
             ['title' => 'Ошибки ФРДО', 'value' => $frdoErrorCount, 'tone' => $frdoErrorCount > 0 ? 'danger' : 'success', 'to' => '/frdo'],

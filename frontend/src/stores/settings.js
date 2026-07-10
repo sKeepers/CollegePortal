@@ -5,6 +5,7 @@ import { api } from '../services/api'
 const groupLabels = {
   general: 'Общие',
   academic: 'Учебный процесс',
+  attendance: 'Посещаемость',
   admissions: 'Приемная комиссия',
   graduation: 'Выпуск',
   identity: 'Идентификация',
@@ -12,7 +13,7 @@ const groupLabels = {
   branding: 'Брендинг',
 }
 
-const groupOrder = ['general', 'academic', 'admissions', 'graduation', 'identity', 'integrations', 'branding']
+const groupOrder = ['general', 'academic', 'attendance', 'admissions', 'graduation', 'identity', 'integrations', 'branding']
 
 async function putSettings(payload) {
   const response = await fetch(`${api.baseUrl}/admin/settings`, {

@@ -543,3 +543,15 @@
 - [x] Создать страницу `/attendance` с таблицей.
 - [x] Создать `docs/ATTENDANCE_ENGINE.md`.
 - [x] Добавить feature-тесты аналитики посещаемости.
+
+## ATTENDANCE-001B: Attendance Dashboard Integration
+
+- [x] Добавить attendance aggregates в Executive Dashboard.
+- [x] Добавить виджет “Преподаватели сегодня”.
+- [x] Добавить виджет “Студенты сегодня”.
+- [x] Расширить блок “Что требует внимания” отсутствиями и опозданиями.
+- [x] Добавить быстрые переходы на `/attendance` с query-фильтрами.
+- [x] Добавить фильтры `/attendance`: тип, статус, группа, преподаватель, период.
+- [x] Добавить карточку выбранной записи справа.
+- [x] Добавить настройки порогов `attendance.teacher_late_threshold_minutes` и `attendance.student_late_threshold_minutes`.
+- [x] Добавить тесты API-фильтров и dashboard aggregates.

@@ -29,6 +29,10 @@ class SettingService
                 'lesson_duration_minutes' => ['value' => 45, 'type' => 'integer', 'is_public' => false, 'label' => 'Длительность занятия, минут', 'description' => 'Базовая длительность одного занятия.'],
                 'default_week_start' => ['value' => 'monday', 'type' => 'string', 'is_public' => false, 'label' => 'Первый день недели', 'description' => 'Для расписания и отчетов.'],
             ],
+            'attendance' => [
+                'teacher_late_threshold_minutes' => ['value' => 5, 'type' => 'integer', 'is_public' => false, 'label' => 'Порог опоздания преподавателя, минут', 'description' => 'Используется в аналитике посещаемости и блоке требует внимания.'],
+                'student_late_threshold_minutes' => ['value' => 10, 'type' => 'integer', 'is_public' => false, 'label' => 'Порог опоздания студента, минут', 'description' => 'Используется в аналитике посещаемости и блоке требует внимания.'],
+            ],
             'admissions' => [
                 'current_admission_campaign' => ['value' => 'Прием 2026', 'type' => 'string', 'is_public' => false, 'label' => 'Текущая приемная кампания', 'description' => 'Название активной приемной кампании.'],
                 'max_applications_per_applicant' => ['value' => 3, 'type' => 'integer', 'is_public' => false, 'label' => 'Максимум заявлений на абитуриента', 'description' => 'Ограничение для будущих проверок приема.'],

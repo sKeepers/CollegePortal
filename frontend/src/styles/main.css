@@ -6297,3 +6297,127 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+.attendance-analysis-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  gap: 16px;
+  align-items: start;
+}
+
+.attendance-analysis-main,
+.attendance-analysis-side {
+  min-width: 0;
+}
+
+.attendance-analysis-side {
+  position: sticky;
+  top: 12px;
+}
+
+.attendance-analysis-link {
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.attendance-analysis-row--selected > td {
+  background: #eff6ff !important;
+}
+
+.attendance-analysis-metric__link {
+  color: #1d4ed8;
+  font-size: 24px;
+  font-weight: 700;
+  padding: 0;
+}
+
+.attendance-analysis-details h3 {
+  color: #0f172a;
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+
+.attendance-analysis-details dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.attendance-analysis-details dl > div {
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+
+.attendance-analysis-details dt {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.attendance-analysis-details dd {
+  color: #0f172a;
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.executive-attendance-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.executive-attendance-block {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.executive-attendance-block h3 {
+  color: #0f172a;
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+
+.executive-attendance-block button {
+  align-items: center;
+  background: #f8fafc;
+  border: 0;
+  border-radius: 7px;
+  color: #0f172a;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  padding: 8px 10px;
+  transition: background .15s ease, transform .15s ease;
+  width: 100%;
+}
+
+.executive-attendance-block button:hover {
+  background: #eef2ff;
+  transform: translateY(-1px);
+}
+
+.executive-attendance-block span {
+  color: #475569;
+  font-size: 12px;
+}
+
+.executive-attendance-block strong {
+  font-size: 18px;
+}
+
+@media (max-width: 1365px) {
+  .attendance-analysis-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .attendance-analysis-side {
+    position: static;
+  }
+}
+
+@media (max-width: 599px) {
+  .executive-attendance-grid {
+    grid-template-columns: 1fr;
+  }
+}

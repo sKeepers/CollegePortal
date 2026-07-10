@@ -40,6 +40,7 @@ const adminDashboardType = computed(() => auth.user?.role?.code === 'director' ?
 const dashboardWidgets = [
   { id: 'stats', title: 'Ключевые показатели', defaultSize: 'full' },
   { id: 'actions', title: 'Быстрые действия', defaultSize: 'medium' },
+  { id: 'attendance', title: 'Посещаемость сегодня', defaultSize: 'medium' },
   { id: 'attention', title: 'Что требует внимания', defaultSize: 'medium' },
   { id: 'charts', title: 'Мини-графики', defaultSize: 'medium' },
   { id: 'admissions', title: 'Приемная комиссия', defaultSize: 'small' },
@@ -54,6 +55,9 @@ const contingent = computed(() => kpi.value.contingent || {})
 const teachers = computed(() => kpi.value.teachers || {})
 const learning = computed(() => kpi.value.learning || {})
 const access = computed(() => kpi.value.access || {})
+const attendance = computed(() => kpi.value.attendance || {})
+const attendanceTeachers = computed(() => attendance.value.teachers || {})
+const attendanceStudents = computed(() => attendance.value.students || {})
 const admissions = computed(() => kpi.value.admissions || {})
 const frdo = computed(() => kpi.value.frdo || {})
 const fis = computed(() => kpi.value.fis || {})
@@ -76,6 +80,8 @@ const statItems = computed(() => [
   { label: 'Входов сегодня', value: access.value.entries_today || 0, icon: DoorOpen },
   { label: 'Выходов сегодня', value: access.value.exits_today || 0, icon: DoorOpen },
   { label: 'Отказанных проходов', value: access.value.denied_today || 0, icon: FileWarning },
+  { label: 'Преподаватели опоздали', value: attendanceTeachers.value.late || 0, icon: UserRound },
+  { label: 'Студенты опоздали', value: attendanceStudents.value.late || 0, icon: GraduationCap },
 ])
 
 const quickActions = [
@@ -83,6 +89,7 @@ const quickActions = [
   { label: 'Приемная комиссия', description: 'Заявления абитуриентов', icon: FileCheck2, to: '/admissions' },
   { label: 'Расписание', description: 'Занятия и аудитории', icon: CalendarDays, to: '/schedule' },
   { label: 'Проходная', description: 'Сканирование QR', icon: DoorOpen, to: '/access/gate' },
+  { label: 'Посещаемость', description: 'Опоздания и отсутствия', icon: ClipboardList, to: '/attendance' },
   { label: 'Импорт', description: 'Загрузка реальных данных', icon: Upload, to: '/admin/import' },
   { label: 'ФРДО', description: 'Пакеты и ошибки', icon: FileWarning, to: '/frdo' },
   { label: 'ФИС', description: 'Пакеты приема и ГИА', icon: FileWarning, to: '/fis' },
@@ -175,6 +182,27 @@ onMounted(() => {
 
       <template #actions>
         <QuickActionsWidget :actions="quickActions" />
+      </template>
+
+      <template #attendance>
+        <AppCard title="Посещаемость сегодня" subtitle="Проходная + расписание">
+          <div class="executive-attendance-grid">
+            <div class="executive-attendance-block">
+              <h3>Преподаватели сегодня</h3>
+              <button type="button" @click="$router.push('/attendance?type=teachers&status=on_time')"><span>Вовремя</span><strong>{{ attendanceTeachers.on_time || 0 }}</strong></button>
+              <button type="button" @click="$router.push('/attendance?type=teachers&status=late')"><span>Опоздали</span><strong>{{ attendanceTeachers.late || 0 }}</strong></button>
+              <button type="button" @click="$router.push('/attendance?type=teachers&status=absent')"><span>Не пришли</span><strong>{{ attendanceTeachers.absent || 0 }}</strong></button>
+              <button type="button" @click="$router.push('/attendance?type=teachers')"><span>Сейчас в здании</span><strong>{{ attendanceTeachers.inside_now || 0 }}</strong></button>
+            </div>
+            <div class="executive-attendance-block">
+              <h3>Студенты сегодня</h3>
+              <button type="button" @click="$router.push('/attendance?type=students')"><span>Вошли</span><strong>{{ attendanceStudents.entered || 0 }}</strong></button>
+              <button type="button" @click="$router.push('/attendance?type=students&status=late')"><span>Опоздали</span><strong>{{ attendanceStudents.late || 0 }}</strong></button>
+              <button type="button" @click="$router.push('/attendance?type=students&status=absent')"><span>Не вошли</span><strong>{{ attendanceStudents.absent || 0 }}</strong></button>
+              <button type="button" @click="$router.push('/attendance?type=students')"><span>Сейчас в здании</span><strong>{{ attendanceStudents.inside_now || 0 }}</strong></button>
+            </div>
+          </div>
+        </AppCard>
       </template>
 
       <template #attention>
