@@ -35,6 +35,7 @@ const fieldOptions = computed(() => (selectedTypeConfig.value?.fields || []).map
 const headerOptions = computed(() => (store.currentJob?.headers || []).map((header) => ({ label: header, value: header })))
 const result = computed(() => store.currentJob?.result || null)
 const fisResult = computed(() => store.currentJob?.source === 'fis_admissions' ? (store.currentJob?.result || store.currentJob?.metadata || null) : null)
+const isFisJob = computed(() => store.currentJob?.source === 'fis_admissions')
 const canFisApply = computed(() => Boolean(store.currentJob?.source === 'fis_admissions' && store.currentJob?.id && fisResult.value && (fisResult.value.critical_errors || 0) === 0 && (fisResult.value.ambiguous_duplicates || 0) === 0 && (fisResult.value.unresolved_competitions || 0) === 0 && (fisResult.value.total_rows || 0) === 149))
 const errors = computed(() => store.currentJob?.validation_errors || [])
 const canPreview = computed(() => Boolean(dataType.value && file.value))
@@ -160,7 +161,7 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
             <strong>Несопоставленные конкурсы</strong>
             <div class="universal-import-chips"><q-chip v-for="competition in fisResult.unresolved_competitions_list" :key="competition" dense color="red-1" text-color="red-9">{{ competition }}</q-chip></div>
           </div>
-          <AppTable v-if="fisResult?.preview_rows?.length" class="q-mt-md" :rows="fisResult.preview_rows" :columns="[
+          <div v-if="fisResult?.preview_rows?.length" class="import-preview-scroll import-preview-scroll--fis q-mt-md"><AppTable :rows="fisResult.preview_rows" :columns="[
             { name: 'row', label: 'Строка', field: 'row', align: 'left' },
             { name: 'application_number', label: '№ заявления', field: 'application_number', align: 'left' },
             { name: 'fio', label: 'ФИО', field: 'fio', align: 'left' },
@@ -168,7 +169,7 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
             { name: 'competition', label: 'Конкурс', field: 'competition', align: 'left' },
             { name: 'person', label: 'Person', field: 'person', align: 'left' },
             { name: 'application', label: 'Заявление', field: 'application', align: 'left' },
-          ]" :pagination="{ rowsPerPage: 5 }" :rows-per-page-options="[5, 10, 20]" />
+          ]" :pagination="{ rowsPerPage: 5 }" :rows-per-page-options="[5, 10, 20]" /></div>
         </AppCard>
 
         <AppCard title="1. Файл и тип данных" subtitle="Выберите раздел, файл CSV/XLSX и режим обработки дублей.">
@@ -206,7 +207,7 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
           </div>
         </AppCard>
 
-        <AppCard v-if="store.currentJob" title="2. Сопоставление колонок" subtitle="Проверьте, какие колонки файла соответствуют полям CollegePortal.">
+        <AppCard v-if="store.currentJob && !isFisJob" title="2. Сопоставление колонок" subtitle="Проверьте, какие колонки файла соответствуют полям CollegePortal.">
           <div class="universal-import-mapping">
             <div v-for="field in fieldOptions" :key="field.value" class="universal-import-mapping__row">
               <span>{{ field.label }}</span>
@@ -219,8 +220,8 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
           </div>
         </AppCard>
 
-        <AppCard v-if="store.currentJob" title="3. Предварительный просмотр" :subtitle="`Строк в файле: ${store.currentJob.total_rows || 0}`">
-          <AppTable v-if="store.currentJob.preview_rows?.length" :rows="store.currentJob.preview_rows" :columns="previewColumns" :pagination="{ rowsPerPage: 5 }" :rows-per-page-options="[5, 10, 20, 0]" />
+        <AppCard v-if="store.currentJob && !isFisJob" title="3. Предварительный просмотр" :subtitle="`Строк в файле: ${store.currentJob.total_rows || 0}`">
+          <div v-if="store.currentJob.preview_rows?.length" class="import-preview-scroll"><AppTable :rows="store.currentJob.preview_rows" :columns="previewColumns" :pagination="{ rowsPerPage: 5 }" :rows-per-page-options="[5, 10, 20, 0]" /></div>
           <q-banner v-else rounded class="universal-import-hint">В файле не найдено строк для предварительного просмотра.</q-banner>
         </AppCard>
       </section>
@@ -228,11 +229,11 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
       <aside class="universal-import-side">
         <AppCard title="Отчет импорта" subtitle="Результат появится после проверки или подтверждения.">
           <div class="universal-import-report">
-            <div><span>Всего строк</span><strong>{{ store.currentJob?.total_rows || 0 }}</strong></div>
-            <div><span>Создано</span><strong>{{ store.currentJob?.created_count || result?.created || 0 }}</strong></div>
-            <div><span>Обновлено</span><strong>{{ store.currentJob?.updated_count || result?.updated || 0 }}</strong></div>
+            <div><span>Всего строк</span><strong>{{ fisResult?.total_rows || store.currentJob?.total_rows || 0 }}</strong></div>
+            <div><span>Создано</span><strong>{{ fisResult?.created_count ?? store.currentJob?.created_count ?? result?.created ?? 0 }}</strong></div>
+            <div><span>Обновлено</span><strong>{{ fisResult?.updated_count ?? store.currentJob?.updated_count ?? result?.updated ?? 0 }}</strong></div>
             <div><span>Пропущено</span><strong>{{ store.currentJob?.skipped_count || result?.skipped || 0 }}</strong></div>
-            <div><span>Ошибок</span><strong>{{ store.currentJob?.error_count || 0 }}</strong></div>
+            <div><span>Ошибок</span><strong>{{ fisResult?.critical_errors ?? store.currentJob?.error_count ?? 0 }}</strong></div>
           </div>
           <div v-if="store.currentJob?.status" class="q-mt-md"><AppStatusBadge :label="statusLabel(store.currentJob.status)" :tone="statusTone(store.currentJob.status)" /></div>
         </AppCard>
@@ -279,7 +280,7 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
 
 .fis-import-report {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 10px;
   margin-top: 12px;
 }
@@ -308,12 +309,58 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
   grid-template-columns: minmax(0, 1fr) 400px;
   gap: 16px;
   align-items: start;
+  max-width: 100%;
 }
 
 .universal-import-main,
 .universal-import-side {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
+  min-width: 0;
+}
+
+.universal-import-main > *,
+.universal-import-side > * {
+  min-width: 0;
+  align-self: stretch;
+}
+
+.universal-import-side {
+  align-self: start;
+}
+
+
+.import-preview-scroll {
+  max-height: clamp(350px, 42vh, 450px);
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.import-preview-scroll--fis {
+  max-height: clamp(360px, 44vh, 450px);
+}
+
+.import-preview-scroll :deep(.q-table__container),
+.import-preview-scroll :deep(.q-table__middle) {
+  max-height: inherit;
+}
+
+.import-preview-scroll :deep(.q-table__middle) {
+  overflow: auto;
+}
+
+.import-preview-scroll :deep(table) {
+  min-width: max-content;
+}
+
+.import-preview-scroll :deep(.q-table__bottom) {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  background: #ffffff;
 }
 
 .universal-import-controls {
@@ -443,8 +490,30 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .fis-import-controls {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .fis-import-controls .q-btn:last-child {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
   .universal-import-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .fis-import-controls,
+  .universal-import-controls,
+  .universal-import-mapping__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fis-import-report,
+  .universal-import-report {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>
