@@ -36,15 +36,29 @@ class ApplicantApplicationController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $applications = $this->selectionResolver
+        $query = $this->selectionResolver
             ->applyAdmissionSelection(
                 ApplicantApplication::query()->with(['educationProgram.specialty', 'events', 'documents']),
                 ['filter' => $this->filterFromRequest($request)]
             )
             ->when($request->string('education_base')->toString(), fn ($query, string $base) => $query->where('education_base', $base))
             ->orderByDesc('submitted_at')
-            ->orderBy('last_name')
-            ->paginate(50);
+            ->orderBy('last_name');
+
+        $perPage = $request->integer('per_page', $request->integer('rowsPerPage', 50));
+        $perPage = max(0, min($perPage, 1000));
+
+        if ($perPage === 0) {
+            $applications = $query->get();
+            $applications->each(function (ApplicantApplication $application): void {
+                $this->documentService->ensureDefaultDocuments($application);
+                $application->load('documents');
+            });
+
+            return ApplicantApplicationResource::collection($applications);
+        }
+
+        $applications = $query->paginate($perPage ?: 50);
 
         $applications->getCollection()->each(function (ApplicantApplication $application): void {
             $this->documentService->ensureDefaultDocuments($application);
@@ -64,7 +78,9 @@ class ApplicantApplicationController extends Controller
             'total' => (clone $base())->count(),
             'new' => (clone $base())->where('status', 'new')->count(),
             'incomplete' => (clone $base())->where(fn ($query) => $query->where('documents_provided', false)->orWhereNull('documents_provided'))->count(),
-            'ready' => (clone $base())->where('status', 'accepted')->where('documents_provided', true)->count(),
+            'documents_provided' => (clone $base())->where('documents_provided', true)->count(),
+            'ready' => (clone $base())->where('status', 'ready_for_enrollment')->count(),
+            'recommended' => (clone $base())->where('recommended_for_enrollment', true)->count(),
             'enrolled' => (clone $base())->where('status', 'enrolled')->count(),
             'rejected' => (clone $base())->where('status', 'rejected')->count(),
         ];

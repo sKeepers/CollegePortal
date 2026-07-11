@@ -143,6 +143,54 @@ class BulkOperationsApiTest extends TestCase
     }
 
 
+
+    public function test_admissions_pagination_all_returns_all_records_and_kpi_ready_is_independent(): void
+    {
+        $this->seed(RoleSeeder::class);
+        $this->withApiAuth($this->createApiUser(roleCode: 'admission'));
+        $program = $this->createProgram();
+
+        for ($i = 1; $i <= 152; $i++) {
+            $this->makeApplicantApplication($program, [
+                'last_name' => sprintf('Пагинация%03d', $i),
+                'email' => sprintf('pagination%03d@example.test', $i),
+                'status' => $i === 1 ? 'ready_for_enrollment' : 'new',
+                'documents_provided' => $i <= 100,
+                'recommended_for_enrollment' => $i <= 7,
+            ]);
+        }
+
+        $this->getJson('/api/applicant-applications?per_page=10')
+            ->assertOk()
+            ->assertJsonCount(10, 'data')
+            ->assertJsonPath('meta.total', 152)
+            ->assertJsonPath('meta.per_page', 10);
+
+        $this->getJson('/api/applicant-applications?per_page=20')
+            ->assertOk()
+            ->assertJsonCount(20, 'data')
+            ->assertJsonPath('meta.total', 152)
+            ->assertJsonPath('meta.per_page', 20);
+
+        $this->getJson('/api/applicant-applications?per_page=50')
+            ->assertOk()
+            ->assertJsonCount(50, 'data')
+            ->assertJsonPath('meta.total', 152)
+            ->assertJsonPath('meta.per_page', 50);
+
+        $this->getJson('/api/applicant-applications?per_page=0')
+            ->assertOk()
+            ->assertJsonCount(152, 'data');
+
+        $this->getJson('/api/admissions/stats')
+            ->assertOk()
+            ->assertJsonPath('data.total', 152)
+            ->assertJsonPath('data.documents_provided', 100)
+            ->assertJsonPath('data.ready', 1)
+            ->assertJsonPath('data.recommended', 7)
+            ->assertJsonPath('data.enrolled', 0);
+    }
+
     public function test_admissions_stats_and_bulk_filter_selection_cover_all_records_not_current_page(): void
     {
         $this->seed(RoleSeeder::class);

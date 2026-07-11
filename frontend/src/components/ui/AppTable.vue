@@ -36,7 +36,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['update:pagination'])
+const emit = defineEmits(['update:pagination', 'request'])
 
 const safeTableRowClassFn = computed(() => props.tableRowClassFn || (() => ''))
 
@@ -62,6 +62,7 @@ const tablePagination = computed({
     :table-row-class-fn="safeTableRowClassFn"
     binary-state-sort
     @update:pagination="tablePagination = $event"
+    @request="emit('request', $event)"
   >
     <template v-for="(_, name) in $slots" #[name]="slotProps">
       <slot :name="name" v-bind="slotProps || {}" />

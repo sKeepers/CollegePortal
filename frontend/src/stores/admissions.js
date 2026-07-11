@@ -172,7 +172,7 @@ export const useAdmissionsStore = defineStore('admissions', () => {
   const groups = ref([])
   const filters = ref({ ...initialFilters })
   const pagination = ref(null)
-  const stats = ref({ total: 0, new: 0, incomplete: 0, ready: 0, enrolled: 0, rejected: 0 })
+  const stats = ref({ total: 0, new: 0, incomplete: 0, documents_provided: 0, ready: 0, recommended: 0, enrolled: 0, rejected: 0 })
   const selectedId = ref(null)
   const loading = ref(false)
   const saving = ref(false)
@@ -220,7 +220,9 @@ export const useAdmissionsStore = defineStore('admissions', () => {
   const quickQueues = computed(() => [
     { key: 'new', label: 'Новые', value: stats.value.new || 0, status: 'new', completeness: '', tone: 'info' },
     { key: 'incomplete', label: 'Неполный комплект', value: stats.value.incomplete || 0, status: '', completeness: 'incomplete', tone: 'warning' },
-    { key: 'ready', label: 'Готовы к зачислению', value: stats.value.ready || 0, status: 'accepted', completeness: 'complete', tone: 'success' },
+    { key: 'documents_provided', label: 'Документы предоставлены', value: stats.value.documents_provided || 0, status: '', completeness: 'complete', tone: 'success' },
+    { key: 'ready', label: 'Готовы к зачислению', value: stats.value.ready || 0, status: 'ready_for_enrollment', completeness: '', tone: 'success' },
+    { key: 'recommended', label: 'Рекомендованы', value: stats.value.recommended || 0, status: '', completeness: '', tone: 'info' },
     { key: 'enrolled', label: 'Зачислены', value: stats.value.enrolled || 0, status: 'enrolled', completeness: '', tone: 'success' },
     { key: 'rejected', label: 'Отклонены', value: stats.value.rejected || 0, status: 'rejected', completeness: '', tone: 'danger' },
     { key: 'all', label: 'Всего', value: stats.value.total || 0, status: '', completeness: '', tone: 'neutral' },
@@ -228,24 +230,33 @@ export const useAdmissionsStore = defineStore('admissions', () => {
 
   const filteredApplications = computed(() => applications.value)
 
-  async function load() {
+  async function load(tableOptions = {}) {
     loading.value = true
     error.value = ''
 
     try {
-      const query = apiFilters(filters.value)
+      const rowsPerPage = Number(tableOptions.rowsPerPage ?? 50)
+      const query = {
+        ...apiFilters(filters.value),
+        page: rowsPerPage === 0 ? '' : Number(tableOptions.page || 1),
+        per_page: rowsPerPage,
+      }
       const [applicationsPayload, statsPayload, programsPayload, groupsPayload] = await Promise.all([
         api.list('applicant-applications', query),
-        api.list('admissions/stats', query),
+        api.list('admissions/stats', apiFilters(filters.value)),
         api.list('education-programs'),
         api.list('groups'),
       ])
 
       applications.value = extractRows(applicationsPayload)
-      stats.value = statsPayload?.data || { total: 0, new: 0, incomplete: 0, ready: 0, enrolled: 0, rejected: 0 }
+      stats.value = statsPayload?.data || { total: 0, new: 0, incomplete: 0, documents_provided: 0, ready: 0, recommended: 0, enrolled: 0, rejected: 0 }
       educationPrograms.value = extractRows(programsPayload)
       groups.value = extractRows(groupsPayload)
-      pagination.value = extractMeta(applicationsPayload)
+      pagination.value = extractMeta(applicationsPayload) || {
+        total: applications.value.length,
+        per_page: rowsPerPage,
+        current_page: 1,
+      }
 
       if (selectedId.value && !selectedApplication.value) {
         selectedId.value = null

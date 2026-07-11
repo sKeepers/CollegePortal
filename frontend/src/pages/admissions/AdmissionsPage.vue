@@ -92,6 +92,18 @@ const columns = [
 const tableSubtitle = computed(() => `Найдено заявлений: ${filterTotal.value}; на странице: ${currentPageCount.value}`)
 const statusOptions = computed(() => referenceOptions.options('applicant_application_statuses'))
 
+function syncTableRowsNumber() {
+  tablePagination.value = {
+    ...tablePagination.value,
+    rowsNumber: filterTotal.value,
+  }
+}
+
+async function loadAdmissions(pagination = tablePagination.value) {
+  await store.load(pagination)
+  syncTableRowsNumber()
+}
+
 function notifySuccess(message) {
   $q.notify({
     type: 'positive',
@@ -161,6 +173,7 @@ async function applyBulkAction() {
   bulkPreview.value = result?.action === 'export_selected' ? bulkPreview.value : result
   notifySuccess(bulkAction.value === 'export_selected' ? 'Экспорт выбранных заявлений подготовлен' : 'Массовая операция выполнена')
   if (bulkAction.value !== 'export_selected') {
+    await loadAdmissions()
     clearSelection()
     bulkDialogVisible.value = false
   }
@@ -175,8 +188,15 @@ function tableRowClass(row) {
 }
 
 function updateTablePagination(pagination) {
-  tablePagination.value = pagination
-  persistTablePagination(ADMISSIONS_ROWS_PER_PAGE_KEY, pagination)
+  tablePagination.value = { ...pagination, rowsNumber: filterTotal.value }
+  persistTablePagination(ADMISSIONS_ROWS_PER_PAGE_KEY, tablePagination.value)
+}
+
+async function handleTableRequest({ pagination }) {
+  requestSelectionReset()
+  tablePagination.value = { ...pagination, rowsNumber: filterTotal.value }
+  persistTablePagination(ADMISSIONS_ROWS_PER_PAGE_KEY, tablePagination.value)
+  await loadAdmissions(tablePagination.value)
 }
 
 function routeSelectedId() {
@@ -278,14 +298,14 @@ async function applyFilters(filters) {
     status: filters.status,
     program: filters.educationProgramId,
   })
-  await store.load()
+  await loadAdmissions()
 }
 
 async function resetFilters() {
   requestSelectionReset()
   store.resetFilters()
   await syncAdmissionQuery({ selectedId: '', searchText: '', status: '', program: '' })
-  await store.load()
+  await loadAdmissions()
 }
 
 async function applyQuickQueue(queue) {
@@ -299,13 +319,13 @@ async function applyQuickQueue(queue) {
   if (queue.key === 'all') {
     store.resetFilters()
     await syncAdmissionQuery({ selectedId: '', searchText: '', status: '', program: '' })
-    await store.load()
+    await loadAdmissions()
     return
   }
 
   store.setFilters(filters)
   await syncAdmissionQuery({ selectedId: '', searchText: filters.search, status: filters.status, program: filters.educationProgramId })
-  await store.load()
+  await loadAdmissions()
 }
 
 async function handleImport(file) {
@@ -352,7 +372,7 @@ watch(
       status: routeStatus(),
       educationProgramId: routeProgram(),
     })
-    await store.load()
+    await loadAdmissions()
     store.selectApplicationById(routeSelectedId())
 
     if (routeAction() === 'create') {
@@ -369,7 +389,7 @@ onMounted(async () => {
     educationProgramId: routeProgram(),
   })
   store.selectApplicationById(routeSelectedId())
-  await store.load()
+  await loadAdmissions()
 
   if (routeAction() === 'create') {
     openCreateForm()
@@ -443,7 +463,7 @@ onMounted(async () => {
           <span>Групповые действия</span>
           <q-tooltip>{{ hasBulkSelection ? `Выбрано: ${selectedCount}` : 'Выберите заявления в таблице' }}</q-tooltip>
         </q-btn>
-        <q-btn flat :disable="store.loading" @click="store.load">
+        <q-btn flat :disable="store.loading" @click="loadAdmissions()">
           <template #default>
             <RefreshCw :size="16" />
             <span>Обновить</span>
@@ -513,6 +533,7 @@ onMounted(async () => {
           selection="multiple"
           :table-row-class-fn="tableRowClass"
           @update:pagination="updateTablePagination"
+          @request="handleTableRequest"
           @row-click="(_, row) => selectApplication(row)"
         >
           <template #body-cell-applicant="props">
