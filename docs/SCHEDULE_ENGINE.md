@@ -92,3 +92,14 @@ ST-002A поддерживает ручные операции:
 - автоматическая генерация недельного расписания не реализована;
 - шаблоны созданы как структура данных для следующего этапа;
 - старые `schedule_lessons` остаются частью совместимости.
+
+## Visual Editor (ST-002B)
+
+Visual Editor использует Schedule Engine как единственный путь изменения данных: создание, drag & drop перенос и применение шаблона проходят preview/validation/apply. Drop в сетке не сохраняет данные напрямую.
+
+Добавлены template endpoints для MVP:
+
+- `GET /api/schedule/templates`;
+- `POST /api/schedule/templates`;
+- `POST /api/schedule/templates/{id}/apply-preview`;
+- `POST /api/schedule/templates/{id}/apply`.

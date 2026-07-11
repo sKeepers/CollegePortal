@@ -1126,3 +1126,7 @@ Frontend action-level RBAC доведен до основных CRUD и сист
 ## ST-002A: Schedule Engine Foundation
 
 Добавлен foundation Schedule Engine: `schedule_entries`, недельные шаблоны, preview/validate/apply API, контроль конфликтов и покрытие часов нагрузки. Старые `schedule_lessons` сохранены и синхронизируются для совместимости журнала и текущего `/schedule`.
+
+## ST-002B: Visual Schedule Editor
+
+На `/schedule` добавлены режимы «Редактор недели» и «Шаблоны». Редактор использует недельную сетку, drag & drop перенос через preview/apply, панели конфликтов и покрытия нагрузки. Шаблоны поддерживают MVP-создание и применение к выбранной неделе.

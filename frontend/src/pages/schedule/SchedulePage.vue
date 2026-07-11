@@ -27,8 +27,12 @@ const router = useRouter()
 const syncingQueryFromUi = ref(false)
 const createDialog = ref(false)
 const previewDialog = ref(false)
+const templateDialog = ref(false)
 const createSubmitting = ref(false)
+const previewMode = ref('create')
+const draggedLesson = ref(null)
 const createForm = ref({})
+const templateForm = ref(defaultTemplateForm())
 
 const activeView = ref(route.query.view ? String(route.query.view) : 'week')
 const selectedDate = ref(route.query.date ? String(route.query.date) : todayString())
@@ -41,6 +45,8 @@ const viewOptions = [
   { label: 'Аудитория', value: 'classroom' },
   { label: 'Конфликты', value: 'conflicts' },
   { label: 'Покрытие нагрузки', value: 'coverage' },
+  { label: 'Редактор недели', value: 'editor' },
+  { label: 'Шаблоны', value: 'templates' },
 ]
 
 const dayFormatter = new Intl.DateTimeFormat('ru-RU', {
@@ -56,6 +62,18 @@ const longDateFormatter = new Intl.DateTimeFormat('ru-RU', {
 })
 
 const canCreate = computed(() => permissions.hasPermission('schedule.create'))
+const canUpdate = computed(() => permissions.hasPermission('schedule.update'))
+const canManageTemplates = computed(() => permissions.hasPermission('schedule.manage_templates'))
+const isMobileReadonly = computed(() => window.innerWidth < 700)
+
+const lessonSlots = [
+  { number: 1, starts_at: '09:00', ends_at: '10:30' },
+  { number: 2, starts_at: '10:40', ends_at: '12:10' },
+  { number: 3, starts_at: '12:40', ends_at: '14:10' },
+  { number: 4, starts_at: '14:20', ends_at: '15:50' },
+  { number: 5, starts_at: '16:00', ends_at: '17:30' },
+  { number: 6, starts_at: '17:40', ends_at: '19:10' },
+]
 
 const selectedWeekDays = computed(() => {
   const start = startOfWeek(parseLocalDate(selectedDate.value))
@@ -160,6 +178,30 @@ const totalLessons = computed(() => periodLessons.value.length)
 const totalGroups = computed(() => new Set(periodLessons.value.map((lesson) => lesson.group_id).filter(Boolean)).size)
 const totalTeachers = computed(() => new Set(periodLessons.value.map((lesson) => lesson.teacher_id).filter(Boolean)).size)
 const totalClassrooms = computed(() => new Set(periodLessons.value.map((lesson) => lesson.classroom_id).filter(Boolean)).size)
+const weekRange = computed(() => {
+  const days = selectedWeekDays.value
+  return { date_from: days[0]?.value, date_to: days[6]?.value }
+})
+
+function defaultTemplateForm() {
+  return {
+    name: '',
+    academic_year: '',
+    semester: 1,
+    valid_from: selectedWeekDays.value[0]?.value || todayString(),
+    valid_to: selectedWeekDays.value[6]?.value || todayString(),
+    group_id: store.filters.group_id || '',
+    week_type: 'all',
+    status: 'draft',
+    day_of_week: 1,
+    lesson_number: 1,
+    starts_at: '09:00',
+    ends_at: '10:30',
+    subject_id: store.filters.subject_id || '',
+    teacher_id: store.filters.teacher_id || '',
+    classroom_id: store.filters.classroom_id || '',
+  }
+}
 
 function defaultCreateForm() {
   return {
@@ -229,6 +271,21 @@ function lessonTypeTone(type) {
   return lessonTypeTones[type] || 'neutral'
 }
 
+function lessonsForCell(day, slot) {
+  return sortLessons(periodLessons.value.filter((lesson) => lesson.lesson_date === day.value && lesson.starts_at === slot.starts_at))
+}
+
+function hasLessonConflict(lesson) {
+  return store.conflicts.some((conflict) => conflict.date === lesson.lesson_date && conflict.time?.includes(lesson.starts_at))
+}
+
+function lessonCardState(lesson) {
+  if (lesson.status === 'canceled') return 'canceled'
+  if (hasLessonConflict(lesson)) return 'conflict'
+  if (lesson.is_replacement || lesson.status === 'moved') return 'replacement'
+  return lesson.lesson_type || 'lesson'
+}
+
 function conflictTone(level) {
   return level === 'blocking' ? 'danger' : 'warning'
 }
@@ -263,29 +320,42 @@ async function selectLesson(lesson) {
 async function applyFilters(filters) {
   store.setFilters(filters)
   store.selectLessonById(null)
-  await store.load()
+  await loadCurrentPeriod()
   await syncQuery()
 }
 
 async function resetFilters() {
   store.resetFilters()
   store.selectLessonById(null)
-  await store.load()
+  await loadCurrentPeriod()
   await syncQuery()
 }
 
 async function refresh() {
-  await store.load()
+  await loadCurrentPeriod()
 }
 
-function openCreateDialog() {
-  createForm.value = defaultCreateForm()
+async function loadCurrentPeriod() {
+  await store.load(weekRange.value)
+}
+
+function openCreateDialog(cell = null) {
+  createForm.value = {
+    ...defaultCreateForm(),
+    ...(cell ? { date: cell.day.value, lesson_number: cell.slot.number, starts_at: cell.slot.starts_at, ends_at: cell.slot.ends_at } : {}),
+  }
   createDialog.value = true
+}
+
+function openTemplateDialog() {
+  templateForm.value = defaultTemplateForm()
+  templateDialog.value = true
 }
 
 async function previewCreate() {
   createSubmitting.value = true
   try {
+    previewMode.value = 'create'
     await store.previewEntry(createForm.value)
     previewDialog.value = true
   } finally {
@@ -296,7 +366,7 @@ async function previewCreate() {
 async function applyCreate() {
   createSubmitting.value = true
   try {
-    const result = await store.applyEntry(createForm.value)
+    const result = await store.applyEntry(createForm.value, weekRange.value)
     const id = result?.entry?.data?.legacy_lesson_id || result?.entry?.data?.id
     if (id) {
       store.selectLessonById(id)
@@ -311,16 +381,106 @@ async function applyCreate() {
 
 async function changePeriod(days) {
   selectedDate.value = formatDate(addDays(parseLocalDate(selectedDate.value), days))
+  await loadCurrentPeriod()
   await syncQuery()
 }
 
 async function setToday() {
   selectedDate.value = todayString()
+  await loadCurrentPeriod()
   await syncQuery()
 }
 
+function onDragStart(lesson) {
+  if (!canUpdate.value || isMobileReadonly.value) return
+  draggedLesson.value = lesson
+}
+
+async function onCellDrop(day, slot) {
+  if (!draggedLesson.value || !canUpdate.value || isMobileReadonly.value) return
+  createSubmitting.value = true
+  try {
+    previewMode.value = 'move'
+    await store.previewMove(draggedLesson.value, { date: day.value, lesson_number: slot.number, starts_at: slot.starts_at, ends_at: slot.ends_at })
+    previewDialog.value = true
+  } finally {
+    createSubmitting.value = false
+    draggedLesson.value = null
+  }
+}
+
+async function applyMove() {
+  createSubmitting.value = true
+  try {
+    await store.applyMove(weekRange.value)
+    previewDialog.value = false
+  } finally {
+    createSubmitting.value = false
+  }
+}
+
+async function createTemplate() {
+  createSubmitting.value = true
+  try {
+    await store.createTemplate({
+      name: templateForm.value.name,
+      academic_year: templateForm.value.academic_year,
+      semester: templateForm.value.semester,
+      valid_from: templateForm.value.valid_from,
+      valid_to: templateForm.value.valid_to,
+      group_id: templateForm.value.group_id,
+      week_type: templateForm.value.week_type,
+      status: templateForm.value.status,
+      entries: [{
+        day_of_week: templateForm.value.day_of_week,
+        week_type: templateForm.value.week_type,
+        lesson_number: templateForm.value.lesson_number,
+        starts_at: templateForm.value.starts_at,
+        ends_at: templateForm.value.ends_at,
+        subject_id: templateForm.value.subject_id,
+        teacher_id: templateForm.value.teacher_id,
+        classroom_id: templateForm.value.classroom_id || null,
+      }],
+    }, weekRange.value)
+    templateDialog.value = false
+  } finally {
+    createSubmitting.value = false
+  }
+}
+
+async function previewTemplate(template) {
+  createSubmitting.value = true
+  try {
+    previewMode.value = 'template'
+    await store.previewTemplateApply(template.id, { date_from: weekRange.value.date_from, date_to: weekRange.value.date_to })
+    previewDialog.value = true
+  } finally {
+    createSubmitting.value = false
+  }
+}
+
+async function applyTemplate() {
+  if (!store.previewResult?.template_id) return
+  createSubmitting.value = true
+  try {
+    await store.applyTemplate(store.previewResult.template_id, { date_from: weekRange.value.date_from, date_to: weekRange.value.date_to }, weekRange.value)
+    previewDialog.value = false
+  } finally {
+    createSubmitting.value = false
+  }
+}
+
+async function applyPreview() {
+  if (previewMode.value === 'move') { return applyMove() }
+  if (previewMode.value === 'template') { return applyTemplate() }
+  return applyCreate()
+}
+
 watch(activeView, syncQuery)
-watch(selectedDate, syncQuery)
+watch(selectedDate, async () => {
+  await loadCurrentPeriod()
+  await syncQuery()
+})
 
 watch(
   () => [route.query.view, route.query.date, route.query.selected],
@@ -337,7 +497,7 @@ watch(
 
 onMounted(async () => {
   store.selectLessonById(route.query.selected ? String(route.query.selected) : '')
-  await store.load()
+  await loadCurrentPeriod()
 })
 </script>
 
@@ -393,6 +553,7 @@ onMounted(async () => {
     <AppToolbar>
       <span>{{ periodTitle }}</span>
       <template #actions>
+        <q-btn v-if="canManageTemplates" flat :disable="store.loading" @click="openTemplateDialog">Шаблон</q-btn>
         <q-btn v-if="canCreate" color="primary" :disable="store.loading" @click="openCreateDialog">
           <template #default>
             <Plus :size="16" />
@@ -433,7 +594,66 @@ onMounted(async () => {
 
     <div class="schedule-layout">
       <div class="schedule-main">
-        <div v-if="activeView === 'conflicts'" class="schedule-engine-list">
+        <div v-if="activeView === 'editor'" class="schedule-editor">
+          <div class="schedule-editor__scroll">
+            <div class="schedule-editor__grid">
+              <div class="schedule-editor__corner">Пара</div>
+              <div v-for="day in selectedWeekDays" :key="day.value" class="schedule-editor__day">
+                <strong>{{ day.label }}</strong>
+                <span>{{ day.value }}</span>
+              </div>
+
+              <template v-for="slot in lessonSlots" :key="slot.number">
+                <div class="schedule-editor__slot">
+                  <strong>{{ slot.number }}</strong>
+                  <span>{{ slot.starts_at }}-{{ slot.ends_at }}</span>
+                </div>
+                <div
+                  v-for="day in selectedWeekDays"
+                  :key="`${day.value}-${slot.number}`"
+                  class="schedule-editor__cell"
+                  @dragover.prevent
+                  @drop="onCellDrop(day, slot)"
+                  @dblclick="canCreate && openCreateDialog({ day, slot })"
+                >
+                  <button
+                    v-for="lesson in lessonsForCell(day, slot)"
+                    :key="lesson.id"
+                    type="button"
+                    class="schedule-editor-card"
+                    :class="`schedule-editor-card--${lessonCardState(lesson)}`"
+                    :draggable="canUpdate && !isMobileReadonly && !!lesson.schedule_entry_id"
+                    @dragstart="onDragStart(lesson)"
+                    @click="selectLesson(lesson)"
+                  >
+                    <strong>{{ lesson.subject?.name || 'Дисциплина' }}</strong>
+                    <span>{{ lesson.group?.name || 'Группа' }} · {{ teacherName(lesson.teacher) || 'Преподаватель' }}</span>
+                    <small>{{ classroomLabel(lesson.classroom) || 'Аудитория' }}</small>
+                    <small>{{ lesson.starts_at }}-{{ lesson.ends_at }}</small>
+                  </button>
+                  <button v-if="!lessonsForCell(day, slot).length && canCreate" type="button" class="schedule-editor__add" @click="openCreateDialog({ day, slot })">+ занятие</button>
+                </div>
+              </template>
+            </div>
+          </div>
+          <q-banner v-if="isMobileReadonly" rounded class="schedule-mobile-readonly">На мобильной ширине редактор доступен только для просмотра. Drag & drop отключен.</q-banner>
+        </div>
+
+        <div v-else-if="activeView === 'templates'" class="schedule-engine-list">
+          <section v-for="template in store.templates" :key="template.id" class="schedule-engine-item">
+            <div>
+              <strong>{{ template.name }}</strong>
+              <p>{{ template.academic_year }} · {{ template.semester }} семестр · {{ template.group?.name || 'Группа не указана' }}</p>
+            </div>
+            <div class="schedule-template-actions">
+              <AppStatusBadge :label="template.week_type || 'all'" tone="info" />
+              <q-btn v-if="canManageTemplates" flat dense @click="previewTemplate(template)">Применить к неделе</q-btn>
+            </div>
+          </section>
+          <AppEmptyState v-if="!store.templates.length" title="Шаблоны не созданы" description="Создайте шаблон недели для выбранной группы." />
+        </div>
+
+        <div v-else-if="activeView === 'conflicts'" class="schedule-engine-list">
           <section v-for="conflict in store.conflicts" :key="`${conflict.type}-${conflict.date}-${conflict.time}-${conflict.reason}`" class="schedule-engine-item">
             <div>
               <strong>{{ conflict.reason }}</strong>
@@ -538,6 +758,35 @@ onMounted(async () => {
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="templateDialog">
+      <q-card class="schedule-create-dialog">
+        <q-card-section>
+          <div class="text-h6">Шаблон расписания</div>
+          <div class="text-caption text-grey-7">MVP создает шаблон с одной строкой. Расширенное редактирование строк запланировано следующим этапом.</div>
+        </q-card-section>
+        <q-card-section class="schedule-create-grid">
+          <q-input v-model="templateForm.name" dense outlined label="Название" />
+          <q-input v-model="templateForm.academic_year" dense outlined label="Учебный год" placeholder="2026/2027" />
+          <q-select v-model="templateForm.semester" dense outlined emit-value map-options label="Семестр" :options="[{ label: '1 семестр', value: 1 }, { label: '2 семестр', value: 2 }]" />
+          <q-select v-model="templateForm.week_type" dense outlined emit-value map-options label="Неделя" :options="[{ label: 'Каждая', value: 'all' }, { label: 'Четная', value: 'even' }, { label: 'Нечетная', value: 'odd' }]" />
+          <q-input v-model="templateForm.valid_from" dense outlined type="date" label="Действует с" />
+          <q-input v-model="templateForm.valid_to" dense outlined type="date" label="Действует по" />
+          <q-select v-model="templateForm.group_id" dense outlined emit-value map-options label="Группа" :options="store.groupOptions" />
+          <q-select v-model="templateForm.day_of_week" dense outlined emit-value map-options label="День" :options="selectedWeekDays.map((day, index) => ({ label: day.label, value: index + 1 }))" />
+          <q-input v-model.number="templateForm.lesson_number" dense outlined type="number" label="Пара" />
+          <q-input v-model="templateForm.starts_at" dense outlined type="time" label="Начало" />
+          <q-input v-model="templateForm.ends_at" dense outlined type="time" label="Окончание" />
+          <q-select v-model="templateForm.subject_id" dense outlined emit-value map-options label="Дисциплина" :options="store.subjectOptions" />
+          <q-select v-model="templateForm.teacher_id" dense outlined emit-value map-options label="Преподаватель" :options="store.teacherOptions" />
+          <q-select v-model="templateForm.classroom_id" dense outlined emit-value map-options clearable label="Аудитория" :options="store.classroomOptions" />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat :disable="createSubmitting" @click="templateDialog = false">Отмена</q-btn>
+          <q-btn color="primary" :loading="createSubmitting" @click="createTemplate">Создать шаблон</q-btn>
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <q-dialog v-model="previewDialog">
       <q-card class="schedule-preview-dialog">
         <q-card-section>
@@ -556,7 +805,7 @@ onMounted(async () => {
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat :disable="createSubmitting" @click="previewDialog = false">Назад</q-btn>
-          <q-btn color="primary" :disable="!store.previewResult?.can_apply" :loading="createSubmitting" @click="applyCreate">Применить</q-btn>
+          <q-btn color="primary" :disable="!store.previewResult?.can_apply && previewMode !== 'template'" :loading="createSubmitting" @click="applyPreview">Применить</q-btn>
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -631,5 +880,136 @@ onMounted(async () => {
     align-items: flex-start;
     flex-direction: column;
   }
+}
+
+.schedule-editor {
+  display: grid;
+  gap: 12px;
+}
+
+.schedule-editor__scroll {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.schedule-editor__grid {
+  display: grid;
+  grid-template-columns: 90px repeat(7, minmax(156px, 1fr));
+  min-width: 1180px;
+}
+
+.schedule-editor__corner,
+.schedule-editor__day,
+.schedule-editor__slot,
+.schedule-editor__cell {
+  border-right: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.schedule-editor__corner,
+.schedule-editor__day {
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.schedule-editor__day {
+  display: grid;
+  gap: 2px;
+}
+
+.schedule-editor__day span,
+.schedule-editor__slot span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.schedule-editor__slot {
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.schedule-editor__cell {
+  min-height: 118px;
+  padding: 8px;
+  background: #ffffff;
+}
+
+.schedule-editor__cell:hover {
+  background: #f8fafc;
+}
+
+.schedule-editor-card {
+  display: grid;
+  width: 100%;
+  gap: 3px;
+  margin-bottom: 6px;
+  padding: 8px;
+  border: 1px solid #bfdbfe;
+  border-left: 4px solid #2563eb;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #0f172a;
+  cursor: pointer;
+  text-align: left;
+}
+
+.schedule-editor-card[draggable="true"] {
+  cursor: grab;
+}
+
+.schedule-editor-card--replacement {
+  border-color: #fde68a;
+  border-left-color: #d97706;
+  background: #fffbeb;
+}
+
+.schedule-editor-card--canceled {
+  border-color: #fecaca;
+  border-left-color: #dc2626;
+  background: #fef2f2;
+  opacity: 0.75;
+}
+
+.schedule-editor-card--conflict {
+  border-color: #fca5a5;
+  border-left-color: #b91c1c;
+  background: #fff1f2;
+}
+
+.schedule-editor-card span,
+.schedule-editor-card small {
+  overflow-wrap: anywhere;
+  color: #475569;
+  font-size: 12px;
+}
+
+.schedule-editor__add {
+  width: 100%;
+  padding: 8px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.schedule-editor__add:hover {
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+
+.schedule-mobile-readonly {
+  background: #f8fafc;
+}
+
+.schedule-template-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 </style>

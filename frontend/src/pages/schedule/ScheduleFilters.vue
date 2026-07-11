@@ -43,6 +43,19 @@ const semesterOptions = [
   { label: '2 семестр', value: '2' },
 ]
 
+const weekTypeOptions = [
+  { label: 'Каждая неделя', value: 'all' },
+  { label: 'Четная неделя', value: 'even' },
+  { label: 'Нечетная неделя', value: 'odd' },
+]
+
+const statusOptions = [
+  { label: 'Запланировано', value: 'scheduled' },
+  { label: 'Перенесено', value: 'moved' },
+  { label: 'Отменено', value: 'canceled' },
+  { label: 'Черновик', value: 'draft' },
+]
+
 const activeChips = computed(() => [
   chipForOption('academic_year', 'Учебный год', props.academicYearOptions),
   chipForOption('semester', 'Семестр', semesterOptions),
@@ -50,6 +63,8 @@ const activeChips = computed(() => [
   chipForOption('teacher_id', 'Преподаватель', props.teacherOptions),
   chipForOption('classroom_id', 'Аудитория', props.classroomOptions),
   chipForOption('subject_id', 'Дисциплина', props.subjectOptions),
+  chipForOption('week_type', 'Неделя', weekTypeOptions),
+  chipForOption('status', 'Статус', statusOptions),
 ].filter(Boolean))
 
 watch(
@@ -173,6 +188,39 @@ function removeChip(key) {
       :options="subjectOptions"
       :disable="loading"
       @update:model-value="updateFilters({ subject_id: $event || '' })"
+    />
+
+
+    <q-select
+      :model-value="localFilters.week_type"
+      dense
+      outlined
+      emit-value
+      map-options
+      clearable
+      label="Четность"
+      :options="weekTypeOptions"
+      :disable="loading"
+      @update:model-value="updateFilters({ week_type: $event || '' })"
+    />
+    <q-select
+      :model-value="localFilters.status"
+      dense
+      outlined
+      emit-value
+      map-options
+      clearable
+      label="Статус"
+      :options="statusOptions"
+      :disable="loading"
+      @update:model-value="updateFilters({ status: $event || '' })"
+    />
+    <q-checkbox
+      :model-value="localFilters.conflicts_only"
+      dense
+      label="Только конфликты"
+      :disable="loading"
+      @update:model-value="updateFilters({ conflicts_only: $event })"
     />
 
     <template #actions>

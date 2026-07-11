@@ -129,3 +129,7 @@ Teaching Load Engine пишет audit для apply-генерации, созд�
 ## Schedule Engine audit (ST-002A)
 
 Schedule Engine логирует создание занятия, изменение, замену преподавателя, замену аудитории, перенос, отмену и восстановление. Preview/validation не пишут Audit, потому что не изменяют данные.
+
+## Visual Schedule Editor audit (ST-002B)
+
+Drag & drop перенос фиксируется как `schedule_entry_moved`, применение шаблона как `schedule_template_applied`, создание шаблона как `schedule_template_created`. Preview не логируется как изменение.

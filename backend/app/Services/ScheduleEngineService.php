@@ -7,6 +7,7 @@ use App\Models\Group;
 use App\Models\ReferenceItem;
 use App\Models\ScheduleEntry;
 use App\Models\ScheduleLesson;
+use App\Models\ScheduleTemplate;
 use App\Models\Teacher;
 use App\Models\TeachingLoadItem;
 use App\Models\User;
@@ -164,6 +165,107 @@ class ScheduleEngineService
         $query = ScheduleEntry::query()->with($this->relations())->orderBy('date')->orderBy('starts_at');
         $this->applyFilters($query, $filters);
         return $query;
+    }
+
+
+    public function createTemplate(array $payload, ?User $user = null): ScheduleTemplate
+    {
+        return DB::transaction(function () use ($payload, $user): ScheduleTemplate {
+            $entries = $payload['entries'] ?? [];
+            unset($payload['entries']);
+            $template = ScheduleTemplate::create([
+                ...$payload,
+                'status' => $payload['status'] ?? 'draft',
+                'created_by' => $user?->id,
+                'updated_by' => $user?->id,
+            ]);
+
+            foreach ($entries as $entry) {
+                $template->entries()->create($entry);
+            }
+
+            AuditLogService::log('Schedule', 'schedule_template_created', $template, null, $template->load('entries')->toArray(), user: $user);
+
+            return $template->fresh(['group', 'entries.subject', 'entries.teacher', 'entries.classroom']);
+        });
+    }
+
+    public function applyTemplatePreview(ScheduleTemplate $template, string $dateFrom, string $dateTo): array
+    {
+        return $this->applyTemplate($template, $dateFrom, $dateTo, apply: false);
+    }
+
+    public function applyTemplateConfirm(ScheduleTemplate $template, string $dateFrom, string $dateTo, ?User $user = null): array
+    {
+        return DB::transaction(fn () => $this->applyTemplate($template, $dateFrom, $dateTo, apply: true, user: $user));
+    }
+
+    private function applyTemplate(ScheduleTemplate $template, string $dateFrom, string $dateTo, bool $apply, ?User $user = null): array
+    {
+        $template->load(['entries', 'group']);
+        $start = CarbonImmutable::parse($dateFrom)->startOfDay();
+        $end = CarbonImmutable::parse($dateTo)->startOfDay();
+        $report = [
+            'template_id' => $template->id,
+            'template' => $template->name,
+            'date_from' => $start->toDateString(),
+            'date_to' => $end->toDateString(),
+            'found' => 0,
+            'will_create' => 0,
+            'blocking_count' => 0,
+            'warning_count' => 0,
+            'items' => [],
+        ];
+
+        for ($date = $start; $date->lte($end); $date = $date->addDay()) {
+            foreach ($template->entries as $templateEntry) {
+                if ((int) $templateEntry->day_of_week !== $date->dayOfWeekIso) {
+                    continue;
+                }
+
+                $entryPayload = [
+                    'academic_year' => $template->academic_year,
+                    'semester' => $template->semester,
+                    'date' => $date->toDateString(),
+                    'day_of_week' => $date->dayOfWeekIso,
+                    'week_type' => $templateEntry->week_type ?: $template->week_type,
+                    'lesson_number' => $templateEntry->lesson_number,
+                    'starts_at' => $this->timeString($templateEntry->starts_at),
+                    'ends_at' => $this->timeString($templateEntry->ends_at),
+                    'group_id' => $template->group_id,
+                    'subject_id' => $templateEntry->subject_id,
+                    'teacher_id' => $templateEntry->teacher_id,
+                    'classroom_id' => $templateEntry->classroom_id,
+                    'teaching_load_item_id' => $templateEntry->teaching_load_item_id,
+                    'lesson_type_id' => $templateEntry->lesson_type_id,
+                    'status' => 'scheduled',
+                    'source' => 'schedule_template',
+                    'comment' => $templateEntry->comment,
+                ];
+                $preview = $this->preview($entryPayload);
+                $report['found']++;
+                $report['will_create'] += $preview['can_apply'] ? 1 : 0;
+                $report['blocking_count'] += $preview['blocking_count'];
+                $report['warning_count'] += $preview['warning_count'];
+                $report['items'][] = [
+                    'date' => $date->toDateString(),
+                    'lesson_number' => $templateEntry->lesson_number,
+                    'subject_id' => $templateEntry->subject_id,
+                    'can_apply' => $preview['can_apply'],
+                    'conflicts' => $preview['conflicts'],
+                ];
+
+                if ($apply && $preview['can_apply']) {
+                    $this->apply($entryPayload, $user);
+                }
+            }
+        }
+
+        if ($apply) {
+            AuditLogService::log('Schedule', 'schedule_template_applied', $template, null, $report, user: $user);
+        }
+
+        return $report;
     }
 
     public function relations(): array

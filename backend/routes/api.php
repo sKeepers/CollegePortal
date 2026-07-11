@@ -211,6 +211,10 @@ Route::middleware('api.token')->group(function (): void {
 
     Route::middleware('permission:schedule.view')->group(function (): void {
         Route::get('schedule/entries', [ScheduleEngineController::class, 'index']);
+        Route::get('schedule/templates', [ScheduleEngineController::class, 'templates'])->middleware('permission:schedule.manage_templates');
+        Route::post('schedule/templates', [ScheduleEngineController::class, 'storeTemplate'])->middleware('permission:schedule.manage_templates');
+        Route::post('schedule/templates/{scheduleTemplate}/apply-preview', [ScheduleEngineController::class, 'templateApplyPreview'])->middleware('permission:schedule.manage_templates');
+        Route::post('schedule/templates/{scheduleTemplate}/apply', [ScheduleEngineController::class, 'templateApply'])->middleware('permission:schedule.manage_templates');
         Route::get('schedule/conflicts', [ScheduleEngineController::class, 'conflicts'])->middleware('permission:schedule.view_conflicts');
         Route::get('schedule/coverage', [ScheduleEngineController::class, 'coverage'])->middleware('permission:schedule.view_coverage');
         Route::get('schedule/group/{groupId}', [ScheduleEngineController::class, 'group']);

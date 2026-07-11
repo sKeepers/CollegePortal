@@ -12,6 +12,7 @@ class ScheduleLessonResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'schedule_entry_id' => $this->schedule_entry_id,
             'group_id' => $this->group_id,
             'teacher_id' => $this->teacher_id,
             'subject_id' => $this->subject_id,

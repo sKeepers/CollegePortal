@@ -9,6 +9,9 @@ const initialFilters = {
   teacher_id: '',
   classroom_id: '',
   subject_id: '',
+  week_type: '',
+  status: '',
+  conflicts_only: false,
 }
 
 function extractRows(payload) {
@@ -103,6 +106,8 @@ export const useScheduleStore = defineStore('schedule', () => {
   const conflicts = ref([])
   const coverage = ref([])
   const previewResult = ref(null)
+  const templates = ref([])
+  const moveDraft = ref(null)
   const loading = ref(false)
   const error = ref('')
 
@@ -197,7 +202,7 @@ export const useScheduleStore = defineStore('schedule', () => {
       })
   })
 
-  async function load() {
+  async function load(range = {}) {
     loading.value = true
     error.value = ''
 
@@ -207,9 +212,12 @@ export const useScheduleStore = defineStore('schedule', () => {
         teacher_id: filters.value.teacher_id,
         subject_id: filters.value.subject_id,
         classroom_id: filters.value.classroom_id,
+        date_from: range.date_from,
+        date_to: range.date_to,
+        per_page: 200,
       }
 
-      const [lessonsResult, groupsResult, teachersResult, subjectsResult, classroomsResult, conflictsResult, coverageResult] = await Promise.allSettled([
+      const [lessonsResult, groupsResult, teachersResult, subjectsResult, classroomsResult, conflictsResult, coverageResult, templatesResult] = await Promise.allSettled([
         api.list('schedule-lessons', apiFilters),
         api.list('groups'),
         api.list('teachers', { active_only: 1 }),
@@ -217,6 +225,7 @@ export const useScheduleStore = defineStore('schedule', () => {
         api.list('classrooms'),
         api.list('schedule/conflicts', apiFilters),
         api.list('schedule/coverage', apiFilters),
+        api.list('schedule/templates', apiFilters),
       ])
 
       if (lessonsResult.status === 'rejected') {
@@ -230,6 +239,7 @@ export const useScheduleStore = defineStore('schedule', () => {
       classrooms.value = classroomsResult.status === 'fulfilled' ? extractRows(classroomsResult.value) : []
       conflicts.value = conflictsResult.status === 'fulfilled' ? extractRows(conflictsResult.value) : []
       coverage.value = coverageResult.status === 'fulfilled' ? extractRows(coverageResult.value) : []
+      templates.value = templatesResult.status === 'fulfilled' ? extractRows(templatesResult.value) : []
 
       if (selectedId.value && !selectedLesson.value) {
         selectedId.value = null
@@ -265,9 +275,63 @@ export const useScheduleStore = defineStore('schedule', () => {
     return previewResult.value
   }
 
-  async function applyEntry(payload) {
+  async function applyEntry(payload, range = {}) {
     const result = await api.create('schedule/apply', payload)
-    await load()
+    await load(range)
+    return result
+  }
+
+  async function previewMove(lesson, target) {
+    const payload = {
+      academic_year: filters.value.academic_year || '',
+      semester: filters.value.semester || 1,
+      date: target.date,
+      lesson_number: target.lesson_number,
+      starts_at: target.starts_at,
+      ends_at: target.ends_at,
+      group_id: lesson.group_id,
+      subject_id: lesson.subject_id,
+      teacher_id: lesson.teacher_id,
+      classroom_id: lesson.classroom_id || '',
+      status: lesson.status || 'scheduled',
+      comment: lesson.topic || '',
+    }
+    moveDraft.value = { lesson, target, payload }
+    previewResult.value = await api.create('schedule/preview', payload)
+    return previewResult.value
+  }
+
+  async function applyMove(range = {}) {
+    if (!moveDraft.value?.lesson?.schedule_entry_id) {
+      throw new Error('Занятие создано до Schedule Engine и не может быть перенесено drag & drop.')
+    }
+    const lesson = moveDraft.value.lesson
+    const target = moveDraft.value.target
+    const result = await api.create(`schedule/entries/${lesson.schedule_entry_id}/move`, {
+      date: target.date,
+      lesson_number: target.lesson_number,
+      starts_at: target.starts_at,
+      ends_at: target.ends_at,
+    })
+    moveDraft.value = null
+    await load(range)
+    return result
+  }
+
+  async function createTemplate(payload, range = {}) {
+    const result = await api.create('schedule/templates', payload)
+    await load(range)
+    return result
+  }
+
+  async function previewTemplateApply(templateId, payload) {
+    previewResult.value = await api.create(`schedule/templates/${templateId}/apply-preview`, payload)
+    return previewResult.value
+  }
+
+  async function applyTemplate(templateId, payload, range = {}) {
+    const result = await api.create(`schedule/templates/${templateId}/apply`, payload)
+    await load(range)
     return result
   }
 
@@ -277,6 +341,8 @@ export const useScheduleStore = defineStore('schedule', () => {
     conflicts,
     coverage,
     previewResult,
+    templates,
+    moveDraft,
     groups,
     teachers,
     subjects,
@@ -299,5 +365,10 @@ export const useScheduleStore = defineStore('schedule', () => {
     selectLessonById,
     previewEntry,
     applyEntry,
+    previewMove,
+    applyMove,
+    createTemplate,
+    previewTemplateApply,
+    applyTemplate,
   }
 })

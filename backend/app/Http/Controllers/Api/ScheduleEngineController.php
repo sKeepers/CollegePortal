@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ScheduleEntryResource;
 use App\Models\ScheduleEntry;
+use App\Models\ScheduleTemplate;
 use App\Services\ScheduleEngineService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -100,6 +101,67 @@ class ScheduleEngineController extends Controller
     public function restore(ScheduleEntry $scheduleEntry, Request $request): ScheduleEntryResource
     {
         return new ScheduleEntryResource($this->scheduleEngineService->restore($scheduleEntry, $request->user()));
+    }
+
+
+    public function templates(Request $request): JsonResponse
+    {
+        $templates = ScheduleTemplate::query()
+            ->with(['group', 'entries.subject', 'entries.teacher', 'entries.classroom'])
+            ->when($request->integer('group_id'), fn ($query, int $groupId) => $query->where('group_id', $groupId))
+            ->when($request->query('academic_year'), fn ($query, string $year) => $query->where('academic_year', $year))
+            ->orderByDesc('id')
+            ->get();
+
+        return response()->json(['data' => $templates]);
+    }
+
+    public function storeTemplate(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'academic_year' => ['required', 'string', 'max:20'],
+            'semester' => ['required', 'integer', 'min:1', 'max:12'],
+            'valid_from' => ['nullable', 'date'],
+            'valid_to' => ['nullable', 'date', 'after_or_equal:valid_from'],
+            'group_id' => ['required', 'integer', 'exists:groups,id'],
+            'week_type' => ['nullable', Rule::in(['all', 'even', 'odd'])],
+            'status' => ['nullable', Rule::in(['draft', 'active', 'archived'])],
+            'entries' => ['array'],
+            'entries.*.day_of_week' => ['required', 'integer', 'min:1', 'max:7'],
+            'entries.*.week_type' => ['nullable', Rule::in(['all', 'even', 'odd'])],
+            'entries.*.lesson_number' => ['required', 'integer', 'min:1', 'max:12'],
+            'entries.*.starts_at' => ['required', 'date_format:H:i'],
+            'entries.*.ends_at' => ['required', 'date_format:H:i'],
+            'entries.*.subject_id' => ['required', 'integer', 'exists:subjects,id'],
+            'entries.*.teacher_id' => ['required', 'integer', 'exists:teachers,id'],
+            'entries.*.classroom_id' => ['nullable', 'integer', 'exists:classrooms,id'],
+            'entries.*.teaching_load_item_id' => ['nullable', 'integer', 'exists:teaching_load_items,id'],
+            'entries.*.lesson_type_id' => ['nullable', 'integer', 'exists:reference_items,id'],
+            'entries.*.comment' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        return response()->json(['data' => $this->scheduleEngineService->createTemplate($data, $request->user())], Response::HTTP_CREATED);
+    }
+
+    public function templateApplyPreview(ScheduleTemplate $scheduleTemplate, Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'date_from' => ['required', 'date'],
+            'date_to' => ['required', 'date', 'after_or_equal:date_from'],
+        ]);
+
+        return response()->json($this->scheduleEngineService->applyTemplatePreview($scheduleTemplate, $data['date_from'], $data['date_to']));
+    }
+
+    public function templateApply(ScheduleTemplate $scheduleTemplate, Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'date_from' => ['required', 'date'],
+            'date_to' => ['required', 'date', 'after_or_equal:date_from'],
+        ]);
+
+        return response()->json($this->scheduleEngineService->applyTemplateConfirm($scheduleTemplate, $data['date_from'], $data['date_to'], $request->user()));
     }
 
     private function validatedEntry(Request $request): array

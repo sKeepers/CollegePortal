@@ -122,6 +122,55 @@ class ScheduleEngineApiTest extends TestCase
         $this->assertDatabaseHas('schedule_lessons', ['schedule_entry_id' => $entryId]);
     }
 
+
+    public function test_template_preview_and_apply_for_week(): void
+    {
+        $context = $this->context(prefix: 'TPL');
+        $templateId = $this->postJson('/api/schedule/templates', [
+            'name' => 'Четная неделя TPL',
+            'academic_year' => '2026/2027',
+            'semester' => 1,
+            'valid_from' => '2026-09-01',
+            'valid_to' => '2026-12-31',
+            'group_id' => $context['group']->id,
+            'week_type' => 'even',
+            'status' => 'draft',
+            'entries' => [[
+                'day_of_week' => 3,
+                'week_type' => 'even',
+                'lesson_number' => 1,
+                'starts_at' => '09:00',
+                'ends_at' => '10:30',
+                'subject_id' => $context['subject']->id,
+                'teacher_id' => $context['teacher']->id,
+                'classroom_id' => $context['classroom']->id,
+                'teaching_load_item_id' => $context['loadItem']->id,
+            ]],
+        ])->assertCreated()->json('data.id');
+
+        $this->postJson("/api/schedule/templates/{$templateId}/apply-preview", [
+            'date_from' => '2026-09-01',
+            'date_to' => '2026-09-07',
+        ])
+            ->assertOk()
+            ->assertJsonPath('found', 1)
+            ->assertJsonPath('will_create', 1);
+
+        $this->assertDatabaseCount('schedule_entries', 0);
+
+        $this->postJson("/api/schedule/templates/{$templateId}/apply", [
+            'date_from' => '2026-09-01',
+            'date_to' => '2026-09-07',
+        ])->assertOk()->assertJsonPath('found', 1);
+
+        $this->assertDatabaseHas('schedule_entries', [
+            'group_id' => $context['group']->id,
+            'subject_id' => $context['subject']->id,
+            'source' => 'schedule_template',
+        ]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'schedule_template_applied']);
+    }
+
     public function test_schedule_engine_requires_permissions(): void
     {
         $teacherUser = $this->createApiUser(roleCode: 'teacher');

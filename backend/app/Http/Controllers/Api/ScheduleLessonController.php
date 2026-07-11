@@ -30,9 +30,11 @@ class ScheduleLessonController extends Controller
             ->when($request->integer('subject_id'), fn ($query, int $subjectId) => $query->where('subject_id', $subjectId))
             ->when($request->integer('classroom_id'), fn ($query, int $classroomId) => $query->where('classroom_id', $classroomId))
             ->when($request->query('date'), fn ($query, string $date) => $query->whereDate('lesson_date', $date))
+            ->when($request->query('date_from'), fn ($query, string $date) => $query->whereDate('lesson_date', '>=', $date))
+            ->when($request->query('date_to'), fn ($query, string $date) => $query->whereDate('lesson_date', '<=', $date))
             ->orderBy('lesson_date')
             ->orderBy('starts_at')
-            ->paginate(20);
+            ->paginate(min(200, max(1, (int) $request->query('per_page', 50))));
 
         return ScheduleLessonResource::collection($lessons);
     }
