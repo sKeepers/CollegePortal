@@ -1130,3 +1130,7 @@ Frontend action-level RBAC доведен до основных CRUD и сист
 ## ST-002B: Visual Schedule Editor
 
 На `/schedule` добавлены режимы «Редактор недели» и «Шаблоны». Редактор использует недельную сетку, drag & drop перенос через preview/apply, панели конфликтов и покрытия нагрузки. Шаблоны поддерживают MVP-создание и применение к выбранной неделе.
+
+## INFRA-007 Installation Distribution
+
+Release 0.8 RC1 adds an installer distribution foundation under `installer/` and `scripts/release/build-release.sh`. The target production installation path is `/opt/college-portal` on a clean Ubuntu Server 24.04 LTS amd64 VM. Lifecycle scripts cover install, update, backup, restore, uninstall and health checks. Release archives are produced as `college-portal-<version>.tar.gz` and exclude secrets, runtime data, certificates, backups and development artifacts.

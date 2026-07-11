@@ -341,3 +341,8 @@ Schedule Engine foundation реализован. Следующие этапы: 
 ## ST-002B завершено
 
 Visual Schedule Editor добавлен как MVP. Следующие этапы: полноценное редактирование многострочных шаблонов, resize занятий, массовое применение на диапазон и безопасная очистка шаблонных записей.
+
+## Release Packaging
+
+- [x] INFRA-007: installer distribution and lifecycle tools for clean Ubuntu Server deployments.
+- [ ] Future: validate installer on a separate VM with real TLS modes and backup/restore round-trip.

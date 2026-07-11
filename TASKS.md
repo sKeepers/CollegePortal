@@ -686,3 +686,11 @@
 - [x] Добавлены панели конфликтов и покрытия нагрузки.
 - [x] Сохранены существующие режимы расписания.
 - [x] Проверены backend tests и frontend build.
+
+## INFRA-007
+
+- [x] Add installation distribution structure under `installer/`.
+- [x] Add lifecycle scripts for install, update, backup, restore, uninstall and check.
+- [x] Add release archive builder under `scripts/release/build-release.sh`.
+- [x] Add production installation, update, backup/restore and release documentation.
+- [x] Add health endpoints for installer checks.

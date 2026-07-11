@@ -57,3 +57,11 @@ infra/dev-https/certs/
 storage/app/private/imports/
 backend/storage/app/private/imports/
 *.xls
+
+# Release artifacts and installer runtime output
+releases/
+installer/*.tar.gz
+installer/*.sha256
+installer/.env
+installer/certs/
+installer/backups/

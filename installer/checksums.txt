@@ -1,0 +1,2 @@
+Generated release checksums are written by scripts/release/build-release.sh.
+Do not put secrets, backups, dumps, storage files, certificates or .env content here.
