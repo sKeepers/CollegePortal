@@ -4,6 +4,7 @@ namespace App\Services\Bulk;
 
 use App\Models\ApplicantApplication;
 use App\Models\Student;
+use App\Services\ApplicantApplicationDocumentService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -48,13 +49,18 @@ class BulkSelectionResolver
                 $query->whereHas('educationProgram', fn (Builder $query) => $query->where('specialty_id', (int) $id));
             })
             ->when($filter['submittedDate'] ?? $filter['submitted_at'] ?? null, fn (Builder $query, string $date) => $query->whereDate('submitted_at', $date))
-            ->when($filter['completeness'] ?? null, function (Builder $query, string $completeness): void {
-                if ($completeness === 'empty') {
-                    $query->whereDoesntHave('documents')->where(fn (Builder $query) => $query->where('documents_provided', false)->orWhereNull('documents_provided'));
-                } elseif ($completeness === 'complete') {
-                    $query->where('documents_provided', true);
-                } elseif ($completeness === 'incomplete') {
-                    $query->where(fn (Builder $query) => $query->where('documents_provided', false)->orWhereNull('documents_provided'));
+            ->when($filter['documents_status'] ?? $filter['documentsStatus'] ?? $filter['completeness'] ?? null, function (Builder $query, string $status): void {
+                $status = $status === 'empty' ? 'no_documents' : $status;
+                $required = ApplicantApplicationDocumentService::REQUIRED_DOCUMENTS_COUNT;
+
+                if ($status === 'no_documents') {
+                    $query->whereDoesntHave('documents', fn (Builder $query) => $query->where('is_received', true));
+                } elseif ($status === 'complete') {
+                    $query->whereHas('documents', fn (Builder $query) => $query->where('is_received', true), '>=', $required);
+                } elseif ($status === 'incomplete') {
+                    $query
+                        ->whereHas('documents', fn (Builder $query) => $query->where('is_received', true), '>=', 1)
+                        ->whereHas('documents', fn (Builder $query) => $query->where('is_received', true), '<', $required);
                 }
             });
     }

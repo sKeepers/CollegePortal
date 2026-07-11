@@ -74,11 +74,22 @@ class ApplicantApplicationController extends Controller
         $filter = $this->filterFromRequest($request);
         $base = fn () => $this->selectionResolver->applyAdmissionSelection(ApplicantApplication::query(), ['filter' => $filter]);
 
+        $requiredDocumentsCount = ApplicantApplicationDocumentService::REQUIRED_DOCUMENTS_COUNT;
+
         $stats = [
             'total' => (clone $base())->count(),
             'new' => (clone $base())->where('status', 'new')->count(),
-            'incomplete' => (clone $base())->where(fn ($query) => $query->where('documents_provided', false)->orWhereNull('documents_provided'))->count(),
-            'documents_provided' => (clone $base())->where('documents_provided', true)->count(),
+            'no_documents' => (clone $base())->whereDoesntHave('documents', fn ($query) => $query->where('is_received', true))->count(),
+            'incomplete' => (clone $base())
+                ->whereHas('documents', fn ($query) => $query->where('is_received', true), '>=', 1)
+                ->whereHas('documents', fn ($query) => $query->where('is_received', true), '<', $requiredDocumentsCount)
+                ->count(),
+            'complete' => (clone $base())->whereHas('documents', fn ($query) => $query->where('is_received', true), '>=', $requiredDocumentsCount)->count(),
+            'documents_provided' => (clone $base())
+                ->where(fn ($query) => $query
+                    ->where('documents_provided', true)
+                    ->orWhereHas('documents', fn ($query) => $query->where('is_received', true)))
+                ->count(),
             'ready' => (clone $base())->where('status', 'ready_for_enrollment')->count(),
             'recommended' => (clone $base())->where('recommended_for_enrollment', true)->count(),
             'enrolled' => (clone $base())->where('status', 'enrolled')->count(),
@@ -95,6 +106,7 @@ class ApplicantApplicationController extends Controller
             'status' => $request->query('status'),
             'specialtyId' => $request->query('specialtyId', $request->query('specialty_id')),
             'educationProgramId' => $request->query('educationProgramId', $request->query('education_program_id')),
+            'documents_status' => $request->query('documents_status', $request->query('documentsStatus', $request->query('completeness'))),
             'completeness' => $request->query('completeness'),
             'submittedDate' => $request->query('submittedDate', $request->query('submitted_at')),
         ];

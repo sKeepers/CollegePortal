@@ -83,6 +83,7 @@ const canSelectAllFiltered = computed(() => !selectAllFiltered.value && pageSele
 const hasBulkSelection = computed(() => selectedCount.value > 0)
 
 const columns = [
+  { name: 'row_number', label: '№', field: 'row_number', align: 'right', style: 'width: 52px;', headerStyle: 'width: 52px;' },
   { name: 'applicant', label: 'Абитуриент', field: 'last_name', align: 'left', sortable: true, style: 'width: 30%; max-width: 250px;', headerStyle: 'width: 30%;' },
   { name: 'program', label: 'Специальность / программа', field: 'education_program_id', align: 'left', sortable: true, style: 'width: 34%; max-width: 300px;', headerStyle: 'width: 34%;' },
   { name: 'status', label: 'Статус и документы', field: 'status', align: 'left', sortable: true, style: 'width: 26%; min-width: 170px;', headerStyle: 'width: 26%;' },
@@ -179,6 +180,22 @@ async function applyBulkAction() {
   }
 }
 
+function documentTone(application) {
+  const status = documentsCompleteness(application)
+
+  if (status === 'complete') return 'success'
+  if (status === 'no_documents') return 'danger'
+  return 'warning'
+}
+
+function rowNumber(props) {
+  const rowsPerPage = Number(tablePagination.value.rowsPerPage || 0)
+  const page = Number(tablePagination.value.page || 1)
+  const index = Number(props.pageIndex ?? props.rowIndex ?? 0)
+
+  return rowsPerPage === 0 ? index + 1 : ((page - 1) * rowsPerPage) + index + 1
+}
+
 function applicationTitle(application) {
   return applicantName(application) || `Заявление #${application?.id}`
 }
@@ -215,11 +232,15 @@ function routeProgram() {
   return route.query.program ? String(route.query.program) : ''
 }
 
+function routeDocumentsStatus() {
+  return route.query.documents ? String(route.query.documents) : ''
+}
+
 function routeAction() {
   return route.query.action ? String(route.query.action) : ''
 }
 
-async function syncAdmissionQuery({ selectedId = routeSelectedId(), searchText = routeSearchText(), status = routeStatus(), program = routeProgram() }) {
+async function syncAdmissionQuery({ selectedId = routeSelectedId(), searchText = routeSearchText(), status = routeStatus(), program = routeProgram(), documentsStatus = routeDocumentsStatus() }) {
   const query = { ...route.query }
 
   if (selectedId) {
@@ -244,6 +265,12 @@ async function syncAdmissionQuery({ selectedId = routeSelectedId(), searchText =
     query.program = program
   } else {
     delete query.program
+  }
+
+  if (documentsStatus) {
+    query.documents = documentsStatus
+  } else {
+    delete query.documents
   }
 
   syncingQueryFromUi.value = true
@@ -297,6 +324,7 @@ async function applyFilters(filters) {
     searchText: filters.search,
     status: filters.status,
     program: filters.educationProgramId,
+    documentsStatus: filters.documentsStatus,
   })
   await loadAdmissions()
 }
@@ -304,7 +332,7 @@ async function applyFilters(filters) {
 async function resetFilters() {
   requestSelectionReset()
   store.resetFilters()
-  await syncAdmissionQuery({ selectedId: '', searchText: '', status: '', program: '' })
+  await syncAdmissionQuery({ selectedId: '', searchText: '', status: '', program: '', documentsStatus: '' })
   await loadAdmissions()
 }
 
@@ -313,18 +341,18 @@ async function applyQuickQueue(queue) {
   const filters = {
     ...store.filters,
     status: queue.status,
-    completeness: queue.completeness,
+    documentsStatus: queue.documentsStatus || '',
   }
 
   if (queue.key === 'all') {
     store.resetFilters()
-    await syncAdmissionQuery({ selectedId: '', searchText: '', status: '', program: '' })
+    await syncAdmissionQuery({ selectedId: '', searchText: '', status: '', program: '', documentsStatus: '' })
     await loadAdmissions()
     return
   }
 
   store.setFilters(filters)
-  await syncAdmissionQuery({ selectedId: '', searchText: filters.search, status: filters.status, program: filters.educationProgramId })
+  await syncAdmissionQuery({ selectedId: '', searchText: filters.search, status: filters.status, program: filters.educationProgramId, documentsStatus: filters.documentsStatus })
   await loadAdmissions()
 }
 
@@ -361,7 +389,7 @@ async function updateDocument(document, payload) {
 }
 
 watch(
-  () => [route.query.selected, route.query.search, route.query.status, route.query.program, route.query.action],
+  () => [route.query.selected, route.query.search, route.query.status, route.query.program, route.query.documents, route.query.action],
   async () => {
     if (syncingQueryFromUi.value) {
       return
@@ -371,6 +399,7 @@ watch(
       search: routeSearchText(),
       status: routeStatus(),
       educationProgramId: routeProgram(),
+      documentsStatus: routeDocumentsStatus(),
     })
     await loadAdmissions()
     store.selectApplicationById(routeSelectedId())
@@ -387,6 +416,7 @@ onMounted(async () => {
     search: routeSearchText(),
     status: routeStatus(),
     educationProgramId: routeProgram(),
+    documentsStatus: routeDocumentsStatus(),
   })
   store.selectApplicationById(routeSelectedId())
   await loadAdmissions()
@@ -536,6 +566,12 @@ onMounted(async () => {
           @request="handleTableRequest"
           @row-click="(_, row) => selectApplication(row)"
         >
+          <template #body-cell-row_number="props">
+            <q-td :props="props" class="text-grey-7">
+              {{ rowNumber(props) }}
+            </q-td>
+          </template>
+
           <template #body-cell-applicant="props">
             <q-td :props="props">
               <button class="admissions-row-link" type="button" @click.stop="selectApplication(props.row)">
@@ -563,7 +599,7 @@ onMounted(async () => {
                 <AppStatusBadge :label="statusLabel(props.row.status)" :tone="statusTone(props.row.status)" />
                 <AppStatusBadge
                   :label="documentsCompletenessLabel(props.row)"
-                  :tone="documentsCompleteness(props.row) === 'complete' ? 'success' : 'warning'"
+                  :tone="documentTone(props.row)"
                 />
               </div>
             </q-td>

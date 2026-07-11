@@ -33,7 +33,7 @@ const localFilters = reactive({
   status: '',
   specialtyId: '',
   educationProgramId: '',
-  completeness: '',
+  documentsStatus: '',
   submittedDate: '',
 })
 
@@ -42,7 +42,7 @@ const activeChips = computed(() => {
   const selectedStatus = props.statusOptions.find((status) => status.value === localFilters.status)
   const selectedSpecialty = props.specialtyOptions.find((specialty) => Number(specialty.value) === Number(localFilters.specialtyId))
   const selectedProgram = props.educationProgramOptions.find((program) => Number(program.value) === Number(localFilters.educationProgramId))
-  const selectedCompleteness = COMPLETENESS_OPTIONS.find((option) => option.value === localFilters.completeness)
+  const selectedCompleteness = COMPLETENESS_OPTIONS.find((option) => option.value === localFilters.documentsStatus)
 
   if (localFilters.search) {
     chips.push({ key: 'search', label: `Поиск: ${localFilters.search}` })
@@ -60,8 +60,8 @@ const activeChips = computed(() => {
     chips.push({ key: 'educationProgramId', label: `Программа: ${selectedProgram?.label || localFilters.educationProgramId}` })
   }
 
-  if (localFilters.completeness) {
-    chips.push({ key: 'completeness', label: `Документы: ${selectedCompleteness?.label || localFilters.completeness}` })
+  if (localFilters.documentsStatus) {
+    chips.push({ key: 'documentsStatus', label: `Документы: ${selectedCompleteness?.label || localFilters.documentsStatus}` })
   }
 
   if (localFilters.submittedDate) {
@@ -79,7 +79,7 @@ watch(
       status: value.status || '',
       specialtyId: value.specialtyId || '',
       educationProgramId: value.educationProgramId || '',
-      completeness: value.completeness || '',
+      documentsStatus: value.documentsStatus || value.completeness || '',
       submittedDate: value.submittedDate || '',
     })
   },
@@ -97,7 +97,7 @@ function resetFilters() {
     status: '',
     specialtyId: '',
     educationProgramId: '',
-    completeness: '',
+    documentsStatus: '',
     submittedDate: '',
   })
   emit('update:modelValue', { ...localFilters })
@@ -152,7 +152,7 @@ function removeChip(key) {
       :options="educationProgramOptions"
     />
     <q-select
-      v-model="localFilters.completeness"
+      v-model="localFilters.documentsStatus"
       dense
       outlined
       clearable

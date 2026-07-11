@@ -53,6 +53,11 @@ const selectedProgram = computed(() => props.application?.education_program || n
 const selectedSpecialty = computed(() => selectedProgram.value?.specialty || null)
 const completeness = computed(() => documentsCompleteness(props.application))
 const canEnroll = computed(() => props.application?.status !== 'enrolled' && completeness.value === 'complete')
+const completenessTone = computed(() => {
+  if (completeness.value === 'complete') return 'success'
+  if (completeness.value === 'no_documents') return 'danger'
+  return 'warning'
+})
 
 const specialtyText = computed(() => {
   const specialty = selectedSpecialty.value
@@ -136,7 +141,7 @@ function toggleDocument(document) {
   >
     <template #status>
       <AppStatusBadge :label="statusLabel(application.status)" :tone="statusTone(application.status)" />
-      <AppStatusBadge :label="documentsCompletenessLabel(application)" :tone="completeness === 'complete' ? 'success' : 'warning'" />
+      <AppStatusBadge :label="documentsCompletenessLabel(application)" :tone="completenessTone" />
     </template>
 
     <template #actions>

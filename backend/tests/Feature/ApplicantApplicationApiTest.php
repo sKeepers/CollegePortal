@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ApplicantApplication;
+use App\Models\ApplicantApplicationDocument;
 use App\Models\EducationProgram;
 use App\Models\Group;
 use App\Models\Specialty;
@@ -177,6 +178,64 @@ class ApplicantApplicationApiTest extends TestCase
             ->assertJsonPath('data.created', 0)
             ->assertJsonPath('data.updated', 0)
             ->assertJsonPath('data.errors.0.line', 2);
+    }
+
+    public function test_it_filters_applicant_applications_by_document_status(): void
+    {
+        $program = $this->createProgram();
+        $noDocuments = ApplicantApplication::create($this->payload($program, [
+            'last_name' => 'БезДокументов',
+            'email' => 'no-documents@example.test',
+        ]));
+        $incomplete = ApplicantApplication::create($this->payload($program, [
+            'last_name' => 'Неполный',
+            'email' => 'incomplete-documents@example.test',
+        ]));
+        $complete = ApplicantApplication::create($this->payload($program, [
+            'last_name' => 'Полный',
+            'email' => 'complete-documents@example.test',
+        ]));
+
+        $this->receiveDocuments($incomplete, 3);
+        $this->receiveDocuments($complete, 6);
+
+        $this->getJson('/api/applicant-applications?documents_status=no_documents&per_page=0')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $noDocuments->id)
+            ->assertJsonPath('data.0.documents_status', 'no_documents')
+            ->assertJsonPath('data.0.documents_count', 0)
+            ->assertJsonPath('data.0.required_documents_count', 6)
+            ->assertJsonPath('data.0.documents_missing_count', 6)
+            ->assertJsonPath('data.0.documents_complete', false);
+
+        $this->getJson('/api/applicant-applications?documents_status=incomplete&per_page=0')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $incomplete->id)
+            ->assertJsonPath('data.0.documents_status', 'incomplete')
+            ->assertJsonPath('data.0.documents_count', 3)
+            ->assertJsonPath('data.0.required_documents_count', 6)
+            ->assertJsonPath('data.0.documents_missing_count', 3)
+            ->assertJsonPath('data.0.documents_complete', false);
+
+        $this->getJson('/api/applicant-applications?documents_status=complete&per_page=0')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $complete->id)
+            ->assertJsonPath('data.0.documents_status', 'complete')
+            ->assertJsonPath('data.0.documents_count', 6)
+            ->assertJsonPath('data.0.required_documents_count', 6)
+            ->assertJsonPath('data.0.documents_missing_count', 0)
+            ->assertJsonPath('data.0.documents_complete', true);
+
+        $this->getJson('/api/admissions/stats')
+            ->assertOk()
+            ->assertJsonPath('data.total', 3)
+            ->assertJsonPath('data.no_documents', 1)
+            ->assertJsonPath('data.incomplete', 1)
+            ->assertJsonPath('data.complete', 1)
+            ->assertJsonPath('data.documents_provided', 2);
     }
 
     public function test_it_updates_applicant_application_document_status(): void
@@ -356,6 +415,26 @@ class ApplicantApplicationApiTest extends TestCase
             'course' => 1,
             'year_start' => 2026,
         ]);
+    }
+
+    private function receiveDocuments(ApplicantApplication $application, int $count): void
+    {
+        foreach (array_slice([
+            'passport' => 'Паспорт',
+            'education_document' => 'Документ об образовании',
+            'snils' => 'СНИЛС',
+            'consent' => 'Согласие на обработку персональных данных',
+            'photo' => 'Фотография',
+            'medical_certificate' => 'Медицинская справка',
+        ], 0, $count) as $type => $title) {
+            ApplicantApplicationDocument::create([
+                'applicant_application_id' => $application->id,
+                'type' => $type,
+                'title' => $title,
+                'is_received' => true,
+                'received_at' => now(),
+            ]);
+        }
     }
 
     private function receiveAllDocuments(ApplicantApplication $application): void

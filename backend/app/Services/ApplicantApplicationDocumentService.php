@@ -7,6 +7,8 @@ use App\Models\ApplicantApplicationDocument;
 
 class ApplicantApplicationDocumentService
 {
+    public const REQUIRED_DOCUMENTS_COUNT = 6;
+
     private const DEFAULT_DOCUMENTS = [
         'passport' => 'Паспорт',
         'education_document' => 'Документ об образовании',

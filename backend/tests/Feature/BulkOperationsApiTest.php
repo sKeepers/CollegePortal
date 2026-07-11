@@ -209,7 +209,8 @@ class BulkOperationsApiTest extends TestCase
         $this->getJson('/api/admissions/stats')
             ->assertOk()
             ->assertJsonPath('data.total', 152)
-            ->assertJsonPath('data.incomplete', 152)
+            ->assertJsonPath('data.no_documents', 152)
+            ->assertJsonPath('data.incomplete', 0)
             ->assertJsonPath('data.enrolled', 10);
 
         $firstPageIds = ApplicantApplication::query()->orderBy('id')->take(50)->pluck('id')->all();
@@ -228,7 +229,10 @@ class BulkOperationsApiTest extends TestCase
         $this->getJson('/api/admissions/stats')
             ->assertOk()
             ->assertJsonPath('data.total', 152)
-            ->assertJsonPath('data.incomplete', 102);
+            ->assertJsonPath('data.no_documents', 102)
+            ->assertJsonPath('data.incomplete', 0)
+            ->assertJsonPath('data.complete', 50)
+            ->assertJsonPath('data.documents_provided', 50);
 
         $preview = $this->postJson('/api/admissions/bulk/preview', [
             'filter' => ['page' => 1, 'per_page' => 50, 'rowsPerPage' => 50, 'limit' => 50],
@@ -255,7 +259,12 @@ class BulkOperationsApiTest extends TestCase
             ->assertJsonPath('data.already_set', 50);
 
         $this->assertSame(152, ApplicantApplication::where('documents_provided', true)->count());
-        $this->getJson('/api/admissions/stats')->assertOk()->assertJsonPath('data.incomplete', 0);
+        $this->getJson('/api/admissions/stats')
+            ->assertOk()
+            ->assertJsonPath('data.no_documents', 0)
+            ->assertJsonPath('data.incomplete', 0)
+            ->assertJsonPath('data.complete', 152)
+            ->assertJsonPath('data.documents_provided', 152);
     }
 
     public function test_dashboard_admissions_without_documents_matches_admissions_aggregate(): void
@@ -273,12 +282,14 @@ class BulkOperationsApiTest extends TestCase
         }
 
         $stats = $this->getJson('/api/admissions/stats')->assertOk()->json('data');
-        $this->assertSame(2, $stats['incomplete']);
+        $this->assertSame(3, $stats['no_documents']);
+        $this->assertSame(0, $stats['incomplete']);
+        $this->assertSame(1, $stats['documents_provided']);
 
         $dashboard = $this->getJson('/api/dashboard/analytics/executive')->assertOk()->json('data.attention');
         $withoutDocuments = collect($dashboard)->firstWhere('title', 'Заявления без документов');
 
-        $this->assertSame($stats['incomplete'], $withoutDocuments['value']);
+        $this->assertSame($stats['no_documents'], $withoutDocuments['value']);
     }
 
     public function test_bulk_operations_require_exact_permissions(): void

@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
+use App\Services\ApplicantApplicationDocumentService;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class ApplicantApplicationResource extends JsonResource
@@ -40,6 +41,16 @@ class ApplicantApplicationResource extends JsonResource
             'documents' => ApplicantApplicationDocumentResource::collection($this->whenLoaded('documents')),
             'documents_received_count' => $this->whenLoaded('documents', fn () => $this->documents->where('is_received', true)->count()),
             'documents_total_count' => $this->whenLoaded('documents', fn () => $this->documents->count()),
+            'documents_count' => $this->whenLoaded('documents', fn () => $this->documents->where('is_received', true)->count()),
+            'required_documents_count' => $this->whenLoaded('documents', fn () => max(ApplicantApplicationDocumentService::REQUIRED_DOCUMENTS_COUNT, $this->documents->count())),
+            'documents_missing_count' => $this->whenLoaded('documents', fn () => max(0, max(ApplicantApplicationDocumentService::REQUIRED_DOCUMENTS_COUNT, $this->documents->count()) - $this->documents->where('is_received', true)->count())),
+            'documents_complete' => $this->whenLoaded('documents', fn () => $this->documents->where('is_received', true)->count() >= max(ApplicantApplicationDocumentService::REQUIRED_DOCUMENTS_COUNT, $this->documents->count())),
+            'documents_status' => $this->whenLoaded('documents', function () {
+                $received = $this->documents->where('is_received', true)->count();
+                $required = max(ApplicantApplicationDocumentService::REQUIRED_DOCUMENTS_COUNT, $this->documents->count());
+
+                return $received === 0 ? 'no_documents' : ($received >= $required ? 'complete' : 'incomplete');
+            }),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

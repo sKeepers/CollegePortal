@@ -14,6 +14,7 @@ use App\Models\ScheduleLesson;
 use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\TeachingLoadItem;
+use App\Services\ApplicantApplicationDocumentService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
 
@@ -138,7 +139,14 @@ class DashboardAnalyticsService
     private function attentionItems($frdoErrors, $fisErrors, array $attendance = []): array
     {
         $studentsWithoutPhoto = Student::query()->whereNull('photo_path')->count();
-        $applicationsWithoutDocuments = ApplicantApplication::query()->where(fn ($query) => $query->where('documents_provided', false)->orWhereNull('documents_provided'))->count();
+        $requiredDocumentsCount = ApplicantApplicationDocumentService::REQUIRED_DOCUMENTS_COUNT;
+        $applicationsWithoutDocuments = ApplicantApplication::query()
+            ->whereDoesntHave('documents', fn ($query) => $query->where('is_received', true))
+            ->count();
+        $applicationsIncompleteDocuments = ApplicantApplication::query()
+            ->whereHas('documents', fn ($query) => $query->where('is_received', true), '>=', 1)
+            ->whereHas('documents', fn ($query) => $query->where('is_received', true), '<', $requiredDocumentsCount)
+            ->count();
         $frdoErrorCount = $frdoErrors->sum('validation_errors_count');
         $fisErrorCount = $fisErrors->sum('validation_errors_count');
 
@@ -150,7 +158,8 @@ class DashboardAnalyticsService
             ['title' => 'Студенты опоздали сверх порога', 'value' => $attendanceAttention['students_late_over_threshold']['count'] ?? 0, 'tone' => ($attendanceAttention['students_late_over_threshold']['count'] ?? 0) > 0 ? 'warning' : 'success', 'to' => '/attendance?type=students&status=late'],
             ['title' => 'Расписание без входа', 'value' => $attendanceAttention['schedule_without_entry']['count'] ?? 0, 'tone' => ($attendanceAttention['schedule_without_entry']['count'] ?? 0) > 0 ? 'danger' : 'success', 'to' => '/attendance?status=absent'],
             ['title' => 'Студенты без фото', 'value' => $studentsWithoutPhoto, 'tone' => $studentsWithoutPhoto > 0 ? 'warning' : 'success', 'to' => '/students'],
-            ['title' => 'Заявления без документов', 'value' => $applicationsWithoutDocuments, 'tone' => $applicationsWithoutDocuments > 0 ? 'warning' : 'success', 'to' => '/admissions'],
+            ['title' => 'Заявления без документов', 'value' => $applicationsWithoutDocuments, 'tone' => $applicationsWithoutDocuments > 0 ? 'warning' : 'success', 'to' => '/admissions?documents=no_documents'],
+            ['title' => 'Заявления с неполным комплектом', 'value' => $applicationsIncompleteDocuments, 'tone' => $applicationsIncompleteDocuments > 0 ? 'warning' : 'success', 'to' => '/admissions?documents=incomplete'],
             ['title' => 'Ошибки ФРДО', 'value' => $frdoErrorCount, 'tone' => $frdoErrorCount > 0 ? 'danger' : 'success', 'to' => '/frdo'],
             ['title' => 'Ошибки ФИС', 'value' => $fisErrorCount, 'tone' => $fisErrorCount > 0 ? 'danger' : 'success', 'to' => '/fis'],
         ])->values()->all();

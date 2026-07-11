@@ -7,7 +7,7 @@ const initialFilters = {
   status: '',
   specialtyId: '',
   educationProgramId: '',
-  completeness: '',
+  documentsStatus: '',
   submittedDate: '',
 }
 
@@ -25,9 +25,10 @@ export const EDUCATION_BASE_OPTIONS = [
 ]
 
 export const COMPLETENESS_OPTIONS = [
-  { label: 'Полный комплект', value: 'complete' },
+  { label: 'Все', value: '' },
+  { label: 'Без документов', value: 'no_documents' },
   { label: 'Неполный комплект', value: 'incomplete' },
-  { label: 'Без документов', value: 'empty' },
+  { label: 'Полный комплект', value: 'complete' },
 ]
 
 function extractRows(payload) {
@@ -69,20 +70,25 @@ export function programLabel(program) {
 
 function documentCounts(application) {
   const documents = Array.isArray(application?.documents) ? application.documents : []
-  const total = Number(application?.documents_total_count ?? documents.length ?? 0)
-  const received = Number(application?.documents_received_count ?? documents.filter((document) => document.is_received).length ?? 0)
+  const required = Number(application?.required_documents_count ?? application?.documents_total_count ?? documents.length ?? 6)
+  const received = Number(application?.documents_count ?? application?.documents_received_count ?? documents.filter((document) => document.is_received).length ?? 0)
+  const missing = Number(application?.documents_missing_count ?? Math.max(0, required - received))
 
-  return { total, received }
+  return { required, received, missing }
 }
 
 export function documentsCompleteness(application) {
-  const { total, received } = documentCounts(application)
-
-  if (!total) {
-    return 'empty'
+  if (application?.documents_status) {
+    return application.documents_status
   }
 
-  return received >= total ? 'complete' : 'incomplete'
+  const { required, received } = documentCounts(application)
+
+  if (received === 0) {
+    return 'no_documents'
+  }
+
+  return received >= required ? 'complete' : 'incomplete'
 }
 
 export function formatDate(value) {
@@ -126,13 +132,16 @@ export function formatDateTime(value) {
 }
 
 export function documentsCompletenessLabel(application) {
-  const { total, received } = documentCounts(application)
+  const { required, received } = documentCounts(application)
+  const status = documentsCompleteness(application)
 
-  if (!total) {
-    return 'Документы не заведены'
+  if (status === 'no_documents') {
+    return `Без документов: ${received}/${required}`
   }
 
-  return received >= total ? `Полный комплект: ${received}/${total}` : `Неполный комплект: ${received}/${total}`
+  return status === 'complete'
+    ? `Полный комплект: ${received}/${required}`
+    : `Неполный комплект: ${received}/${required}`
 }
 
 function cleanPayload(payload) {
@@ -161,7 +170,7 @@ function apiFilters(filters) {
     status: filters.status,
     specialtyId: filters.specialtyId,
     educationProgramId: filters.educationProgramId,
-    completeness: filters.completeness,
+    documents_status: filters.documentsStatus || filters.completeness,
     submittedDate: filters.submittedDate,
   }
 }
@@ -172,7 +181,7 @@ export const useAdmissionsStore = defineStore('admissions', () => {
   const groups = ref([])
   const filters = ref({ ...initialFilters })
   const pagination = ref(null)
-  const stats = ref({ total: 0, new: 0, incomplete: 0, documents_provided: 0, ready: 0, recommended: 0, enrolled: 0, rejected: 0 })
+  const stats = ref({ total: 0, new: 0, no_documents: 0, incomplete: 0, complete: 0, documents_provided: 0, ready: 0, recommended: 0, enrolled: 0, rejected: 0 })
   const selectedId = ref(null)
   const loading = ref(false)
   const saving = ref(false)
@@ -218,14 +227,15 @@ export const useAdmissionsStore = defineStore('admissions', () => {
   ))
 
   const quickQueues = computed(() => [
-    { key: 'new', label: 'Новые', value: stats.value.new || 0, status: 'new', completeness: '', tone: 'info' },
-    { key: 'incomplete', label: 'Неполный комплект', value: stats.value.incomplete || 0, status: '', completeness: 'incomplete', tone: 'warning' },
-    { key: 'documents_provided', label: 'Документы предоставлены', value: stats.value.documents_provided || 0, status: '', completeness: 'complete', tone: 'success' },
-    { key: 'ready', label: 'Готовы к зачислению', value: stats.value.ready || 0, status: 'ready_for_enrollment', completeness: '', tone: 'success' },
-    { key: 'recommended', label: 'Рекомендованы', value: stats.value.recommended || 0, status: '', completeness: '', tone: 'info' },
-    { key: 'enrolled', label: 'Зачислены', value: stats.value.enrolled || 0, status: 'enrolled', completeness: '', tone: 'success' },
-    { key: 'rejected', label: 'Отклонены', value: stats.value.rejected || 0, status: 'rejected', completeness: '', tone: 'danger' },
-    { key: 'all', label: 'Всего', value: stats.value.total || 0, status: '', completeness: '', tone: 'neutral' },
+    { key: 'new', label: 'Новые', value: stats.value.new || 0, status: 'new', documentsStatus: '', tone: 'info' },
+    { key: 'no_documents', label: 'Без документов', value: stats.value.no_documents || 0, status: '', documentsStatus: 'no_documents', tone: 'danger' },
+    { key: 'incomplete', label: 'Неполный комплект', value: stats.value.incomplete || 0, status: '', documentsStatus: 'incomplete', tone: 'warning' },
+    { key: 'documents_provided', label: 'Документы предоставлены', value: stats.value.documents_provided || 0, status: '', documentsStatus: '', tone: 'success' },
+    { key: 'ready', label: 'Готовы к зачислению', value: stats.value.ready || 0, status: 'ready_for_enrollment', documentsStatus: '', tone: 'success' },
+    { key: 'recommended', label: 'Рекомендованы', value: stats.value.recommended || 0, status: '', documentsStatus: '', tone: 'info' },
+    { key: 'enrolled', label: 'Зачислены', value: stats.value.enrolled || 0, status: 'enrolled', documentsStatus: '', tone: 'success' },
+    { key: 'rejected', label: 'Отклонены', value: stats.value.rejected || 0, status: 'rejected', documentsStatus: '', tone: 'danger' },
+    { key: 'all', label: 'Всего', value: stats.value.total || 0, status: '', documentsStatus: '', tone: 'neutral' },
   ])
 
   const filteredApplications = computed(() => applications.value)
@@ -249,7 +259,7 @@ export const useAdmissionsStore = defineStore('admissions', () => {
       ])
 
       applications.value = extractRows(applicationsPayload)
-      stats.value = statsPayload?.data || { total: 0, new: 0, incomplete: 0, documents_provided: 0, ready: 0, recommended: 0, enrolled: 0, rejected: 0 }
+      stats.value = statsPayload?.data || { total: 0, new: 0, no_documents: 0, incomplete: 0, complete: 0, documents_provided: 0, ready: 0, recommended: 0, enrolled: 0, rejected: 0 }
       educationPrograms.value = extractRows(programsPayload)
       groups.value = extractRows(groupsPayload)
       pagination.value = extractMeta(applicationsPayload) || {
