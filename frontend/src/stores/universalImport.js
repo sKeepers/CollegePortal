@@ -106,7 +106,58 @@ export const useUniversalImportStore = defineStore('universalImport', () => {
     }
   }
 
+
+  async function fisAnalyze(file) {
+    return fisUpload('admin/import/fis-admissions/analyze', file, 'Не удалось распознать файл ФИС')
+  }
+
+  async function fisDryRun(file) {
+    return fisUpload('admin/import/fis-admissions/dry-run', file, 'Не удалось выполнить dry-run ФИС')
+  }
+
+  async function fisApply(jobId, file = null) {
+    saving.value = true
+    error.value = ''
+    try {
+      let payload
+      if (jobId) {
+        payload = await api.create('admin/import/fis-admissions/apply', { job_id: jobId })
+      } else {
+        const formData = new FormData()
+        formData.append('file', file)
+        payload = await api.upload('/admin/import/fis-admissions/apply', formData)
+      }
+      currentJob.value = extractData(payload)
+      await loadHistory('applicants')
+      return currentJob.value
+    } catch (err) {
+      error.value = err.message || 'Не удалось применить импорт ФИС'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function fisUpload(path, file, fallbackMessage) {
+    if (!file) return null
+    saving.value = true
+    error.value = ''
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const payload = await api.upload(`/${path}`, formData)
+      currentJob.value = extractData(payload)
+      await loadHistory('applicants')
+      return currentJob.value
+    } catch (err) {
+      error.value = err.message || fallbackMessage
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
   function resetJob() { currentJob.value = null }
 
-  return { config, history, currentJob, loading, saving, error, typeOptions, modeOptions, selectedTypeConfig, loadConfig, loadHistory, preview, validate, confirm, downloadTemplate, resetJob }
+  return { config, history, currentJob, loading, saving, error, typeOptions, modeOptions, selectedTypeConfig, loadConfig, loadHistory, preview, validate, confirm, downloadTemplate, fisAnalyze, fisDryRun, fisApply, resetJob }
 })

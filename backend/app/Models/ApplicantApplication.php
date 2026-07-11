@@ -10,7 +10,12 @@ class ApplicantApplication extends Model
 {
     protected $fillable = [
         'person_id',
+        'external_source',
+        'external_application_number',
+        'external_status',
+        'external_registered_at',
         'education_program_id',
+        'competition_name',
         'last_name',
         'first_name',
         'middle_name',
@@ -18,8 +23,16 @@ class ApplicantApplication extends Model
         'phone',
         'email',
         'education_base',
+        'education_form',
+        'funding_form',
         'status',
         'submitted_at',
+        'certificate_average_score',
+        'achievement_score',
+        'ranking_score',
+        'documents_provided',
+        'recommended_for_enrollment',
+        'fis_raw_data',
         'comment',
     ];
 
@@ -28,6 +41,13 @@ class ApplicantApplication extends Model
         return [
             'birth_date' => 'date',
             'submitted_at' => 'date',
+            'external_registered_at' => 'date',
+            'certificate_average_score' => 'decimal:2',
+            'achievement_score' => 'decimal:2',
+            'ranking_score' => 'decimal:2',
+            'documents_provided' => 'boolean',
+            'recommended_for_enrollment' => 'boolean',
+            'fis_raw_data' => 'array',
         ];
     }
 

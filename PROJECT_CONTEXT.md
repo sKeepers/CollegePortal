@@ -1101,3 +1101,7 @@ Frontend action-level RBAC доведен до основных CRUD и сист
 ### PERSON-001: Unified Person Foundation
 
 Добавлена foundation-сущность `Person`: таблица `people`, nullable `person_id` в профилях студентов, преподавателей, заявлений абитуриентов, выпускников и цифровых пропусков, read-only API `/api/people`, frontend-раздел `/people` и команда `php artisan person:link-existing`. Старые API и таблицы остаются совместимыми; поля ФИО/контактов/фото в профилях не удаляются.
+
+## FIS Admissions Import
+
+Добавлен специализированный импорт заявлений из экспорта ФИС ГИА и Приема: `FisAdmissionsImportHandler`, API `/api/admin/import/fis-admissions/*`, UI-источник на `/admin/import`, история в `import_jobs`, сопоставление с `Person`.

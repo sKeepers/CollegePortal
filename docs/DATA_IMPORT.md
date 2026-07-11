@@ -197,3 +197,7 @@
 - `ScheduleImportHandler`.
 
 Все обработчики реализуют `ImportHandlerInterface`. Поведение `/admin/import`, API и формат ответов не изменялись.
+
+## ФИС ГИА и Приема
+
+Для заявлений абитуриентов используется специализированный источник `ФИС ГИА и Приема` на странице `/admin/import`. Он читает `.xls/.xlsx`, выполняет analyze/dry-run/apply, использует Person Foundation и не сохраняет паспортные данные в открытом виде. Подробности: `docs/FIS_ADMISSIONS_IMPORT.md`.

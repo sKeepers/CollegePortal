@@ -22,3 +22,8 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Private import files with real personal data
+storage/app/private/imports/
+backend/storage/app/private/imports/
+*.xls

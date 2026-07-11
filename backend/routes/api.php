@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\DashboardLayoutController;
 use App\Http\Controllers\Api\ExamController;
 use App\Http\Controllers\Api\FrdoPackageController;
 use App\Http\Controllers\Api\FisPackageController;
+use App\Http\Controllers\Api\FisAdmissionsImportController;
 use App\Http\Controllers\Api\EducationProgramController;
 use App\Http\Controllers\Api\GradeController;
 use App\Http\Controllers\Api\GraduateController;
@@ -94,6 +95,10 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('admin/import/config', [UniversalImportController::class, 'config']);
         Route::get('admin/import/history', [UniversalImportController::class, 'history']);
         Route::get('admin/import/templates/{dataType}.csv', [UniversalImportController::class, 'template']);
+        Route::post('admin/import/fis-admissions/analyze', [FisAdmissionsImportController::class, 'analyze']);
+        Route::post('admin/import/fis-admissions/dry-run', [FisAdmissionsImportController::class, 'dryRun']);
+        Route::post('admin/import/fis-admissions/apply', [FisAdmissionsImportController::class, 'apply']);
+        Route::get('admin/import/fis-admissions/jobs/{importJob}', [FisAdmissionsImportController::class, 'show']);
         Route::post('admin/import/preview', [UniversalImportController::class, 'preview']);
         Route::post('admin/import/{importJob}/validate', [UniversalImportController::class, 'validateJob']);
         Route::post('admin/import/{importJob}/confirm', [UniversalImportController::class, 'confirm']);

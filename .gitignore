@@ -52,3 +52,8 @@ infra/dev-https/certs/
 *.key
 *.csr
 *.srl
+
+# Private import files with real personal data
+storage/app/private/imports/
+backend/storage/app/private/imports/
+*.xls

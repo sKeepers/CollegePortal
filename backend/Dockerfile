@@ -9,7 +9,13 @@ RUN apt-get update \
         libicu-dev \
         libpq-dev \
         libzip-dev \
+        libpng-dev \
+        libjpeg-dev \
+        libfreetype6-dev \
+    && docker-php-ext-configure \
+        gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
+        gd \
         intl \
         opcache \
         pdo_pgsql \

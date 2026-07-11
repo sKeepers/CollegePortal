@@ -20,6 +20,7 @@ const $q = useQuasar()
 const dataType = ref('students')
 const mode = ref('skip_duplicates')
 const file = ref(null)
+const fisFile = ref(null)
 const mapping = reactive({})
 const previewColumns = computed(() => (store.currentJob?.headers || []).map((header) => ({ name: header, label: header, field: header, align: 'left' })))
 const historyColumns = [
@@ -33,6 +34,8 @@ const selectedTypeConfig = computed(() => store.typeOptions.find((type) => type.
 const fieldOptions = computed(() => (selectedTypeConfig.value?.fields || []).map((field) => ({ label: field.label + (field.required ? ' *' : ''), value: field.value, required: field.required, example: field.example })))
 const headerOptions = computed(() => (store.currentJob?.headers || []).map((header) => ({ label: header, value: header })))
 const result = computed(() => store.currentJob?.result || null)
+const fisResult = computed(() => store.currentJob?.source === 'fis_admissions' ? (store.currentJob?.result || store.currentJob?.metadata || null) : null)
+const canFisApply = computed(() => Boolean(store.currentJob?.source === 'fis_admissions' && store.currentJob?.id && fisResult.value && (fisResult.value.critical_errors || 0) === 0 && (fisResult.value.ambiguous_duplicates || 0) === 0 && (fisResult.value.unresolved_competitions || 0) === 0 && (fisResult.value.total_rows || 0) === 149))
 const errors = computed(() => store.currentJob?.validation_errors || [])
 const canPreview = computed(() => Boolean(dataType.value && file.value))
 const canConfirm = computed(() => Boolean(store.currentJob?.id && Object.keys(mapping).length))
@@ -74,6 +77,25 @@ async function handleDownloadTemplate() {
   $q.notify({ type: 'positive', message: 'Шаблон CSV скачан', position: 'top-right' })
 }
 
+
+async function handleFisAnalyze() {
+  if (!canManage.value || !fisFile.value) return
+  await store.fisAnalyze(fisFile.value)
+  $q.notify({ type: 'positive', message: 'Файл ФИС распознан', position: 'top-right' })
+}
+async function handleFisDryRun() {
+  if (!canManage.value || !fisFile.value) return
+  await store.fisDryRun(fisFile.value)
+  const hasBlockers = (fisResult.value?.critical_errors || 0) > 0 || (fisResult.value?.ambiguous_duplicates || 0) > 0 || (fisResult.value?.unresolved_competitions || 0) > 0
+  $q.notify({ type: hasBlockers ? 'warning' : 'positive', message: hasBlockers ? 'Dry-run ФИС требует проверки' : 'Dry-run ФИС прошел без критических ошибок', position: 'top-right' })
+}
+async function handleFisApply() {
+  if (!canManage.value || !canFisApply.value) return
+  await store.fisApply(store.currentJob.id)
+  $q.notify({ type: 'positive', message: 'Импорт ФИС применен', position: 'top-right' })
+}
+function fisStat(label, value) { return { label, value: value ?? 0 } }
+
 async function handlePreview() {
   if (!canManage.value) return
   await store.preview(dataType.value, file.value)
@@ -110,6 +132,45 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
 
     <div class="universal-import-layout">
       <section class="universal-import-main">
+
+        <AppCard title="ФИС ГИА и Приема" subtitle="Специализированный импорт принятых заявлений из Excel-выгрузки ФИС. Персональные поля в предпросмотре маскируются.">
+          <div class="fis-import-controls">
+            <q-file v-if="canManage" v-model="fisFile" outlined dense accept=".xls,.xlsx" label="Файл ФИС XLS/XLSX"><template #prepend><Upload :size="16" /></template></q-file>
+            <q-btn v-if="canManage" outline color="primary" :disable="!fisFile" :loading="store.saving" @click="handleFisAnalyze">Распознать</q-btn>
+            <q-btn v-if="canManage" color="primary" :disable="!fisFile" :loading="store.saving" @click="handleFisDryRun">Dry-run</q-btn>
+            <q-btn v-if="canManage" color="negative" outline :disable="!canFisApply" :loading="store.saving" @click="handleFisApply">Подтвердить apply</q-btn>
+          </div>
+          <q-stepper flat animated alternative-labels class="fis-import-steps" :model-value="fisResult ? 6 : 1">
+            <q-step :name="1" title="Файл" :done="Boolean(store.currentJob?.source === 'fis_admissions')" />
+            <q-step :name="2" title="Структура" :done="Boolean(fisResult?.headers?.length)" />
+            <q-step :name="3" title="Статистика" :done="Boolean(fisResult?.total_rows)" />
+            <q-step :name="4" title="Конкурсы" :done="Boolean(fisResult && (fisResult.unresolved_competitions || 0) === 0)" />
+            <q-step :name="5" title="Дубли" :done="Boolean(fisResult && (fisResult.ambiguous_duplicates || 0) === 0)" />
+            <q-step :name="6" title="Итог" />
+          </q-stepper>
+          <div v-if="fisResult" class="fis-import-report">
+            <div v-for="item in [fisStat('Строк', fisResult.total_rows), fisStat('Валидных', fisResult.valid_rows), fisStat('Person', fisResult.unique_persons), fisStat('Новых Person', fisResult.new_persons), fisStat('Найдено Person', fisResult.found_persons), fisStat('Новых заявлений', fisResult.applications_to_create), fisStat('Обновлений', fisResult.applications_to_update), fisStat('Неоднозначных дублей', fisResult.ambiguous_duplicates), fisStat('Конкурсов', fisResult.unique_competitions), fisStat('Несопоставлено', fisResult.unresolved_competitions), fisStat('Критических ошибок', fisResult.critical_errors)]" :key="item.label">
+              <span>{{ item.label }}</span><strong>{{ item.value }}</strong>
+            </div>
+          </div>
+          <div v-if="fisResult?.warnings?.length" class="universal-import-errors q-mt-md">
+            <article v-for="warning in fisResult.warnings" :key="warning"><strong>Предупреждение</strong><span>{{ warning }}</span></article>
+          </div>
+          <div v-if="fisResult?.unresolved_competitions_list?.length" class="q-mt-md">
+            <strong>Несопоставленные конкурсы</strong>
+            <div class="universal-import-chips"><q-chip v-for="competition in fisResult.unresolved_competitions_list" :key="competition" dense color="red-1" text-color="red-9">{{ competition }}</q-chip></div>
+          </div>
+          <AppTable v-if="fisResult?.preview_rows?.length" class="q-mt-md" :rows="fisResult.preview_rows" :columns="[
+            { name: 'row', label: 'Строка', field: 'row', align: 'left' },
+            { name: 'application_number', label: '№ заявления', field: 'application_number', align: 'left' },
+            { name: 'fio', label: 'ФИО', field: 'fio', align: 'left' },
+            { name: 'snils', label: 'СНИЛС', field: 'snils', align: 'left' },
+            { name: 'competition', label: 'Конкурс', field: 'competition', align: 'left' },
+            { name: 'person', label: 'Person', field: 'person', align: 'left' },
+            { name: 'application', label: 'Заявление', field: 'application', align: 'left' },
+          ]" :pagination="{ rowsPerPage: 5 }" :rows-per-page-options="[5, 10, 20]" />
+        </AppCard>
+
         <AppCard title="1. Файл и тип данных" subtitle="Выберите раздел, файл CSV/XLSX и режим обработки дублей.">
           <div class="universal-import-controls">
             <q-select v-model="dataType" outlined dense emit-value map-options label="Тип данных" :options="store.typeOptions" />
@@ -203,6 +264,45 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
 
 
 <style scoped>
+
+.fis-import-controls {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto auto auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.fis-import-steps {
+  margin-top: 12px;
+  background: transparent;
+}
+
+.fis-import-report {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.fis-import-report div {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.fis-import-report span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.fis-import-report strong {
+  color: #0f172a;
+  font-size: 18px;
+}
+
 .universal-import-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 400px;
