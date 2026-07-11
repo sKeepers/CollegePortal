@@ -186,14 +186,17 @@ class ApplicantApplicationApiTest extends TestCase
         $noDocuments = ApplicantApplication::create($this->payload($program, [
             'last_name' => 'БезДокументов',
             'email' => 'no-documents@example.test',
+            'documents_provided' => true,
         ]));
         $incomplete = ApplicantApplication::create($this->payload($program, [
             'last_name' => 'Неполный',
             'email' => 'incomplete-documents@example.test',
+            'documents_provided' => true,
         ]));
         $complete = ApplicantApplication::create($this->payload($program, [
             'last_name' => 'Полный',
             'email' => 'complete-documents@example.test',
+            'documents_provided' => true,
         ]));
 
         $this->receiveDocuments($incomplete, 3);
@@ -229,13 +232,16 @@ class ApplicantApplicationApiTest extends TestCase
             ->assertJsonPath('data.0.documents_missing_count', 0)
             ->assertJsonPath('data.0.documents_complete', true);
 
-        $this->getJson('/api/admissions/stats')
+        $stats = $this->getJson('/api/admissions/stats')
             ->assertOk()
             ->assertJsonPath('data.total', 3)
             ->assertJsonPath('data.no_documents', 1)
             ->assertJsonPath('data.incomplete', 1)
             ->assertJsonPath('data.complete', 1)
-            ->assertJsonPath('data.documents_provided', 2);
+            ->assertJsonPath('data.documents_provided', 3)
+            ->json('data');
+
+        $this->assertSame($stats['total'], $stats['no_documents'] + $stats['incomplete'] + $stats['complete']);
     }
 
     public function test_it_updates_applicant_application_document_status(): void

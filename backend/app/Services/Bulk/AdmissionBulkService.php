@@ -101,14 +101,12 @@ class AdmissionBulkService
     private function markDocumentsProvided(ApplicantApplication $application, bool $apply): array
     {
         if ($application->documents_provided) {
-            return ['type' => 'already_set', 'reason' => 'Документы уже отмечены как предоставленные.', 'changes' => ['documents_provided' => true]];
+            return ['type' => 'already_set', 'reason' => 'Получение документов уже подтверждено.', 'changes' => ['documents_provided' => true]];
         }
 
         if ($apply) {
-            $this->documentService->ensureDefaultDocuments($application);
-            $application->documents()->update(['is_received' => true, 'received_at' => now()]);
             $application->update(['documents_provided' => true]);
-            $this->eventService->record($application, 'bulk_documents_provided', 'Документы предоставлены', 'Все документы отмечены как полученные массовой операцией.');
+            $this->eventService->record($application, 'bulk_documents_provided', 'Получение документов подтверждено', 'Административный признак получения документов установлен массовой операцией. Записи отдельных документов не изменялись.');
         }
         return ['type' => 'changed', 'changes' => ['documents_provided' => true]];
     }

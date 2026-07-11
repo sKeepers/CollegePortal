@@ -72,11 +72,21 @@ const admissionSubtitle = computed(() => [
   programLabel(selectedProgram.value) || 'Программа не указана',
   specialtyText.value,
 ])
+const documentsReceivedCount = computed(() => Number(props.application?.documents_count ?? props.documents.filter((document) => document.is_received).length ?? 0))
+const documentsRequiredCount = computed(() => Number(props.application?.required_documents_count ?? props.documents.length ?? 0))
+const documentsProvidedLabel = computed(() => props.application?.documents_provided ? 'Да' : 'Нет')
+const completenessText = computed(() => `${documentsReceivedCount.value}/${documentsRequiredCount.value}`)
+const completenessStatusLabel = computed(() => {
+  if (completeness.value === 'complete') return 'Полный'
+  if (completeness.value === 'no_documents') return 'Без документов'
+  return 'Неполный'
+})
+
 const admissionMetrics = computed(() => [
   { label: 'Дата подачи', value: formatDate(props.application?.submitted_at) },
   { label: 'База', value: educationBaseLabel(props.application?.education_base) },
-  { label: 'Документы', value: `${props.documents.filter((document) => document.is_received).length}/${props.documents.length}` },
-  { label: 'Событий', value: props.events.length },
+  { label: 'Комплектность', value: completenessText.value },
+  { label: 'Получение подтверждено', value: documentsProvidedLabel.value },
 ])
 const admissionActions = computed(() => [
   { label: 'Документы', to: { path: '/admissions', query: { selected: props.application?.id, tab: 'documents' } } },
@@ -186,6 +196,18 @@ function toggleDocument(document) {
               <div>
                 <dt>Дата рождения</dt>
                 <dd>{{ formatDate(application.birth_date) }}</dd>
+              </div>
+              <div>
+                <dt>Получение подтверждено</dt>
+                <dd>{{ documentsProvidedLabel }}</dd>
+              </div>
+              <div>
+                <dt>Комплектность</dt>
+                <dd>{{ completenessText }}</dd>
+              </div>
+              <div>
+                <dt>Статус комплекта</dt>
+                <dd>{{ completenessStatusLabel }}</dd>
               </div>
             </dl>
           </section>

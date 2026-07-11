@@ -263,7 +263,10 @@ onMounted(() => {
         <AppCard title="Приемная комиссия" subtitle="Состояние заявлений">
           <div class="dashboard-role-list dashboard-role-list--compact">
             <div><span>Новые</span><strong>{{ admissions.new_applications || 0 }}</strong></div>
-            <div><span>Ожидают проверки</span><strong>{{ admissions.pending_review || 0 }}</strong></div>
+            <div><span>Без документов</span><strong>{{ admissions.no_documents || 0 }}</strong></div>
+            <div><span>Неполный комплект</span><strong>{{ admissions.incomplete_documents || 0 }}</strong></div>
+            <div><span>Полный комплект</span><strong>{{ admissions.complete_documents || 0 }}</strong></div>
+            <div><span>Получение подтверждено</span><strong>{{ admissions.documents_confirmed || 0 }}</strong></div>
             <div><span>Зачислено</span><strong>{{ admissions.enrolled || 0 }}</strong></div>
           </div>
         </AppCard>

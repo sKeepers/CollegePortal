@@ -68,7 +68,7 @@ const bulkPreview = ref(null)
 
 const bulkActions = computed(() => [
   { label: 'Изменить статус', value: 'change_status', permission: 'admissions.bulk_status' },
-  { label: 'Документы предоставлены', value: 'mark_documents_provided', permission: 'admissions.bulk_documents' },
+  { label: 'Подтвердить получение документов', value: 'mark_documents_provided', permission: 'admissions.bulk_documents' },
   { label: 'Рекомендовать', value: 'mark_recommended', permission: 'admissions.bulk_recommend' },
   { label: 'Назначить направление', value: 'assign_program', permission: 'admissions.bulk_assign' },
   { label: 'Зачислить', value: 'enroll_selected', permission: 'admissions.bulk_enroll' },
@@ -672,7 +672,7 @@ onMounted(async () => {
             <q-select v-model="bulkPayload.group_id" outlined dense :options="store.groupOptions" emit-value map-options label="Группа для зачисления" />
             <q-input v-model="bulkPayload.enrollment_date" outlined dense type="date" label="Дата зачисления" />
           </template>
-          <q-banner v-if="bulkAction === 'mark_documents_provided'" rounded class="bg-blue-1 text-blue-10">Все документы выбранных заявлений будут отмечены как полученные.</q-banner>
+          <q-banner v-if="bulkAction === 'mark_documents_provided'" rounded class="bg-blue-1 text-blue-10">Операция устанавливает административный признак получения и не создает записи отдельных документов.</q-banner>
           <q-banner v-if="bulkAction === 'enroll_selected'" rounded class="bg-orange-1 text-orange-10">Перед зачислением будет проверена комплектность документов и отсутствие дублей студентов.</q-banner>
           <q-card v-if="bulkPreview" flat bordered>
             <q-card-section>

@@ -181,7 +181,8 @@ export const useAdmissionsStore = defineStore('admissions', () => {
   const groups = ref([])
   const filters = ref({ ...initialFilters })
   const pagination = ref(null)
-  const stats = ref({ total: 0, new: 0, no_documents: 0, incomplete: 0, complete: 0, documents_provided: 0, ready: 0, recommended: 0, enrolled: 0, rejected: 0 })
+  const emptyStats = () => ({ total: 0, new: 0, no_documents: 0, incomplete: 0, complete: 0, documents_provided: 0, ready: 0, recommended: 0, enrolled: 0, rejected: 0 })
+  const stats = ref(emptyStats())
   const selectedId = ref(null)
   const loading = ref(false)
   const saving = ref(false)
@@ -230,7 +231,8 @@ export const useAdmissionsStore = defineStore('admissions', () => {
     { key: 'new', label: 'Новые', value: stats.value.new || 0, status: 'new', documentsStatus: '', tone: 'info' },
     { key: 'no_documents', label: 'Без документов', value: stats.value.no_documents || 0, status: '', documentsStatus: 'no_documents', tone: 'danger' },
     { key: 'incomplete', label: 'Неполный комплект', value: stats.value.incomplete || 0, status: '', documentsStatus: 'incomplete', tone: 'warning' },
-    { key: 'documents_provided', label: 'Документы предоставлены', value: stats.value.documents_provided || 0, status: '', documentsStatus: '', tone: 'success' },
+    { key: 'complete', label: 'Полный комплект', value: stats.value.complete || 0, status: '', documentsStatus: 'complete', tone: 'success' },
+    { key: 'documents_provided', label: 'Получение подтверждено', value: stats.value.documents_provided || 0, status: '', documentsStatus: '', tone: 'neutral' },
     { key: 'ready', label: 'Готовы к зачислению', value: stats.value.ready || 0, status: 'ready_for_enrollment', documentsStatus: '', tone: 'success' },
     { key: 'recommended', label: 'Рекомендованы', value: stats.value.recommended || 0, status: '', documentsStatus: '', tone: 'info' },
     { key: 'enrolled', label: 'Зачислены', value: stats.value.enrolled || 0, status: 'enrolled', documentsStatus: '', tone: 'success' },
@@ -259,7 +261,7 @@ export const useAdmissionsStore = defineStore('admissions', () => {
       ])
 
       applications.value = extractRows(applicationsPayload)
-      stats.value = statsPayload?.data || { total: 0, new: 0, no_documents: 0, incomplete: 0, complete: 0, documents_provided: 0, ready: 0, recommended: 0, enrolled: 0, rejected: 0 }
+      stats.value = statsPayload?.data || emptyStats()
       educationPrograms.value = extractRows(programsPayload)
       groups.value = extractRows(groupsPayload)
       pagination.value = extractMeta(applicationsPayload) || {

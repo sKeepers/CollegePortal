@@ -60,6 +60,10 @@ class BulkOperationsApiTest extends TestCase
             'payload' => [],
         ])->assertOk()->assertJsonPath('data.changed', 1);
 
+        $this->assertTrue($application->refresh()->documents_provided);
+        $this->assertSame(0, $application->documents()->count());
+        $this->markDocumentsReceived($application, 6);
+
         $this->postJson('/api/admissions/bulk/apply', [
             'ids' => [$application->id],
             'action' => 'mark_recommended',
@@ -229,9 +233,9 @@ class BulkOperationsApiTest extends TestCase
         $this->getJson('/api/admissions/stats')
             ->assertOk()
             ->assertJsonPath('data.total', 152)
-            ->assertJsonPath('data.no_documents', 102)
+            ->assertJsonPath('data.no_documents', 152)
             ->assertJsonPath('data.incomplete', 0)
-            ->assertJsonPath('data.complete', 50)
+            ->assertJsonPath('data.complete', 0)
             ->assertJsonPath('data.documents_provided', 50);
 
         $preview = $this->postJson('/api/admissions/bulk/preview', [
@@ -261,10 +265,37 @@ class BulkOperationsApiTest extends TestCase
         $this->assertSame(152, ApplicantApplication::where('documents_provided', true)->count());
         $this->getJson('/api/admissions/stats')
             ->assertOk()
-            ->assertJsonPath('data.no_documents', 0)
+            ->assertJsonPath('data.no_documents', 152)
             ->assertJsonPath('data.incomplete', 0)
-            ->assertJsonPath('data.complete', 152)
+            ->assertJsonPath('data.complete', 0)
             ->assertJsonPath('data.documents_provided', 152);
+    }
+
+    public function test_admissions_bulk_document_confirmation_does_not_create_documents(): void
+    {
+        $this->seed(RoleSeeder::class);
+        $this->withApiAuth($this->createApiUser(roleCode: 'admission'));
+        $program = $this->createProgram();
+        $application = $this->makeApplicantApplication($program, ['documents_provided' => false]);
+
+        $this->postJson('/api/admissions/bulk/apply', [
+            'ids' => [$application->id],
+            'action' => 'mark_documents_provided',
+            'payload' => [],
+        ])->assertOk()
+            ->assertJsonPath('data.changed', 1);
+
+        $application->refresh();
+        $this->assertTrue($application->documents_provided);
+        $this->assertSame(0, $application->documents()->count());
+
+        $stats = $this->getJson('/api/admissions/stats')->assertOk()->json('data');
+        $this->assertSame(1, $stats['total']);
+        $this->assertSame(1, $stats['no_documents']);
+        $this->assertSame(0, $stats['incomplete']);
+        $this->assertSame(0, $stats['complete']);
+        $this->assertSame(1, $stats['documents_provided']);
+        $this->assertSame($stats['total'], $stats['no_documents'] + $stats['incomplete'] + $stats['complete']);
     }
 
     public function test_dashboard_admissions_without_documents_matches_admissions_aggregate(): void
@@ -364,9 +395,9 @@ class BulkOperationsApiTest extends TestCase
         ], $overrides));
     }
 
-    private function markDocumentsReceived(ApplicantApplication $application): void
+    private function markDocumentsReceived(ApplicantApplication $application, int $count = 3): void
     {
-        foreach (['passport', 'education', 'photo'] as $type) {
+        foreach (array_slice(['passport', 'education_document', 'snils', 'consent', 'photo', 'medical_certificate'], 0, $count) as $type) {
             ApplicantApplicationDocument::create([
                 'applicant_application_id' => $application->id,
                 'type' => $type,

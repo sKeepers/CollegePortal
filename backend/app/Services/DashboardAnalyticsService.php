@@ -48,6 +48,18 @@ class DashboardAnalyticsService
             ->take(5)
             ->get();
         $attendance = $this->attendanceAnalysis->dashboardSummary();
+        $requiredDocumentsCount = ApplicantApplicationDocumentService::REQUIRED_DOCUMENTS_COUNT;
+        $applicationsNoDocuments = ApplicantApplication::query()
+            ->whereDoesntHave('documents', fn ($query) => $query->where('is_received', true))
+            ->count();
+        $applicationsIncompleteDocuments = ApplicantApplication::query()
+            ->whereHas('documents', fn ($query) => $query->where('is_received', true), '>=', 1)
+            ->whereHas('documents', fn ($query) => $query->where('is_received', true), '<', $requiredDocumentsCount)
+            ->count();
+        $applicationsCompleteDocuments = ApplicantApplication::query()
+            ->whereHas('documents', fn ($query) => $query->where('is_received', true), '>=', $requiredDocumentsCount)
+            ->count();
+        $applicationsDocumentsConfirmed = ApplicantApplication::query()->where('documents_provided', true)->count();
 
         return [
             'data' => [
@@ -79,6 +91,10 @@ class DashboardAnalyticsService
                         'new_applications' => ApplicantApplication::query()->where('status', 'new')->count(),
                         'pending_review' => ApplicantApplication::query()->whereIn('status', ['pending', 'in_review', 'documents_pending'])->count(),
                         'enrolled' => ApplicantApplication::query()->where('status', 'enrolled')->count(),
+                        'no_documents' => $applicationsNoDocuments,
+                        'incomplete_documents' => $applicationsIncompleteDocuments,
+                        'complete_documents' => $applicationsCompleteDocuments,
+                        'documents_confirmed' => $applicationsDocumentsConfirmed,
                     ],
                     'frdo' => [
                         'ready' => FrdoPackage::query()->where('status', 'ready')->count(),
@@ -147,6 +163,10 @@ class DashboardAnalyticsService
             ->whereHas('documents', fn ($query) => $query->where('is_received', true), '>=', 1)
             ->whereHas('documents', fn ($query) => $query->where('is_received', true), '<', $requiredDocumentsCount)
             ->count();
+        $applicationsCompleteDocuments = ApplicantApplication::query()
+            ->whereHas('documents', fn ($query) => $query->where('is_received', true), '>=', $requiredDocumentsCount)
+            ->count();
+        $applicationsDocumentsConfirmed = ApplicantApplication::query()->where('documents_provided', true)->count();
         $frdoErrorCount = $frdoErrors->sum('validation_errors_count');
         $fisErrorCount = $fisErrors->sum('validation_errors_count');
 
@@ -160,6 +180,8 @@ class DashboardAnalyticsService
             ['title' => 'Студенты без фото', 'value' => $studentsWithoutPhoto, 'tone' => $studentsWithoutPhoto > 0 ? 'warning' : 'success', 'to' => '/students'],
             ['title' => 'Заявления без документов', 'value' => $applicationsWithoutDocuments, 'tone' => $applicationsWithoutDocuments > 0 ? 'warning' : 'success', 'to' => '/admissions?documents=no_documents'],
             ['title' => 'Заявления с неполным комплектом', 'value' => $applicationsIncompleteDocuments, 'tone' => $applicationsIncompleteDocuments > 0 ? 'warning' : 'success', 'to' => '/admissions?documents=incomplete'],
+            ['title' => 'Заявления с полным комплектом', 'value' => $applicationsCompleteDocuments, 'tone' => 'success', 'to' => '/admissions?documents=complete'],
+            ['title' => 'Получение документов подтверждено', 'value' => $applicationsDocumentsConfirmed, 'tone' => 'neutral', 'to' => '/admissions'],
             ['title' => 'Ошибки ФРДО', 'value' => $frdoErrorCount, 'tone' => $frdoErrorCount > 0 ? 'danger' : 'success', 'to' => '/frdo'],
             ['title' => 'Ошибки ФИС', 'value' => $fisErrorCount, 'tone' => $fisErrorCount > 0 ? 'danger' : 'success', 'to' => '/fis'],
         ])->values()->all();
