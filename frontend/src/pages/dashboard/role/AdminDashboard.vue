@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import {
   BookOpenCheck,
   CalendarDays,
+  ClipboardList,
   DoorOpen,
   FileCheck2,
   FileWarning,
