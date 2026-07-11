@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import { usePermissions } from '../../../composables/usePermissions'
 import { useQuasar } from 'quasar'
 import { KeyRound, RefreshCw, Save } from '@lucide/vue'
 import AppPage from '../../../components/ui/AppPage.vue'
@@ -15,6 +16,8 @@ import AppLoading from '../../../components/ui/AppLoading.vue'
 import { usePermissionsStore } from '../../../stores/permissions'
 
 const store = usePermissionsStore()
+const permissions = usePermissions()
+const canManage = computed(() => permissions.hasPermission('permissions.manage'))
 const $q = useQuasar()
 const roleIds = ref([])
 const pagination = ref({ rowsPerPage: 30 })
@@ -99,7 +102,7 @@ onMounted(store.load)
             <div><dt>Системное</dt><dd>{{ selected.system ? 'Да' : 'Нет' }}</dd></div>
           </dl>
           <q-select v-model="roleIds" outlined dense emit-value map-options multiple use-chips label="Роли с этим разрешением" :options="store.roleOptions" />
-          <q-btn class="q-mt-md" color="primary" :loading="store.saving" @click="saveRoles"><Save :size="16" class="q-mr-xs" /> Сохранить роли</q-btn>
+          <q-btn v-if="canManage" class="q-mt-md" color="primary" :loading="store.saving" @click="saveRoles"><Save :size="16" class="q-mr-xs" /> Сохранить роли</q-btn>
           <div class="permissions-assigned">
             <strong>Сейчас имеют доступ</strong>
             <q-list v-if="assignedRoles.length" dense bordered separator>

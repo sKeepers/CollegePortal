@@ -14,10 +14,13 @@ import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
 import { useDigitalPassesStore, ENTITY_OPTIONS, entityTypeLabel, formatDateTime, ownerName, statusLabel, statusTone } from '../../stores/digitalPasses'
 import { useAuthStore } from '../../stores/auth'
+import { usePermissions } from '../../composables/usePermissions'
 import { TABLE_ROWS_PER_PAGE_OPTIONS, createTablePagination, persistTablePagination } from '../../services/tableSettings'
 
 const store = useDigitalPassesStore()
 const auth = useAuthStore()
+const permissions = usePermissions()
+const canManage = computed(() => permissions.hasPermission('digitalpasses.manage'))
 const $q = useQuasar()
 const rowsPerPageKey = 'collegePortal.digitalPasses.rowsPerPage'
 const issueDialogVisible = ref(false)
@@ -59,10 +62,10 @@ function notifySuccess(message) { $q.notify({ type: 'positive', message, positio
 function rowClass(row) { return Number(row.id) === Number(store.selectedId) ? 'digital-passes-row--selected' : '' }
 function updateTablePagination(pagination) { tablePagination.value = pagination; persistTablePagination(rowsPerPageKey, pagination) }
 async function selectIdentity(identity) { await store.select(identity) }
-function openIssueDialog(entityType = 'student') { Object.assign(issueForm, { entity_type: entityType, entity_id: '', expires_at: '' }); issueDialogVisible.value = true }
-async function issuePass() { await store.issue(issueForm); issueDialogVisible.value = false; notifySuccess('Цифровой пропуск выпущен') }
-function requestRevoke(identity) { revokingIdentity.value = identity; revokeDialogVisible.value = true }
-async function confirmRevoke() { await store.revoke(revokingIdentity.value); notifySuccess('Цифровой пропуск отозван'); revokingIdentity.value = null }
+function openIssueDialog(entityType = 'student') { if (!canManage.value) return; Object.assign(issueForm, { entity_type: entityType, entity_id: '', expires_at: '' }); issueDialogVisible.value = true }
+async function issuePass() { if (!canManage.value) return; await store.issue(issueForm); issueDialogVisible.value = false; notifySuccess('Цифровой пропуск выпущен') }
+function requestRevoke(identity) { if (!canManage.value) return; revokingIdentity.value = identity; revokeDialogVisible.value = true }
+async function confirmRevoke() { if (!canManage.value) return; await store.revoke(revokingIdentity.value); notifySuccess('Цифровой пропуск отозван'); revokingIdentity.value = null }
 function tokenPreview(token) { return token ? `${token.slice(0, 8)}...${token.slice(-6)}` : '—' }
 async function downloadQrPng() {
   const blob = await store.downloadQrPng()
@@ -84,7 +87,7 @@ onMounted(async () => { await store.load(); if (store.identities[0]) await store
   <AppPage>
     <PageHeader title="Цифровые пропуска" subtitle="Цифровая идентификация студентов и преподавателей. QR-код содержит только технический токен.">
       <template #actions>
-        <q-btn color="primary" @click="openIssueDialog()"><Plus :size="16" class="q-mr-xs" /><span>Выпустить пропуск</span></q-btn>
+        <q-btn v-if="canManage" color="primary" @click="openIssueDialog()"><Plus :size="16" class="q-mr-xs" /><span>Выпустить пропуск</span></q-btn>
       </template>
     </PageHeader>
     <AppToolbar>
@@ -103,9 +106,9 @@ onMounted(async () => { await store.load(); if (store.identities[0]) await store
           <template #body-cell-status="props"><q-td :props="props"><AppStatusBadge :label="statusLabel(props.row.status)" :tone="statusTone(props.row.status)" /></q-td></template>
           <template #body-cell-issued_at="props"><q-td :props="props">{{ formatDateTime(props.row.issued_at) }}</q-td></template>
           <template #body-cell-expires_at="props"><q-td :props="props">{{ formatDateTime(props.row.expires_at) }}</q-td></template>
-          <template #body-cell-actions="props"><q-td :props="props"><div class="digital-passes-row-actions"><q-btn flat round dense color="negative" title="Отозвать" :disable="props.row.status === 'revoked' || store.saving" @click.stop="requestRevoke(props.row)"><ShieldX :size="16" /></q-btn></div></q-td></template>
+          <template #body-cell-actions="props"><q-td :props="props"><div class="digital-passes-row-actions"><q-btn v-if="canManage" flat round dense color="negative" title="Отозвать" :disable="props.row.status === 'revoked' || store.saving" @click.stop="requestRevoke(props.row)"><ShieldX :size="16" /></q-btn></div></q-td></template>
         </AppTable>
-        <AppEmptyState v-else title="Цифровые пропуска не найдены" description="Выпустите первый QR-пропуск для студента или преподавателя."><q-btn color="primary" label="Выпустить пропуск" @click="openIssueDialog()" /></AppEmptyState>
+        <AppEmptyState v-else title="Цифровые пропуска не найдены" description="Выпустите первый QR-пропуск для студента или преподавателя."><q-btn v-if="canManage" color="primary" label="Выпустить пропуск" @click="openIssueDialog()" /></AppEmptyState>
       </div>
       <aside class="digital-passes-side">
         <AppEmptyState v-if="!store.selectedIdentity" title="Пропуск не выбран" description="Выберите строку в таблице, чтобы открыть QR-код и сведения о владельце." />
@@ -122,8 +125,8 @@ onMounted(async () => { await store.load(); if (store.identities[0]) await store
           <template #actions>
             <div class="workspace-panel__actions">
               <q-btn v-if="ownerRoute" no-caps unelevated class="workspace-panel__action" :to="ownerRoute"><ExternalLink :size="15" class="q-mr-xs" /> Открыть человека</q-btn>
-              <q-btn no-caps unelevated class="workspace-panel__action" :disable="store.selectedIdentity.status === 'revoked' || store.saving" @click="requestRevoke(store.selectedIdentity)"><ShieldX :size="16" class="q-mr-xs" /> Отозвать</q-btn>
-              <q-btn no-caps unelevated class="workspace-panel__action" @click="openIssueDialog(store.selectedIdentity.entity_type)">Выпустить заново</q-btn>
+              <q-btn v-if="canManage" no-caps unelevated class="workspace-panel__action" :disable="store.selectedIdentity.status === 'revoked' || store.saving" @click="requestRevoke(store.selectedIdentity)"><ShieldX :size="16" class="q-mr-xs" /> Отозвать</q-btn>
+              <q-btn v-if="canManage" no-caps unelevated class="workspace-panel__action" @click="openIssueDialog(store.selectedIdentity.entity_type)">Выпустить заново</q-btn>
               <q-btn no-caps unelevated class="workspace-panel__action" :to="accessHistoryRoute">История проходов</q-btn>
             </div>
           </template>

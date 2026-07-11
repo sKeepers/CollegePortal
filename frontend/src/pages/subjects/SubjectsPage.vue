@@ -15,18 +15,25 @@ import SubjectDetailsPanel from './SubjectDetailsPanel.vue'
 import SubjectFilters from './SubjectFilters.vue'
 import SubjectFormPanel from './SubjectFormPanel.vue'
 import { useSubjectsStore } from '../../stores/subjects'
+import { usePermissions } from '../../composables/usePermissions'
 import {
   TABLE_ROWS_PER_PAGE_OPTIONS,
   createTablePagination,
   persistTablePagination,
 } from '../../services/tableSettings'
 
+const permissions = usePermissions()
 const store = useSubjectsStore()
 const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
 const SUBJECTS_ROWS_PER_PAGE_KEY = 'collegePortal.subjects.rowsPerPage'
 const syncingQueryFromUi = ref(false)
+const canCreate = computed(() => permissions.hasPermission('subjects.create') || permissions.hasPermission('subjects.edit'))
+const canUpdate = computed(() => permissions.hasPermission('subjects.update') || permissions.hasPermission('subjects.edit'))
+const canDelete = computed(() => permissions.hasPermission('subjects.delete') || permissions.hasPermission('subjects.edit'))
+const canImport = computed(() => canUpdate.value)
+const canExport = computed(() => permissions.hasPermission('subjects.update') || permissions.hasPermission('subjects.edit') || permissions.hasPermission('subjects.view'))
 
 const importFile = ref(null)
 const formVisible = ref(false)
@@ -132,11 +139,13 @@ async function selectSubject(subject) {
 }
 
 function openCreateForm() {
+  if (!canCreate.value) return
   editingSubject.value = null
   formVisible.value = true
 }
 
 function openEditForm(subject) {
+  if (!canUpdate.value) return
   editingSubject.value = subject
   formVisible.value = true
 }
@@ -150,6 +159,7 @@ async function saveSubject(payload) {
 }
 
 function requestDelete(subject) {
+  if (!canDelete.value) return
   deletingSubject.value = subject
   deleteDialogVisible.value = true
 }
@@ -176,6 +186,7 @@ async function resetFilters() {
 }
 
 async function handleImport(file) {
+  if (!canImport.value) return
   if (!file) {
     return
   }
@@ -186,6 +197,7 @@ async function handleImport(file) {
 }
 
 async function exportSubjects() {
+  if (!canExport.value) return
   await store.exportCsv()
   notifySuccess('Экспорт дисциплин подготовлен')
 }
@@ -230,7 +242,7 @@ onMounted(async () => {
       subtitle="Учебные дисциплины, коды, отделения, преподаватели, CSV-обмен и быстрые переходы."
     >
       <template #actions>
-        <q-btn color="primary" @click="openCreateForm">
+        <q-btn v-if="canCreate" color="primary" @click="openCreateForm">
           <template #default>
             <Plus :size="16" />
             <span>Новая дисциплина</span>
@@ -254,6 +266,7 @@ onMounted(async () => {
       <template #actions>
         <AppLoading v-if="store.loading" label="Загрузка дисциплин..." />
         <q-file
+          v-if="canImport"
           v-model="importFile"
           dense
           outlined
@@ -275,7 +288,7 @@ onMounted(async () => {
             <span>Обновить</span>
           </template>
         </q-btn>
-        <q-btn color="secondary" :disable="store.loading" @click="exportSubjects">
+        <q-btn v-if="canExport" color="secondary" :disable="store.loading" @click="exportSubjects">
           <template #default>
             <Download :size="16" />
             <span>Экспорт</span>
@@ -349,10 +362,10 @@ onMounted(async () => {
           <template #body-cell-actions="props">
             <q-td :props="props">
               <div class="subjects-row-actions">
-                <q-btn flat round dense title="Редактировать" @click.stop="openEditForm(props.row)">
+                <q-btn v-if="canUpdate" flat round dense title="Редактировать" @click.stop="openEditForm(props.row)">
                   <Edit3 :size="16" />
                 </q-btn>
-                <q-btn flat round dense color="negative" title="Удалить" @click.stop="requestDelete(props.row)">
+                <q-btn v-if="canDelete" flat round dense color="negative" title="Удалить" @click.stop="requestDelete(props.row)">
                   <Trash2 :size="16" />
                 </q-btn>
               </div>
@@ -365,7 +378,7 @@ onMounted(async () => {
           title="Дисциплины не найдены"
           description="Измените фильтры, импортируйте CSV или создайте дисциплину вручную."
         >
-          <q-btn color="primary" label="Новая дисциплина" @click="openCreateForm" />
+          <q-btn v-if="canCreate" color="primary" label="Новая дисциплина" @click="openCreateForm" />
         </AppEmptyState>
       </div>
 

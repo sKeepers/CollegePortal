@@ -17,12 +17,14 @@ import StudentFilters from './StudentFilters.vue'
 import StudentFormPanel from './StudentFormPanel.vue'
 import { useStudentsStore } from '../../stores/students'
 import { useReferenceOptionsStore } from '../../stores/referenceOptions'
+import { usePermissions } from '../../composables/usePermissions'
 import {
   TABLE_ROWS_PER_PAGE_OPTIONS,
   createTablePagination,
   persistTablePagination,
 } from '../../services/tableSettings'
 
+const permissions = usePermissions()
 const store = useStudentsStore()
 const referenceOptions = useReferenceOptionsStore()
 const $q = useQuasar()
@@ -30,6 +32,11 @@ const route = useRoute()
 const router = useRouter()
 const STUDENTS_ROWS_PER_PAGE_KEY = 'collegePortal.students.rowsPerPage'
 const syncingQueryFromUi = ref(false)
+const canCreate = computed(() => permissions.hasPermission('students.create') || permissions.hasPermission('students.edit'))
+const canUpdate = computed(() => permissions.hasPermission('students.update') || permissions.hasPermission('students.edit'))
+const canDelete = computed(() => permissions.hasPermission('students.delete') || permissions.hasPermission('students.edit'))
+const canImport = computed(() => canUpdate.value)
+const canExport = computed(() => permissions.hasPermission('students.update') || permissions.hasPermission('students.edit') || permissions.hasPermission('students.view'))
 
 const importFile = ref(null)
 const formVisible = ref(false)
@@ -156,11 +163,13 @@ async function selectStudent(student) {
 }
 
 function openCreateForm() {
+  if (!canCreate.value) return
   editingStudent.value = null
   formVisible.value = true
 }
 
 function openEditForm(student) {
+  if (!canUpdate.value) return
   editingStudent.value = student
   formVisible.value = true
 }
@@ -174,6 +183,7 @@ async function saveStudent(payload) {
 }
 
 function requestDelete(student) {
+  if (!canDelete.value) return
   deletingStudent.value = student
   deleteDialogVisible.value = true
 }
@@ -202,6 +212,7 @@ async function resetFilters() {
 }
 
 async function handleImport(file) {
+  if (!canImport.value) return
   if (!file) {
     return
   }
@@ -212,6 +223,7 @@ async function handleImport(file) {
 }
 
 async function exportStudents() {
+  if (!canExport.value) return
   await store.exportCsv()
   notifySuccess('Экспорт студентов подготовлен')
 }
@@ -258,7 +270,7 @@ onMounted(async () => {
       subtitle="Учет студентов, фильтры, карточка, импорт и экспорт."
     >
       <template #actions>
-        <q-btn color="primary" @click="openCreateForm">
+        <q-btn v-if="canCreate" color="primary" @click="openCreateForm">
           <template #default>
             <Plus :size="16" />
             <span>Новый студент</span>
@@ -282,6 +294,7 @@ onMounted(async () => {
       <template #actions>
         <AppLoading v-if="store.loading" label="Загрузка студентов..." />
         <q-file
+          v-if="canImport"
           v-model="importFile"
           dense
           outlined
@@ -307,7 +320,7 @@ onMounted(async () => {
             <span>Обновить</span>
           </template>
         </q-btn>
-        <q-btn color="secondary" :disable="store.loading" @click="exportStudents">
+        <q-btn v-if="canExport" color="secondary" :disable="store.loading" @click="exportStudents">
           <template #default>
             <Download :size="16" />
             <span>Экспорт</span>
@@ -375,10 +388,10 @@ onMounted(async () => {
           <template #body-cell-actions="props">
             <q-td :props="props">
               <div class="students-row-actions">
-                <q-btn flat round dense title="Редактировать" @click.stop="openEditForm(props.row)">
+                <q-btn v-if="canUpdate" flat round dense title="Редактировать" @click.stop="openEditForm(props.row)">
                   <Edit3 :size="16" />
                 </q-btn>
-                <q-btn flat round dense color="negative" title="Удалить" @click.stop="requestDelete(props.row)">
+                <q-btn v-if="canDelete" flat round dense color="negative" title="Удалить" @click.stop="requestDelete(props.row)">
                   <Trash2 :size="16" />
                 </q-btn>
               </div>
@@ -391,7 +404,7 @@ onMounted(async () => {
           title="Студенты не найдены"
           description="Измените фильтры, импортируйте CSV или создайте новую запись вручную."
         >
-          <q-btn color="primary" label="Новый студент" @click="openCreateForm" />
+          <q-btn v-if="canCreate" color="primary" label="Новый студент" @click="openCreateForm" />
         </AppEmptyState>
       </div>
 

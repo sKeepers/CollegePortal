@@ -15,18 +15,25 @@ import GroupDetailsPanel from './GroupDetailsPanel.vue'
 import GroupFilters from './GroupFilters.vue'
 import GroupFormPanel from './GroupFormPanel.vue'
 import { useGroupsStore } from '../../stores/groups'
+import { usePermissions } from '../../composables/usePermissions'
 import {
   TABLE_ROWS_PER_PAGE_OPTIONS,
   createTablePagination,
   persistTablePagination,
 } from '../../services/tableSettings'
 
+const permissions = usePermissions()
 const store = useGroupsStore()
 const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
 const GROUPS_ROWS_PER_PAGE_KEY = 'collegePortal.groups.rowsPerPage'
 const syncingQueryFromUi = ref(false)
+const canCreate = computed(() => permissions.hasPermission('groups.create') || permissions.hasPermission('groups.edit'))
+const canUpdate = computed(() => permissions.hasPermission('groups.update') || permissions.hasPermission('groups.edit'))
+const canDelete = computed(() => permissions.hasPermission('groups.delete') || permissions.hasPermission('groups.edit'))
+const canImport = computed(() => canUpdate.value)
+const canExport = computed(() => permissions.hasPermission('groups.update') || permissions.hasPermission('groups.edit') || permissions.hasPermission('groups.view'))
 
 const importFile = ref(null)
 const formVisible = ref(false)
@@ -149,11 +156,13 @@ async function selectGroup(group) {
 }
 
 function openCreateForm() {
+  if (!canCreate.value) return
   editingGroup.value = null
   formVisible.value = true
 }
 
 function openEditForm(group) {
+  if (!canUpdate.value) return
   editingGroup.value = group
   formVisible.value = true
 }
@@ -167,6 +176,7 @@ async function saveGroup(payload) {
 }
 
 function requestDelete(group) {
+  if (!canDelete.value) return
   deletingGroup.value = group
   deleteDialogVisible.value = true
 }
@@ -187,6 +197,7 @@ function resetFilters() {
 }
 
 async function handleImport(file) {
+  if (!canImport.value) return
   if (!file) {
     return
   }
@@ -197,6 +208,7 @@ async function handleImport(file) {
 }
 
 async function exportGroups() {
+  if (!canExport.value) return
   await store.exportCsv()
   notifySuccess('Экспорт групп подготовлен')
 }
@@ -233,7 +245,7 @@ onMounted(async () => {
       subtitle="Учебные группы, курсы, программы, кураторы и CSV-обмен."
     >
       <template #actions>
-        <q-btn color="primary" @click="openCreateForm">
+        <q-btn v-if="canCreate" color="primary" @click="openCreateForm">
           <template #default>
             <Plus :size="16" />
             <span>Новая группа</span>
@@ -257,6 +269,7 @@ onMounted(async () => {
       <template #actions>
         <AppLoading v-if="store.loading" label="Загрузка групп..." />
         <q-file
+          v-if="canImport"
           v-model="importFile"
           dense
           outlined
@@ -278,7 +291,7 @@ onMounted(async () => {
             <span>Обновить</span>
           </template>
         </q-btn>
-        <q-btn color="secondary" :disable="store.loading" @click="exportGroups">
+        <q-btn v-if="canExport" color="secondary" :disable="store.loading" @click="exportGroups">
           <template #default>
             <Download :size="16" />
             <span>Экспорт</span>
@@ -343,10 +356,10 @@ onMounted(async () => {
           <template #body-cell-actions="props">
             <q-td :props="props">
               <div class="groups-row-actions">
-                <q-btn flat round dense title="Редактировать" @click.stop="openEditForm(props.row)">
+                <q-btn v-if="canUpdate" flat round dense title="Редактировать" @click.stop="openEditForm(props.row)">
                   <Edit3 :size="16" />
                 </q-btn>
-                <q-btn flat round dense color="negative" title="Удалить" @click.stop="requestDelete(props.row)">
+                <q-btn v-if="canDelete" flat round dense color="negative" title="Удалить" @click.stop="requestDelete(props.row)">
                   <Trash2 :size="16" />
                 </q-btn>
               </div>
@@ -359,7 +372,7 @@ onMounted(async () => {
           title="Группы не найдены"
           description="Измените фильтры, импортируйте CSV или создайте новую группу вручную."
         >
-          <q-btn color="primary" label="Новая группа" @click="openCreateForm" />
+          <q-btn v-if="canCreate" color="primary" label="Новая группа" @click="openCreateForm" />
         </AppEmptyState>
       </div>
 

@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { usePermissions } from '../../../composables/usePermissions'
 import { useQuasar } from 'quasar'
 import { RefreshCw, RotateCcw, Save, Settings as SettingsIcon } from '@lucide/vue'
 import AppPage from '../../../components/ui/AppPage.vue'
@@ -12,6 +13,8 @@ import AppConfirmDialog from '../../../components/ui/AppConfirmDialog.vue'
 import { groupLabels, useSettingsStore } from '../../../stores/settings'
 
 const store = useSettingsStore()
+const permissions = usePermissions()
+const canManage = computed(() => permissions.hasPermission('settings.manage'))
 const $q = useQuasar()
 const activeTab = ref('general')
 const resetDialog = ref(false)
@@ -61,8 +64,8 @@ onMounted(async () => {
       <template #actions>
         <AppLoading v-if="store.loading || store.saving" :label="store.saving ? 'Сохранение...' : 'Загрузка настроек...'" />
         <q-btn flat :disable="store.loading || store.saving" @click="store.load"><RefreshCw :size="16" class="q-mr-xs" /> Обновить</q-btn>
-        <q-btn outline color="warning" :disable="store.loading || store.saving" @click="resetDialog = true"><RotateCcw :size="16" class="q-mr-xs" /> Сбросить</q-btn>
-        <q-btn color="primary" :loading="store.saving" @click="save"><Save :size="16" class="q-mr-xs" /> Сохранить</q-btn>
+        <q-btn v-if="canManage" outline color="warning" :disable="store.loading || store.saving" @click="resetDialog = true"><RotateCcw :size="16" class="q-mr-xs" /> Сбросить</q-btn>
+        <q-btn v-if="canManage" color="primary" :loading="store.saving" @click="save"><Save :size="16" class="q-mr-xs" /> Сохранить</q-btn>
       </template>
     </AppToolbar>
     <AppErrorBanner :message="store.error" />

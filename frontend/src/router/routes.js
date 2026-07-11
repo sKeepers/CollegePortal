@@ -27,6 +27,7 @@ const AccessReportsPage = () => import('../pages/access/AccessReportsPage.vue')
 const ScannerTestPage = () => import('../pages/access/ScannerTestPage.vue')
 const ApplicantPublicPage = () => import('../pages/public/ApplicantPublicPage.vue')
 const UiFoundationPage = () => import('../pages/system/UiFoundationPage.vue')
+const ForbiddenPage = () => import('../pages/system/ForbiddenPage.vue')
 const DataManagementPage = () => import('../pages/admin/DataManagementPage.vue')
 const UniversalImportPage = () => import('../pages/admin/UniversalImportPage.vue')
 const UsersPage = () => import('../pages/admin/users/UsersPage.vue')
@@ -69,6 +70,7 @@ export const routes = [
   {
     path: '/m/student',
     component: MobileStudentLayout,
+    meta: { permission: 'mobile.student.view' },
     children: [
       {
         path: '',
@@ -80,7 +82,7 @@ export const routes = [
         path: 'pass',
         name: 'mobile-student-pass',
         component: MobileStudentPassPage,
-        meta: { title: 'QR-пропуск студента' },
+        meta: { title: 'QR-пропуск студента', permission: 'mobile.student.pass' },
       },
     ],
   },
@@ -89,6 +91,12 @@ export const routes = [
     name: 'legacy',
     component: () => import('../pages/legacy/LegacyPage.vue'),
     meta: { public: true, title: 'Старый интерфейс' },
+  },
+  {
+    path: '/forbidden',
+    name: 'forbidden',
+    component: ForbiddenPage,
+    meta: { title: 'Недостаточно прав' },
   },
   {
     path: '/',
@@ -210,7 +218,7 @@ export const routes = [
         path: 'access/mobile-scanner',
         name: 'access-mobile-scanner',
         component: MobileScannerPage,
-        meta: { title: 'Мобильный сканер', roles: ['admin', 'security'] },
+        meta: { title: 'Мобильный сканер', permission: 'gate.scan' },
       },
       {
         path: 'access/reports',
@@ -222,7 +230,7 @@ export const routes = [
         path: 'access/scanner-test',
         name: 'access-scanner-test',
         component: ScannerTestPage,
-        meta: { title: 'Тест QR-сканера', adminOnly: true },
+        meta: { title: 'Тест QR-сканера', adminOnly: true, permission: 'gate.scan' },
       },
       {
         path: 'identity/digital-passes',

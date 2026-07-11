@@ -16,6 +16,7 @@ import AdmissionDetailsPanel from './AdmissionDetailsPanel.vue'
 import AdmissionFilters from './AdmissionFilters.vue'
 import AdmissionFormPanel from './AdmissionFormPanel.vue'
 import { useReferenceOptionsStore } from '../../stores/referenceOptions'
+import { usePermissions } from '../../composables/usePermissions'
 import {
   applicantName,
   documentsCompleteness,
@@ -33,6 +34,7 @@ import {
   persistTablePagination,
 } from '../../services/tableSettings'
 
+const permissions = usePermissions()
 const store = useAdmissionsStore()
 const referenceOptions = useReferenceOptionsStore()
 const $q = useQuasar()
@@ -40,6 +42,11 @@ const route = useRoute()
 const router = useRouter()
 const ADMISSIONS_ROWS_PER_PAGE_KEY = 'collegePortal.admissions.rowsPerPage'
 const syncingQueryFromUi = ref(false)
+const canCreate = computed(() => permissions.hasPermission('admissions.create') || permissions.hasPermission('admissions.edit'))
+const canUpdate = computed(() => permissions.hasPermission('admissions.update') || permissions.hasPermission('admissions.edit'))
+const canDelete = computed(() => permissions.hasPermission('admissions.delete') || permissions.hasPermission('admissions.edit'))
+const canImport = computed(() => canUpdate.value)
+const canExport = computed(() => permissions.hasPermission('admissions.update') || permissions.hasPermission('admissions.edit') || permissions.hasPermission('admissions.view'))
 
 const importFile = ref(null)
 const formVisible = ref(false)
@@ -151,11 +158,13 @@ async function selectApplication(application) {
 }
 
 function openCreateForm() {
+  if (!canCreate.value) return
   editingApplication.value = null
   formVisible.value = true
 }
 
 function openEditForm(application) {
+  if (!canUpdate.value) return
   editingApplication.value = application
   formVisible.value = true
 }
@@ -169,6 +178,7 @@ async function saveApplication(payload) {
 }
 
 function requestDelete(application) {
+  if (!canDelete.value) return
   deletingApplication.value = application
   deleteDialogVisible.value = true
 }
@@ -213,6 +223,7 @@ async function applyQuickQueue(queue) {
 }
 
 async function handleImport(file) {
+  if (!canImport.value) return
   if (!file) {
     return
   }
@@ -227,11 +238,13 @@ async function handleImport(file) {
 }
 
 async function exportAdmissions() {
+  if (!canExport.value) return
   await store.exportCsv()
   notifySuccess('Экспорт заявлений подготовлен')
 }
 
 async function enrollApplication(payload) {
+  if (!canUpdate.value) return
   const data = await store.enroll(store.selectedApplication, payload)
   notifySuccess(data?.student ? 'Абитуриент зачислен в студенты' : 'Зачисление выполнено')
 }
@@ -284,7 +297,7 @@ onMounted(async () => {
       subtitle="Реестр заявлений, документы, статусы, CSV-обмен и зачисление абитуриентов."
     >
       <template #actions>
-        <q-btn color="primary" @click="openCreateForm">
+        <q-btn v-if="canCreate" color="primary" @click="openCreateForm">
           <template #default>
             <Plus :size="16" />
             <span>Новое заявление</span>
@@ -323,6 +336,7 @@ onMounted(async () => {
       <template #actions>
         <AppLoading v-if="store.loading" label="Загрузка заявлений..." />
         <q-file
+          v-if="canImport"
           v-model="importFile"
           dense
           outlined
@@ -344,7 +358,7 @@ onMounted(async () => {
             <span>Обновить</span>
           </template>
         </q-btn>
-        <q-btn color="secondary" :disable="store.loading" @click="exportAdmissions">
+        <q-btn v-if="canExport" color="secondary" :disable="store.loading" @click="exportAdmissions">
           <template #default>
             <Download :size="16" />
             <span>Экспорт</span>
@@ -419,10 +433,10 @@ onMounted(async () => {
           <template #body-cell-actions="props">
             <q-td :props="props">
               <div class="admissions-row-actions">
-                <q-btn flat round dense title="Редактировать" @click.stop="openEditForm(props.row)">
+                <q-btn v-if="canUpdate" flat round dense title="Редактировать" @click.stop="openEditForm(props.row)">
                   <Edit3 :size="16" />
                 </q-btn>
-                <q-btn flat round dense color="negative" title="Удалить" @click.stop="requestDelete(props.row)">
+                <q-btn v-if="canDelete" flat round dense color="negative" title="Удалить" @click.stop="requestDelete(props.row)">
                   <Trash2 :size="16" />
                 </q-btn>
               </div>
@@ -435,7 +449,7 @@ onMounted(async () => {
           title="Заявления не найдены"
           description="Измените фильтры, импортируйте CSV или создайте заявление вручную."
         >
-          <q-btn color="primary" label="Новое заявление" @click="openCreateForm" />
+          <q-btn v-if="canCreate" color="primary" label="Новое заявление" @click="openCreateForm" />
         </AppEmptyState>
       </div>
 

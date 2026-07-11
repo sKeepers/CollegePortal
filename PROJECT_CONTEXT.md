@@ -1093,3 +1093,7 @@ API: `/api/attendance/teachers/today`, `/api/attendance/students/today`. Fronten
 ### RBAC-001: Permission Matrix
 
 Добавлена полноценная permission-based RBAC-матрица. Сущность `Permission` расширена полями `module`, `system`, `active`; создан API `/api/admin/permissions`; сидер ролей наполняет 61 permission и назначает их базовым ролям. Backend middleware `permission:` теперь мапит legacy route permissions на точечные permissions по URI и HTTP-методу, поэтому API защищен на уровне модулей и действий. Frontend получает объединенный список permissions всех ролей пользователя и строит меню/маршруты по новым кодам.
+
+### RBAC-001.1: Permission-aware CRUD UI
+
+Frontend action-level RBAC доведен до основных CRUD и системных страниц. Добавлены `usePermissions()`, `PermissionGuard.vue`, страница `/forbidden` и router guard для `meta.permission`, `meta.permissionsAny` и `meta.permissionsAll`. Кнопки создания, редактирования, удаления, импорта, экспорта и специальных действий скрываются без permission; обработчики действий также проверяют permission перед открытием формы или запуском операции. Backend middleware `permission:` остается источником истины.

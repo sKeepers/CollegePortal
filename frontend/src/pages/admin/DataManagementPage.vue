@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { Database, Download, RefreshCw, Trash2, Upload } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
@@ -11,8 +11,11 @@ import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import { useDemoDataStore } from '../../stores/demoData'
+import { usePermissions } from '../../composables/usePermissions'
 
 const store = useDemoDataStore()
+const permissions = usePermissions()
+const canManage = computed(() => permissions.hasPermission('import.manage'))
 const $q = useQuasar()
 const importFile = ref(null)
 const clearDialog = ref(false)
@@ -26,10 +29,10 @@ const summaryLabels = {
 }
 
 function notify(message, type = 'positive') { $q.notify({ type, message, position: 'top-right', timeout: 1800 }) }
-async function createDemoData() { const payload = await store.createDemoData(); notify(payload?.message || 'Демо-данные созданы') }
-async function clearDemoData() { const payload = await store.clearDemoData(); notify(payload?.message || 'Демо-данные очищены') }
-async function importData(file) { if (!file) return; const payload = await store.importData(file); importFile.value = null; notify(payload?.message || 'Файл принят') }
-async function exportData() { await store.exportData(); notify('Экспорт данных подготовлен') }
+async function createDemoData() { if (!canManage.value) return; const payload = await store.createDemoData(); notify(payload?.message || 'Демо-данные созданы') }
+async function clearDemoData() { if (!canManage.value) return; const payload = await store.clearDemoData(); notify(payload?.message || 'Демо-данные очищены') }
+async function importData(file) { if (!canManage.value || !file) return; const payload = await store.importData(file); importFile.value = null; notify(payload?.message || 'Файл принят') }
+async function exportData() { if (!canManage.value) return; await store.exportData(); notify('Экспорт данных подготовлен') }
 onMounted(store.load)
 </script>
 
@@ -49,10 +52,10 @@ onMounted(store.load)
       <section class="data-management-main">
         <AppCard title="Действия" subtitle="Создание и очистка демо-данных используются только в DEV/TEST перед пользовательской проверкой.">
           <div class="data-management-actions">
-            <q-btn color="primary" :loading="store.loading" @click="createDemoData"><Database :size="16" class="q-mr-xs" /> Создать демо-данные</q-btn>
-            <q-btn color="negative" outline :disable="store.isProduction || store.loading" @click="clearDialog = true"><Trash2 :size="16" class="q-mr-xs" /> Очистить демо-данные</q-btn>
-            <q-file v-model="importFile" dense outlined accept=".csv,text/csv" label="Импорт данных" style="max-width: 260px" @update:model-value="importData"><template #prepend><Upload :size="16" /></template></q-file>
-            <q-btn color="primary" outline :disable="store.loading" @click="exportData"><Download :size="16" class="q-mr-xs" /> Экспорт данных</q-btn>
+            <q-btn v-if="canManage" color="primary" :loading="store.loading" @click="createDemoData"><Database :size="16" class="q-mr-xs" /> Создать демо-данные</q-btn>
+            <q-btn v-if="canManage" color="negative" outline :disable="store.isProduction || store.loading" @click="clearDialog = true"><Trash2 :size="16" class="q-mr-xs" /> Очистить демо-данные</q-btn>
+            <q-file v-if="canManage" v-model="importFile" dense outlined accept=".csv,text/csv" label="Импорт данных" style="max-width: 260px" @update:model-value="importData"><template #prepend><Upload :size="16" /></template></q-file>
+            <q-btn v-if="canManage" color="primary" outline :disable="store.loading" @click="exportData"><Download :size="16" class="q-mr-xs" /> Экспорт данных</q-btn>
           </div>
           <q-banner v-if="store.isProduction" rounded class="data-management-warning">Очистка демо-данных недоступна в production.</q-banner>
           <q-banner v-if="store.lastMessage" rounded class="data-management-info">{{ store.lastMessage }}</q-banner>

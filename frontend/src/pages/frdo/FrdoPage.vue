@@ -13,10 +13,13 @@ import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
+import { usePermissions } from '../../composables/usePermissions'
 import { TABLE_ROWS_PER_PAGE_OPTIONS, createTablePagination, persistTablePagination } from '../../services/tableSettings'
 import { FRDO_RECORD_STATUS_OPTIONS, FRDO_STATUS_OPTIONS, formatRuDateTime, statusLabel, statusTone, useFrdoStore } from '../../stores/frdo'
 
 const store = useFrdoStore()
+const permissions = usePermissions()
+const canManage = computed(() => permissions.hasPermission('frdo.export'))
 const $q = useQuasar(), route = useRoute(), router = useRouter()
 const rowsKey = 'collegePortal.frdo.rowsPerPage'
 const syncingQuery = ref(false), createVisible = ref(false)
@@ -57,13 +60,13 @@ function updatePagination(p) { tablePagination.value = p; persistTablePagination
 function routeSelectedId() { return route.query.selected ? String(route.query.selected) : '' }
 async function syncQuery(selectedId = routeSelectedId()) { const query = { ...route.query }; selectedId ? query.selected = selectedId : delete query.selected; syncingQuery.value = true; await router.replace({ path: '/frdo', query }); syncingQuery.value = false }
 async function selectPackage(pkg) { store.select(pkg); await syncQuery(pkg?.id || '') }
-function openCreate() { Object.assign(form, { name: '', graduation_year: store.graduationYearOptions[0]?.value || new Date().getFullYear(), education_program_id: '', note: '' }); createVisible.value = true }
-async function createPackage() { await store.createPackage(form); createVisible.value = false; notify('Пакет ФРДО создан') }
-async function validatePackage() { await store.validatePackage(); notify('Пакет проверен') }
-async function markExported() { await store.markExported(); notify('Пакет отмечен как выгруженный') }
-async function archivePackage() { await store.archive(); notify('Пакет архивирован') }
-async function exportCsv() { await store.exportCsv(); notify('CSV выгружен') }
-async function exportJson() { await store.exportJson(); notify('JSON выгружен') }
+function openCreate() { if (!canManage.value) return; Object.assign(form, { name: '', graduation_year: store.graduationYearOptions[0]?.value || new Date().getFullYear(), education_program_id: '', note: '' }); createVisible.value = true }
+async function createPackage() { if (!canManage.value) return; await store.createPackage(form); createVisible.value = false; notify('Пакет ФРДО создан') }
+async function validatePackage() { if (!canManage.value) return; await store.validatePackage(); notify('Пакет проверен') }
+async function markExported() { if (!canManage.value) return; await store.markExported(); notify('Пакет отмечен как выгруженный') }
+async function archivePackage() { if (!canManage.value) return; await store.archive(); notify('Пакет архивирован') }
+async function exportCsv() { if (!canManage.value) return; await store.exportCsv(); notify('CSV выгружен') }
+async function exportJson() { if (!canManage.value) return; await store.exportJson(); notify('JSON выгружен') }
 async function applyFilters() { store.setFilters({ ...store.filters }); await syncQuery('') }
 async function resetFilters() { store.resetFilters(); await syncQuery('') }
 watch(() => route.query.selected, () => { if (!syncingQuery.value) store.selectById(routeSelectedId()) })
@@ -72,7 +75,7 @@ onMounted(async () => { store.selectById(routeSelectedId()); await store.load();
 
 <template>
   <AppPage>
-    <PageHeader title="ФРДО" subtitle="Подготовка, проверка и выгрузка данных выпускников без реальной отправки во ФРДО."><template #actions><q-btn color="primary" @click="openCreate"><Plus :size="16" class="q-mr-xs" /> Новый пакет</q-btn></template></PageHeader>
+    <PageHeader title="ФРДО" subtitle="Подготовка, проверка и выгрузка данных выпускников без реальной отправки во ФРДО."><template #actions><q-btn v-if="canManage" color="primary" @click="openCreate"><Plus :size="16" class="q-mr-xs" /> Новый пакет</q-btn></template></PageHeader>
     <AppToolbar><span>{{ tableSubtitle }}</span><template #actions><AppLoading v-if="store.loading" label="Загрузка ФРДО..." /><q-btn flat :disable="store.loading" @click="store.load"><RefreshCw :size="16" class="q-mr-xs" /> Обновить</q-btn></template></AppToolbar>
     <AppErrorBanner :message="store.error" />
     <AppFilterBar><q-select v-model="store.filters.graduation_year" dense outlined clearable emit-value map-options label="Год выпуска" :options="store.graduationYearOptions" /><q-select v-model="store.filters.status" dense outlined clearable emit-value map-options label="Статус" :options="FRDO_STATUS_OPTIONS" /><q-select v-model="store.filters.education_program_id" dense outlined clearable emit-value map-options label="Программа" :options="store.programOptions" /><template #actions><q-btn color="primary" @click="applyFilters">Применить</q-btn><q-btn flat @click="resetFilters">Сбросить</q-btn></template></AppFilterBar>

@@ -582,5 +582,17 @@
 - [x] Добавить страницу `/admin/permissions`.
 - [x] Добавить permission-aware быстрые действия Dashboard.
 - [x] Добавить RBAC-тесты: 403 без permission, 200 с permission, teacher/student/security/director сценарии.
-- [ ] Следующим этапом скрыть action-кнопки внутри всех CRUD-страниц по create/update/delete/export/import permissions.
+- [x] RBAC-001.1: скрыть action-кнопки внутри основных CRUD-страниц по create/update/delete/export/import permissions.
 - [ ] Следующим этапом усилить ownership-фильтры для teacher/student: только свои группы, расписание, журнал, экзамены.
+
+## RBAC-001.1: Permission-aware CRUD UI
+
+- [x] Создать `usePermissions()` для `hasPermission`, `hasAnyPermission`, `hasAllPermissions`.
+- [x] Создать `PermissionGuard.vue` для условного отображения UI.
+- [x] Добавить `/forbidden` и route guard для single/any/all permissions.
+- [x] Закрыть action-кнопки и обработчики в Students, Groups, Teachers, Subjects, Classrooms.
+- [x] Закрыть action-кнопки и обработчики в Admissions, Curricula, Teaching Load, Exams, Graduation.
+- [x] Закрыть действия ФРДО, ФИС, Digital Passes.
+- [x] Закрыть системные действия Users, Roles, Permissions, Settings, Reference, Import, Data Management.
+- [x] Проверить `npm run build`.
+- [ ] Frontend unit/integration tests не добавлены: в текущем frontend нет test runner; проверка выполнена через build и API smoke.

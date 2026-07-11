@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { usePermissions } from '../../../composables/usePermissions'
 import { useQuasar } from 'quasar'
 import { Edit, Plus, RefreshCw, ShieldCheck, Trash2, UserPlus } from '@lucide/vue'
 import AppPage from '../../../components/ui/AppPage.vue'
@@ -15,6 +16,8 @@ import AppConfirmDialog from '../../../components/ui/AppConfirmDialog.vue'
 import { useRolesStore } from '../../../stores/roles'
 
 const store = useRolesStore()
+const permissions = usePermissions()
+const canManage = computed(() => permissions.hasPermission('roles.manage'))
 const $q = useQuasar()
 const formOpen = ref(false)
 const assignOpen = ref(false)
@@ -106,8 +109,8 @@ onMounted(async () => {
       <template #actions>
         <AppLoading v-if="store.loading || store.saving" label="Обработка..." />
         <q-btn flat :disable="store.loading" @click="store.load"><RefreshCw :size="16" class="q-mr-xs" /> Обновить</q-btn>
-        <q-btn outline color="primary" @click="openAssign()"><UserPlus :size="16" class="q-mr-xs" /> Назначить</q-btn>
-        <q-btn color="primary" @click="openCreate"><Plus :size="16" class="q-mr-xs" /> Создать</q-btn>
+        <q-btn v-if="canManage" outline color="primary" @click="openAssign()"><UserPlus :size="16" class="q-mr-xs" /> Назначить</q-btn>
+        <q-btn v-if="canManage" color="primary" @click="openCreate"><Plus :size="16" class="q-mr-xs" /> Создать</q-btn>
       </template>
     </AppToolbar>
     <AppErrorBanner :message="store.error" />
@@ -137,8 +140,8 @@ onMounted(async () => {
           </template>
           <template #body-cell-actions="props">
             <q-td :props="props" class="roles-actions">
-              <q-btn flat dense round title="Редактировать" @click.stop="openEdit(props.row)"><Edit :size="16" /></q-btn>
-              <q-btn flat dense round color="negative" title="Удалить" @click.stop="askDelete(props.row)"><Trash2 :size="16" /></q-btn>
+              <q-btn v-if="canManage" flat dense round title="Редактировать" @click.stop="openEdit(props.row)"><Edit :size="16" /></q-btn>
+              <q-btn v-if="canManage" flat dense round color="negative" title="Удалить" @click.stop="askDelete(props.row)"><Trash2 :size="16" /></q-btn>
             </q-td>
           </template>
         </AppTable>
@@ -168,7 +171,7 @@ onMounted(async () => {
                   <q-item-label caption>{{ user.email }}</q-item-label>
                 </q-item-section>
                 <q-item-section side>
-                  <q-btn flat dense color="primary" @click="openAssign(user)">Изменить</q-btn>
+                  <q-btn v-if="canManage" flat dense color="primary" @click="openAssign(user)">Изменить</q-btn>
                 </q-item-section>
               </q-item>
             </q-list>
@@ -189,7 +192,7 @@ onMounted(async () => {
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Отмена" v-close-popup />
-          <q-btn color="primary" :loading="store.saving" label="Сохранить" @click="saveRole" />
+          <q-btn v-if="canManage" color="primary" :loading="store.saving" label="Сохранить" @click="saveRole" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -204,7 +207,7 @@ onMounted(async () => {
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Отмена" v-close-popup />
-          <q-btn color="primary" :disable="!assignment.user_id || !assignment.role_ids.length" :loading="store.saving" label="Назначить" @click="assignRoles" />
+          <q-btn v-if="canManage" color="primary" :disable="!assignment.user_id || !assignment.role_ids.length" :loading="store.saving" label="Назначить" @click="assignRoles" />
         </q-card-actions>
       </q-card>
     </q-dialog>

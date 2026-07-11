@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { usePermissions } from '../../../composables/usePermissions'
 import { useQuasar } from 'quasar'
 import { Edit3, ListTree, Plus, RefreshCw, Tags, Trash2 } from '@lucide/vue'
 import AppPage from '../../../components/ui/AppPage.vue'
@@ -14,6 +15,8 @@ import AppStatusBadge from '../../../components/ui/AppStatusBadge.vue'
 import { useReferenceDataStore } from '../../../stores/referenceData'
 
 const store = useReferenceDataStore()
+const permissions = usePermissions()
+const canManage = computed(() => permissions.hasPermission('reference.manage'))
 const $q = useQuasar()
 const catalogDialog = ref(false)
 const itemDialog = ref(false)
@@ -136,8 +139,8 @@ onMounted(store.loadCatalogs)
       <template #actions>
         <AppLoading v-if="store.loading || store.itemsLoading || store.saving" label="Загрузка справочников..." />
         <q-btn flat :disable="store.loading" @click="store.loadCatalogs"><RefreshCw :size="16" class="q-mr-xs" /> Обновить</q-btn>
-        <q-btn color="primary" @click="openCatalogDialog()"><Plus :size="16" class="q-mr-xs" /> Справочник</q-btn>
-        <q-btn color="primary" outline :disable="!store.selectedCatalogId" @click="openItemDialog()"><Plus :size="16" class="q-mr-xs" /> Элемент</q-btn>
+        <q-btn v-if="canManage" color="primary" @click="openCatalogDialog()"><Plus :size="16" class="q-mr-xs" /> Справочник</q-btn>
+        <q-btn v-if="canManage" color="primary" outline :disable="!store.selectedCatalogId" @click="openItemDialog()"><Plus :size="16" class="q-mr-xs" /> Элемент</q-btn>
       </template>
     </AppToolbar>
     <AppErrorBanner :message="store.error" />
@@ -169,8 +172,8 @@ onMounted(store.loadCatalogs)
             <template #body-cell-items="props"><q-td :props="props">{{ props.row.items_count ?? 0 }}</q-td></template>
             <template #body-cell-actions="props">
               <q-td :props="props">
-                <q-btn flat dense round title="Редактировать" @click.stop="openCatalogDialog(props.row)"><Edit3 :size="15" /></q-btn>
-                <q-btn flat dense round color="negative" title="Удалить" :disable="props.row.is_system || Number(props.row.items_count || 0) > 0" @click.stop="editingCatalog = props.row; deleteCatalogDialog = true"><Trash2 :size="15" /></q-btn>
+                <q-btn v-if="canManage" flat dense round title="Редактировать" @click.stop="openCatalogDialog(props.row)"><Edit3 :size="15" /></q-btn>
+                <q-btn v-if="canManage" flat dense round color="negative" title="Удалить" :disable="props.row.is_system || Number(props.row.items_count || 0) > 0" @click.stop="editingCatalog = props.row; deleteCatalogDialog = true"><Trash2 :size="15" /></q-btn>
               </q-td>
             </template>
           </q-table>
@@ -212,9 +215,9 @@ onMounted(store.loadCatalogs)
             </template>
             <template #body-cell-actions="props">
               <q-td :props="props">
-                <q-btn flat dense no-caps @click="toggleItem(props.row)">{{ props.row.is_active ? 'Деактивировать' : 'Активировать' }}</q-btn>
-                <q-btn flat dense round title="Редактировать" @click="openItemDialog(props.row)"><Edit3 :size="15" /></q-btn>
-                <q-btn flat dense round color="negative" title="Удалить" :disable="props.row.is_system || selectedCatalog.is_system" @click="editingItem = props.row; deleteItemDialog = true"><Trash2 :size="15" /></q-btn>
+                <q-btn v-if="canManage" flat dense no-caps @click="toggleItem(props.row)">{{ props.row.is_active ? 'Деактивировать' : 'Активировать' }}</q-btn>
+                <q-btn v-if="canManage" flat dense round title="Редактировать" @click="openItemDialog(props.row)"><Edit3 :size="15" /></q-btn>
+                <q-btn v-if="canManage" flat dense round color="negative" title="Удалить" :disable="props.row.is_system || selectedCatalog.is_system" @click="editingItem = props.row; deleteItemDialog = true"><Trash2 :size="15" /></q-btn>
               </q-td>
             </template>
           </q-table>

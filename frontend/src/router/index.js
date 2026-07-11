@@ -26,18 +26,32 @@ router.beforeEach(async (to) => {
     return { name: 'login' }
   }
 
+  if (to.name === 'forbidden') {
+    return true
+  }
+
   if (to.meta.adminOnly && !auth.isAdmin) {
-    return { name: 'dashboard' }
+    return { name: 'forbidden' }
   }
 
   if (to.meta.roles && !auth.hasRole(to.meta.roles)) {
-    return { name: 'dashboard' }
+    return { name: 'forbidden' }
   }
 
   const permission = to.meta.permission
+  const permissionsAny = to.meta.permissionsAny || to.meta.permissions
+  const permissionsAll = to.meta.permissionsAll
 
   if (permission && !auth.can(permission)) {
-    return { name: 'dashboard' }
+    return { name: 'forbidden' }
+  }
+
+  if (Array.isArray(permissionsAny) && permissionsAny.length && !permissionsAny.some((code) => auth.can(code))) {
+    return { name: 'forbidden' }
+  }
+
+  if (Array.isArray(permissionsAll) && permissionsAll.length && !permissionsAll.every((code) => auth.can(code))) {
+    return { name: 'forbidden' }
   }
 
   return true

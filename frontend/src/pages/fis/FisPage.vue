@@ -13,10 +13,13 @@ import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
+import { usePermissions } from '../../composables/usePermissions'
 import { TABLE_ROWS_PER_PAGE_OPTIONS, createTablePagination, persistTablePagination } from '../../services/tableSettings'
 import { FIS_RECORD_STATUS_OPTIONS, FIS_STATUS_OPTIONS, FIS_TYPE_OPTIONS, formatRuDateTime, optionLabel, statusTone, useFisStore } from '../../stores/fis'
 
 const store = useFisStore()
+const permissions = usePermissions()
+const canManage = computed(() => permissions.hasPermission('fis.export'))
 const $q = useQuasar(), route = useRoute(), router = useRouter()
 const rowsKey = 'collegePortal.fis.rowsPerPage'
 const syncingQuery = ref(false), createVisible = ref(false)
@@ -49,13 +52,13 @@ function updatePagination(p) { tablePagination.value = p; persistTablePagination
 function routeSelectedId() { return route.query.selected ? String(route.query.selected) : '' }
 async function syncQuery(selectedId = routeSelectedId()) { const query = { ...route.query }; selectedId ? query.selected = selectedId : delete query.selected; syncingQuery.value = true; await router.replace({ path: '/fis', query }); syncingQuery.value = false }
 async function selectPackage(pkg) { store.select(pkg); await syncQuery(pkg?.id || '') }
-function openCreate(type = 'admission') { Object.assign(form, { name: '', package_type: type, year: store.yearOptions[0]?.value || new Date().getFullYear(), education_program_id: '', note: '' }); createVisible.value = true }
-async function createPackage() { await store.createPackage(form); createVisible.value = false; notify('Пакет ФИС создан') }
-async function validatePackage() { await store.validatePackage(); notify('Пакет проверен') }
-async function markExported() { await store.markExported(); notify('Пакет отмечен как выгруженный') }
-async function archivePackage() { await store.archive(); notify('Пакет архивирован') }
-async function exportCsv() { await store.exportCsv(); notify('CSV выгружен') }
-async function exportJson() { await store.exportJson(); notify('JSON выгружен') }
+function openCreate(type = 'admission') { if (!canManage.value) return; Object.assign(form, { name: '', package_type: type, year: store.yearOptions[0]?.value || new Date().getFullYear(), education_program_id: '', note: '' }); createVisible.value = true }
+async function createPackage() { if (!canManage.value) return; await store.createPackage(form); createVisible.value = false; notify('Пакет ФИС создан') }
+async function validatePackage() { if (!canManage.value) return; await store.validatePackage(); notify('Пакет проверен') }
+async function markExported() { if (!canManage.value) return; await store.markExported(); notify('Пакет отмечен как выгруженный') }
+async function archivePackage() { if (!canManage.value) return; await store.archive(); notify('Пакет архивирован') }
+async function exportCsv() { if (!canManage.value) return; await store.exportCsv(); notify('CSV выгружен') }
+async function exportJson() { if (!canManage.value) return; await store.exportJson(); notify('JSON выгружен') }
 async function applyFilters() { store.setFilters({ ...store.filters }); await syncQuery('') }
 async function resetFilters() { store.resetFilters(); await syncQuery('') }
 watch(() => route.query.selected, () => { if (!syncingQuery.value) store.selectById(routeSelectedId()) })
@@ -64,7 +67,7 @@ onMounted(async () => { store.selectById(routeSelectedId()); await store.load();
 
 <template>
   <AppPage>
-    <PageHeader title="ФИС" subtitle="Подготовка, проверка и выгрузка данных для ФИС ГИА и ФИС Приема без реальной отправки."><template #actions><q-btn color="primary" @click="openCreate('admission')"><Plus :size="16" class="q-mr-xs" /> Пакет приема</q-btn><q-btn outline color="primary" class="q-ml-sm" @click="openCreate('gia')"><Plus :size="16" class="q-mr-xs" /> Пакет ГИА</q-btn></template></PageHeader>
+    <PageHeader title="ФИС" subtitle="Подготовка, проверка и выгрузка данных для ФИС ГИА и ФИС Приема без реальной отправки."><template #actions><q-btn v-if="canManage" color="primary" @click="openCreate('admission')"><Plus :size="16" class="q-mr-xs" /> Пакет приема</q-btn><q-btn outline color="primary" class="q-ml-sm" @click="openCreate('gia')"><Plus :size="16" class="q-mr-xs" /> Пакет ГИА</q-btn></template></PageHeader>
     <AppToolbar><span>{{ tableSubtitle }}</span><template #actions><AppLoading v-if="store.loading" label="Загрузка ФИС..." /><q-btn flat :disable="store.loading" @click="store.load"><RefreshCw :size="16" class="q-mr-xs" /> Обновить</q-btn></template></AppToolbar>
     <AppErrorBanner :message="store.error" />
     <AppFilterBar><q-select v-model="store.filters.package_type" dense outlined clearable emit-value map-options label="Тип" :options="FIS_TYPE_OPTIONS" /><q-select v-model="store.filters.year" dense outlined clearable emit-value map-options label="Год" :options="store.yearOptions" /><q-select v-model="store.filters.status" dense outlined clearable emit-value map-options label="Статус" :options="FIS_STATUS_OPTIONS" /><q-select v-model="store.filters.education_program_id" dense outlined clearable emit-value map-options label="Программа" :options="store.programOptions" /><template #actions><q-btn color="primary" @click="applyFilters">Применить</q-btn><q-btn flat @click="resetFilters">Сбросить</q-btn></template></AppFilterBar>

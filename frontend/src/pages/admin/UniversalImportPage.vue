@@ -11,8 +11,11 @@ import AppLoading from '../../components/ui/AppLoading.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import AppTable from '../../components/ui/AppTable.vue'
 import { useUniversalImportStore } from '../../stores/universalImport'
+import { usePermissions } from '../../composables/usePermissions'
 
 const store = useUniversalImportStore()
+const permissions = usePermissions()
+const canManage = computed(() => permissions.hasPermission('import.manage'))
 const $q = useQuasar()
 const dataType = ref('students')
 const mode = ref('skip_duplicates')
@@ -57,6 +60,7 @@ function syncMappingFromJob() {
   Object.entries(store.currentJob?.mapping || {}).forEach(([field, header]) => { mapping[field] = header || '' })
 }
 async function handleDownloadTemplate() {
+  if (!canManage.value) return
   const blob = await store.downloadTemplate(dataType.value)
   if (!blob) return
   const url = URL.createObjectURL(blob)
@@ -71,16 +75,19 @@ async function handleDownloadTemplate() {
 }
 
 async function handlePreview() {
+  if (!canManage.value) return
   await store.preview(dataType.value, file.value)
   syncMappingFromJob()
   $q.notify({ type: 'positive', message: 'Предварительный просмотр подготовлен', position: 'top-right' })
 }
 async function handleValidate() {
+  if (!canManage.value) return
   await store.validate({ ...mapping }, mode.value)
   syncMappingFromJob()
   $q.notify({ type: errors.value.length ? 'warning' : 'positive', message: errors.value.length ? 'Найдены ошибки проверки' : 'Проверка прошла без ошибок', position: 'top-right' })
 }
 async function handleConfirm() {
+  if (!canManage.value) return
   await store.confirm({ ...mapping }, mode.value)
   syncMappingFromJob()
   $q.notify({ type: store.currentJob.error_count ? 'warning' : 'positive', message: 'Импорт выполнен', position: 'top-right' })
@@ -107,9 +114,9 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
           <div class="universal-import-controls">
             <q-select v-model="dataType" outlined dense emit-value map-options label="Тип данных" :options="store.typeOptions" />
             <q-select v-model="mode" outlined dense emit-value map-options label="Режим" :options="store.modeOptions" option-value="value" option-label="label" />
-            <q-file v-model="file" outlined dense accept=".csv,.txt,.xlsx" label="CSV или XLSX"><template #prepend><Upload :size="16" /></template></q-file>
-            <q-btn outline color="primary" :loading="store.saving" @click="handleDownloadTemplate"><Download :size="16" class="q-mr-xs" /> Шаблон CSV</q-btn>
-            <q-btn color="primary" :disable="!canPreview" :loading="store.saving" @click="handlePreview"><FileSpreadsheet :size="16" class="q-mr-xs" /> Предпросмотр</q-btn>
+            <q-file v-if="canManage" v-model="file" outlined dense accept=".csv,.txt,.xlsx" label="CSV или XLSX"><template #prepend><Upload :size="16" /></template></q-file>
+            <q-btn v-if="canManage" outline color="primary" :loading="store.saving" @click="handleDownloadTemplate"><Download :size="16" class="q-mr-xs" /> Шаблон CSV</q-btn>
+            <q-btn v-if="canManage" color="primary" :disable="!canPreview" :loading="store.saving" @click="handlePreview"><FileSpreadsheet :size="16" class="q-mr-xs" /> Предпросмотр</q-btn>
           </div>
           <q-banner rounded class="universal-import-hint">Поддерживаются студенты, группы, преподаватели, дисциплины, аудитории и абитуриенты. Импорт выполняется только после подтверждения.</q-banner>
           <div v-if="selectedTypeConfig" class="universal-import-reference">
@@ -146,8 +153,8 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
             </div>
           </div>
           <div class="universal-import-actions">
-            <q-btn outline color="primary" :disable="!canConfirm" :loading="store.saving" @click="handleValidate"><Wand2 :size="16" class="q-mr-xs" /> Проверить</q-btn>
-            <q-btn color="primary" :disable="!canConfirm" :loading="store.saving" @click="handleConfirm"><CheckCircle2 :size="16" class="q-mr-xs" /> Подтвердить импорт</q-btn>
+            <q-btn v-if="canManage" outline color="primary" :disable="!canConfirm" :loading="store.saving" @click="handleValidate"><Wand2 :size="16" class="q-mr-xs" /> Проверить</q-btn>
+            <q-btn v-if="canManage" color="primary" :disable="!canConfirm" :loading="store.saving" @click="handleConfirm"><CheckCircle2 :size="16" class="q-mr-xs" /> Подтвердить импорт</q-btn>
           </div>
         </AppCard>
 

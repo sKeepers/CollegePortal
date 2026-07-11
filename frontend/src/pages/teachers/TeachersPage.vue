@@ -16,18 +16,25 @@ import TeacherDetailsPanel from './TeacherDetailsPanel.vue'
 import TeacherFilters from './TeacherFilters.vue'
 import TeacherFormPanel from './TeacherFormPanel.vue'
 import { useTeachersStore } from '../../stores/teachers'
+import { usePermissions } from '../../composables/usePermissions'
 import {
   TABLE_ROWS_PER_PAGE_OPTIONS,
   createTablePagination,
   persistTablePagination,
 } from '../../services/tableSettings'
 
+const permissions = usePermissions()
 const store = useTeachersStore()
 const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
 const TEACHERS_ROWS_PER_PAGE_KEY = 'collegePortal.teachers.rowsPerPage'
 const syncingQueryFromUi = ref(false)
+const canCreate = computed(() => permissions.hasPermission('teachers.create') || permissions.hasPermission('teachers.edit'))
+const canUpdate = computed(() => permissions.hasPermission('teachers.update') || permissions.hasPermission('teachers.edit'))
+const canDelete = computed(() => permissions.hasPermission('teachers.delete') || permissions.hasPermission('teachers.edit'))
+const canImport = computed(() => canUpdate.value)
+const canExport = computed(() => permissions.hasPermission('teachers.update') || permissions.hasPermission('teachers.edit') || permissions.hasPermission('teachers.view'))
 
 const importFile = ref(null)
 const formVisible = ref(false)
@@ -139,11 +146,13 @@ async function selectTeacher(teacher) {
 }
 
 function openCreateForm() {
+  if (!canCreate.value) return
   editingTeacher.value = null
   formVisible.value = true
 }
 
 function openEditForm(teacher) {
+  if (!canUpdate.value) return
   editingTeacher.value = teacher
   formVisible.value = true
 }
@@ -157,6 +166,7 @@ async function saveTeacher(payload) {
 }
 
 function requestDelete(teacher) {
+  if (!canDelete.value) return
   deletingTeacher.value = teacher
   deleteDialogVisible.value = true
 }
@@ -179,6 +189,7 @@ async function resetFilters() {
 }
 
 async function handleImport(file) {
+  if (!canImport.value) return
   if (!file) {
     return
   }
@@ -189,6 +200,7 @@ async function handleImport(file) {
 }
 
 async function exportTeachers() {
+  if (!canExport.value) return
   await store.exportCsv()
   notifySuccess('Экспорт преподавателей подготовлен')
 }
@@ -231,7 +243,7 @@ onMounted(async () => {
       subtitle="Педагогический состав, контакты, отделения, CSV-обмен и быстрые переходы."
     >
       <template #actions>
-        <q-btn color="primary" @click="openCreateForm">
+        <q-btn v-if="canCreate" color="primary" @click="openCreateForm">
           <template #default>
             <Plus :size="16" />
             <span>Новый преподаватель</span>
@@ -255,6 +267,7 @@ onMounted(async () => {
       <template #actions>
         <AppLoading v-if="store.loading" label="Загрузка преподавателей..." />
         <q-file
+          v-if="canImport"
           v-model="importFile"
           dense
           outlined
@@ -276,7 +289,7 @@ onMounted(async () => {
             <span>Обновить</span>
           </template>
         </q-btn>
-        <q-btn color="secondary" :disable="store.loading" @click="exportTeachers">
+        <q-btn v-if="canExport" color="secondary" :disable="store.loading" @click="exportTeachers">
           <template #default>
             <Download :size="16" />
             <span>Экспорт</span>
@@ -353,10 +366,10 @@ onMounted(async () => {
           <template #body-cell-actions="props">
             <q-td :props="props">
               <div class="teachers-row-actions">
-                <q-btn flat round dense title="Редактировать" @click.stop="openEditForm(props.row)">
+                <q-btn v-if="canUpdate" flat round dense title="Редактировать" @click.stop="openEditForm(props.row)">
                   <Edit3 :size="16" />
                 </q-btn>
-                <q-btn flat round dense color="negative" title="Удалить" @click.stop="requestDelete(props.row)">
+                <q-btn v-if="canDelete" flat round dense color="negative" title="Удалить" @click.stop="requestDelete(props.row)">
                   <Trash2 :size="16" />
                 </q-btn>
               </div>
@@ -369,7 +382,7 @@ onMounted(async () => {
           title="Преподаватели не найдены"
           description="Измените фильтры, импортируйте CSV или создайте преподавателя вручную."
         >
-          <q-btn color="primary" label="Новый преподаватель" @click="openCreateForm" />
+          <q-btn v-if="canCreate" color="primary" label="Новый преподаватель" @click="openCreateForm" />
         </AppEmptyState>
       </div>
 

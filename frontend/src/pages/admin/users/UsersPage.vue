@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { usePermissions } from '../../../composables/usePermissions'
 import { useQuasar } from 'quasar'
 import { Ban, CheckCircle2, Edit, Plus, RefreshCw, ShieldCheck, Trash2, UserRound } from '@lucide/vue'
 import AppPage from '../../../components/ui/AppPage.vue'
@@ -18,6 +19,8 @@ import { useUsersStore } from '../../../stores/users'
 
 const rowsPerPageKey = 'collegePortal.users.rowsPerPage'
 const store = useUsersStore()
+const permissions = usePermissions()
+const canManage = computed(() => permissions.hasPermission('users.manage'))
 const $q = useQuasar()
 const formOpen = ref(false)
 const editingUser = ref(null)
@@ -198,7 +201,7 @@ onMounted(async () => {
       <template #actions>
         <AppLoading v-if="store.loading || store.saving" label="Обработка..." />
         <q-btn flat :disable="store.loading" @click="store.load"><RefreshCw :size="16" class="q-mr-xs" /> Обновить</q-btn>
-        <q-btn color="primary" @click="openCreate"><Plus :size="16" class="q-mr-xs" /> Создать</q-btn>
+        <q-btn v-if="canManage" color="primary" @click="openCreate"><Plus :size="16" class="q-mr-xs" /> Создать</q-btn>
       </template>
     </AppToolbar>
     <AppErrorBanner :message="store.error" />
@@ -246,10 +249,10 @@ onMounted(async () => {
           </template>
           <template #body-cell-actions="props">
             <q-td :props="props" class="users-actions">
-              <q-btn flat dense round title="Редактировать" @click.stop="openEdit(props.row)"><Edit :size="16" /></q-btn>
-              <q-btn v-if="props.row.is_active" flat dense round color="warning" title="Заблокировать" @click.stop="askBlock(props.row)"><Ban :size="16" /></q-btn>
-              <q-btn v-else flat dense round color="positive" title="Разблокировать" @click.stop="askUnblock(props.row)"><CheckCircle2 :size="16" /></q-btn>
-              <q-btn flat dense round color="negative" title="Удалить" @click.stop="askDelete(props.row)"><Trash2 :size="16" /></q-btn>
+              <q-btn v-if="canManage" flat dense round title="Редактировать" @click.stop="openEdit(props.row)"><Edit :size="16" /></q-btn>
+              <q-btn v-if="canManage && props.row.is_active" flat dense round color="warning" title="Заблокировать" @click.stop="askBlock(props.row)"><Ban :size="16" /></q-btn>
+              <q-btn v-else-if="canManage" flat dense round color="positive" title="Разблокировать" @click.stop="askUnblock(props.row)"><CheckCircle2 :size="16" /></q-btn>
+              <q-btn v-if="canManage" flat dense round color="negative" title="Удалить" @click.stop="askDelete(props.row)"><Trash2 :size="16" /></q-btn>
             </q-td>
           </template>
         </AppTable>
@@ -285,10 +288,10 @@ onMounted(async () => {
           </dl>
 
           <div class="users-card-actions">
-            <q-btn outline color="primary" @click="openEdit(selectedUser)"><Edit :size="16" class="q-mr-xs" /> Редактировать</q-btn>
-            <q-btn outline color="primary" @click="openRolesDialog(selectedUser)"><ShieldCheck :size="16" class="q-mr-xs" /> Роли</q-btn>
-            <q-btn v-if="selectedUser.is_active" outline color="warning" @click="askBlock(selectedUser)"><Ban :size="16" class="q-mr-xs" /> Заблокировать</q-btn>
-            <q-btn v-else outline color="positive" @click="askUnblock(selectedUser)"><CheckCircle2 :size="16" class="q-mr-xs" /> Разблокировать</q-btn>
+            <q-btn v-if="canManage" outline color="primary" @click="openEdit(selectedUser)"><Edit :size="16" class="q-mr-xs" /> Редактировать</q-btn>
+            <q-btn v-if="canManage" outline color="primary" @click="openRolesDialog(selectedUser)"><ShieldCheck :size="16" class="q-mr-xs" /> Роли</q-btn>
+            <q-btn v-if="canManage && selectedUser.is_active" outline color="warning" @click="askBlock(selectedUser)"><Ban :size="16" class="q-mr-xs" /> Заблокировать</q-btn>
+            <q-btn v-else-if="canManage" outline color="positive" @click="askUnblock(selectedUser)"><CheckCircle2 :size="16" class="q-mr-xs" /> Разблокировать</q-btn>
             <q-btn v-if="openPerson(selectedUser)" flat color="primary" :to="openPerson(selectedUser)">Открыть связанную карточку</q-btn>
           </div>
         </AppCard>
@@ -312,7 +315,7 @@ onMounted(async () => {
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Отмена" v-close-popup />
-          <q-btn color="primary" :loading="store.saving" label="Сохранить" @click="saveUser" />
+          <q-btn v-if="canManage" color="primary" :loading="store.saving" label="Сохранить" @click="saveUser" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -330,7 +333,7 @@ onMounted(async () => {
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Отмена" v-close-popup />
-          <q-btn color="primary" :disable="!rolesForm.role_ids.length" :loading="store.saving" label="Сохранить роли" @click="saveRoles" />
+          <q-btn v-if="canManage" color="primary" :disable="!rolesForm.role_ids.length" :loading="store.saving" label="Сохранить роли" @click="saveRoles" />
         </q-card-actions>
       </q-card>
     </q-dialog>
