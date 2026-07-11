@@ -18,6 +18,7 @@ class UpdateGroupRequest extends FormRequest
             'name' => ['sometimes', 'nullable', 'string', 'max:255', Rule::unique('groups', 'name')->ignore($this->route('group'))],
             'specialty' => ['sometimes', 'required', 'string', 'max:255'],
             'education_program_id' => ['sometimes', 'nullable', 'integer', 'exists:education_programs,id'],
+            'curriculum_id' => ['sometimes', 'nullable', 'integer', 'exists:curricula,id'],
             'course' => ['sometimes', 'required', 'integer', 'min:1', 'max:6'],
             'year_start' => ['sometimes', 'required', 'integer', 'min:2000', 'max:2100'],
             'curator_id' => ['sometimes', 'nullable', 'integer', 'exists:teachers,id'],

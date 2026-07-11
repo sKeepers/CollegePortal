@@ -12,6 +12,7 @@ class Group extends Model
         'name',
         'specialty',
         'education_program_id',
+        'curriculum_id',
         'course',
         'year_start',
         'curator_id',
@@ -33,6 +34,11 @@ class Group extends Model
     public function educationProgram(): BelongsTo
     {
         return $this->belongsTo(EducationProgram::class);
+    }
+
+    public function curriculum(): BelongsTo
+    {
+        return $this->belongsTo(Curriculum::class);
     }
 
     public function students(): HasMany

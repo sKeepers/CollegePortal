@@ -107,6 +107,10 @@ class RoleSeeder extends Seeder
             ['module' => 'Admissions', 'code' => 'admissions.documents.download', 'name' => 'Документы абитуриентов: скачивание', 'description' => 'Скачивание файлов документов через защищенный endpoint.'],
             ['module' => 'Curricula', 'code' => 'curricula.view', 'name' => 'Учебные планы: просмотр', 'description' => 'Просмотр учебных планов.'],
             ['module' => 'Curricula', 'code' => 'curricula.edit', 'name' => 'Учебные планы: ведение', 'description' => 'Создание, изменение и импорт учебных планов.'],
+            ['module' => 'Curricula', 'code' => 'curricula.subjects.view', 'name' => 'Учебные планы: дисциплины просмотр', 'description' => 'Просмотр нормализованных дисциплин учебного плана.'],
+            ['module' => 'Curricula', 'code' => 'curricula.subjects.create', 'name' => 'Учебные планы: дисциплины добавление', 'description' => 'Добавление дисциплин семестра в учебный план.'],
+            ['module' => 'Curricula', 'code' => 'curricula.subjects.update', 'name' => 'Учебные планы: дисциплины изменение', 'description' => 'Изменение часов и контроля дисциплин учебного плана.'],
+            ['module' => 'Curricula', 'code' => 'curricula.subjects.delete', 'name' => 'Учебные планы: дисциплины удаление', 'description' => 'Удаление дисциплин из учебного плана.'],
             ['module' => 'Teaching Load', 'code' => 'teachingload.view', 'name' => 'Нагрузка: просмотр', 'description' => 'Просмотр нагрузки преподавателей.'],
             ['module' => 'Teaching Load', 'code' => 'teachingload.edit', 'name' => 'Нагрузка: ведение', 'description' => 'Создание, изменение и импорт нагрузки.'],
             ['module' => 'Exams', 'code' => 'exams.view', 'name' => 'Экзамены: просмотр', 'description' => 'Просмотр экзаменов и ГИА.'],
@@ -144,7 +148,7 @@ class RoleSeeder extends Seeder
         return [
             'dashboard.view', 'people.view', 'students.view', 'groups.view', 'teachers.view', 'subjects.view', 'classrooms.view',
             'schedule.view', 'journal.view', 'journal.export', 'attendance.view', 'attendance.reports',
-            'admissions.view', 'admissions.documents.view', 'admissions.documents.download', 'admissions.bulk_export', 'curricula.view', 'teachingload.view', 'exams.view', 'graduation.view',
+            'admissions.view', 'admissions.documents.view', 'admissions.documents.download', 'admissions.bulk_export', 'curricula.view', 'curricula.subjects.view', 'teachingload.view', 'exams.view', 'graduation.view',
             'frdo.view', 'fis.view', 'gate.reports', 'audit.view', 'reference.manage', 'view_reports',
         ];
     }
@@ -158,7 +162,7 @@ class RoleSeeder extends Seeder
             'subjects.view', 'subjects.create', 'subjects.update', 'subjects.delete',
             'classrooms.view', 'classrooms.create', 'classrooms.update', 'classrooms.delete',
             'schedule.view', 'schedule.update', 'journal.view', 'journal.edit', 'journal.export',
-            'attendance.view', 'attendance.reports', 'admissions.documents.view', 'curricula.view', 'curricula.edit',
+            'attendance.view', 'attendance.reports', 'admissions.documents.view', 'curricula.view', 'curricula.edit', 'curricula.subjects.view', 'curricula.subjects.create', 'curricula.subjects.update', 'curricula.subjects.delete',
             'teachingload.view', 'teachingload.edit', 'exams.view', 'exams.edit',
             'graduation.view', 'graduation.edit', 'people.update', 'people.link', 'frdo.view', 'fis.view', 'reference.manage', 'import.manage',
             'manage_dictionaries', 'manage_schedule', 'manage_journal', 'view_reports',

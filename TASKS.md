@@ -640,3 +640,17 @@
 - [x] Добавить sync-команду legacy registry.
 - [x] Добавить документацию `docs/APPLICANT_DOCUMENTS.md`.
 - [ ] Расширить frontend bulk-панель действиями по типу документа отдельной UX-задачей.
+
+## ST-001A: Curriculum Engine foundation
+
+- [x] Проанализировать текущие Curricula, Subjects, Groups, Teaching Load, Exams.
+- [x] Создать `docs/CURRICULUM_DOMAIN.md`.
+- [x] Добавить `curriculum_subjects`.
+- [x] Добавить `control_types` в Reference Data.
+- [x] Добавить связь `groups.curriculum_id`.
+- [x] Добавить API subjects/semesters/summary и CRUD строк плана.
+- [x] Добавить `CurriculumEngineService`.
+- [x] Добавить вкладки карточки учебного плана на `/curricula`.
+- [x] Добавить permissions `curricula.subjects.*`.
+- [x] Добавить audit и тесты.
+- [x] Проверить `php artisan test` и `npm run build`.

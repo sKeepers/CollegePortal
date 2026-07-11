@@ -7,12 +7,17 @@ use App\Http\Requests\StoreCurriculumItemRequest;
 use App\Http\Requests\StoreCurriculumRequest;
 use App\Http\Requests\UpdateCurriculumRequest;
 use App\Http\Resources\CurriculumItemResource;
+use App\Http\Resources\CurriculumSubjectResource;
 use App\Http\Resources\CurriculumResource;
 use App\Models\Curriculum;
 use App\Models\CurriculumItem;
+use App\Models\CurriculumSubject;
+use App\Models\ReferenceItem;
 use App\Models\EducationProgram;
 use App\Models\Subject;
+use App\Services\AuditLogService;
 use App\Services\AutoCodeService;
+use App\Services\CurriculumEngineService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -23,15 +28,17 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CurriculumController extends Controller
 {
-    public function __construct(private readonly AutoCodeService $autoCodeService)
-    {
+    public function __construct(
+        private readonly AutoCodeService $autoCodeService,
+        private readonly CurriculumEngineService $curriculumEngine,
+    ) {
     }
 
     public function index(Request $request): AnonymousResourceCollection
     {
         $curricula = Curriculum::query()
-            ->with(['educationProgram.specialty', 'items.subject'])
-            ->withCount('items')
+            ->with(['educationProgram.specialty', 'items.subject', 'subjects.subject', 'subjects.controlType'])
+            ->withCount(['items', 'subjects'])
             ->when($request->integer('education_program_id'), fn ($query, int $id) => $query->where('education_program_id', $id))
             ->when($request->integer('year_start'), fn ($query, int $year) => $query->where('year_start', $year))
             ->when($request->integer('specialty_id'), function ($query, int $specialtyId): void {
@@ -56,21 +63,21 @@ class CurriculumController extends Controller
     {
         $curriculum = Curriculum::create($this->validatedCurriculumData($request->validated()));
 
-        return (new CurriculumResource($curriculum->load(['educationProgram.specialty', 'items.subject'])->loadCount('items')))
+        return (new CurriculumResource($curriculum->load(['educationProgram.specialty', 'items.subject', 'subjects.subject', 'subjects.controlType'])->loadCount(['items', 'subjects'])))
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
     public function show(Curriculum $curriculum): CurriculumResource
     {
-        return new CurriculumResource($curriculum->load(['educationProgram.specialty', 'items.subject'])->loadCount('items'));
+        return new CurriculumResource($curriculum->load(['educationProgram.specialty', 'items.subject', 'subjects.subject', 'subjects.controlType'])->loadCount(['items', 'subjects']));
     }
 
     public function update(UpdateCurriculumRequest $request, Curriculum $curriculum): CurriculumResource
     {
         $curriculum->update($this->normalizedCurriculumPatch($request->validated()));
 
-        return new CurriculumResource($curriculum->load(['educationProgram.specialty', 'items.subject'])->loadCount('items'));
+        return new CurriculumResource($curriculum->load(['educationProgram.specialty', 'items.subject', 'subjects.subject', 'subjects.controlType'])->loadCount(['items', 'subjects']));
     }
 
     public function destroy(Curriculum $curriculum): Response
@@ -92,6 +99,59 @@ class CurriculumController extends Controller
     public function destroyItem(CurriculumItem $curriculumItem): Response
     {
         $curriculumItem->delete();
+
+        return response()->noContent();
+    }
+
+    public function subjects(Curriculum $curriculum): AnonymousResourceCollection
+    {
+        return CurriculumSubjectResource::collection($curriculum->subjects()->with(['subject', 'controlType'])->get());
+    }
+
+    public function semesters(Curriculum $curriculum): JsonResponse
+    {
+        $semesters = collect($this->curriculumEngine->semesters($curriculum))->map(function (array $semester): array {
+            return [
+                'semester' => $semester['semester'],
+                'subjects_count' => $semester['subjects_count'],
+                'total_hours' => $semester['total_hours'],
+                'subjects' => CurriculumSubjectResource::collection($semester['subjects'])->resolve(),
+            ];
+        })->values();
+
+        return response()->json(['data' => $semesters]);
+    }
+
+    public function summary(Curriculum $curriculum): JsonResponse
+    {
+        return response()->json(['data' => $this->curriculumEngine->summary($curriculum)]);
+    }
+
+    public function storeSubject(Request $request, Curriculum $curriculum): JsonResponse
+    {
+        $data = $this->validatedSubjectData($request);
+        $subject = $curriculum->subjects()->create($data);
+        AuditLogService::log('Curricula', 'curriculum_subject_created', $subject, null, $subject->getAttributes(), $request);
+
+        return (new CurriculumSubjectResource($subject->load(['subject', 'controlType'])))
+            ->response()
+            ->setStatusCode(Response::HTTP_CREATED);
+    }
+
+    public function updateSubject(Request $request, CurriculumSubject $curriculumSubject): CurriculumSubjectResource
+    {
+        $old = $curriculumSubject->getAttributes();
+        $curriculumSubject->update($this->validatedSubjectData($request, partial: true, existing: $curriculumSubject));
+        AuditLogService::log('Curricula', 'curriculum_subject_updated', $curriculumSubject, $old, $curriculumSubject->getAttributes(), $request);
+
+        return new CurriculumSubjectResource($curriculumSubject->load(['subject', 'controlType']));
+    }
+
+    public function destroySubject(Request $request, CurriculumSubject $curriculumSubject): Response
+    {
+        $old = $curriculumSubject->getAttributes();
+        AuditLogService::log('Curricula', 'curriculum_subject_deleted', $curriculumSubject, $old, null, $request);
+        $curriculumSubject->delete();
 
         return response()->noContent();
     }
@@ -193,10 +253,55 @@ class CurriculumController extends Controller
     }
 
 
+
+    private function validatedSubjectData(Request $request, bool $partial = false, ?CurriculumSubject $existing = null): array
+    {
+        $required = $partial ? 'sometimes' : 'required';
+        $data = $request->validate([
+            'semester' => [$required, 'integer', 'min:1', 'max:12'],
+            'subject_id' => [$required, 'integer', 'exists:subjects,id'],
+            'lecture_hours' => ['sometimes', 'integer', 'min:0', 'max:5000'],
+            'practice_hours' => ['sometimes', 'integer', 'min:0', 'max:5000'],
+            'laboratory_hours' => ['sometimes', 'integer', 'min:0', 'max:5000'],
+            'independent_hours' => ['sometimes', 'integer', 'min:0', 'max:5000'],
+            'total_hours' => ['nullable', 'integer', 'min:0', 'max:20000'],
+            'control_type_id' => ['nullable', 'integer', 'exists:reference_items,id'],
+            'control_type' => ['nullable', 'string', 'max:100'],
+            'sequence' => ['sometimes', 'integer', 'min:0', 'max:1000'],
+            'is_optional' => ['sometimes', 'boolean'],
+            'competencies' => ['nullable', 'array'],
+        ]);
+
+        foreach (['lecture_hours', 'practice_hours', 'laboratory_hours', 'independent_hours', 'sequence'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $data[$field] = (int) $data[$field];
+            }
+        }
+
+        if (array_key_exists('control_type_id', $data) && $data['control_type_id']) {
+            $data['control_type'] = ReferenceItem::query()->find($data['control_type_id'])?->code;
+        }
+
+        if (! array_key_exists('total_hours', $data) || $data['total_hours'] === null) {
+            $data['total_hours'] = (int) ($data['lecture_hours'] ?? $existing?->lecture_hours ?? 0)
+                + (int) ($data['practice_hours'] ?? $existing?->practice_hours ?? 0)
+                + (int) ($data['laboratory_hours'] ?? $existing?->laboratory_hours ?? 0)
+                + (int) ($data['independent_hours'] ?? $existing?->independent_hours ?? 0);
+        } else {
+            $data['total_hours'] = (int) $data['total_hours'];
+        }
+
+        if (array_key_exists('is_optional', $data)) {
+            $data['is_optional'] = (bool) $data['is_optional'];
+        }
+
+        return $data;
+    }
+
     private function normalizedCurriculumPatch(array $data): array
     {
         $patch = [];
-        foreach (['code', 'education_program_id', 'name', 'year_start', 'status', 'description'] as $field) {
+        foreach (['code', 'education_program_id', 'name', 'qualification', 'year_start', 'status', 'description', 'competencies'] as $field) {
             if (array_key_exists($field, $data)) {
                 $patch[$field] = $field === 'name' ? trim($data[$field]) : $data[$field];
             }
@@ -214,9 +319,11 @@ class CurriculumController extends Controller
             'code' => ($data['code'] ?? null) ?: $this->autoCodeService->curriculumCode($data['name'] ?? null),
             'education_program_id' => (int) $data['education_program_id'],
             'name' => trim($data['name']),
+            'qualification' => $data['qualification'] ?? null,
             'year_start' => (int) $data['year_start'],
             'status' => $data['status'] ?: 'draft',
             'description' => $data['description'] ?? null,
+            'competencies' => $data['competencies'] ?? null,
         ];
     }
 

@@ -136,6 +136,20 @@ class ReferenceDataSeeder extends Seeder
                 ],
             ],
             [
+                'code' => 'control_types',
+                'name' => 'Виды контроля',
+                'description' => 'Формы контроля учебного плана.',
+                'items' => [
+                    ['code' => 'exam', 'name' => 'Экзамен', 'metadata' => ['tone' => 'danger']],
+                    ['code' => 'credit', 'name' => 'Зачет', 'metadata' => ['tone' => 'success']],
+                    ['code' => 'differentiated_credit', 'name' => 'Дифференцированный зачет', 'metadata' => ['tone' => 'warning']],
+                    ['code' => 'coursework', 'name' => 'Курсовая работа', 'metadata' => ['tone' => 'info']],
+                    ['code' => 'project', 'name' => 'Проект', 'metadata' => ['tone' => 'info']],
+                    ['code' => 'practice', 'name' => 'Практика', 'metadata' => ['tone' => 'neutral']],
+                    ['code' => 'gia', 'name' => 'ГИА', 'metadata' => ['tone' => 'danger']],
+                ],
+            ],
+            [
                 'code' => 'exam_types',
                 'name' => 'Виды экзаменов',
                 'description' => 'Формы промежуточной и итоговой аттестации.',

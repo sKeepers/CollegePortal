@@ -8,7 +8,7 @@ export const CURRICULUM_STATUS_OPTIONS = [
   { label: 'Действует', value: 'active', tone: 'success' },
   { label: 'Архив', value: 'archived', tone: 'warning' },
 ]
-export const CONTROL_FORM_OPTIONS = ['Экзамен', 'Зачет', 'Дифференцированный зачет', 'Контрольная работа', 'Курсовая работа']
+export const CONTROL_FORM_OPTIONS = ['Экзамен', 'Зачет', 'Дифференцированный зачет', 'Курсовая работа', 'Проект', 'Практика', 'ГИА']
 function extractRows(payload) { return Array.isArray(payload?.data) ? payload.data : [] }
 export function statusLabel(status) { return CURRICULUM_STATUS_OPTIONS.find((item) => item.value === status)?.label || status || '—' }
 export function statusTone(status) { return CURRICULUM_STATUS_OPTIONS.find((item) => item.value === status)?.tone || 'neutral' }
@@ -32,11 +32,28 @@ function cleanItem(payload) {
     sort_order: Number(payload.sort_order || 0),
   }
 }
+function cleanSubject(payload) {
+  return {
+    subject_id: Number(payload.subject_id),
+    semester: Number(payload.semester || 1),
+    lecture_hours: Number(payload.lecture_hours || 0),
+    practice_hours: Number(payload.practice_hours || 0),
+    laboratory_hours: Number(payload.laboratory_hours || 0),
+    independent_hours: Number(payload.independent_hours || 0),
+    control_type_id: payload.control_type_id ? Number(payload.control_type_id) : null,
+    sequence: Number(payload.sequence || 0),
+    is_optional: Boolean(payload.is_optional),
+  }
+}
 export const useCurriculaStore = defineStore('curricula', () => {
   const curricula = ref([])
   const educationPrograms = ref([])
   const specialties = ref([])
   const subjects = ref([])
+  const controlTypes = ref([])
+  const selectedSubjects = ref([])
+  const selectedSemesters = ref([])
+  const selectedSummary = ref(null)
   const filters = ref({ ...initialFilters })
   const selectedId = ref(null)
   const loading = ref(false)
@@ -60,21 +77,24 @@ export const useCurriculaStore = defineStore('curricula', () => {
   const programOptions = computed(() => educationPrograms.value.map((program) => ({ label: [program.name, program.study_form, program.year_start].filter(Boolean).join(' · '), value: program.id, specialty_id: program.specialty_id })))
   const specialtyOptions = computed(() => specialties.value.map((specialty) => ({ label: [specialty.code, specialty.name].filter(Boolean).join(' · '), value: specialty.id })))
   const subjectOptions = computed(() => subjects.value.map((subject) => ({ label: [subject.code, subject.name].filter(Boolean).join(' · '), value: subject.id })))
+  const controlTypeOptions = computed(() => controlTypes.value.map((item) => ({ label: item.name, value: item.id, code: item.code })))
   const yearOptions = computed(() => [...new Set(curricula.value.map((item) => item.year_start).filter(Boolean))].sort((a, b) => b - a).map((year) => ({ label: String(year), value: year })))
   const selectedItems = computed(() => selectedCurriculum.value?.items || [])
-  const selectedHours = computed(() => selectedItems.value.reduce((sum, item) => sum + Number(item.hours_total || 0), 0))
+  const selectedHours = computed(() => (selectedSummary.value?.total_hours ?? selectedSubjects.value.reduce((sum, item) => sum + Number(item.total_hours || 0), 0)) || selectedItems.value.reduce((sum, item) => sum + Number(item.hours_total || 0), 0))
 
   async function load() {
     loading.value = true; error.value = ''
     try {
-      const [curriculaPayload, programsPayload, specialtiesPayload, subjectsPayload] = await Promise.all([
-        api.list('curricula'), api.list('education-programs'), api.list('specialties'), api.list('subjects'),
+      const [curriculaPayload, programsPayload, specialtiesPayload, subjectsPayload, controlTypesPayload] = await Promise.all([
+        api.list('curricula'), api.list('education-programs'), api.list('specialties'), api.list('subjects'), api.list('admin/reference/items', { catalog_code: 'control_types', is_active: 1 }),
       ])
       curricula.value = extractRows(curriculaPayload)
       educationPrograms.value = extractRows(programsPayload)
       specialties.value = extractRows(specialtiesPayload)
       subjects.value = extractRows(subjectsPayload)
+      controlTypes.value = extractRows(controlTypesPayload)
       if (selectedId.value && !selectedCurriculum.value) selectedId.value = null
+      if (selectedId.value) await loadEngine(selectedId.value)
     } catch (err) { error.value = err.message || 'Не удалось загрузить учебные планы' }
     finally { loading.value = false }
   }
@@ -82,7 +102,7 @@ export const useCurriculaStore = defineStore('curricula', () => {
     saving.value = true; error.value = ''
     try {
       const response = id ? await api.update('curricula', id, cleanCurriculum(payload)) : await api.create('curricula', cleanCurriculum(payload))
-      await load(); selectedId.value = response?.data?.id || id || selectedId.value
+      await load(); selectedId.value = response?.data?.id || id || selectedId.value; if (selectedId.value) await loadEngine(selectedId.value)
       return response?.data || null
     } catch (err) { error.value = err.message || 'Не удалось сохранить учебный план'; throw err }
     finally { saving.value = false }
@@ -92,6 +112,38 @@ export const useCurriculaStore = defineStore('curricula', () => {
     loading.value = true; error.value = ''
     try { await api.delete('curricula', curriculum.id); selectedId.value = null; await load() }
     catch (err) { error.value = err.message || 'Не удалось удалить учебный план'; throw err }
+    finally { loading.value = false }
+  }
+
+  async function loadEngine(id = selectedId.value) {
+    if (!id) { selectedSubjects.value = []; selectedSemesters.value = []; selectedSummary.value = null; return }
+    const [subjectsPayload, semestersPayload, summaryPayload] = await Promise.all([
+      api.list(`curricula/${id}/subjects`),
+      api.list(`curricula/${id}/semesters`),
+      api.list(`curricula/${id}/summary`),
+    ])
+    selectedSubjects.value = extractRows(subjectsPayload)
+    selectedSemesters.value = extractRows(semestersPayload)
+    selectedSummary.value = summaryPayload?.data || null
+  }
+  async function addSubject(payload) {
+    if (!selectedId.value) return null
+    saving.value = true; error.value = ''
+    try { const response = await api.create(`curricula/${selectedId.value}/subjects`, cleanSubject(payload)); await load(); await loadEngine(); return response?.data || null }
+    catch (err) { error.value = err.message || 'Не удалось добавить дисциплину семестра'; throw err }
+    finally { saving.value = false }
+  }
+  async function updateSubject(id, payload) {
+    saving.value = true; error.value = ''
+    try { const response = await api.put(`curriculum-subjects/${id}`, cleanSubject(payload)); await load(); await loadEngine(); return response?.data || null }
+    catch (err) { error.value = err.message || 'Не удалось обновить дисциплину семестра'; throw err }
+    finally { saving.value = false }
+  }
+  async function removeSubject(subject) {
+    if (!subject?.id) return
+    loading.value = true; error.value = ''
+    try { await api.delete('curriculum-subjects', subject.id); await load(); await loadEngine() }
+    catch (err) { error.value = err.message || 'Не удалось удалить дисциплину семестра'; throw err }
     finally { loading.value = false }
   }
   async function addItem(payload) {
@@ -122,7 +174,7 @@ export const useCurriculaStore = defineStore('curricula', () => {
   }
   function setFilters(next) { filters.value = { ...filters.value, ...next } }
   function resetFilters() { filters.value = { ...initialFilters } }
-  function select(curriculum) { selectedId.value = curriculum?.id || null }
-  function selectById(id) { selectedId.value = id || null }
-  return { curricula, filteredCurricula, educationPrograms, specialties, subjects, filters, selectedId, selectedCurriculum, selectedItems, selectedHours, loading, saving, error, importSummary, programOptions, specialtyOptions, subjectOptions, yearOptions, load, save, remove, addItem, removeItem, importCsv, exportCsv, setFilters, resetFilters, select, selectById }
+  async function select(curriculum) { selectedId.value = curriculum?.id || null; await loadEngine() }
+  async function selectById(id) { selectedId.value = id || null; await loadEngine() }
+  return { curricula, filteredCurricula, educationPrograms, specialties, subjects, controlTypes, selectedSubjects, selectedSemesters, selectedSummary, filters, selectedId, selectedCurriculum, selectedItems, selectedHours, loading, saving, error, importSummary, programOptions, specialtyOptions, subjectOptions, controlTypeOptions, yearOptions, load, loadEngine, save, remove, addSubject, updateSubject, removeSubject, addItem, removeItem, importCsv, exportCsv, setFilters, resetFilters, select, selectById }
 })

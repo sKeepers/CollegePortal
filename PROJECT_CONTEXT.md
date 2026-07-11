@@ -1114,3 +1114,7 @@ Frontend action-level RBAC доведен до основных CRUD и сист
 ## ADM-DOCS-001: Applicant Documents Registry
 
 Добавлен registry документов заявления абитуриента на основе Reference Data. Комплектность Admissions теперь считается по обязательным типам `applicant_document_types`, а `documents_provided` остается отдельным административным флагом. Файлы документов хранятся в приватном storage и скачиваются только через авторизованный API. Добавлены permissions `admissions.documents.*`, audit действий, sync-команда legacy-строк и вкладка документов в карточке заявления.
+
+## ST-001A: Curriculum Engine foundation
+
+Добавлен foundation нормализованного учебного плана. Новый слой `curriculum_subjects` хранит дисциплины семестров, часы по видам работ, вид контроля из Reference Data, порядок, optional-флаг и заготовку компетенций. Группа может ссылаться на действующий `curriculum_id`, а `CurriculumEngineService` возвращает дисциплины семестра группы, итоги и группировку по семестрам. Существующие `curricula` и legacy `curriculum_items` сохранены для совместимости.

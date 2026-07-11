@@ -28,7 +28,7 @@ class ReferenceDataApiTest extends TestCase
             'is_active' => true,
         ]);
 
-        $this->assertSame(12, ReferenceCatalog::query()->count());
+        $this->assertSame(13, ReferenceCatalog::query()->count());
     }
 
     public function test_reference_service_returns_cached_catalog_options(): void

@@ -145,6 +145,12 @@ Route::middleware('api.token')->group(function (): void {
         Route::apiResource('applicant-applications', ApplicantApplicationController::class);
         Route::get('curricula/export', [CurriculumController::class, 'export']);
         Route::post('curricula/import', [CurriculumController::class, 'import']);
+        Route::get('curricula/{curriculum}/subjects', [CurriculumController::class, 'subjects'])->middleware('permission:curricula.subjects.view');
+        Route::get('curricula/{curriculum}/semesters', [CurriculumController::class, 'semesters'])->middleware('permission:curricula.subjects.view');
+        Route::get('curricula/{curriculum}/summary', [CurriculumController::class, 'summary'])->middleware('permission:curricula.subjects.view');
+        Route::post('curricula/{curriculum}/subjects', [CurriculumController::class, 'storeSubject'])->middleware('permission:curricula.subjects.create');
+        Route::put('curriculum-subjects/{curriculumSubject}', [CurriculumController::class, 'updateSubject'])->middleware('permission:curricula.subjects.update');
+        Route::delete('curriculum-subjects/{curriculumSubject}', [CurriculumController::class, 'destroySubject'])->middleware('permission:curricula.subjects.delete');
         Route::post('curricula/{curriculum}/items', [CurriculumController::class, 'storeItem']);
         Route::delete('curriculum-items/{curriculumItem}', [CurriculumController::class, 'destroyItem']);
         Route::apiResource('curricula', CurriculumController::class);
