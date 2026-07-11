@@ -113,7 +113,15 @@ class FisAdmissionsImportController extends Controller
 
         $file = $request->file('file');
         $hash = hash_file('sha256', $file->getRealPath());
-        $storedPath = $file->storeAs('imports/fis', $hash.'.'.$file->getClientOriginalExtension(), 'local');
+        $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'xls');
+        $directory = 'imports/fis_uploads';
+        $storedPath = $directory.'/'.$hash.'.'.$extension;
+
+        Storage::disk('local')->makeDirectory($directory);
+        $saved = Storage::disk('local')->put($storedPath, file_get_contents($file->getRealPath()));
+        if (! $saved || ! Storage::disk('local')->exists($storedPath)) {
+            throw new RuntimeException('Не удалось временно сохранить файл ФИС для обработки.');
+        }
 
         return ImportJob::create([
             'user_id' => $request->user()?->id,

@@ -9,6 +9,7 @@ use App\Models\Person;
 use App\Models\Specialty;
 use App\Services\Import\FisAdmissionsImportHandler;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xls;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -17,6 +18,26 @@ use Tests\TestCase;
 class FisAdmissionsImportHandlerTest extends TestCase
 {
     use RefreshDatabase;
+
+
+    public function test_web_upload_analyze_stores_uploaded_xls_before_processing(): void
+    {
+        $this->withApiAuth();
+        $this->createPrograms();
+        $path = $this->fixture('xls', [
+            ['1005', 'Принято', '01.07.2026', '01.07.2026', 'Зайцева Зоя Ивановна', '53.02.04 Вокальное искусство', '', '', '', '', 'Россия', 'Женский', '05.05.2008', '', '', '', '', '444-444-444 44', 'z@example.test', '4,90', '1', '5', 'Да', 'Нет'],
+        ]);
+        $upload = new UploadedFile($path, 'fis-admissions.xls', 'application/vnd.ms-excel', null, true);
+
+        $response = $this->post('/api/admin/import/fis-admissions/analyze', ['file' => $upload], ['Accept' => 'application/json']);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.source', 'fis_admissions')
+            ->assertJsonPath('data.status', 'analyzed')
+            ->assertJsonPath('data.metadata.row_count', 1);
+        $this->assertNotSame('0', (string) $response->json('data.stored_path'));
+        $this->assertDatabaseHas('import_jobs', ['source' => 'fis_admissions', 'status' => 'analyzed']);
+    }
 
     public function test_dry_run_reads_xls_and_masks_personal_data_without_db_changes(): void
     {
