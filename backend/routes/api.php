@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AccessGateController;
 use App\Http\Controllers\Api\AccessReportController;
 use App\Http\Controllers\Api\AdminRoleController;
+use App\Http\Controllers\Api\AdminPermissionController;
 use App\Http\Controllers\Api\AdminSettingController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AdminUserController;
@@ -67,6 +68,9 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('admin/settings', [AdminSettingController::class, 'index']);
         Route::put('admin/settings', [AdminSettingController::class, 'update']);
         Route::get('admin/audit/{auditLog}', [AuditLogController::class, 'show']);
+        Route::apiResource('admin/permissions', AdminPermissionController::class)->except(['show']);
+        Route::post('admin/permissions/{permission}/roles', [AdminPermissionController::class, 'assignRoles']);
+        Route::get('admin/permissions/roles/list', [AdminPermissionController::class, 'roles']);
         Route::apiResource('admin/roles', AdminRoleController::class)->except(['show']);
         Route::get('admin/users/roles', [AdminUserController::class, 'roles']);
         Route::get('admin/users/people', [AdminUserController::class, 'people']);

@@ -21,7 +21,7 @@ class AdminUserController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $users = User::query()
-            ->with(['role.permissions', 'roles'])
+            ->with(['role.permissions', 'roles.permissions'])
             ->when($request->string('search')->toString(), function ($query, string $search) {
                 $query->where(function ($inner) use ($search) {
                     $inner->where('name', 'like', "%{$search}%")
@@ -54,12 +54,12 @@ class AdminUserController extends Controller
         $this->syncPrimaryRole($user);
         AuditLogService::log('users', 'create', $user, null, $user->fresh()->toArray(), $request);
 
-        return new UserResource($user->load(['role.permissions', 'roles']));
+        return new UserResource($user->load(['role.permissions', 'roles.permissions']));
     }
 
     public function show(User $user): UserResource
     {
-        return new UserResource($user->load(['role.permissions', 'roles']));
+        return new UserResource($user->load(['role.permissions', 'roles.permissions']));
     }
 
     public function update(Request $request, User $user): UserResource
@@ -77,7 +77,7 @@ class AdminUserController extends Controller
         $this->syncPrimaryRole($user);
         AuditLogService::log('users', 'update', $user, $old, $user->fresh()->getAttributes(), $request);
 
-        return new UserResource($user->refresh()->load(['role.permissions', 'roles']));
+        return new UserResource($user->refresh()->load(['role.permissions', 'roles.permissions']));
     }
 
     public function destroy(Request $request, User $user): JsonResponse
@@ -103,7 +103,7 @@ class AdminUserController extends Controller
         $user->forceFill(['is_active' => false, 'api_token_hash' => null])->save();
         AuditLogService::log('users', 'block', $user, $old, $user->fresh()->getAttributes(), $request);
 
-        return new UserResource($user->refresh()->load(['role.permissions', 'roles']));
+        return new UserResource($user->refresh()->load(['role.permissions', 'roles.permissions']));
     }
 
     public function unblock(User $user): UserResource
@@ -112,7 +112,7 @@ class AdminUserController extends Controller
         $user->forceFill(['is_active' => true])->save();
         AuditLogService::log('users', 'unblock', $user, $old, $user->fresh()->getAttributes(), request());
 
-        return new UserResource($user->refresh()->load(['role.permissions', 'roles']));
+        return new UserResource($user->refresh()->load(['role.permissions', 'roles.permissions']));
     }
 
 
@@ -137,7 +137,7 @@ class AdminUserController extends Controller
         $user->forceFill(['role_id' => $primaryRoleId])->save();
         AuditLogService::log('users', 'assign_roles', $user, $old, ['role_id' => $primaryRoleId, 'role_ids' => $roleIds->all()], $request);
 
-        return new UserResource($user->refresh()->load(['role.permissions', 'roles']));
+        return new UserResource($user->refresh()->load(['role.permissions', 'roles.permissions']));
     }
 
     public function roles(): JsonResponse

@@ -20,7 +20,7 @@ class AuthController extends Controller
         $credentials = $request->validated();
 
         $user = User::query()
-            ->with('role')
+            ->with(['role.permissions', 'roles.permissions'])
             ->where('email', $credentials['email'])
             ->first();
 
@@ -44,13 +44,13 @@ class AuthController extends Controller
         return response()->json([
             'token' => $token,
             'token_type' => 'Bearer',
-            'user' => new UserResource($user->refresh()->load('role.permissions')),
+            'user' => new UserResource($user->refresh()->load(['role.permissions', 'roles.permissions'])),
         ]);
     }
 
     public function me(Request $request): UserResource
     {
-        return new UserResource($request->user()->load('role.permissions'));
+        return new UserResource($request->user()->load(['role.permissions', 'roles.permissions']));
     }
 
     public function logout(Request $request): JsonResponse

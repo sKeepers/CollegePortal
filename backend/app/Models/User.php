@@ -82,12 +82,31 @@ class User extends Authenticatable
 
     public function hasPermission(string $permissionCode): bool
     {
+        if ($this->hasRole('admin')) {
+            return true;
+        }
+
         return $this->roles()
-            ->whereHas('permissions', fn ($query) => $query->where('code', $permissionCode))
+            ->whereHas('permissions', fn ($query) => $query->where('code', $permissionCode)->where('active', true))
             ->exists()
             || $this->role()
-                ->whereHas('permissions', fn ($query) => $query->where('code', $permissionCode))
+                ->whereHas('permissions', fn ($query) => $query->where('code', $permissionCode)->where('active', true))
                 ->exists();
+    }
+
+    public function permissionCodes(): array
+    {
+        $codes = collect();
+
+        if ($this->relationLoaded('role') && $this->role?->relationLoaded('permissions')) {
+            $codes = $codes->merge($this->role->permissions->where('active', true)->pluck('code'));
+        }
+
+        if ($this->relationLoaded('roles')) {
+            $codes = $codes->merge($this->roles->flatMap(fn (Role $role) => $role->relationLoaded('permissions') ? $role->permissions->where('active', true)->pluck('code') : []));
+        }
+
+        return $codes->unique()->values()->all();
     }
 
     public function hasRole(string $roleCode): bool

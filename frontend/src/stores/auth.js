@@ -10,7 +10,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => Boolean(user.value && api.token()))
   const isAdmin = computed(() => user.value?.role?.code === 'admin')
-  const permissions = computed(() => user.value?.role?.permissions || [])
+  const permissions = computed(() => user.value?.permissions || user.value?.role?.permissions || [])
   const roleCodes = computed(() => {
     const codes = new Set()
     if (user.value?.role?.code) codes.add(user.value.role.code)

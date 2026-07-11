@@ -85,7 +85,7 @@ const statItems = computed(() => [
   { label: 'Студенты опоздали', value: attendanceStudents.value.late || 0, icon: GraduationCap },
 ])
 
-const quickActions = [
+const quickActionsSource = [
   { label: 'Студенты', description: 'Контингент и карточки', icon: GraduationCap, to: '/students' },
   { label: 'Приемная комиссия', description: 'Заявления абитуриентов', icon: FileCheck2, to: '/admissions' },
   { label: 'Расписание', description: 'Занятия и аудитории', icon: CalendarDays, to: '/schedule' },
@@ -96,6 +96,19 @@ const quickActions = [
   { label: 'ФИС', description: 'Пакеты приема и ГИА', icon: FileWarning, to: '/fis' },
   { label: 'Аудит', description: 'Действия пользователей', icon: ScrollText, to: '/admin/audit' },
 ]
+
+const quickActionPermissions = {
+  '/students': 'students.view',
+  '/admissions': 'admissions.view',
+  '/schedule': 'schedule.view',
+  '/access/gate': 'gate.scan',
+  '/attendance': 'attendance.reports',
+  '/admin/import': 'import.manage',
+  '/frdo': 'frdo.view',
+  '/fis': 'fis.view',
+  '/admin/audit': 'audit.view',
+}
+const quickActions = computed(() => quickActionsSource.filter((action) => !quickActionPermissions[action.to] || auth.can(quickActionPermissions[action.to])))
 
 const auditActivity = computed(() => (payload.value.audit || []).map((item) => ({
   id: item.id,

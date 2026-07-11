@@ -10,8 +10,19 @@ class Permission extends Model
     protected $fillable = [
         'name',
         'code',
+        'module',
         'description',
+        'system',
+        'active',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'system' => 'boolean',
+            'active' => 'boolean',
+        ];
+    }
 
     public function roles(): BelongsToMany
     {

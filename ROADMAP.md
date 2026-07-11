@@ -297,3 +297,10 @@ Roadmap фиксирует порядок развития проекта пос
 - REF-020: детализировать permission matrix;
 - REF-030: подготовить owner/person resolver foundation.
 
+## RBAC-001: Permission Matrix
+
+- [x] Реализовать permission platform и матрицу ролей.
+- [x] Добавить `/admin/permissions`.
+- [x] Защитить API точечными permissions.
+- [ ] RBAC-002: ownership-политики для преподавателей и студентов.
+- [ ] RBAC-003: скрытие action-level кнопок во всех CRUD-разделах.

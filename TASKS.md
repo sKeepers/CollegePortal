@@ -568,3 +568,19 @@
 - [x] Добавить CSS-полосу времени по дням без сторонних библиотек.
 - [x] Добавить настройки `attendance.early_leave_threshold_minutes` и `attendance.max_open_session_hours`.
 - [x] Покрыть тестами корректные пары, несколько пар, вход без выхода, выход без входа, ранний уход, опоздание, отсутствие, день без расписания, переход через полночь и CSV.
+
+## RBAC-001: Permission Matrix and Fine-Grained Access Control
+
+- [x] Расширить `permissions` полями `module`, `system`, `active`.
+- [x] Создать Permission Resource и API `/api/admin/permissions`.
+- [x] Добавить назначение permissions ролям.
+- [x] Заполнить базовую матрицу из 61 permission.
+- [x] Сохранить старые permissions для обратной совместимости.
+- [x] Перевести API-проверки на точечные permissions через `EnsurePermission`.
+- [x] Обновить Auth payload объединенными permissions всех ролей пользователя.
+- [x] Перевести frontend routes/menu на новые permission-коды.
+- [x] Добавить страницу `/admin/permissions`.
+- [x] Добавить permission-aware быстрые действия Dashboard.
+- [x] Добавить RBAC-тесты: 403 без permission, 200 с permission, teacher/student/security/director сценарии.
+- [ ] Следующим этапом скрыть action-кнопки внутри всех CRUD-страниц по create/update/delete/export/import permissions.
+- [ ] Следующим этапом усилить ownership-фильтры для teacher/student: только свои группы, расписание, журнал, экзамены.

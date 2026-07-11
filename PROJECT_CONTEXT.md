@@ -1089,3 +1089,7 @@ API: `/api/attendance/teachers/today`, `/api/attendance/students/today`. Fronten
 ### ATTENDANCE-001C: История присутствия и учет времени
 
 Модуль `/attendance` расширен историческим read-only отчетом. Backend `AttendanceAnalysisService` рассчитывает сводки за период по событиям проходной и расписанию: время внутри, входы/выходы, опоздания, ранние уходы, отсутствия, дни без расписания и незакрытые сессии. Добавлены API `/api/attendance/history`, `/api/attendance/person/{type}/{id}/summary`, `/api/attendance/person/{type}/{id}/days` и CSV-экспорт. Frontend поддерживает режимы `Сегодня`, `Период`, `По человеку` и вкладки карточки человека.
+
+### RBAC-001: Permission Matrix
+
+Добавлена полноценная permission-based RBAC-матрица. Сущность `Permission` расширена полями `module`, `system`, `active`; создан API `/api/admin/permissions`; сидер ролей наполняет 61 permission и назначает их базовым ролям. Backend middleware `permission:` теперь мапит legacy route permissions на точечные permissions по URI и HTTP-методу, поэтому API защищен на уровне модулей и действий. Frontend получает объединенный список permissions всех ролей пользователя и строит меню/маршруты по новым кодам.
