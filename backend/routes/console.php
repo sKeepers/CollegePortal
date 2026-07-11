@@ -44,3 +44,5 @@ Artisan::command('person:link-existing {--dry-run : Show planned links without w
 
     return self::SUCCESS;
 })->purpose('Safely create Person records and link existing profiles.');
+
+// Applicant document registry command is auto-discovered by Laravel.

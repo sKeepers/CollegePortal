@@ -68,6 +68,6 @@ class ApplicantApplication extends Model
 
     public function documents(): HasMany
     {
-        return $this->hasMany(ApplicantApplicationDocument::class)->orderBy('id');
+        return $this->hasMany(ApplicantApplicationDocument::class)->with(['documentType', 'files', 'receiver', 'verifier'])->orderBy('id');
     }
 }

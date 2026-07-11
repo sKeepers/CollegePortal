@@ -2,8 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Models\ApplicantApplicationDocument;
 use Illuminate\Http\Request;
-use App\Services\ApplicantApplicationDocumentService;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class ApplicantApplicationResource extends JsonResource
@@ -39,20 +39,37 @@ class ApplicantApplicationResource extends JsonResource
             'education_program' => new EducationProgramResource($this->whenLoaded('educationProgram')),
             'events' => ApplicantApplicationEventResource::collection($this->whenLoaded('events')),
             'documents' => ApplicantApplicationDocumentResource::collection($this->whenLoaded('documents')),
-            'documents_received_count' => $this->whenLoaded('documents', fn () => $this->documents->where('is_received', true)->count()),
-            'documents_total_count' => $this->whenLoaded('documents', fn () => $this->documents->count()),
-            'documents_count' => $this->whenLoaded('documents', fn () => $this->documents->where('is_received', true)->count()),
-            'required_documents_count' => $this->whenLoaded('documents', fn () => max(ApplicantApplicationDocumentService::REQUIRED_DOCUMENTS_COUNT, $this->documents->count())),
-            'documents_missing_count' => $this->whenLoaded('documents', fn () => max(0, max(ApplicantApplicationDocumentService::REQUIRED_DOCUMENTS_COUNT, $this->documents->count()) - $this->documents->where('is_received', true)->count())),
-            'documents_complete' => $this->whenLoaded('documents', fn () => $this->documents->where('is_received', true)->count() >= max(ApplicantApplicationDocumentService::REQUIRED_DOCUMENTS_COUNT, $this->documents->count())),
-            'documents_status' => $this->whenLoaded('documents', function () {
-                $received = $this->documents->where('is_received', true)->count();
-                $required = max(ApplicantApplicationDocumentService::REQUIRED_DOCUMENTS_COUNT, $this->documents->count());
-
-                return $received === 0 ? 'no_documents' : ($received >= $required ? 'complete' : 'incomplete');
-            }),
+            'documents_received_count' => $this->whenLoaded('documents', fn () => $this->registryDocumentCounts()['received']),
+            'documents_total_count' => $this->whenLoaded('documents', fn () => $this->registryDocumentCounts()['required']),
+            'documents_count' => $this->whenLoaded('documents', fn () => $this->registryDocumentCounts()['received']),
+            'required_documents_count' => $this->whenLoaded('documents', fn () => $this->registryDocumentCounts()['required']),
+            'documents_missing_count' => $this->whenLoaded('documents', fn () => max(0, $this->registryDocumentCounts()['required'] - $this->registryDocumentCounts()['received'])),
+            'documents_complete' => $this->whenLoaded('documents', fn () => $this->registryDocumentCounts()['complete']),
+            'documents_verified_complete' => $this->whenLoaded('documents', fn () => $this->registryDocumentCounts()['verified_complete']),
+            'documents_status' => $this->whenLoaded('documents', fn () => $this->registryDocumentCounts()['status']),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
+        ];
+    }
+
+    private function registryDocumentCounts(): array
+    {
+        $documents = $this->documents;
+        $required = $documents->filter(fn ($document) => (bool) ($document->documentType?->metadata['required'] ?? true));
+        $received = $required->filter(fn ($document) => in_array($document->status ?: ($document->is_received ? 'received' : 'missing'), ApplicantApplicationDocument::COMPLETE_STATUSES, true));
+        $verified = $required->filter(fn ($document) => ($document->status ?: null) === ApplicantApplicationDocument::STATUS_VERIFIED);
+        $requiredCount = $required->count();
+        $receivedCount = $received->count();
+        $verifiedCount = $verified->count();
+        $complete = $requiredCount > 0 && $receivedCount >= $requiredCount;
+        $verifiedComplete = $requiredCount > 0 && $verifiedCount >= $requiredCount;
+
+        return [
+            'required' => $requiredCount,
+            'received' => $receivedCount,
+            'complete' => $complete,
+            'verified_complete' => $verifiedComplete,
+            'status' => $receivedCount === 0 ? 'no_documents' : ($verifiedComplete ? 'verified_complete' : ($complete ? 'complete' : 'incomplete')),
         ];
     }
 }

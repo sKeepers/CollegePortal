@@ -96,3 +96,7 @@ Students:
 - Каждая apply-операция пишет Audit Log.
 - CSV-экспорт маскирует чувствительные контактные данные там, где это требуется.
 - Полные СНИЛС, паспортные данные и адреса в preview не выводятся.
+
+## ADM-DOCS-001: массовые операции по документам Admissions
+
+Admissions bulk API дополнен операциями по конкретному типу документа: `mark_document_type_received`, `send_document_type_review`, `verify_document_type`, `reject_document_type`. Все операции работают через preview/apply, принимают `payload.document_type`, а reject требует `payload.reason`. Preview не создает registry-записи; apply создает недостающую registry-строку и пишет Audit Log.

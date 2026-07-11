@@ -4,12 +4,14 @@ namespace App\Services;
 
 use App\Models\AccessEvent;
 use App\Models\ApplicantApplication;
+use App\Models\ApplicantApplicationDocument;
 use App\Models\AuditLog;
 use App\Models\Classroom;
 use App\Models\Exam;
 use App\Models\FisPackage;
 use App\Models\FrdoPackage;
 use App\Models\Graduate;
+use App\Models\ReferenceItem;
 use App\Models\ScheduleLesson;
 use App\Models\Student;
 use App\Models\Teacher;
@@ -50,16 +52,17 @@ class DashboardAnalyticsService
         $attendance = $this->attendanceAnalysis->dashboardSummary();
         $requiredDocumentsCount = ApplicantApplicationDocumentService::REQUIRED_DOCUMENTS_COUNT;
         $applicationsNoDocuments = ApplicantApplication::query()
-            ->whereDoesntHave('documents', fn ($query) => $query->where('is_received', true))
+            ->whereDoesntHave('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES))
             ->count();
         $applicationsIncompleteDocuments = ApplicantApplication::query()
-            ->whereHas('documents', fn ($query) => $query->where('is_received', true), '>=', 1)
-            ->whereHas('documents', fn ($query) => $query->where('is_received', true), '<', $requiredDocumentsCount)
+            ->whereHas('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '>=', 1)
+            ->whereHas('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '<', $requiredDocumentsCount)
             ->count();
         $applicationsCompleteDocuments = ApplicantApplication::query()
-            ->whereHas('documents', fn ($query) => $query->where('is_received', true), '>=', $requiredDocumentsCount)
+            ->whereHas('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '>=', $requiredDocumentsCount)
             ->count();
         $applicationsDocumentsConfirmed = ApplicantApplication::query()->where('documents_provided', true)->count();
+        $verifiedCompleteDocuments = $this->verifiedCompleteApplicantCount();
 
         return [
             'data' => [
@@ -95,6 +98,12 @@ class DashboardAnalyticsService
                         'incomplete_documents' => $applicationsIncompleteDocuments,
                         'complete_documents' => $applicationsCompleteDocuments,
                         'documents_confirmed' => $applicationsDocumentsConfirmed,
+                        'without_passport' => $this->missingApplicantDocumentType('passport'),
+                        'without_education_document' => $this->missingApplicantDocumentType('education_document'),
+                        'without_personal_data_consent' => $this->missingApplicantDocumentType('personal_data_consent'),
+                        'documents_under_review' => ApplicantApplicationDocument::query()->where('status', ApplicantApplicationDocument::STATUS_UNDER_REVIEW)->count(),
+                        'documents_rejected' => ApplicantApplicationDocument::query()->where('status', ApplicantApplicationDocument::STATUS_REJECTED)->count(),
+                        'verified_complete_documents' => $verifiedCompleteDocuments,
                     ],
                     'frdo' => [
                         'ready' => FrdoPackage::query()->where('status', 'ready')->count(),
@@ -157,16 +166,17 @@ class DashboardAnalyticsService
         $studentsWithoutPhoto = Student::query()->whereNull('photo_path')->count();
         $requiredDocumentsCount = ApplicantApplicationDocumentService::REQUIRED_DOCUMENTS_COUNT;
         $applicationsWithoutDocuments = ApplicantApplication::query()
-            ->whereDoesntHave('documents', fn ($query) => $query->where('is_received', true))
+            ->whereDoesntHave('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES))
             ->count();
         $applicationsIncompleteDocuments = ApplicantApplication::query()
-            ->whereHas('documents', fn ($query) => $query->where('is_received', true), '>=', 1)
-            ->whereHas('documents', fn ($query) => $query->where('is_received', true), '<', $requiredDocumentsCount)
+            ->whereHas('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '>=', 1)
+            ->whereHas('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '<', $requiredDocumentsCount)
             ->count();
         $applicationsCompleteDocuments = ApplicantApplication::query()
-            ->whereHas('documents', fn ($query) => $query->where('is_received', true), '>=', $requiredDocumentsCount)
+            ->whereHas('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '>=', $requiredDocumentsCount)
             ->count();
         $applicationsDocumentsConfirmed = ApplicantApplication::query()->where('documents_provided', true)->count();
+        $applicationsVerifiedCompleteDocuments = $this->verifiedCompleteApplicantCount();
         $frdoErrorCount = $frdoErrors->sum('validation_errors_count');
         $fisErrorCount = $fisErrors->sum('validation_errors_count');
 
@@ -182,9 +192,45 @@ class DashboardAnalyticsService
             ['title' => 'Заявления с неполным комплектом', 'value' => $applicationsIncompleteDocuments, 'tone' => $applicationsIncompleteDocuments > 0 ? 'warning' : 'success', 'to' => '/admissions?documents=incomplete'],
             ['title' => 'Заявления с полным комплектом', 'value' => $applicationsCompleteDocuments, 'tone' => 'success', 'to' => '/admissions?documents=complete'],
             ['title' => 'Получение документов подтверждено', 'value' => $applicationsDocumentsConfirmed, 'tone' => 'neutral', 'to' => '/admissions'],
+            ['title' => 'Документы ожидают проверки', 'value' => ApplicantApplicationDocument::query()->where('status', ApplicantApplicationDocument::STATUS_UNDER_REVIEW)->count(), 'tone' => 'warning', 'to' => '/admissions'],
+            ['title' => 'Отклоненные документы', 'value' => ApplicantApplicationDocument::query()->where('status', ApplicantApplicationDocument::STATUS_REJECTED)->count(), 'tone' => 'danger', 'to' => '/admissions'],
+            ['title' => 'Полностью подтвержденные комплекты', 'value' => $applicationsVerifiedCompleteDocuments, 'tone' => 'success', 'to' => '/admissions'],
             ['title' => 'Ошибки ФРДО', 'value' => $frdoErrorCount, 'tone' => $frdoErrorCount > 0 ? 'danger' : 'success', 'to' => '/frdo'],
             ['title' => 'Ошибки ФИС', 'value' => $fisErrorCount, 'tone' => $fisErrorCount > 0 ? 'danger' : 'success', 'to' => '/fis'],
         ])->values()->all();
+    }
+
+    private function missingApplicantDocumentType(string $code): int
+    {
+        return ApplicantApplication::query()
+            ->whereDoesntHave('documents', fn ($query) => $query
+                ->whereHas('documentType', fn ($query) => $query->where('code', $code))
+                ->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES))
+            ->count();
+    }
+
+    private function verifiedCompleteApplicantCount(): int
+    {
+        $requiredIds = ReferenceItem::query()
+            ->whereHas('catalog', fn ($query) => $query->where('code', 'applicant_document_types'))
+            ->where('is_active', true)
+            ->get()
+            ->filter(fn (ReferenceItem $item) => (bool) ($item->metadata['required'] ?? false))
+            ->pluck('id')
+            ->all();
+
+        if ($requiredIds === []) {
+            return 0;
+        }
+
+        return ApplicantApplication::query()
+            ->whereDoesntHave('documents', fn ($query) => $query
+                ->whereIn('document_type_id', $requiredIds)
+                ->where('status', '!=', ApplicantApplicationDocument::STATUS_VERIFIED))
+            ->whereHas('documents', fn ($query) => $query
+                ->whereIn('document_type_id', $requiredIds)
+                ->where('status', ApplicantApplicationDocument::STATUS_VERIFIED), '=', count($requiredIds))
+            ->count();
     }
 
     private function packageSummary($package): array

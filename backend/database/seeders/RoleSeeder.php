@@ -98,6 +98,13 @@ class RoleSeeder extends Seeder
             ['module' => 'Admissions', 'code' => 'admissions.bulk_assign', 'name' => 'Приемная комиссия: массовое назначение направления', 'description' => 'Массовое назначение конкурса или программы.'],
             ['module' => 'Admissions', 'code' => 'admissions.bulk_export', 'name' => 'Приемная комиссия: массовый экспорт', 'description' => 'Экспорт выбранных заявлений.'],
             ['module' => 'Admissions', 'code' => 'admissions.bulk_enroll', 'name' => 'Приемная комиссия: массовое зачисление', 'description' => 'Массовое зачисление абитуриентов в студенты.'],
+            ['module' => 'Admissions', 'code' => 'admissions.documents.view', 'name' => 'Документы абитуриентов: просмотр', 'description' => 'Просмотр реестра документов заявления.'],
+            ['module' => 'Admissions', 'code' => 'admissions.documents.receive', 'name' => 'Документы абитуриентов: прием', 'description' => 'Отметка документов как полученных.'],
+            ['module' => 'Admissions', 'code' => 'admissions.documents.upload', 'name' => 'Документы абитуриентов: загрузка файлов', 'description' => 'Загрузка файлов документов в private storage.'],
+            ['module' => 'Admissions', 'code' => 'admissions.documents.verify', 'name' => 'Документы абитуриентов: подтверждение', 'description' => 'Проверка и подтверждение документов.'],
+            ['module' => 'Admissions', 'code' => 'admissions.documents.reject', 'name' => 'Документы абитуриентов: отклонение', 'description' => 'Отклонение документа с причиной.'],
+            ['module' => 'Admissions', 'code' => 'admissions.documents.delete', 'name' => 'Документы абитуриентов: удаление', 'description' => 'Удаление записей и файлов документов.'],
+            ['module' => 'Admissions', 'code' => 'admissions.documents.download', 'name' => 'Документы абитуриентов: скачивание', 'description' => 'Скачивание файлов документов через защищенный endpoint.'],
             ['module' => 'Curricula', 'code' => 'curricula.view', 'name' => 'Учебные планы: просмотр', 'description' => 'Просмотр учебных планов.'],
             ['module' => 'Curricula', 'code' => 'curricula.edit', 'name' => 'Учебные планы: ведение', 'description' => 'Создание, изменение и импорт учебных планов.'],
             ['module' => 'Teaching Load', 'code' => 'teachingload.view', 'name' => 'Нагрузка: просмотр', 'description' => 'Просмотр нагрузки преподавателей.'],
@@ -137,7 +144,7 @@ class RoleSeeder extends Seeder
         return [
             'dashboard.view', 'people.view', 'students.view', 'groups.view', 'teachers.view', 'subjects.view', 'classrooms.view',
             'schedule.view', 'journal.view', 'journal.export', 'attendance.view', 'attendance.reports',
-            'admissions.view', 'admissions.bulk_export', 'curricula.view', 'teachingload.view', 'exams.view', 'graduation.view',
+            'admissions.view', 'admissions.documents.view', 'admissions.documents.download', 'admissions.bulk_export', 'curricula.view', 'teachingload.view', 'exams.view', 'graduation.view',
             'frdo.view', 'fis.view', 'gate.reports', 'audit.view', 'reference.manage', 'view_reports',
         ];
     }
@@ -151,7 +158,7 @@ class RoleSeeder extends Seeder
             'subjects.view', 'subjects.create', 'subjects.update', 'subjects.delete',
             'classrooms.view', 'classrooms.create', 'classrooms.update', 'classrooms.delete',
             'schedule.view', 'schedule.update', 'journal.view', 'journal.edit', 'journal.export',
-            'attendance.view', 'attendance.reports', 'curricula.view', 'curricula.edit',
+            'attendance.view', 'attendance.reports', 'admissions.documents.view', 'curricula.view', 'curricula.edit',
             'teachingload.view', 'teachingload.edit', 'exams.view', 'exams.edit',
             'graduation.view', 'graduation.edit', 'people.update', 'people.link', 'frdo.view', 'fis.view', 'reference.manage', 'import.manage',
             'manage_dictionaries', 'manage_schedule', 'manage_journal', 'view_reports',
@@ -160,7 +167,7 @@ class RoleSeeder extends Seeder
 
     private function admissionPermissions(): array
     {
-        return ['dashboard.view', 'people.view', 'admissions.view', 'admissions.edit', 'admissions.bulk_status', 'admissions.bulk_documents', 'admissions.bulk_recommend', 'admissions.bulk_assign', 'admissions.bulk_export', 'admissions.bulk_enroll', 'students.view', 'groups.view', 'reference.manage', 'import.manage', 'view_reports'];
+        return ['dashboard.view', 'people.view', 'admissions.view', 'admissions.edit', 'admissions.documents.view', 'admissions.documents.receive', 'admissions.documents.upload', 'admissions.documents.verify', 'admissions.documents.reject', 'admissions.documents.download', 'admissions.bulk_status', 'admissions.bulk_documents', 'admissions.bulk_recommend', 'admissions.bulk_assign', 'admissions.bulk_export', 'admissions.bulk_enroll', 'students.view', 'groups.view', 'reference.manage', 'import.manage', 'view_reports'];
     }
 
     private function teacherPermissions(): array

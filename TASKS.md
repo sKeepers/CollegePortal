@@ -628,3 +628,15 @@
 - [x] Добавить документацию `docs/BULK_OPERATIONS.md`.
 - [x] Проверить `php artisan test` и `npm run build`.
 
+
+## ADM-DOCS-001: Applicant Documents Registry
+
+- [x] Добавить Reference Data каталог `applicant_document_types`.
+- [x] Расширить `applicant_application_documents` и добавить `applicant_document_files`.
+- [x] Добавить API приема, загрузки, проверки, отклонения, скачивания и удаления файлов.
+- [x] Пересчитать комплектность по обязательным типам документов.
+- [x] Добавить вкладку документов в карточку заявления `/admissions`.
+- [x] Добавить permissions и audit.
+- [x] Добавить sync-команду legacy registry.
+- [x] Добавить документацию `docs/APPLICANT_DOCUMENTS.md`.
+- [ ] Расширить frontend bulk-панель действиями по типу документа отдельной UX-задачей.

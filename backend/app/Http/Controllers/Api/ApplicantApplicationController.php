@@ -10,6 +10,7 @@ use App\Http\Requests\UpdateApplicantApplicationRequest;
 use App\Http\Resources\ApplicantApplicationResource;
 use App\Http\Resources\StudentResource;
 use App\Models\ApplicantApplication;
+use App\Models\ApplicantApplicationDocument;
 use App\Models\Student;
 use App\Services\ApplicantApplicationCsvService;
 use App\Services\ApplicantApplicationDocumentService;
@@ -79,16 +80,16 @@ class ApplicantApplicationController extends Controller
         $stats = [
             'total' => (clone $base())->count(),
             'new' => (clone $base())->where('status', 'new')->count(),
-            'no_documents' => (clone $base())->whereDoesntHave('documents', fn ($query) => $query->where('is_received', true))->count(),
+            'no_documents' => (clone $base())->whereDoesntHave('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES))->count(),
             'incomplete' => (clone $base())
-                ->whereHas('documents', fn ($query) => $query->where('is_received', true), '>=', 1)
-                ->whereHas('documents', fn ($query) => $query->where('is_received', true), '<', $requiredDocumentsCount)
+                ->whereHas('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '>=', 1)
+                ->whereHas('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '<', $requiredDocumentsCount)
                 ->count(),
-            'complete' => (clone $base())->whereHas('documents', fn ($query) => $query->where('is_received', true), '>=', $requiredDocumentsCount)->count(),
+            'complete' => (clone $base())->whereHas('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '>=', $requiredDocumentsCount)->count(),
             'documents_provided' => (clone $base())
                 ->where(fn ($query) => $query
                     ->where('documents_provided', true)
-                    ->orWhereHas('documents', fn ($query) => $query->where('is_received', true)))
+                    ->orWhereHas('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES)))
                 ->count(),
             'ready' => (clone $base())->where('status', 'ready_for_enrollment')->count(),
             'recommended' => (clone $base())->where('recommended_for_enrollment', true)->count(),

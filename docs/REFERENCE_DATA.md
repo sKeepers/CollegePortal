@@ -135,3 +135,9 @@ ReferenceService::options('exam_types');
 Справочники кэшируются на 30 минут. Кэш каталога сбрасывается при создании, редактировании или удалении справочника/элемента через административный API.
 
 Frontend использует store `referenceOptions`, который загружает элементы через API `GET /api/admin/reference/items?catalog_code=<code>&is_active=1` и переиспользует их на странице.
+
+## ADM-DOCS-001: applicant_document_types
+
+Добавлен системный каталог `applicant_document_types` для документов абитуриента. Registry комплектности Admissions использует именно этот справочник, поэтому количество обязательных документов больше не задается константой UI или `documents_provided`.
+
+Стартовые элементы: `passport`, `snils`, `education_document`, `photo`, `medical_certificate`, `personal_data_consent`. Metadata содержит обязательность, допустимые расширения и максимальный размер файла.

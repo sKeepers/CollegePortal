@@ -181,3 +181,9 @@ Frontend получил единый слой проверки permissions:
 
 Добавлены точечные permissions для массовых операций Admissions и Students. UI скрывает недоступные действия, но источником истины остается backend: каждый bulk endpoint проверяет permission по выбранному action. Director получает только bulk export, admission - операции приемной комиссии, study/deputy - операции студентов, admin - полный доступ.
 
+
+## ADM-DOCS-001: Applicant document permissions
+
+Добавлены permissions для registry документов заявления: `admissions.documents.view`, `admissions.documents.receive`, `admissions.documents.upload`, `admissions.documents.verify`, `admissions.documents.reject`, `admissions.documents.delete`, `admissions.documents.download`.
+
+Матрица: `admin` имеет полный доступ; `admission` может смотреть, принимать, загружать, проверять, отклонять и скачивать; `director` может смотреть и скачивать; `deputy` и `study` могут смотреть; `teacher`, `student`, `security` доступа не имеют.

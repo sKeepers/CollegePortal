@@ -13,6 +13,7 @@ use App\Models\Person;
 use App\Models\Role;
 use App\Models\Specialty;
 use App\Models\Student;
+use Database\Seeders\ReferenceDataSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -23,6 +24,7 @@ class BulkOperationsApiTest extends TestCase
 
     public function test_admissions_preview_does_not_change_database_and_apply_changes_status_with_audit(): void
     {
+        $this->seed(ReferenceDataSeeder::class);
         $this->seed(RoleSeeder::class);
         $this->withApiAuth($this->createApiUser(roleCode: 'admission'));
         $program = $this->createProgram();
@@ -48,6 +50,7 @@ class BulkOperationsApiTest extends TestCase
 
     public function test_admissions_bulk_recommend_and_enroll_selected_without_student_duplicates(): void
     {
+        $this->seed(ReferenceDataSeeder::class);
         $this->seed(RoleSeeder::class);
         $this->withApiAuth($this->createApiUser(roleCode: 'admission'));
         $program = $this->createProgram();
@@ -87,8 +90,63 @@ class BulkOperationsApiTest extends TestCase
         $this->assertSame(1, Student::where('email', 'bulk-applicant@example.test')->count());
     }
 
+    public function test_admissions_bulk_document_type_statuses_preview_and_apply(): void
+    {
+        $this->seed(ReferenceDataSeeder::class);
+        $this->seed(RoleSeeder::class);
+        $this->withApiAuth($this->createApiUser(roleCode: 'admission'));
+        $program = $this->createProgram();
+        $application = $this->makeApplicantApplication($program);
+
+        $this->postJson('/api/admissions/bulk/preview', [
+            'ids' => [$application->id],
+            'action' => 'mark_document_type_received',
+            'payload' => ['document_type' => 'passport'],
+        ])->assertOk()->assertJsonPath('data.will_change', 1);
+
+        $this->assertSame(0, $application->documents()->count());
+
+        $this->postJson('/api/admissions/bulk/apply', [
+            'ids' => [$application->id],
+            'action' => 'send_document_type_review',
+            'payload' => ['document_type' => 'passport'],
+        ])->assertOk()->assertJsonPath('data.changed', 1);
+
+        $this->assertDatabaseHas('applicant_application_documents', [
+            'applicant_application_id' => $application->id,
+            'type' => 'passport',
+            'status' => 'under_review',
+        ]);
+
+        $this->postJson('/api/admissions/bulk/apply', [
+            'ids' => [$application->id],
+            'action' => 'verify_document_type',
+            'payload' => ['document_type' => 'passport'],
+        ])->assertOk()->assertJsonPath('data.changed', 1);
+
+        $this->assertDatabaseHas('applicant_application_documents', [
+            'applicant_application_id' => $application->id,
+            'type' => 'passport',
+            'status' => 'verified',
+        ]);
+
+        $this->postJson('/api/admissions/bulk/apply', [
+            'ids' => [$application->id],
+            'action' => 'reject_document_type',
+            'payload' => ['document_type' => 'passport', 'reason' => 'Нечитаемый файл'],
+        ])->assertOk()->assertJsonPath('data.changed', 1);
+
+        $this->assertDatabaseHas('applicant_application_documents', [
+            'applicant_application_id' => $application->id,
+            'type' => 'passport',
+            'status' => 'rejected',
+            'rejection_reason' => 'Нечитаемый файл',
+        ]);
+    }
+
     public function test_students_bulk_assign_status_archive_export_and_issue_passes_without_duplicates(): void
     {
+        $this->seed(ReferenceDataSeeder::class);
         $this->seed(RoleSeeder::class);
         $this->withApiAuth($this->createApiUser(roleCode: 'study'));
         $program = $this->createProgram();
@@ -150,6 +208,7 @@ class BulkOperationsApiTest extends TestCase
 
     public function test_admissions_pagination_all_returns_all_records_and_kpi_ready_is_independent(): void
     {
+        $this->seed(ReferenceDataSeeder::class);
         $this->seed(RoleSeeder::class);
         $this->withApiAuth($this->createApiUser(roleCode: 'admission'));
         $program = $this->createProgram();
@@ -197,6 +256,7 @@ class BulkOperationsApiTest extends TestCase
 
     public function test_admissions_stats_and_bulk_filter_selection_cover_all_records_not_current_page(): void
     {
+        $this->seed(ReferenceDataSeeder::class);
         $this->seed(RoleSeeder::class);
         $this->withApiAuth($this->createApiUser(roleCode: 'admission'));
         $program = $this->createProgram();
@@ -273,6 +333,7 @@ class BulkOperationsApiTest extends TestCase
 
     public function test_admissions_bulk_document_confirmation_does_not_create_documents(): void
     {
+        $this->seed(ReferenceDataSeeder::class);
         $this->seed(RoleSeeder::class);
         $this->withApiAuth($this->createApiUser(roleCode: 'admission'));
         $program = $this->createProgram();
@@ -300,6 +361,7 @@ class BulkOperationsApiTest extends TestCase
 
     public function test_dashboard_admissions_without_documents_matches_admissions_aggregate(): void
     {
+        $this->seed(ReferenceDataSeeder::class);
         $this->seed(RoleSeeder::class);
         $this->withApiAuth($this->createApiUser(roleCode: 'admin'));
         $program = $this->createProgram();
@@ -325,6 +387,7 @@ class BulkOperationsApiTest extends TestCase
 
     public function test_bulk_operations_require_exact_permissions(): void
     {
+        $this->seed(ReferenceDataSeeder::class);
         $this->seed(RoleSeeder::class);
         $teacher = $this->createApiUser(roleCode: 'teacher');
         $director = $this->createApiUser(roleCode: 'director');
@@ -397,12 +460,13 @@ class BulkOperationsApiTest extends TestCase
 
     private function markDocumentsReceived(ApplicantApplication $application, int $count = 3): void
     {
-        foreach (array_slice(['passport', 'education_document', 'snils', 'consent', 'photo', 'medical_certificate'], 0, $count) as $type) {
+        foreach (array_slice(['passport', 'education_document', 'snils', 'personal_data_consent', 'photo', 'medical_certificate'], 0, $count) as $type) {
             ApplicantApplicationDocument::create([
                 'applicant_application_id' => $application->id,
                 'type' => $type,
                 'title' => $type,
                 'is_received' => true,
+                'status' => 'received',
                 'received_at' => now(),
             ]);
         }

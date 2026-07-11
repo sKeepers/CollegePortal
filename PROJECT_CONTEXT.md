@@ -1110,3 +1110,7 @@ Frontend action-level RBAC доведен до основных CRUD и сист
 
 Добавлена foundation массовых операций для `/admissions` и `/students`: выбор строк, выбор всех записей по фильтру, preview/apply API, RBAC permissions, Audit Log и безопасный CSV-экспорт выбранных записей. Массовое удаление не реализовано.
 
+
+## ADM-DOCS-001: Applicant Documents Registry
+
+Добавлен registry документов заявления абитуриента на основе Reference Data. Комплектность Admissions теперь считается по обязательным типам `applicant_document_types`, а `documents_provided` остается отдельным административным флагом. Файлы документов хранятся в приватном storage и скачиваются только через авторизованный API. Добавлены permissions `admissions.documents.*`, audit действий, sync-команда legacy-строк и вкладка документов в карточке заявления.

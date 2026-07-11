@@ -267,6 +267,12 @@ onMounted(() => {
             <div><span>Неполный комплект</span><strong>{{ admissions.incomplete_documents || 0 }}</strong></div>
             <div><span>Полный комплект</span><strong>{{ admissions.complete_documents || 0 }}</strong></div>
             <div><span>Получение подтверждено</span><strong>{{ admissions.documents_confirmed || 0 }}</strong></div>
+            <div><span>Без паспорта</span><strong>{{ admissions.without_passport || 0 }}</strong></div>
+            <div><span>Без документа об образовании</span><strong>{{ admissions.without_education_document || 0 }}</strong></div>
+            <div><span>Без согласия на ПДн</span><strong>{{ admissions.without_personal_data_consent || 0 }}</strong></div>
+            <div><span>Ожидают проверки</span><strong>{{ admissions.documents_under_review || 0 }}</strong></div>
+            <div><span>Отклоненные документы</span><strong>{{ admissions.documents_rejected || 0 }}</strong></div>
+            <div><span>Подтвержденные комплекты</span><strong>{{ admissions.verified_complete_documents || 0 }}</strong></div>
             <div><span>Зачислено</span><strong>{{ admissions.enrolled || 0 }}</strong></div>
           </div>
         </AppCard>

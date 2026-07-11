@@ -398,6 +398,126 @@ export const useAdmissionsStore = defineStore('admissions', () => {
     }
   }
 
+  async function loadDocuments(application) {
+    if (!application?.id) return null
+    saving.value = true
+    error.value = ''
+    try {
+      const payload = await api.list(`admissions/${application.id}/documents`)
+      const index = applications.value.findIndex((item) => Number(item.id) === Number(application.id))
+      if (index >= 0) {
+        applications.value[index] = {
+          ...applications.value[index],
+          documents: payload?.data || [],
+          documents_count: payload?.meta?.documents_count ?? applications.value[index].documents_count,
+          required_documents_count: payload?.meta?.required_documents_count ?? applications.value[index].required_documents_count,
+          documents_missing_count: payload?.meta?.documents_missing_count ?? applications.value[index].documents_missing_count,
+          documents_complete: payload?.meta?.documents_complete ?? applications.value[index].documents_complete,
+          documents_status: payload?.meta?.documents_status ?? applications.value[index].documents_status,
+        }
+      }
+      return payload
+    } catch (err) {
+      error.value = err.message || 'Не удалось загрузить документы'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function receiveDocument(application, document, payload = {}) {
+    if (!application?.id || !document?.type) return null
+    saving.value = true
+    error.value = ''
+    try {
+      const response = await api.create(`admissions/${application.id}/documents/${document.type}/receive`, payload)
+      await loadDocuments(application)
+      return response?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось отметить документ'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function uploadDocument(application, document, file) {
+    if (!application?.id || !document?.type || !file) return null
+    saving.value = true
+    error.value = ''
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const response = await api.upload(`/admissions/${application.id}/documents/${document.type}/upload`, formData)
+      await loadDocuments(application)
+      return response?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось загрузить файл документа'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function verifyDocument(application, document) {
+    if (!application?.id || !document?.id) return null
+    saving.value = true
+    error.value = ''
+    try {
+      const response = await api.create(`admissions/${application.id}/documents/${document.id}/verify`, {})
+      await loadDocuments(application)
+      return response?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось подтвердить документ'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function rejectDocument(application, document, reason) {
+    if (!application?.id || !document?.id) return null
+    saving.value = true
+    error.value = ''
+    try {
+      const response = await api.create(`admissions/${application.id}/documents/${document.id}/reject`, { rejection_reason: reason || 'Документ требует исправления' })
+      await loadDocuments(application)
+      return response?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось отклонить документ'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function downloadDocumentFile(application, doc, file) {
+    if (!application?.id || !doc?.id || !file?.id) return null
+    const blob = await api.download(`/admissions/${application.id}/documents/${doc.id}/files/${file.id}/download`)
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = file.original_name || 'document'
+    link.click()
+    window.URL.revokeObjectURL(url)
+    return blob
+  }
+
+  async function deleteDocumentFile(application, document, file) {
+    if (!application?.id || !document?.id || !file?.id) return null
+    saving.value = true
+    error.value = ''
+    try {
+      await api.delete(`admissions/${application.id}/documents/${document.id}/files`, file.id)
+      await loadDocuments(application)
+    } catch (err) {
+      error.value = err.message || 'Не удалось удалить файл документа'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
   async function updateDocument(application, document, payload) {
     if (!application?.id || !document?.type) {
       return null
@@ -504,6 +624,13 @@ export const useAdmissionsStore = defineStore('admissions', () => {
     importCsv,
     exportCsv,
     enroll,
+    loadDocuments,
+    receiveDocument,
+    uploadDocument,
+    verifyDocument,
+    rejectDocument,
+    downloadDocumentFile,
+    deleteDocumentFile,
     updateDocument,
     previewBulk,
     applyBulk,

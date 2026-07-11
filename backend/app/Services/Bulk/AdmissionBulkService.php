@@ -3,13 +3,16 @@
 namespace App\Services\Bulk;
 
 use App\Models\ApplicantApplication;
+use App\Models\ApplicantApplicationDocument;
 use App\Models\Person;
 use App\Models\Student;
 use App\Services\ApplicantApplicationDocumentService;
 use App\Services\ApplicantApplicationEventService;
+use App\Services\ApplicantDocumentRegistryService;
 use App\Services\AuditLogService;
 use App\Services\PersonService;
 use Illuminate\Http\Request;
+use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -20,6 +23,10 @@ class AdmissionBulkService
     public const PERMISSIONS = [
         'change_status' => 'admissions.bulk_status',
         'mark_documents_provided' => 'admissions.bulk_documents',
+        'mark_document_type_received' => 'admissions.documents.receive',
+        'send_document_type_review' => 'admissions.documents.receive',
+        'verify_document_type' => 'admissions.documents.verify',
+        'reject_document_type' => 'admissions.documents.reject',
         'mark_recommended' => 'admissions.bulk_recommend',
         'assign_program' => 'admissions.bulk_assign',
         'export_selected' => 'admissions.bulk_export',
@@ -29,6 +36,7 @@ class AdmissionBulkService
     public function __construct(
         private readonly BulkSelectionResolver $resolver,
         private readonly ApplicantApplicationDocumentService $documentService,
+        private readonly ApplicantDocumentRegistryService $documentRegistry,
         private readonly ApplicantApplicationEventService $eventService,
         private readonly PersonService $personService,
     ) {
@@ -52,8 +60,8 @@ class AdmissionBulkService
             return $this->export($applications);
         }
 
-        $report = DB::transaction(function () use ($action, $applications, $payload, $selection): array {
-            return $this->buildReport($action, $applications, $payload, true, $selection);
+        $report = DB::transaction(function () use ($action, $applications, $payload, $selection, $request): array {
+            return $this->buildReport($action, $applications, $payload, true, $selection, $request->user());
         });
 
         AuditLogService::log('Admissions', 'bulk_'.$action, ['type' => 'ApplicantApplication', 'id' => null], null, $report, $request, requestId: $this->requestId($request));
@@ -61,7 +69,7 @@ class AdmissionBulkService
         return $report;
     }
 
-    private function buildReport(string $action, Collection $applications, array $payload, bool $apply, array $selection = []): array
+    private function buildReport(string $action, Collection $applications, array $payload, bool $apply, array $selection = [], ?User $user = null): array
     {
         $report = $this->baseReport($action, $applications->count(), $selection);
 
@@ -69,6 +77,10 @@ class AdmissionBulkService
             $result = match ($action) {
                 'change_status' => $this->changeStatus($application, $payload, $apply),
                 'mark_documents_provided' => $this->markDocumentsProvided($application, $apply),
+                'mark_document_type_received' => $this->changeDocumentTypeStatus($application, $payload, ApplicantApplicationDocument::STATUS_RECEIVED, $apply, $user),
+                'send_document_type_review' => $this->changeDocumentTypeStatus($application, $payload, ApplicantApplicationDocument::STATUS_UNDER_REVIEW, $apply, $user),
+                'verify_document_type' => $this->changeDocumentTypeStatus($application, $payload, ApplicantApplicationDocument::STATUS_VERIFIED, $apply, $user),
+                'reject_document_type' => $this->changeDocumentTypeStatus($application, $payload, ApplicantApplicationDocument::STATUS_REJECTED, $apply, $user),
                 'mark_recommended' => $this->markRecommended($application, $apply),
                 'assign_program' => $this->assignProgram($application, $payload, $apply),
                 'enroll_selected' => $this->enroll($application, $payload, $apply),
@@ -109,6 +121,58 @@ class AdmissionBulkService
             $this->eventService->record($application, 'bulk_documents_provided', 'Получение документов подтверждено', 'Административный признак получения документов установлен массовой операцией. Записи отдельных документов не изменялись.');
         }
         return ['type' => 'changed', 'changes' => ['documents_provided' => true]];
+    }
+
+    private function changeDocumentTypeStatus(ApplicantApplication $application, array $payload, string $status, bool $apply, ?User $user): array
+    {
+        $typeCode = trim((string) ($payload['document_type'] ?? $payload['type'] ?? ''));
+        $typeCode = $typeCode === 'consent' ? 'personal_data_consent' : $typeCode;
+        if ($typeCode === '') {
+            return ['type' => 'error', 'reason' => 'Не указан тип документа.'];
+        }
+
+        $type = $this->documentRegistry->documentTypes()->firstWhere('code', $typeCode);
+        if (! $type) {
+            return ['type' => 'error', 'reason' => 'Неизвестный тип документа.'];
+        }
+
+        if ($status === ApplicantApplicationDocument::STATUS_REJECTED && trim((string) ($payload['reason'] ?? '')) === '') {
+            return ['type' => 'error', 'reason' => 'Для отклонения документа нужна причина.'];
+        }
+
+        $document = $application->documents()
+            ->where(function ($query) use ($typeCode, $type) {
+                $query->where('document_type_id', $type->id)
+                    ->orWhere('type', $typeCode);
+            })
+            ->first();
+
+        if ($document?->status === $status) {
+            return ['type' => 'already_set', 'reason' => 'Документ уже имеет выбранный статус.', 'changes' => ['document_type' => $typeCode, 'status' => $status]];
+        }
+
+        if ($apply) {
+            if (! $user) {
+                return ['type' => 'error', 'reason' => 'Не определен пользователь операции.'];
+            }
+
+            $this->documentService->ensureDefaultDocuments($application);
+            $document = $this->documentRegistry->documentByType($application, $typeCode);
+
+            match ($status) {
+                ApplicantApplicationDocument::STATUS_VERIFIED => $this->documentRegistry->verify($application, $document, $user, ['comment' => $payload['comment'] ?? null]),
+                ApplicantApplicationDocument::STATUS_REJECTED => $this->documentRegistry->reject($application, $document, $user, (string) $payload['reason'], $payload['comment'] ?? null),
+                default => $this->documentRegistry->receive($application, $typeCode, $user, [
+                    'status' => $status,
+                    'comment' => $payload['comment'] ?? null,
+                    'source' => 'bulk',
+                ]),
+            };
+
+            $this->eventService->record($application, 'bulk_document_status', 'Массовое изменение документа', "Документ {$type->name} переведен в статус {$status}.", ['document_type' => $typeCode, 'status' => $status]);
+        }
+
+        return ['type' => 'changed', 'changes' => ['document_type' => $typeCode, 'status' => $status]];
     }
 
     private function markRecommended(ApplicantApplication $application, bool $apply): array
@@ -155,9 +219,8 @@ class AdmissionBulkService
         }
 
         $this->documentService->ensureDefaultDocuments($application);
-        $documentsTotal = $application->documents()->count();
-        $documentsReceived = $application->documents()->where('is_received', true)->count();
-        if ($documentsTotal === 0 || $documentsReceived < $documentsTotal) {
+        $documentStats = $this->documentService->completeness($application);
+        if (! $documentStats['documents_complete']) {
             return ['type' => 'error', 'reason' => 'Получены не все обязательные документы.'];
         }
         if ($application->person_id && Student::where('person_id', $application->person_id)->exists()) {

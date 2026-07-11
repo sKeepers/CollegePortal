@@ -9,37 +9,39 @@ class ApplicantApplicationDocumentService
 {
     public const REQUIRED_DOCUMENTS_COUNT = 6;
 
-    private const DEFAULT_DOCUMENTS = [
-        'passport' => 'Паспорт',
-        'education_document' => 'Документ об образовании',
-        'snils' => 'СНИЛС',
-        'consent' => 'Согласие на обработку персональных данных',
-        'photo' => 'Фотография',
-        'medical_certificate' => 'Медицинская справка',
-    ];
+    public function __construct(private readonly ApplicantDocumentRegistryService $registry)
+    {
+    }
 
     public function ensureDefaultDocuments(ApplicantApplication $application): void
     {
-        foreach (self::DEFAULT_DOCUMENTS as $type => $title) {
-            $application->documents()->firstOrCreate(
-                ['type' => $type],
-                ['title' => $title],
-            );
-        }
+        $this->registry->syncLegacyDocumentTypes($application);
+        $this->registry->ensureRegistry($application);
     }
 
     public function updateDocument(ApplicantApplication $application, string $type, array $payload): ApplicantApplicationDocument
     {
         $this->ensureDefaultDocuments($application);
+        $document = $this->registry->documentByType($application, $type);
 
-        $document = $application->documents()->where('type', $type)->firstOrFail();
+        $status = ($payload['is_received'] ?? false)
+            ? ApplicantApplicationDocument::STATUS_RECEIVED
+            : ApplicantApplicationDocument::STATUS_MISSING;
+
         $document->update([
-            'is_received' => $payload['is_received'],
+            'status' => $status,
+            'is_received' => (bool) ($payload['is_received'] ?? false),
             'received_at' => $payload['received_at'] ?? null,
             'number' => $payload['number'] ?? null,
             'comment' => $payload['comment'] ?? null,
+            'source' => $payload['source'] ?? 'legacy_patch',
         ]);
 
-        return $document;
+        return $document->fresh(['documentType', 'files', 'receiver', 'verifier']);
+    }
+
+    public function completeness(ApplicantApplication $application): array
+    {
+        return $this->registry->stats($application);
     }
 }

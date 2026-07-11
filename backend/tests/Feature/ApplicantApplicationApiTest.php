@@ -8,6 +8,7 @@ use App\Models\EducationProgram;
 use App\Models\Group;
 use App\Models\Specialty;
 use App\Models\Student;
+use Database\Seeders\ReferenceDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
@@ -20,6 +21,7 @@ class ApplicantApplicationApiTest extends TestCase
     {
         parent::setUp();
 
+        $this->seed(ReferenceDataSeeder::class);
         $this->withApiAuth();
     }
 
@@ -438,6 +440,7 @@ class ApplicantApplicationApiTest extends TestCase
                 'type' => $type,
                 'title' => $title,
                 'is_received' => true,
+                'status' => 'received',
                 'received_at' => now(),
             ]);
         }

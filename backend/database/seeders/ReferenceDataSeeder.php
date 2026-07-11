@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\ReferenceCatalog;
+use App\Services\ReferenceService;
 use Illuminate\Database\Seeder;
 
 class ReferenceDataSeeder extends Seeder
@@ -36,6 +37,8 @@ class ReferenceDataSeeder extends Seeder
                     ],
                 );
             }
+
+            ReferenceService::forget($catalog->code);
         }
     }
 
@@ -152,6 +155,19 @@ class ReferenceDataSeeder extends Seeder
                     ['code' => 'ready', 'name' => 'Готов', 'metadata' => ['tone' => 'info']],
                     ['code' => 'issued', 'name' => 'Выдан', 'metadata' => ['tone' => 'success']],
                     ['code' => 'revoked', 'name' => 'Аннулирован', 'metadata' => ['tone' => 'danger']],
+                ],
+            ],
+            [
+                'code' => 'applicant_document_types',
+                'name' => 'Типы документов абитуриента',
+                'description' => 'Обязательные и дополнительные документы заявления абитуриента.',
+                'items' => [
+                    ['code' => 'passport', 'name' => 'Паспорт', 'metadata' => ['required' => true, 'allowed_extensions' => ['pdf', 'jpg', 'jpeg', 'png', 'webp'], 'max_size_mb' => 10, 'tone' => 'info']],
+                    ['code' => 'snils', 'name' => 'СНИЛС', 'metadata' => ['required' => true, 'allowed_extensions' => ['pdf', 'jpg', 'jpeg', 'png', 'webp'], 'max_size_mb' => 10, 'tone' => 'info']],
+                    ['code' => 'education_document', 'name' => 'Документ об образовании', 'metadata' => ['required' => true, 'allowed_extensions' => ['pdf', 'jpg', 'jpeg', 'png', 'webp'], 'max_size_mb' => 15, 'tone' => 'info']],
+                    ['code' => 'photo', 'name' => 'Фотография', 'metadata' => ['required' => true, 'allowed_extensions' => ['jpg', 'jpeg', 'png', 'webp'], 'max_size_mb' => 5, 'tone' => 'info']],
+                    ['code' => 'medical_certificate', 'name' => 'Медицинская справка', 'metadata' => ['required' => true, 'allowed_extensions' => ['pdf', 'jpg', 'jpeg', 'png', 'webp'], 'max_size_mb' => 10, 'tone' => 'info']],
+                    ['code' => 'personal_data_consent', 'name' => 'Согласие на ПДн', 'metadata' => ['required' => true, 'allowed_extensions' => ['pdf', 'jpg', 'jpeg', 'png', 'webp'], 'max_size_mb' => 10, 'tone' => 'info']],
                 ],
             ],
             [

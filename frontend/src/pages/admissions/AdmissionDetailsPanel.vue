@@ -1,6 +1,6 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
-import { CheckCircle2, ClipboardList, FileText, History, Mail, Phone } from '@lucide/vue'
+import { BookOpen, CheckCircle2, ClipboardList, Download, FileText, GraduationCap, History, Mail, Phone, Upload, UserPlus, XCircle } from '@lucide/vue'
 import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
@@ -39,7 +39,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['enroll', 'update-document'])
+const emit = defineEmits(['enroll', 'update-document', 'receive-document', 'upload-document', 'verify-document', 'reject-document', 'download-file', 'delete-file'])
 
 const activeTab = ref('overview')
 const enrollDialogVisible = ref(false)
@@ -116,11 +116,39 @@ function submitEnroll() {
 }
 
 function documentTone(document) {
-  return document?.is_received ? 'success' : 'warning'
+  const status = document?.status || (document?.is_received ? 'received' : 'missing')
+  if (status === 'verified') return 'success'
+  if (status === 'received' || status === 'under_review') return 'info'
+  if (status === 'rejected') return 'danger'
+  return 'warning'
 }
 
 function documentLabel(document) {
-  return document?.is_received ? 'Получен' : 'Ожидается'
+  const labels = {
+    missing: 'Не получен',
+    received: 'Получен',
+    under_review: 'На проверке',
+    verified: 'Подтвержден',
+    rejected: 'Отклонен',
+  }
+  return labels[document?.status] || (document?.is_received ? 'Получен' : 'Не получен')
+}
+
+function fileAccept(document) {
+  return (document?.allowed_extensions || ['pdf', 'jpg', 'jpeg', 'png', 'webp']).map((extension) => `.${extension}`).join(',')
+}
+
+function uploadFile(document, file) {
+  if (file) {
+    emit('upload-document', document, file)
+  }
+}
+
+function rejectDocument(document) {
+  const reason = window.prompt('Причина отклонения документа')
+  if (reason) {
+    emit('reject-document', document, reason)
+  }
 }
 
 function toggleDocument(document) {
@@ -236,19 +264,46 @@ function toggleDocument(document) {
           <section class="admission-details__section">
             <h3><FileText :size="16" /> Документы</h3>
             <div v-if="documents.length" class="admission-documents">
-              <div v-for="document in documents" :key="document.id || document.type" class="admission-documents__item">
-                <div>
-                  <strong>{{ document.title }}</strong>
+              <div v-for="document in documents" :key="document.id || document.type" class="admission-documents__item admission-documents__item--registry">
+                <div class="admission-documents__main">
+                  <div class="admission-documents__title">
+                    <strong>{{ document.title }}</strong>
+                    <AppStatusBadge :label="document.required ? 'Обязательный' : 'Дополнительный'" tone="neutral" />
+                    <AppStatusBadge :label="documentLabel(document)" :tone="documentTone(document)" />
+                  </div>
                   <span>
-                    <template v-if="document.received_at">Дата: {{ formatDate(document.received_at) }}</template>
-                    <template v-if="document.number"> · № {{ document.number }}</template>
-                    <template v-if="document.comment"> · {{ document.comment }}</template>
+                    Получен: {{ formatDate(document.received_at) }}
+                    <template v-if="document.verified_at"> · Проверен: {{ formatDateTime(document.verified_at) }}</template>
+                    <template v-if="document.received_by"> · Принял: {{ document.received_by }}</template>
+                    <template v-if="document.verified_by"> · Проверил: {{ document.verified_by }}</template>
+                    · Файлов: {{ document.files_count || document.files?.length || 0 }}
                   </span>
+                  <span v-if="document.rejection_reason" class="admission-documents__reject">Причина: {{ document.rejection_reason }}</span>
+                  <span v-if="document.comment">Комментарий: {{ document.comment }}</span>
+                  <div v-if="document.files?.length" class="admission-documents__files">
+                    <button v-for="file in document.files" :key="file.id" type="button" class="admission-documents__file" @click="emit('download-file', document, file)">
+                      <Download :size="13" /> {{ file.original_name }}
+                    </button>
+                  </div>
                 </div>
                 <div class="admission-documents__actions">
-                  <AppStatusBadge :label="documentLabel(document)" :tone="documentTone(document)" />
-                  <q-btn flat dense no-caps :disable="saving" @click="toggleDocument(document)">
-                    {{ document.is_received ? 'Снять отметку' : 'Получен' }}
+                  <q-file
+                    dense
+                    outlined
+                    :disable="saving"
+                    :accept="fileAccept(document)"
+                    label="Загрузить"
+                    class="admission-documents__upload"
+                    @update:model-value="(file) => uploadFile(document, file)"
+                  >
+                    <template #prepend><Upload :size="14" /></template>
+                  </q-file>
+                  <q-btn flat dense no-caps :disable="saving" @click="emit('receive-document', document)">Получен</q-btn>
+                  <q-btn flat dense no-caps :disable="saving || document.status === 'verified'" @click="emit('verify-document', document)">
+                    <CheckCircle2 :size="14" /> Подтвердить
+                  </q-btn>
+                  <q-btn flat dense no-caps color="negative" :disable="saving" @click="rejectDocument(document)">
+                    <XCircle :size="14" /> Отклонить
                   </q-btn>
                 </div>
               </div>
@@ -326,3 +381,62 @@ function toggleDocument(document) {
     </div>
   </WorkspacePanel>
 </template>
+
+<style scoped>
+.admission-documents {
+  display: grid;
+  gap: 10px;
+}
+
+.admission-documents__item--registry {
+  align-items: flex-start;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  padding: 12px;
+}
+
+.admission-documents__main {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.admission-documents__title,
+.admission-documents__actions,
+.admission-documents__files {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admission-documents__actions {
+  justify-content: flex-start;
+}
+
+.admission-documents__upload {
+  max-width: 170px;
+  min-width: 150px;
+}
+
+.admission-documents__file {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #0f172a;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  gap: 5px;
+  max-width: 100%;
+  padding: 5px 8px;
+}
+
+.admission-documents__reject {
+  color: #b91c1c;
+}
+</style>

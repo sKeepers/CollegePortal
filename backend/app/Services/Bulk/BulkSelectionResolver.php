@@ -3,6 +3,7 @@
 namespace App\Services\Bulk;
 
 use App\Models\ApplicantApplication;
+use App\Models\ApplicantApplicationDocument;
 use App\Models\Student;
 use App\Services\ApplicantApplicationDocumentService;
 use Illuminate\Database\Eloquent\Builder;
@@ -54,13 +55,13 @@ class BulkSelectionResolver
                 $required = ApplicantApplicationDocumentService::REQUIRED_DOCUMENTS_COUNT;
 
                 if ($status === 'no_documents') {
-                    $query->whereDoesntHave('documents', fn (Builder $query) => $query->where('is_received', true));
+                    $query->whereDoesntHave('documents', fn (Builder $query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES));
                 } elseif ($status === 'complete') {
-                    $query->whereHas('documents', fn (Builder $query) => $query->where('is_received', true), '>=', $required);
+                    $query->whereHas('documents', fn (Builder $query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '>=', $required);
                 } elseif ($status === 'incomplete') {
                     $query
-                        ->whereHas('documents', fn (Builder $query) => $query->where('is_received', true), '>=', 1)
-                        ->whereHas('documents', fn (Builder $query) => $query->where('is_received', true), '<', $required);
+                        ->whereHas('documents', fn (Builder $query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '>=', 1)
+                        ->whereHas('documents', fn (Builder $query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '<', $required);
                 }
             });
     }

@@ -388,6 +388,35 @@ async function updateDocument(document, payload) {
   notifySuccess(payload.is_received ? 'Документ отмечен как полученный' : 'Отметка документа снята')
 }
 
+async function receiveDocument(document) {
+  await store.receiveDocument(store.selectedApplication, document)
+  notifySuccess('Получение документа отмечено')
+}
+
+async function uploadDocument(document, file) {
+  await store.uploadDocument(store.selectedApplication, document, file)
+  notifySuccess('Файл документа загружен')
+}
+
+async function verifyDocument(document) {
+  await store.verifyDocument(store.selectedApplication, document)
+  notifySuccess('Документ подтвержден')
+}
+
+async function rejectDocument(document, reason) {
+  await store.rejectDocument(store.selectedApplication, document, reason)
+  notifySuccess('Документ отклонен')
+}
+
+async function downloadDocumentFile(document, file) {
+  await store.downloadDocumentFile(store.selectedApplication, document, file)
+}
+
+async function deleteDocumentFile(document, file) {
+  await store.deleteDocumentFile(store.selectedApplication, document, file)
+  notifySuccess('Файл документа удален')
+}
+
 watch(
   () => [route.query.selected, route.query.search, route.query.status, route.query.program, route.query.documents, route.query.action],
   async () => {
@@ -637,6 +666,12 @@ onMounted(async () => {
           :saving="store.saving"
           @enroll="enrollApplication"
           @update-document="updateDocument"
+          @receive-document="receiveDocument"
+          @upload-document="uploadDocument"
+          @verify-document="verifyDocument"
+          @reject-document="rejectDocument"
+          @download-file="downloadDocumentFile"
+          @delete-file="deleteDocumentFile"
         />
       </aside>
     </div>
