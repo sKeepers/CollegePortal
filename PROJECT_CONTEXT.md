@@ -1122,3 +1122,7 @@ Frontend action-level RBAC доведен до основных CRUD и сист
 ## ST-001B: Teaching Load generation from Curriculum
 
 Добавлен Teaching Load Engine: нагрузка может формироваться из `curriculum_subjects` выбранной группы через preview/apply. Generated-нагрузка хранит связь с учебным планом, группой и строками `curriculum_subjects`, рассчитывает planned/assigned/unassigned/overassigned часы и поддерживает ручное назначение преподавателей. Автоматический подбор преподавателей не реализован намеренно.
+
+## ST-002A: Schedule Engine Foundation
+
+Добавлен foundation Schedule Engine: `schedule_entries`, недельные шаблоны, preview/validate/apply API, контроль конфликтов и покрытие часов нагрузки. Старые `schedule_lessons` сохранены и синхронизируются для совместимости журнала и текущего `/schedule`.

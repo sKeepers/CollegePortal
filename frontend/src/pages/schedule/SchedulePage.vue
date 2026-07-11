@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { CalendarDays, ChevronLeft, ChevronRight, RefreshCw } from '@lucide/vue'
+import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, Plus, RefreshCw } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -11,6 +11,7 @@ import AppLoading from '../../components/ui/AppLoading.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import ScheduleDetailsPanel from './ScheduleDetailsPanel.vue'
 import ScheduleFilters from './ScheduleFilters.vue'
+import { usePermissions } from '../../composables/usePermissions'
 import {
   classroomLabel,
   lessonTypeLabels,
@@ -20,9 +21,14 @@ import {
 } from '../../stores/schedule'
 
 const store = useScheduleStore()
+const permissions = usePermissions()
 const route = useRoute()
 const router = useRouter()
 const syncingQueryFromUi = ref(false)
+const createDialog = ref(false)
+const previewDialog = ref(false)
+const createSubmitting = ref(false)
+const createForm = ref({})
 
 const activeView = ref(route.query.view ? String(route.query.view) : 'week')
 const selectedDate = ref(route.query.date ? String(route.query.date) : todayString())
@@ -33,6 +39,8 @@ const viewOptions = [
   { label: 'Преподаватель', value: 'teacher' },
   { label: 'Группа', value: 'group' },
   { label: 'Аудитория', value: 'classroom' },
+  { label: 'Конфликты', value: 'conflicts' },
+  { label: 'Покрытие нагрузки', value: 'coverage' },
 ]
 
 const dayFormatter = new Intl.DateTimeFormat('ru-RU', {
@@ -46,6 +54,8 @@ const longDateFormatter = new Intl.DateTimeFormat('ru-RU', {
   month: 'long',
   year: 'numeric',
 })
+
+const canCreate = computed(() => permissions.hasPermission('schedule.create'))
 
 const selectedWeekDays = computed(() => {
   const start = startOfWeek(parseLocalDate(selectedDate.value))
@@ -101,6 +111,10 @@ const viewGroups = computed(() => {
     }))
   }
 
+  if (['conflicts', 'coverage'].includes(activeView.value)) {
+    return []
+  }
+
   return groupedLessons.value
 })
 
@@ -146,6 +160,23 @@ const totalLessons = computed(() => periodLessons.value.length)
 const totalGroups = computed(() => new Set(periodLessons.value.map((lesson) => lesson.group_id).filter(Boolean)).size)
 const totalTeachers = computed(() => new Set(periodLessons.value.map((lesson) => lesson.teacher_id).filter(Boolean)).size)
 const totalClassrooms = computed(() => new Set(periodLessons.value.map((lesson) => lesson.classroom_id).filter(Boolean)).size)
+
+function defaultCreateForm() {
+  return {
+    academic_year: '',
+    semester: 1,
+    date: selectedDate.value || todayString(),
+    lesson_number: 1,
+    starts_at: '09:00',
+    ends_at: '10:30',
+    group_id: store.filters.group_id || '',
+    subject_id: store.filters.subject_id || '',
+    teacher_id: store.filters.teacher_id || '',
+    classroom_id: store.filters.classroom_id || '',
+    status: 'scheduled',
+    comment: '',
+  }
+}
 
 function todayString() {
   return formatDate(new Date())
@@ -198,6 +229,10 @@ function lessonTypeTone(type) {
   return lessonTypeTones[type] || 'neutral'
 }
 
+function conflictTone(level) {
+  return level === 'blocking' ? 'danger' : 'warning'
+}
+
 function isSelected(lesson) {
   return Number(lesson.id) === Number(store.selectedId)
 }
@@ -241,6 +276,37 @@ async function resetFilters() {
 
 async function refresh() {
   await store.load()
+}
+
+function openCreateDialog() {
+  createForm.value = defaultCreateForm()
+  createDialog.value = true
+}
+
+async function previewCreate() {
+  createSubmitting.value = true
+  try {
+    await store.previewEntry(createForm.value)
+    previewDialog.value = true
+  } finally {
+    createSubmitting.value = false
+  }
+}
+
+async function applyCreate() {
+  createSubmitting.value = true
+  try {
+    const result = await store.applyEntry(createForm.value)
+    const id = result?.entry?.data?.legacy_lesson_id || result?.entry?.data?.id
+    if (id) {
+      store.selectLessonById(id)
+    }
+    previewDialog.value = false
+    createDialog.value = false
+    await syncQuery()
+  } finally {
+    createSubmitting.value = false
+  }
 }
 
 async function changePeriod(days) {
@@ -327,6 +393,12 @@ onMounted(async () => {
     <AppToolbar>
       <span>{{ periodTitle }}</span>
       <template #actions>
+        <q-btn v-if="canCreate" color="primary" :disable="store.loading" @click="openCreateDialog">
+          <template #default>
+            <Plus :size="16" />
+            <span>Создать занятие</span>
+          </template>
+        </q-btn>
         <AppLoading v-if="store.loading" label="Загрузка расписания..." />
         <q-btn flat :disable="store.loading" @click="refresh">
           <template #default>
@@ -361,7 +433,33 @@ onMounted(async () => {
 
     <div class="schedule-layout">
       <div class="schedule-main">
-        <div v-if="viewGroups.length" class="schedule-board" :class="`schedule-board--${activeView}`">
+        <div v-if="activeView === 'conflicts'" class="schedule-engine-list">
+          <section v-for="conflict in store.conflicts" :key="`${conflict.type}-${conflict.date}-${conflict.time}-${conflict.reason}`" class="schedule-engine-item">
+            <div>
+              <strong>{{ conflict.reason }}</strong>
+              <p>{{ conflict.object }} · {{ conflict.time }}</p>
+            </div>
+            <AppStatusBadge :label="conflict.level === 'blocking' ? 'Блокирует' : 'Предупреждение'" :tone="conflictTone(conflict.level)" />
+          </section>
+          <AppEmptyState v-if="!store.conflicts.length" title="Конфликты не найдены" description="По текущим фильтрам блокирующих конфликтов нет." />
+        </div>
+
+        <div v-else-if="activeView === 'coverage'" class="schedule-engine-list">
+          <section v-for="item in store.coverage" :key="item.teaching_load_item_id" class="schedule-engine-item">
+            <div>
+              <strong>{{ item.subject || 'Дисциплина не указана' }}</strong>
+              <p>{{ item.group || 'Группа не указана' }} · {{ item.teacher || 'Преподаватель не назначен' }}</p>
+            </div>
+            <div class="schedule-engine-hours">
+              <span>План: {{ item.planned_hours }}</span>
+              <span>В расписании: {{ item.scheduled_hours }}</span>
+              <span>Остаток: {{ item.remaining_hours }}</span>
+            </div>
+          </section>
+          <AppEmptyState v-if="!store.coverage.length" title="Покрытие не найдено" description="Сформируйте нагрузку или измените фильтры." />
+        </div>
+
+        <div v-else-if="viewGroups.length" class="schedule-board" :class="`schedule-board--${activeView}`">
           <section v-for="group in viewGroups" :key="group.key" class="schedule-column">
             <header>
               <div>
@@ -413,5 +511,125 @@ onMounted(async () => {
         />
       </aside>
     </div>
+
+    <q-dialog v-model="createDialog">
+      <q-card class="schedule-create-dialog">
+        <q-card-section>
+          <div class="text-h6">Новое занятие</div>
+          <div class="text-caption text-grey-7">Сохранение выполняется через preview и проверку конфликтов.</div>
+        </q-card-section>
+        <q-card-section class="schedule-create-grid">
+          <q-input v-model="createForm.academic_year" dense outlined label="Учебный год" placeholder="2026/2027" />
+          <q-select v-model="createForm.semester" dense outlined emit-value map-options label="Семестр" :options="[{ label: '1 семестр', value: 1 }, { label: '2 семестр', value: 2 }]" />
+          <q-input v-model="createForm.date" dense outlined type="date" label="Дата" />
+          <q-input v-model.number="createForm.lesson_number" dense outlined type="number" label="Пара" />
+          <q-input v-model="createForm.starts_at" dense outlined type="time" label="Начало" />
+          <q-input v-model="createForm.ends_at" dense outlined type="time" label="Окончание" />
+          <q-select v-model="createForm.group_id" dense outlined emit-value map-options label="Группа" :options="store.groupOptions" />
+          <q-select v-model="createForm.subject_id" dense outlined emit-value map-options label="Дисциплина" :options="store.subjectOptions" />
+          <q-select v-model="createForm.teacher_id" dense outlined emit-value map-options label="Преподаватель" :options="store.teacherOptions" />
+          <q-select v-model="createForm.classroom_id" dense outlined emit-value map-options clearable label="Аудитория" :options="store.classroomOptions" />
+          <q-input v-model="createForm.comment" dense outlined autogrow label="Комментарий" class="schedule-create-grid__wide" />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat :disable="createSubmitting" @click="createDialog = false">Отмена</q-btn>
+          <q-btn color="primary" :loading="createSubmitting" @click="previewCreate">Проверить</q-btn>
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <q-dialog v-model="previewDialog">
+      <q-card class="schedule-preview-dialog">
+        <q-card-section>
+          <div class="text-h6">Preview расписания</div>
+          <div class="text-caption text-grey-7">{{ store.previewResult?.recommendation }}</div>
+        </q-card-section>
+        <q-card-section>
+          <q-banner v-if="store.previewResult?.conflicts?.length" rounded class="schedule-preview-warning">
+            <template #avatar><AlertTriangle :size="18" /></template>
+            <div v-for="conflict in store.previewResult.conflicts" :key="`${conflict.type}-${conflict.reason}`" class="schedule-preview-conflict">
+              <strong>{{ conflict.level === 'blocking' ? 'Блокирует' : 'Предупреждение' }}</strong>
+              <span>{{ conflict.reason }}</span>
+            </div>
+          </q-banner>
+          <AppEmptyState v-else title="Конфликты не найдены" description="Занятие можно добавить в расписание." />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat :disable="createSubmitting" @click="previewDialog = false">Назад</q-btn>
+          <q-btn color="primary" :disable="!store.previewResult?.can_apply" :loading="createSubmitting" @click="applyCreate">Применить</q-btn>
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </AppPage>
 </template>
+
+
+<style scoped>
+.schedule-engine-list {
+  display: grid;
+  gap: 12px;
+}
+
+.schedule-engine-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.schedule-engine-item p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.schedule-engine-hours {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  color: #475569;
+  font-size: 13px;
+}
+
+.schedule-create-dialog,
+.schedule-preview-dialog {
+  width: min(760px, calc(100vw - 32px));
+}
+
+.schedule-create-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.schedule-create-grid__wide {
+  grid-column: 1 / -1;
+}
+
+.schedule-preview-warning {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.schedule-preview-conflict {
+  display: grid;
+  gap: 2px;
+  margin: 4px 0;
+}
+
+@media (max-width: 700px) {
+  .schedule-create-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-engine-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+</style>

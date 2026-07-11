@@ -34,6 +34,7 @@ use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\StudentBulkController;
 use App\Http\Controllers\Api\SubjectController;
 use App\Http\Controllers\Api\ScheduleLessonController;
+use App\Http\Controllers\Api\ScheduleEngineController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ReferenceCatalogController;
 use App\Http\Controllers\Api\ReferenceItemController;
@@ -206,6 +207,23 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('teachers/export', [TeacherController::class, 'export']);
         Route::post('teachers/import', [TeacherController::class, 'import']);
         Route::apiResource('teachers', TeacherController::class);
+    });
+
+    Route::middleware('permission:schedule.view')->group(function (): void {
+        Route::get('schedule/entries', [ScheduleEngineController::class, 'index']);
+        Route::get('schedule/conflicts', [ScheduleEngineController::class, 'conflicts'])->middleware('permission:schedule.view_conflicts');
+        Route::get('schedule/coverage', [ScheduleEngineController::class, 'coverage'])->middleware('permission:schedule.view_coverage');
+        Route::get('schedule/group/{groupId}', [ScheduleEngineController::class, 'group']);
+        Route::get('schedule/teacher/{teacherId}', [ScheduleEngineController::class, 'teacher']);
+        Route::get('schedule/classroom/{classroomId}', [ScheduleEngineController::class, 'classroom']);
+        Route::post('schedule/preview', [ScheduleEngineController::class, 'preview'])->middleware('permission:schedule.validate');
+        Route::post('schedule/validate', [ScheduleEngineController::class, 'validateEntry'])->middleware('permission:schedule.validate');
+        Route::post('schedule/apply', [ScheduleEngineController::class, 'apply'])->middleware('permission:schedule.create');
+        Route::post('schedule/entries/{scheduleEntry}/replace-teacher', [ScheduleEngineController::class, 'replaceTeacher'])->middleware('permission:schedule.manage_replacements');
+        Route::post('schedule/entries/{scheduleEntry}/replace-classroom', [ScheduleEngineController::class, 'replaceClassroom'])->middleware('permission:schedule.manage_replacements');
+        Route::post('schedule/entries/{scheduleEntry}/move', [ScheduleEngineController::class, 'move'])->middleware('permission:schedule.manage_replacements');
+        Route::post('schedule/entries/{scheduleEntry}/cancel', [ScheduleEngineController::class, 'cancel'])->middleware('permission:schedule.manage_replacements');
+        Route::post('schedule/entries/{scheduleEntry}/restore', [ScheduleEngineController::class, 'restore'])->middleware('permission:schedule.manage_replacements');
     });
 
     Route::apiResource('schedule-lessons', ScheduleLessonController::class)

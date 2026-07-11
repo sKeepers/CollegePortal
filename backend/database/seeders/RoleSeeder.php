@@ -84,7 +84,14 @@ class RoleSeeder extends Seeder
             ['module' => 'Classrooms', 'code' => 'classrooms.update', 'name' => 'Аудитории: изменение', 'description' => 'Редактирование аудиторий и импорт.'],
             ['module' => 'Classrooms', 'code' => 'classrooms.delete', 'name' => 'Аудитории: удаление', 'description' => 'Удаление аудиторий.'],
             ['module' => 'Schedule', 'code' => 'schedule.view', 'name' => 'Расписание: просмотр', 'description' => 'Просмотр расписания.'],
+            ['module' => 'Schedule', 'code' => 'schedule.create', 'name' => 'Расписание: создание', 'description' => 'Создание занятий через Schedule Engine.'],
             ['module' => 'Schedule', 'code' => 'schedule.update', 'name' => 'Расписание: изменение', 'description' => 'Создание, изменение и удаление занятий.'],
+            ['module' => 'Schedule', 'code' => 'schedule.delete', 'name' => 'Расписание: удаление', 'description' => 'Удаление занятий расписания.'],
+            ['module' => 'Schedule', 'code' => 'schedule.validate', 'name' => 'Расписание: проверка', 'description' => 'Preview и validation перед применением расписания.'],
+            ['module' => 'Schedule', 'code' => 'schedule.manage_templates', 'name' => 'Расписание: шаблоны', 'description' => 'Управление недельными шаблонами расписания.'],
+            ['module' => 'Schedule', 'code' => 'schedule.manage_replacements', 'name' => 'Расписание: замены', 'description' => 'Замены, переносы, отмены и восстановления занятий.'],
+            ['module' => 'Schedule', 'code' => 'schedule.view_conflicts', 'name' => 'Расписание: конфликты', 'description' => 'Просмотр конфликтов расписания.'],
+            ['module' => 'Schedule', 'code' => 'schedule.view_coverage', 'name' => 'Расписание: покрытие нагрузки', 'description' => 'Просмотр покрытия часов нагрузки расписанием.'],
             ['module' => 'Journal', 'code' => 'journal.view', 'name' => 'Журнал: просмотр', 'description' => 'Просмотр журнала.'],
             ['module' => 'Journal', 'code' => 'journal.edit', 'name' => 'Журнал: ведение', 'description' => 'Внесение посещаемости и оценок.'],
             ['module' => 'Journal', 'code' => 'journal.export', 'name' => 'Журнал: экспорт', 'description' => 'Экспорт отчетов журнала.'],
@@ -151,7 +158,7 @@ class RoleSeeder extends Seeder
     {
         return [
             'dashboard.view', 'people.view', 'students.view', 'groups.view', 'teachers.view', 'subjects.view', 'classrooms.view',
-            'schedule.view', 'journal.view', 'journal.export', 'attendance.view', 'attendance.reports',
+            'schedule.view', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.export', 'attendance.view', 'attendance.reports',
             'admissions.view', 'admissions.documents.view', 'admissions.documents.download', 'admissions.bulk_export', 'curricula.view', 'curricula.subjects.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'graduation.view',
             'frdo.view', 'fis.view', 'gate.reports', 'audit.view', 'reference.manage', 'view_reports',
         ];
@@ -165,7 +172,7 @@ class RoleSeeder extends Seeder
             'teachers.view', 'teachers.create', 'teachers.update', 'teachers.delete',
             'subjects.view', 'subjects.create', 'subjects.update', 'subjects.delete',
             'classrooms.view', 'classrooms.create', 'classrooms.update', 'classrooms.delete',
-            'schedule.view', 'schedule.update', 'journal.view', 'journal.edit', 'journal.export',
+            'schedule.view', 'schedule.create', 'schedule.update', 'schedule.delete', 'schedule.validate', 'schedule.manage_templates', 'schedule.manage_replacements', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.edit', 'journal.export',
             'attendance.view', 'attendance.reports', 'admissions.documents.view', 'curricula.view', 'curricula.edit', 'curricula.subjects.view', 'curricula.subjects.create', 'curricula.subjects.update', 'curricula.subjects.delete',
             'teachingload.view', 'teachingload.edit', 'teaching_load.generate', 'teaching_load.assign', 'teaching_load.bulk_assign', 'teaching_load.view_coverage', 'exams.view', 'exams.edit',
             'graduation.view', 'graduation.edit', 'people.update', 'people.link', 'frdo.view', 'fis.view', 'reference.manage', 'import.manage',

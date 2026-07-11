@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class ScheduleLesson extends Model
 {
     protected $fillable = [
+        'schedule_entry_id',
         'group_id',
         'teacher_id',
         'subject_id',
@@ -27,6 +28,11 @@ class ScheduleLesson extends Model
             'starts_at' => 'datetime:H:i',
             'ends_at' => 'datetime:H:i',
         ];
+    }
+
+    public function scheduleEntry(): BelongsTo
+    {
+        return $this->belongsTo(ScheduleEntry::class);
     }
 
     public function group(): BelongsTo

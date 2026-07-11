@@ -1,0 +1,94 @@
+# Schedule Engine
+
+## Цель
+
+Schedule Engine — foundation для безопасного создания, проверки и применения расписания на основе учебных планов и нагрузки преподавателей.
+
+## Источники данных
+
+- `curriculum_subjects` задают дисциплины и часы учебного плана;
+- `teaching_load_items` задают допустимые пары группа-дисциплина-преподаватель;
+- `groups` задают учебную группу и размер контингента;
+- `teachers` задают преподавателей;
+- `classrooms` задают аудитории и вместимость;
+- `reference_items` каталога `lesson_types` задают виды занятий.
+
+## Поток операции
+
+Любая новая запись расписания проходит поток:
+
+1. `preview` — расчет записи и конфликтов без изменения БД;
+2. `validate` — тот же механизм проверки для внешних клиентов;
+3. `apply` — транзакционное сохранение только если нет blocking-конфликтов;
+4. audit log — запись изменения;
+5. синхронизация `schedule_lessons` для совместимости.
+
+## API
+
+- `POST /api/schedule/preview`;
+- `POST /api/schedule/validate`;
+- `POST /api/schedule/apply`;
+- `GET /api/schedule/conflicts`;
+- `GET /api/schedule/coverage`;
+- `GET /api/schedule/group/{groupId}`;
+- `GET /api/schedule/teacher/{teacherId}`;
+- `GET /api/schedule/classroom/{classroomId}`;
+- `POST /api/schedule/entries/{id}/replace-teacher`;
+- `POST /api/schedule/entries/{id}/replace-classroom`;
+- `POST /api/schedule/entries/{id}/move`;
+- `POST /api/schedule/entries/{id}/cancel`;
+- `POST /api/schedule/entries/{id}/restore`.
+
+## Правила конфликтов
+
+Blocking:
+
+- преподаватель занят в это время;
+- группа занята в это время;
+- аудитория занята в это время;
+- некорректное время;
+- дубль записи;
+- дисциплина отсутствует в нагрузке группы;
+- выбранная строка нагрузки не соответствует группе или дисциплине;
+- преподаватель не соответствует назначению в нагрузке.
+
+Warning:
+
+- аудитория меньше группы;
+- преподаватель еще не назначен в строке нагрузки;
+- часы расписания превышают плановые часы нагрузки.
+
+## Контроль часов
+
+Для `teaching_load_item` engine считает:
+
+- `planned_hours`;
+- `scheduled_hours`;
+- `remaining_hours`;
+- `over_scheduled_hours`.
+
+Статусы:
+
+- `not_scheduled`;
+- `partially_scheduled`;
+- `scheduled`;
+- `over_scheduled`.
+
+## Замены и переносы
+
+ST-002A поддерживает ручные операции:
+
+- замена преподавателя;
+- замена аудитории;
+- перенос занятия;
+- отмена;
+- восстановление.
+
+Каждая операция проходит validation, сохраняет связь с исходной записью через `replaced_entry_id` и пишется в Audit.
+
+## Ограничения MVP
+
+- автоматический подбор преподавателей не реализован;
+- автоматическая генерация недельного расписания не реализована;
+- шаблоны созданы как структура данных для следующего этапа;
+- старые `schedule_lessons` остаются частью совместимости.

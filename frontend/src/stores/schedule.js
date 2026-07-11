@@ -100,6 +100,9 @@ export const useScheduleStore = defineStore('schedule', () => {
   const classrooms = ref([])
   const filters = ref({ ...initialFilters })
   const selectedId = ref(null)
+  const conflicts = ref([])
+  const coverage = ref([])
+  const previewResult = ref(null)
   const loading = ref(false)
   const error = ref('')
 
@@ -206,12 +209,14 @@ export const useScheduleStore = defineStore('schedule', () => {
         classroom_id: filters.value.classroom_id,
       }
 
-      const [lessonsResult, groupsResult, teachersResult, subjectsResult, classroomsResult] = await Promise.allSettled([
+      const [lessonsResult, groupsResult, teachersResult, subjectsResult, classroomsResult, conflictsResult, coverageResult] = await Promise.allSettled([
         api.list('schedule-lessons', apiFilters),
         api.list('groups'),
         api.list('teachers', { active_only: 1 }),
         api.list('subjects'),
         api.list('classrooms'),
+        api.list('schedule/conflicts', apiFilters),
+        api.list('schedule/coverage', apiFilters),
       ])
 
       if (lessonsResult.status === 'rejected') {
@@ -223,6 +228,8 @@ export const useScheduleStore = defineStore('schedule', () => {
       teachers.value = teachersResult.status === 'fulfilled' ? extractRows(teachersResult.value) : []
       subjects.value = subjectsResult.status === 'fulfilled' ? extractRows(subjectsResult.value) : []
       classrooms.value = classroomsResult.status === 'fulfilled' ? extractRows(classroomsResult.value) : []
+      conflicts.value = conflictsResult.status === 'fulfilled' ? extractRows(conflictsResult.value) : []
+      coverage.value = coverageResult.status === 'fulfilled' ? extractRows(coverageResult.value) : []
 
       if (selectedId.value && !selectedLesson.value) {
         selectedId.value = null
@@ -253,9 +260,23 @@ export const useScheduleStore = defineStore('schedule', () => {
     selectedId.value = id || null
   }
 
+  async function previewEntry(payload) {
+    previewResult.value = await api.create('schedule/preview', payload)
+    return previewResult.value
+  }
+
+  async function applyEntry(payload) {
+    const result = await api.create('schedule/apply', payload)
+    await load()
+    return result
+  }
+
   return {
     lessons,
     filteredLessons,
+    conflicts,
+    coverage,
+    previewResult,
     groups,
     teachers,
     subjects,
@@ -276,5 +297,7 @@ export const useScheduleStore = defineStore('schedule', () => {
     resetFilters,
     selectLesson,
     selectLessonById,
+    previewEntry,
+    applyEntry,
   }
 })

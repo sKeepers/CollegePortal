@@ -666,3 +666,13 @@
 - [x] Добавить быстрое действие из `/curricula`.
 - [x] Добавить RBAC permissions и Audit Log.
 - [x] Добавить тесты и документацию `docs/TEACHING_LOAD_ENGINE.md`.
+
+## ST-002A: Schedule Engine Foundation
+
+- [x] Создана модель `schedule_entries`.
+- [x] Добавлены шаблоны расписания как foundation.
+- [x] Добавлен ScheduleEngineService.
+- [x] Добавлены preview/validate/apply endpoints.
+- [x] Добавлены конфликты и покрытие нагрузки.
+- [x] `/schedule` получил создание занятия через preview.
+- [x] Документация обновлена.

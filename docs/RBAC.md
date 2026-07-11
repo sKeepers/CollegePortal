@@ -191,3 +191,17 @@ Frontend получил единый слой проверки permissions:
 ## ST-001B: Teaching Load Engine permissions
 
 Добавлены permissions `teaching_load.generate`, `teaching_load.assign`, `teaching_load.bulk_assign`, `teaching_load.view_coverage`. Учебная часть и заместитель директора могут формировать нагрузку и назначать преподавателей; директор видит coverage; преподаватель сохраняет просмотр своей нагрузки без генерации.
+
+## Schedule Engine permissions (ST-002A)
+
+Добавлены точечные permissions:
+
+- `schedule.create`;
+- `schedule.delete`;
+- `schedule.validate`;
+- `schedule.manage_templates`;
+- `schedule.manage_replacements`;
+- `schedule.view_conflicts`;
+- `schedule.view_coverage`.
+
+`admin` получает все права. `director` получает просмотр, конфликты и покрытие. `deputy`, `study`, `academic_office` получают управление расписанием. `teacher` и `student` сохраняют только просмотр своего расписания на уровне UI/API-фильтрации будущих этапов.
