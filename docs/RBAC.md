@@ -176,3 +176,8 @@ Frontend получил единый слой проверки permissions:
 ## PERSON-001 permissions
 
 Добавлены permissions `people.view`, `people.create`, `people.update`, `people.link`, `people.merge`. На текущем этапе frontend `/people` и read-only API используют `people.view`; `people.link` используется как административное право для безопасного связывания профилей через command. `people.merge` зарезервирован для будущего этапа и не дает UI-действия.
+
+## BULK-001: permissions for bulk operations
+
+Добавлены точечные permissions для массовых операций Admissions и Students. UI скрывает недоступные действия, но источником истины остается backend: каждый bulk endpoint проверяет permission по выбранному action. Director получает только bulk export, admission - операции приемной комиссии, study/deputy - операции студентов, admin - полный доступ.
+

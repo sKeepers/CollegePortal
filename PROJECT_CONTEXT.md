@@ -1105,3 +1105,8 @@ Frontend action-level RBAC доведен до основных CRUD и сист
 ## FIS Admissions Import
 
 Добавлен специализированный импорт заявлений из экспорта ФИС ГИА и Приема: `FisAdmissionsImportHandler`, API `/api/admin/import/fis-admissions/*`, UI-источник на `/admin/import`, история в `import_jobs`, сопоставление с `Person`.
+
+## BULK-001
+
+Добавлена foundation массовых операций для `/admissions` и `/students`: выбор строк, выбор всех записей по фильтру, preview/apply API, RBAC permissions, Audit Log и безопасный CSV-экспорт выбранных записей. Массовое удаление не реализовано.
+

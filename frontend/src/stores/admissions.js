@@ -413,6 +413,46 @@ export const useAdmissionsStore = defineStore('admissions', () => {
     }
   }
 
+
+  async function previewBulk(request) {
+    saving.value = true
+    error.value = ''
+    try {
+      const payload = await api.create('admissions/bulk/preview', request)
+      return payload?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось подготовить массовую операцию'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function applyBulk(request) {
+    saving.value = true
+    error.value = ''
+    try {
+      if (request.action === 'export_selected') {
+        const blob = await api.postDownload('/admissions/bulk/apply', request)
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = 'admissions-selected.csv'
+        link.click()
+        window.URL.revokeObjectURL(url)
+        return { action: 'export_selected' }
+      }
+      const payload = await api.create('admissions/bulk/apply', request)
+      await load()
+      return payload?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось выполнить массовую операцию'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
   function setFilters(nextFilters) {
     filters.value = {
       ...filters.value,
@@ -457,6 +497,8 @@ export const useAdmissionsStore = defineStore('admissions', () => {
     exportCsv,
     enroll,
     updateDocument,
+    previewBulk,
+    applyBulk,
     setFilters,
     resetFilters,
     selectApplication,

@@ -27,6 +27,9 @@ function cleanPayload(payload) {
     phone: payload.phone?.trim() || null,
     email: payload.email?.trim() || null,
     status: payload.status || 'active',
+    course: payload.course ? Number(payload.course) : null,
+    education_form: payload.education_form?.trim() || null,
+    funding_form: payload.funding_form?.trim() || null,
     enrollment_date: payload.enrollment_date || null,
   }
 }
@@ -223,6 +226,46 @@ export const useStudentsStore = defineStore('students', () => {
     }
   }
 
+
+  async function previewBulk(request) {
+    saving.value = true
+    error.value = ''
+    try {
+      const payload = await api.create('students/bulk/preview', request)
+      return payload?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось подготовить массовую операцию'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function applyBulk(request) {
+    saving.value = true
+    error.value = ''
+    try {
+      if (request.action === 'export_selected') {
+        const blob = await api.postDownload('/students/bulk/apply', request)
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = 'students-selected.csv'
+        link.click()
+        window.URL.revokeObjectURL(url)
+        return { action: 'export_selected' }
+      }
+      const payload = await api.create('students/bulk/apply', request)
+      await load()
+      return payload?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось выполнить массовую операцию'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
   function setFilters(nextFilters) {
     filters.value = {
       ...filters.value,
@@ -292,6 +335,8 @@ export const useStudentsStore = defineStore('students', () => {
     remove,
     importCsv,
     exportCsv,
+    previewBulk,
+    applyBulk,
     loadStudentDetails,
     setFilters,
     resetFilters,

@@ -60,6 +60,13 @@ class RoleSeeder extends Seeder
             ['module' => 'Students', 'code' => 'students.create', 'name' => 'Студенты: создание', 'description' => 'Создание студентов.'],
             ['module' => 'Students', 'code' => 'students.update', 'name' => 'Студенты: изменение', 'description' => 'Редактирование студентов, импорт и фото.'],
             ['module' => 'Students', 'code' => 'students.delete', 'name' => 'Студенты: удаление', 'description' => 'Удаление студентов.'],
+            ['module' => 'Students', 'code' => 'students.bulk_group', 'name' => 'Студенты: массовое назначение группы', 'description' => 'Массовое назначение группы студентам.'],
+            ['module' => 'Students', 'code' => 'students.bulk_status', 'name' => 'Студенты: массовое изменение статуса', 'description' => 'Массовое изменение статуса студентов.'],
+            ['module' => 'Students', 'code' => 'students.bulk_course', 'name' => 'Студенты: массовое изменение курса', 'description' => 'Массовое изменение курса студентов.'],
+            ['module' => 'Students', 'code' => 'students.bulk_education', 'name' => 'Студенты: массовое изменение формы обучения', 'description' => 'Массовое изменение формы обучения и финансирования студентов.'],
+            ['module' => 'Students', 'code' => 'students.bulk_passes', 'name' => 'Студенты: массовый выпуск QR', 'description' => 'Массовый выпуск цифровых пропусков студентам.'],
+            ['module' => 'Students', 'code' => 'students.bulk_archive', 'name' => 'Студенты: массовое архивирование', 'description' => 'Массовое архивирование студентов без удаления.'],
+            ['module' => 'Students', 'code' => 'students.bulk_export', 'name' => 'Студенты: массовый экспорт', 'description' => 'Экспорт выбранных студентов.'],
             ['module' => 'Groups', 'code' => 'groups.view', 'name' => 'Группы: просмотр', 'description' => 'Просмотр групп.'],
             ['module' => 'Groups', 'code' => 'groups.create', 'name' => 'Группы: создание', 'description' => 'Создание групп.'],
             ['module' => 'Groups', 'code' => 'groups.update', 'name' => 'Группы: изменение', 'description' => 'Редактирование групп и импорт.'],
@@ -85,6 +92,12 @@ class RoleSeeder extends Seeder
             ['module' => 'Attendance', 'code' => 'attendance.reports', 'name' => 'Посещаемость: отчеты', 'description' => 'Исторические отчеты посещаемости.'],
             ['module' => 'Admissions', 'code' => 'admissions.view', 'name' => 'Приемная комиссия: просмотр', 'description' => 'Просмотр заявлений.'],
             ['module' => 'Admissions', 'code' => 'admissions.edit', 'name' => 'Приемная комиссия: ведение', 'description' => 'Создание, изменение, импорт и зачисление заявлений.'],
+            ['module' => 'Admissions', 'code' => 'admissions.bulk_status', 'name' => 'Приемная комиссия: массовое изменение статуса', 'description' => 'Массовое изменение статуса заявлений.'],
+            ['module' => 'Admissions', 'code' => 'admissions.bulk_documents', 'name' => 'Приемная комиссия: массовая отметка документов', 'description' => 'Массовая отметка комплекта документов.'],
+            ['module' => 'Admissions', 'code' => 'admissions.bulk_recommend', 'name' => 'Приемная комиссия: массовая рекомендация', 'description' => 'Массовая рекомендация к зачислению.'],
+            ['module' => 'Admissions', 'code' => 'admissions.bulk_assign', 'name' => 'Приемная комиссия: массовое назначение направления', 'description' => 'Массовое назначение конкурса или программы.'],
+            ['module' => 'Admissions', 'code' => 'admissions.bulk_export', 'name' => 'Приемная комиссия: массовый экспорт', 'description' => 'Экспорт выбранных заявлений.'],
+            ['module' => 'Admissions', 'code' => 'admissions.bulk_enroll', 'name' => 'Приемная комиссия: массовое зачисление', 'description' => 'Массовое зачисление абитуриентов в студенты.'],
             ['module' => 'Curricula', 'code' => 'curricula.view', 'name' => 'Учебные планы: просмотр', 'description' => 'Просмотр учебных планов.'],
             ['module' => 'Curricula', 'code' => 'curricula.edit', 'name' => 'Учебные планы: ведение', 'description' => 'Создание, изменение и импорт учебных планов.'],
             ['module' => 'Teaching Load', 'code' => 'teachingload.view', 'name' => 'Нагрузка: просмотр', 'description' => 'Просмотр нагрузки преподавателей.'],
@@ -124,7 +137,7 @@ class RoleSeeder extends Seeder
         return [
             'dashboard.view', 'people.view', 'students.view', 'groups.view', 'teachers.view', 'subjects.view', 'classrooms.view',
             'schedule.view', 'journal.view', 'journal.export', 'attendance.view', 'attendance.reports',
-            'admissions.view', 'curricula.view', 'teachingload.view', 'exams.view', 'graduation.view',
+            'admissions.view', 'admissions.bulk_export', 'curricula.view', 'teachingload.view', 'exams.view', 'graduation.view',
             'frdo.view', 'fis.view', 'gate.reports', 'audit.view', 'reference.manage', 'view_reports',
         ];
     }
@@ -132,7 +145,7 @@ class RoleSeeder extends Seeder
     private function academicEditorPermissions(): array
     {
         return [
-            'dashboard.view', 'people.view', 'students.view', 'students.create', 'students.update', 'students.delete',
+            'dashboard.view', 'people.view', 'students.view', 'students.create', 'students.update', 'students.delete', 'students.bulk_group', 'students.bulk_status', 'students.bulk_course', 'students.bulk_education', 'students.bulk_passes', 'students.bulk_archive', 'students.bulk_export',
             'groups.view', 'groups.create', 'groups.update', 'groups.delete',
             'teachers.view', 'teachers.create', 'teachers.update', 'teachers.delete',
             'subjects.view', 'subjects.create', 'subjects.update', 'subjects.delete',
@@ -147,7 +160,7 @@ class RoleSeeder extends Seeder
 
     private function admissionPermissions(): array
     {
-        return ['dashboard.view', 'people.view', 'admissions.view', 'admissions.edit', 'students.view', 'groups.view', 'reference.manage', 'import.manage', 'view_reports'];
+        return ['dashboard.view', 'people.view', 'admissions.view', 'admissions.edit', 'admissions.bulk_status', 'admissions.bulk_documents', 'admissions.bulk_recommend', 'admissions.bulk_assign', 'admissions.bulk_export', 'admissions.bulk_enroll', 'students.view', 'groups.view', 'reference.manage', 'import.manage', 'view_reports'];
     }
 
     private function teacherPermissions(): array

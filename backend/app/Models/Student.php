@@ -12,6 +12,7 @@ class Student extends Model
         'person_id',
         'user_id',
         'group_id',
+        'course',
         'last_name',
         'first_name',
         'middle_name',
@@ -21,6 +22,9 @@ class Student extends Model
         'photo_path',
         'status',
         'enrollment_date',
+        'education_form',
+        'funding_form',
+        'archived_at',
     ];
 
     protected function casts(): array
@@ -28,6 +32,8 @@ class Student extends Model
         return [
             'birth_date' => 'date',
             'enrollment_date' => 'date',
+            'course' => 'integer',
+            'archived_at' => 'datetime',
         ];
     }
 

@@ -618,3 +618,13 @@
 - [x] Поддержан dry-run с маскированием ПДн.
 - [x] Подготовлен apply с блокировкой при критических ошибках, дублях и несопоставленных конкурсах.
 - [x] Добавлена документация `docs/FIS_ADMISSIONS_IMPORT.md`.
+
+## BULK-001
+
+- [x] Добавить backend preview/apply endpoints для Admissions и Students.
+- [x] Добавить RBAC permissions для массовых операций.
+- [x] Добавить Audit Log для apply.
+- [x] Добавить выбор строк и bulk-панель в `/admissions` и `/students`.
+- [x] Добавить документацию `docs/BULK_OPERATIONS.md`.
+- [x] Проверить `php artisan test` и `npm run build`.
+

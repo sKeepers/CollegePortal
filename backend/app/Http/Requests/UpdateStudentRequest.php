@@ -24,6 +24,9 @@ class UpdateStudentRequest extends FormRequest
             'phone' => ['sometimes', 'nullable', 'string', 'max:50'],
             'email' => ['sometimes', 'nullable', 'email', 'max:255'],
             'status' => ['sometimes', 'required', Rule::in(['active', 'academic_leave', 'graduated', 'expelled'])],
+            'course' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:6'],
+            'education_form' => ['sometimes', 'nullable', 'string', 'max:80'],
+            'funding_form' => ['sometimes', 'nullable', 'string', 'max:80'],
             'enrollment_date' => ['sometimes', 'nullable', 'date'],
         ];
     }

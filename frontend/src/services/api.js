@@ -113,6 +113,27 @@ export const api = {
     })
   },
 
+  async postDownload(path, data) {
+    const token = localStorage.getItem('college_portal_token')
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method: 'POST',
+      headers: {
+        Accept: 'text/csv',
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        'X-Idempotency-Key': crypto.randomUUID?.() || String(Date.now()),
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}))
+      throw new Error(payload.message || 'Файл не удалось скачать')
+    }
+
+    return response.blob()
+  },
+
   async download(path) {
     const token = localStorage.getItem('college_portal_token')
     const response = await fetch(`${API_BASE_URL}${path}`, {

@@ -59,6 +59,25 @@ const tablePagination = ref(createTablePagination(ADMISSIONS_ROWS_PER_PAGE_KEY, 
   rowsPerPage: 20,
 }))
 
+const selectedRows = ref([])
+const selectAllFiltered = ref(false)
+const bulkDialogVisible = ref(false)
+const bulkAction = ref('')
+const bulkPayload = ref({})
+const bulkPreview = ref(null)
+
+const bulkActions = computed(() => [
+  { label: 'Изменить статус', value: 'change_status', permission: 'admissions.bulk_status' },
+  { label: 'Документы предоставлены', value: 'mark_documents_provided', permission: 'admissions.bulk_documents' },
+  { label: 'Рекомендовать', value: 'mark_recommended', permission: 'admissions.bulk_recommend' },
+  { label: 'Назначить направление', value: 'assign_program', permission: 'admissions.bulk_assign' },
+  { label: 'Зачислить', value: 'enroll_selected', permission: 'admissions.bulk_enroll' },
+  { label: 'Экспортировать', value: 'export_selected', permission: 'admissions.bulk_export' },
+].filter((action) => permissions.hasPermission(action.permission)))
+
+const selectedCount = computed(() => (selectAllFiltered.value ? store.filteredApplications.length : selectedRows.value.length))
+const hasBulkSelection = computed(() => selectedCount.value > 0)
+
 const columns = [
   { name: 'applicant', label: 'Абитуриент', field: 'last_name', align: 'left', sortable: true, style: 'width: 30%; max-width: 250px;', headerStyle: 'width: 30%;' },
   { name: 'program', label: 'Специальность / программа', field: 'education_program_id', align: 'left', sortable: true, style: 'width: 34%; max-width: 300px;', headerStyle: 'width: 34%;' },
@@ -85,6 +104,50 @@ function notifyWarning(message) {
     position: 'top-right',
     timeout: 2200,
   })
+}
+
+function clearSelection() {
+  selectedRows.value = []
+  selectAllFiltered.value = false
+  bulkPreview.value = null
+}
+
+function requestSelectionReset() {
+  if (!hasBulkSelection.value) return true
+  clearSelection()
+  notifyWarning('Выбор очищен из-за изменения фильтров')
+  return true
+}
+
+function openBulkDialog(action = '') {
+  if (!hasBulkSelection.value) return
+  bulkAction.value = action || bulkActions.value[0]?.value || ''
+  bulkPayload.value = {}
+  bulkPreview.value = null
+  bulkDialogVisible.value = true
+}
+
+function bulkRequest() {
+  return {
+    ids: selectAllFiltered.value ? [] : selectedRows.value.map((row) => row.id),
+    filter: selectAllFiltered.value ? { ...store.filters } : {},
+    action: bulkAction.value,
+    payload: { ...bulkPayload.value },
+  }
+}
+
+async function previewBulkAction() {
+  bulkPreview.value = await store.previewBulk(bulkRequest())
+}
+
+async function applyBulkAction() {
+  const result = await store.applyBulk(bulkRequest())
+  bulkPreview.value = result?.action === 'export_selected' ? bulkPreview.value : result
+  notifySuccess(bulkAction.value === 'export_selected' ? 'Экспорт выбранных заявлений подготовлен' : 'Массовая операция выполнена')
+  if (bulkAction.value !== 'export_selected') {
+    clearSelection()
+    bulkDialogVisible.value = false
+  }
 }
 
 function applicationTitle(application) {
@@ -191,6 +254,7 @@ async function confirmDelete() {
 }
 
 async function applyFilters(filters) {
+  requestSelectionReset()
   store.setFilters(filters)
   await syncAdmissionQuery({
     selectedId: '',
@@ -201,11 +265,13 @@ async function applyFilters(filters) {
 }
 
 async function resetFilters() {
+  requestSelectionReset()
   store.resetFilters()
   await syncAdmissionQuery({ selectedId: '', searchText: '', status: '', program: '' })
 }
 
 async function applyQuickQueue(queue) {
+  requestSelectionReset()
   const filters = {
     ...store.filters,
     status: queue.status,
@@ -352,6 +418,10 @@ onMounted(async () => {
           </template>
           <q-tooltip>Загрузка файла CSV</q-tooltip>
         </q-file>
+        <q-btn flat :disable="!hasBulkSelection || store.loading" @click="openBulkDialog()">
+          <span>Групповые действия</span>
+          <q-tooltip>{{ hasBulkSelection ? `Выбрано: ${selectedCount}` : 'Выберите заявления в таблице' }}</q-tooltip>
+        </q-btn>
         <q-btn flat :disable="store.loading" @click="store.load">
           <template #default>
             <RefreshCw :size="16" />
@@ -367,6 +437,21 @@ onMounted(async () => {
         </q-btn>
       </template>
     </AppToolbar>
+
+
+    <q-banner v-if="hasBulkSelection" rounded class="admissions-import-summary">
+      <div class="row items-center justify-between q-gutter-sm">
+        <div>
+          Выбрано заявлений: <strong>{{ selectedCount }}</strong>
+          <span v-if="selectAllFiltered"> · все записи по текущему фильтру</span>
+        </div>
+        <div class="row q-gutter-sm">
+          <q-btn flat size="sm" label="Выбрать все по фильтру" @click="selectAllFiltered = true" />
+          <q-btn flat size="sm" label="Снять выделение" @click="clearSelection" />
+          <q-btn color="primary" size="sm" label="Групповые действия" @click="openBulkDialog()" />
+        </div>
+      </div>
+    </q-banner>
 
     <AppErrorBanner :message="store.error" />
 
@@ -393,6 +478,8 @@ onMounted(async () => {
           :loading="store.loading"
           :pagination="tablePagination"
           :rows-per-page-options="TABLE_ROWS_PER_PAGE_OPTIONS"
+          v-model:selected="selectedRows"
+          selection="multiple"
           :table-row-class-fn="tableRowClass"
           @update:pagination="updateTablePagination"
           @row-click="(_, row) => selectApplication(row)"
@@ -477,6 +564,50 @@ onMounted(async () => {
           @cancel="formVisible = false"
         />
       </div>
+    </q-dialog>
+
+
+    <q-dialog v-model="bulkDialogVisible" persistent>
+      <q-card style="min-width: 520px; max-width: 760px;">
+        <q-card-section>
+          <div class="text-h6">Групповые действия приемной комиссии</div>
+          <div class="text-caption text-grey-7">Выбрано заявлений: {{ selectedCount }}</div>
+        </q-card-section>
+        <q-card-section class="q-gutter-md">
+          <q-select v-model="bulkAction" outlined dense :options="bulkActions" emit-value map-options label="Действие" @update:model-value="bulkPreview = null" />
+          <q-select v-if="bulkAction === 'change_status'" v-model="bulkPayload.status" outlined dense :options="statusOptions" emit-value map-options label="Статус" />
+          <template v-if="bulkAction === 'assign_program'">
+            <q-select v-model="bulkPayload.education_program_id" outlined dense :options="store.educationProgramOptions" emit-value map-options label="Образовательная программа" />
+            <q-input v-model="bulkPayload.competition_name" outlined dense label="Конкурс / направление" />
+          </template>
+          <template v-if="bulkAction === 'enroll_selected'">
+            <q-select v-model="bulkPayload.group_id" outlined dense :options="store.groupOptions" emit-value map-options label="Группа для зачисления" />
+            <q-input v-model="bulkPayload.enrollment_date" outlined dense type="date" label="Дата зачисления" />
+          </template>
+          <q-banner v-if="bulkAction === 'mark_documents_provided'" rounded class="bg-blue-1 text-blue-10">Все документы выбранных заявлений будут отмечены как полученные.</q-banner>
+          <q-banner v-if="bulkAction === 'enroll_selected'" rounded class="bg-orange-1 text-orange-10">Перед зачислением будет проверена комплектность документов и отсутствие дублей студентов.</q-banner>
+          <q-card v-if="bulkPreview" flat bordered>
+            <q-card-section>
+              <div class="text-subtitle2">Предпросмотр</div>
+              <div>Будет изменено: {{ bulkPreview.will_change }} · пропущено: {{ bulkPreview.skipped }} · ошибок: {{ bulkPreview.errors }}</div>
+              <q-list dense separator class="q-mt-sm">
+                <q-item v-for="item in bulkPreview.sample" :key="item.id">
+                  <q-item-section>
+                    <q-item-label>{{ item.name }}</q-item-label>
+                    <q-item-label caption>{{ item.reason || 'Готово к изменению' }}</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>{{ item.result }}</q-item-section>
+                </q-item>
+              </q-list>
+            </q-card-section>
+          </q-card>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Отмена" @click="bulkDialogVisible = false" />
+          <q-btn flat label="Предпросмотр" :loading="store.saving" @click="previewBulkAction" />
+          <q-btn color="primary" label="Применить" :loading="store.saving" :disable="!bulkPreview && bulkAction !== 'export_selected'" @click="applyBulkAction" />
+        </q-card-actions>
+      </q-card>
     </q-dialog>
 
     <AppConfirmDialog
