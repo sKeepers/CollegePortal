@@ -138,7 +138,7 @@ class DashboardAnalyticsService
     private function attentionItems($frdoErrors, $fisErrors, array $attendance = []): array
     {
         $studentsWithoutPhoto = Student::query()->whereNull('photo_path')->count();
-        $applicationsWithoutDocuments = ApplicantApplication::query()->whereDoesntHave('documents', fn ($query) => $query->where('is_received', true))->count();
+        $applicationsWithoutDocuments = ApplicantApplication::query()->where(fn ($query) => $query->where('documents_provided', false)->orWhereNull('documents_provided'))->count();
         $frdoErrorCount = $frdoErrors->sum('validation_errors_count');
         $fisErrorCount = $fisErrors->sum('validation_errors_count');
 

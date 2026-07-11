@@ -75,7 +75,11 @@ const bulkActions = computed(() => [
   { label: 'Экспортировать', value: 'export_selected', permission: 'admissions.bulk_export' },
 ].filter((action) => permissions.hasPermission(action.permission)))
 
-const selectedCount = computed(() => (selectAllFiltered.value ? store.filteredApplications.length : selectedRows.value.length))
+const selectedCount = computed(() => (selectAllFiltered.value ? store.stats.total : selectedRows.value.length))
+const pageSelectionCount = computed(() => selectedRows.value.length)
+const currentPageCount = computed(() => store.filteredApplications.length)
+const filterTotal = computed(() => store.stats.total || store.pagination?.total || store.filteredApplications.length)
+const canSelectAllFiltered = computed(() => !selectAllFiltered.value && pageSelectionCount.value > 0 && filterTotal.value > pageSelectionCount.value)
 const hasBulkSelection = computed(() => selectedCount.value > 0)
 
 const columns = [
@@ -85,7 +89,7 @@ const columns = [
   { name: 'actions', label: '', field: 'actions', align: 'right', style: 'width: 76px;', headerStyle: 'width: 76px;' },
 ]
 
-const tableSubtitle = computed(() => `Найдено заявлений: ${store.filteredApplications.length}`)
+const tableSubtitle = computed(() => `Найдено заявлений: ${filterTotal.value}; на странице: ${currentPageCount.value}`)
 const statusOptions = computed(() => referenceOptions.options('applicant_application_statuses'))
 
 function notifySuccess(message) {
@@ -112,6 +116,11 @@ function clearSelection() {
   bulkPreview.value = null
 }
 
+function selectAllByFilter() {
+  selectAllFiltered.value = true
+  bulkPreview.value = null
+}
+
 function requestSelectionReset() {
   if (!hasBulkSelection.value) return true
   clearSelection()
@@ -127,10 +136,17 @@ function openBulkDialog(action = '') {
   bulkDialogVisible.value = true
 }
 
+function selectionScope() {
+  if (selectAllFiltered.value) return 'filter'
+  if (selectedRows.value.length === currentPageCount.value) return 'current_page'
+  return 'selected_ids'
+}
+
 function bulkRequest() {
   return {
     ids: selectAllFiltered.value ? [] : selectedRows.value.map((row) => row.id),
     filter: selectAllFiltered.value ? { ...store.filters } : {},
+    selection_scope: selectionScope(),
     action: bulkAction.value,
     payload: { ...bulkPayload.value },
   }
@@ -262,12 +278,14 @@ async function applyFilters(filters) {
     status: filters.status,
     program: filters.educationProgramId,
   })
+  await store.load()
 }
 
 async function resetFilters() {
   requestSelectionReset()
   store.resetFilters()
   await syncAdmissionQuery({ selectedId: '', searchText: '', status: '', program: '' })
+  await store.load()
 }
 
 async function applyQuickQueue(queue) {
@@ -281,11 +299,13 @@ async function applyQuickQueue(queue) {
   if (queue.key === 'all') {
     store.resetFilters()
     await syncAdmissionQuery({ selectedId: '', searchText: '', status: '', program: '' })
+    await store.load()
     return
   }
 
   store.setFilters(filters)
   await syncAdmissionQuery({ selectedId: '', searchText: filters.search, status: filters.status, program: filters.educationProgramId })
+  await store.load()
 }
 
 async function handleImport(file) {
@@ -332,6 +352,7 @@ watch(
       status: routeStatus(),
       educationProgramId: routeProgram(),
     })
+    await store.load()
     store.selectApplicationById(routeSelectedId())
 
     if (routeAction() === 'create') {
@@ -442,11 +463,21 @@ onMounted(async () => {
     <q-banner v-if="hasBulkSelection" rounded class="admissions-import-summary">
       <div class="row items-center justify-between q-gutter-sm">
         <div>
-          Выбрано заявлений: <strong>{{ selectedCount }}</strong>
-          <span v-if="selectAllFiltered"> · все записи по текущему фильтру</span>
+          <template v-if="selectAllFiltered">
+            Выбраны все результаты фильтра: <strong>{{ selectedCount }}</strong>
+          </template>
+          <template v-else>
+            Выбрано {{ pageSelectionCount }} заявлений на текущей странице
+          </template>
         </div>
         <div class="row q-gutter-sm">
-          <q-btn flat size="sm" label="Выбрать все по фильтру" @click="selectAllFiltered = true" />
+          <q-btn
+            v-if="canSelectAllFiltered"
+            flat
+            size="sm"
+            :label="`Выбрать все ${filterTotal} заявлений по текущему фильтру`"
+            @click="selectAllByFilter"
+          />
           <q-btn flat size="sm" label="Снять выделение" @click="clearSelection" />
           <q-btn color="primary" size="sm" label="Групповые действия" @click="openBulkDialog()" />
         </div>
@@ -589,7 +620,8 @@ onMounted(async () => {
           <q-card v-if="bulkPreview" flat bordered>
             <q-card-section>
               <div class="text-subtitle2">Предпросмотр</div>
-              <div>Будет изменено: {{ bulkPreview.will_change }} · пропущено: {{ bulkPreview.skipped }} · ошибок: {{ bulkPreview.errors }}</div>
+              <div>Область: {{ bulkPreview.scope_label }} · найдено: {{ bulkPreview.found }}</div>
+              <div>Будет изменено: {{ bulkPreview.will_change }} · уже соответствует: {{ bulkPreview.already_set || 0 }} · пропущено: {{ bulkPreview.skipped }} · ошибок: {{ bulkPreview.errors }}</div>
               <q-list dense separator class="q-mt-sm">
                 <q-item v-for="item in bulkPreview.sample" :key="item.id">
                   <q-item-section>

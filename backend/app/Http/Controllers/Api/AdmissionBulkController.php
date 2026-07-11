@@ -44,6 +44,7 @@ class AdmissionBulkController extends Controller
             'filter' => ['nullable', 'array'],
             'action' => ['required', 'string'],
             'payload' => ['nullable', 'array'],
+            'selection_scope' => ['nullable', 'string'],
         ]);
     }
 

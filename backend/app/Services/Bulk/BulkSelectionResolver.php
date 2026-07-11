@@ -50,12 +50,11 @@ class BulkSelectionResolver
             ->when($filter['submittedDate'] ?? $filter['submitted_at'] ?? null, fn (Builder $query, string $date) => $query->whereDate('submitted_at', $date))
             ->when($filter['completeness'] ?? null, function (Builder $query, string $completeness): void {
                 if ($completeness === 'empty') {
-                    $query->whereDoesntHave('documents');
+                    $query->whereDoesntHave('documents')->where(fn (Builder $query) => $query->where('documents_provided', false)->orWhereNull('documents_provided'));
                 } elseif ($completeness === 'complete') {
-                    $query->whereHas('documents')
-                        ->whereDoesntHave('documents', fn (Builder $query) => $query->where('is_received', false));
+                    $query->where('documents_provided', true);
                 } elseif ($completeness === 'incomplete') {
-                    $query->whereHas('documents', fn (Builder $query) => $query->where('is_received', false));
+                    $query->where(fn (Builder $query) => $query->where('documents_provided', false)->orWhereNull('documents_provided'));
                 }
             });
     }

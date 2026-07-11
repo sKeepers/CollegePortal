@@ -14,6 +14,7 @@ use App\Models\Student;
 use App\Services\ApplicantApplicationCsvService;
 use App\Services\ApplicantApplicationDocumentService;
 use App\Services\ApplicantApplicationEventService;
+use App\Services\Bulk\BulkSelectionResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -29,28 +30,18 @@ class ApplicantApplicationController extends Controller
         private readonly ApplicantApplicationCsvService $applicantApplicationCsvService,
         private readonly ApplicantApplicationEventService $eventService,
         private readonly ApplicantApplicationDocumentService $documentService,
+        private readonly BulkSelectionResolver $selectionResolver,
     ) {
     }
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $applications = ApplicantApplication::query()
-            ->with(['educationProgram.specialty', 'events', 'documents'])
-            ->when($request->integer('education_program_id'), fn ($query, int $programId) => $query->where('education_program_id', $programId))
-            ->when($request->string('status')->toString(), fn ($query, string $status) => $query->where('status', $status))
+        $applications = $this->selectionResolver
+            ->applyAdmissionSelection(
+                ApplicantApplication::query()->with(['educationProgram.specialty', 'events', 'documents']),
+                ['filter' => $this->filterFromRequest($request)]
+            )
             ->when($request->string('education_base')->toString(), fn ($query, string $base) => $query->where('education_base', $base))
-            ->when($request->string('search')->toString(), function ($query, string $search): void {
-                $operator = $query->getModel()->getConnection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
-
-                $query->where(function ($query) use ($operator, $search): void {
-                    $query
-                        ->where('last_name', $operator, "%{$search}%")
-                        ->orWhere('first_name', $operator, "%{$search}%")
-                        ->orWhere('middle_name', $operator, "%{$search}%")
-                        ->orWhere('phone', $operator, "%{$search}%")
-                        ->orWhere('email', $operator, "%{$search}%");
-                });
-            })
             ->orderByDesc('submitted_at')
             ->orderBy('last_name')
             ->paginate(50);
@@ -61,6 +52,36 @@ class ApplicantApplicationController extends Controller
         });
 
         return ApplicantApplicationResource::collection($applications);
+    }
+
+
+    public function stats(Request $request): JsonResponse
+    {
+        $filter = $this->filterFromRequest($request);
+        $base = fn () => $this->selectionResolver->applyAdmissionSelection(ApplicantApplication::query(), ['filter' => $filter]);
+
+        $stats = [
+            'total' => (clone $base())->count(),
+            'new' => (clone $base())->where('status', 'new')->count(),
+            'incomplete' => (clone $base())->where(fn ($query) => $query->where('documents_provided', false)->orWhereNull('documents_provided'))->count(),
+            'ready' => (clone $base())->where('status', 'accepted')->where('documents_provided', true)->count(),
+            'enrolled' => (clone $base())->where('status', 'enrolled')->count(),
+            'rejected' => (clone $base())->where('status', 'rejected')->count(),
+        ];
+
+        return response()->json(['data' => $stats]);
+    }
+
+    private function filterFromRequest(Request $request): array
+    {
+        return [
+            'search' => $request->query('search'),
+            'status' => $request->query('status'),
+            'specialtyId' => $request->query('specialtyId', $request->query('specialty_id')),
+            'educationProgramId' => $request->query('educationProgramId', $request->query('education_program_id')),
+            'completeness' => $request->query('completeness'),
+            'submittedDate' => $request->query('submittedDate', $request->query('submitted_at')),
+        ];
     }
 
     public function store(StoreApplicantApplicationRequest $request): JsonResponse

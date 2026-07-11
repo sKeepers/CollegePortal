@@ -37,7 +37,7 @@ class AdmissionBulkService
     public function preview(string $action, array $selection, array $payload = []): array
     {
         $applications = $this->resolver->admissions($selection);
-        return $this->buildReport($action, $applications, $payload, false);
+        return $this->buildReport($action, $applications, $payload, false, $selection);
     }
 
     public function apply(string $action, array $selection, array $payload, Request $request): array|StreamedResponse
@@ -52,8 +52,8 @@ class AdmissionBulkService
             return $this->export($applications);
         }
 
-        $report = DB::transaction(function () use ($action, $applications, $payload): array {
-            return $this->buildReport($action, $applications, $payload, true);
+        $report = DB::transaction(function () use ($action, $applications, $payload, $selection): array {
+            return $this->buildReport($action, $applications, $payload, true, $selection);
         });
 
         AuditLogService::log('Admissions', 'bulk_'.$action, ['type' => 'ApplicantApplication', 'id' => null], null, $report, $request, requestId: $this->requestId($request));
@@ -61,9 +61,9 @@ class AdmissionBulkService
         return $report;
     }
 
-    private function buildReport(string $action, Collection $applications, array $payload, bool $apply): array
+    private function buildReport(string $action, Collection $applications, array $payload, bool $apply, array $selection = []): array
     {
-        $report = $this->baseReport($action, $applications->count());
+        $report = $this->baseReport($action, $applications->count(), $selection);
 
         foreach ($applications as $application) {
             $result = match ($action) {
@@ -100,6 +100,10 @@ class AdmissionBulkService
 
     private function markDocumentsProvided(ApplicantApplication $application, bool $apply): array
     {
+        if ($application->documents_provided) {
+            return ['type' => 'already_set', 'reason' => 'Документы уже отмечены как предоставленные.', 'changes' => ['documents_provided' => true]];
+        }
+
         if ($apply) {
             $this->documentService->ensureDefaultDocuments($application);
             $application->documents()->update(['is_received' => true, 'received_at' => now()]);
@@ -229,15 +233,35 @@ class AdmissionBulkService
         }, 'admissions-selected.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
-    private function baseReport(string $action, int $total): array
+    private function baseReport(string $action, int $total, array $selection = []): array
     {
-        return ['action' => $action, 'selected' => $total, 'will_change' => 0, 'changed' => 0, 'skipped' => 0, 'errors' => 0, 'items' => [], 'sample' => []];
+        $scope = $selection['selection_scope'] ?? (empty($selection['ids'] ?? []) ? 'filter' : 'selected_ids');
+
+        return [
+            'action' => $action,
+            'scope' => $scope,
+            'scope_label' => match ($scope) {
+                'current_page' => 'Текущая страница',
+                'filter' => 'Все записи по фильтру',
+                default => 'Выбранные записи',
+            },
+            'selected' => $total,
+            'found' => $total,
+            'will_change' => 0,
+            'changed' => 0,
+            'already_set' => 0,
+            'skipped' => 0,
+            'errors' => 0,
+            'items' => [],
+            'sample' => [],
+        ];
     }
 
     private function appendResult(array &$report, ApplicantApplication $application, array $result): void
     {
         $type = $result['type'];
         if ($type === 'changed') { $report['will_change']++; $report['changed']++; }
+        if ($type === 'already_set') { $report['already_set']++; $report['skipped']++; }
         if ($type === 'skipped') { $report['skipped']++; }
         if ($type === 'error') { $report['errors']++; }
         $item = ['id' => $application->id, 'name' => $this->name($application), 'result' => $type, 'reason' => $result['reason'] ?? null, 'changes' => $result['changes'] ?? []];

@@ -155,12 +155,24 @@ function normalize(value) {
   return String(value || '').trim().toLowerCase()
 }
 
+function apiFilters(filters) {
+  return {
+    search: filters.search,
+    status: filters.status,
+    specialtyId: filters.specialtyId,
+    educationProgramId: filters.educationProgramId,
+    completeness: filters.completeness,
+    submittedDate: filters.submittedDate,
+  }
+}
+
 export const useAdmissionsStore = defineStore('admissions', () => {
   const applications = ref([])
   const educationPrograms = ref([])
   const groups = ref([])
   const filters = ref({ ...initialFilters })
   const pagination = ref(null)
+  const stats = ref({ total: 0, new: 0, incomplete: 0, ready: 0, enrolled: 0, rejected: 0 })
   const selectedId = ref(null)
   const loading = ref(false)
   const saving = ref(false)
@@ -205,60 +217,32 @@ export const useAdmissionsStore = defineStore('admissions', () => {
     Array.isArray(selectedApplication.value?.events) ? selectedApplication.value.events : []
   ))
 
-  const quickQueues = computed(() => {
-    const total = applications.value.length
-    const byStatus = (status) => applications.value.filter((application) => application.status === status).length
-    const incomplete = applications.value.filter((application) => documentsCompleteness(application) === 'incomplete').length
-    const ready = applications.value.filter((application) => application.status === 'accepted' && documentsCompleteness(application) === 'complete').length
+  const quickQueues = computed(() => [
+    { key: 'new', label: 'Новые', value: stats.value.new || 0, status: 'new', completeness: '', tone: 'info' },
+    { key: 'incomplete', label: 'Неполный комплект', value: stats.value.incomplete || 0, status: '', completeness: 'incomplete', tone: 'warning' },
+    { key: 'ready', label: 'Готовы к зачислению', value: stats.value.ready || 0, status: 'accepted', completeness: 'complete', tone: 'success' },
+    { key: 'enrolled', label: 'Зачислены', value: stats.value.enrolled || 0, status: 'enrolled', completeness: '', tone: 'success' },
+    { key: 'rejected', label: 'Отклонены', value: stats.value.rejected || 0, status: 'rejected', completeness: '', tone: 'danger' },
+    { key: 'all', label: 'Всего', value: stats.value.total || 0, status: '', completeness: '', tone: 'neutral' },
+  ])
 
-    return [
-      { key: 'new', label: 'Новые', value: byStatus('new'), status: 'new', completeness: '', tone: 'info' },
-      { key: 'incomplete', label: 'Неполный комплект', value: incomplete, status: '', completeness: 'incomplete', tone: 'warning' },
-      { key: 'ready', label: 'Готовы к зачислению', value: ready, status: 'accepted', completeness: 'complete', tone: 'success' },
-      { key: 'enrolled', label: 'Зачислены', value: byStatus('enrolled'), status: 'enrolled', completeness: '', tone: 'success' },
-      { key: 'rejected', label: 'Отклонены', value: byStatus('rejected'), status: 'rejected', completeness: '', tone: 'danger' },
-      { key: 'all', label: 'Всего', value: total, status: '', completeness: '', tone: 'neutral' },
-    ]
-  })
-
-  const filteredApplications = computed(() => {
-    const search = normalize(filters.value.search)
-
-    return applications.value.filter((application) => {
-      const program = application.education_program
-      const specialty = program?.specialty
-      const searchable = [
-        applicantName(application),
-        application.phone,
-        application.email,
-        application.comment,
-        programLabel(program),
-        specialtyLabel(specialty),
-      ].filter(Boolean).join(' ').toLowerCase()
-
-      const matchesSearch = !search || searchable.includes(search)
-      const matchesStatus = !filters.value.status || application.status === filters.value.status
-      const matchesProgram = !filters.value.educationProgramId || Number(application.education_program_id) === Number(filters.value.educationProgramId)
-      const matchesSpecialty = !filters.value.specialtyId || Number(program?.specialty_id || specialty?.id) === Number(filters.value.specialtyId)
-      const matchesCompleteness = !filters.value.completeness || documentsCompleteness(application) === filters.value.completeness
-      const matchesDate = !filters.value.submittedDate || application.submitted_at === filters.value.submittedDate
-
-      return matchesSearch && matchesStatus && matchesProgram && matchesSpecialty && matchesCompleteness && matchesDate
-    })
-  })
+  const filteredApplications = computed(() => applications.value)
 
   async function load() {
     loading.value = true
     error.value = ''
 
     try {
-      const [applicationsPayload, programsPayload, groupsPayload] = await Promise.all([
-        api.list('applicant-applications'),
+      const query = apiFilters(filters.value)
+      const [applicationsPayload, statsPayload, programsPayload, groupsPayload] = await Promise.all([
+        api.list('applicant-applications', query),
+        api.list('admissions/stats', query),
         api.list('education-programs'),
         api.list('groups'),
       ])
 
       applications.value = extractRows(applicationsPayload)
+      stats.value = statsPayload?.data || { total: 0, new: 0, incomplete: 0, ready: 0, enrolled: 0, rejected: 0 }
       educationPrograms.value = extractRows(programsPayload)
       groups.value = extractRows(groupsPayload)
       pagination.value = extractMeta(applicationsPayload)
@@ -481,6 +465,7 @@ export const useAdmissionsStore = defineStore('admissions', () => {
     groupOptions,
     filters,
     pagination,
+    stats,
     selectedId,
     selectedApplication,
     selectedApplicationDocuments,

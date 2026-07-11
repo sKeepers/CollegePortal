@@ -122,6 +122,8 @@ Route::middleware('api.token')->group(function (): void {
         Route::post('digital-identities/issue', [DigitalIdentityController::class, 'issue']);
         Route::post('digital-identities/{digitalIdentity}/revoke', [DigitalIdentityController::class, 'revoke']);
         Route::get('digital-identities/{digitalIdentity}/qr', [DigitalIdentityController::class, 'qr']);
+        Route::get('admissions/stats', [ApplicantApplicationController::class, 'stats']);
+        Route::get('applicant-applications/stats', [ApplicantApplicationController::class, 'stats']);
         Route::post('admissions/bulk/preview', [AdmissionBulkController::class, 'preview']);
         Route::post('admissions/bulk/apply', [AdmissionBulkController::class, 'apply']);
         Route::post('applicant-applications/bulk/preview', [AdmissionBulkController::class, 'preview']);
