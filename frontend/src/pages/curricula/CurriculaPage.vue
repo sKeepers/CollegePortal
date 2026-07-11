@@ -74,6 +74,7 @@ const curriculumActions = computed(() => [
   { label: 'Дисциплины', to: { path: '/subjects', query: { curriculum: store.selectedCurriculum?.id } } },
   { label: 'Группы', to: { path: '/groups', query: { program: store.selectedCurriculum?.education_program_id } } },
   { label: 'Расписание', to: { path: '/schedule', query: { program: store.selectedCurriculum?.education_program_id } } },
+  { label: 'Сформировать нагрузку', to: { path: '/teaching-load', query: { curriculum: store.selectedCurriculum?.id, program: store.selectedCurriculum?.education_program_id } } },
 ])
 const summaryCards = computed(() => [
   { label: 'Всего дисциплин', value: store.selectedSummary?.subjects_count ?? 0 },

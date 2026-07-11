@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('teaching_loads', function (Blueprint $table): void {
             $table->id();
             $table->string('academic_year')->index();
-            $table->foreignId('teacher_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('teacher_id')->nullable()->constrained()->cascadeOnDelete();
             $table->string('status')->default('draft')->index();
             $table->text('description')->nullable();
             $table->timestamps();

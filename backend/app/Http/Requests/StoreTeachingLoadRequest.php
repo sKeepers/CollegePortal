@@ -13,6 +13,8 @@ class StoreTeachingLoadRequest extends FormRequest
         return [
             'academic_year' => ['required', 'string', 'max:20'],
             'teacher_id' => ['required', 'integer', 'exists:teachers,id'],
+            'curriculum_id' => ['nullable', 'integer', 'exists:curricula,id'],
+            'group_id' => ['nullable', 'integer', 'exists:groups,id'],
             'status' => ['nullable', Rule::in(['draft', 'active', 'archived'])],
             'description' => ['nullable', 'string'],
         ];

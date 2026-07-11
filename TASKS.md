@@ -654,3 +654,15 @@
 - [x] Добавить permissions `curricula.subjects.*`.
 - [x] Добавить audit и тесты.
 - [x] Проверить `php artisan test` и `npm run build`.
+
+## ST-001B: Generate teaching load from curriculum
+
+- [x] Расширить `teaching_loads` и `teaching_load_items` для связи с Curriculum Engine.
+- [x] Создать `TeachingLoadGenerationService`.
+- [x] Добавить preview/apply API.
+- [x] Добавить coverage API.
+- [x] Добавить ручное и массовое назначение преподавателя.
+- [x] Добавить фильтры и preview-диалог на `/teaching-load`.
+- [x] Добавить быстрое действие из `/curricula`.
+- [x] Добавить RBAC permissions и Audit Log.
+- [x] Добавить тесты и документацию `docs/TEACHING_LOAD_ENGINE.md`.

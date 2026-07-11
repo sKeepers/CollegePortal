@@ -193,6 +193,11 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('subjects/export', [SubjectController::class, 'export']);
         Route::post('subjects/import', [SubjectController::class, 'import']);
         Route::apiResource('subjects', SubjectController::class);
+        Route::post('teaching-load/generate/preview', [TeachingLoadController::class, 'generatePreview'])->middleware('permission:teaching_load.generate');
+        Route::post('teaching-load/generate/apply', [TeachingLoadController::class, 'generateApply'])->middleware('permission:teaching_load.generate');
+        Route::get('teaching-load/{teachingLoad}/coverage', [TeachingLoadController::class, 'coverage'])->middleware('permission:teaching_load.view_coverage');
+        Route::post('teaching-load/items/{teachingLoadItem}/assign-teacher', [TeachingLoadController::class, 'assignTeacher'])->middleware('permission:teaching_load.assign');
+        Route::post('teaching-load/items/bulk-assign-teacher', [TeachingLoadController::class, 'bulkAssignTeacher'])->middleware('permission:teaching_load.bulk_assign');
         Route::get('teaching-loads/export', [TeachingLoadController::class, 'export']);
         Route::post('teaching-loads/import', [TeachingLoadController::class, 'import']);
         Route::post('teaching-loads/{teachingLoad}/items', [TeachingLoadController::class, 'storeItem']);

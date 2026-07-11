@@ -1118,3 +1118,7 @@ Frontend action-level RBAC доведен до основных CRUD и сист
 ## ST-001A: Curriculum Engine foundation
 
 Добавлен foundation нормализованного учебного плана. Новый слой `curriculum_subjects` хранит дисциплины семестров, часы по видам работ, вид контроля из Reference Data, порядок, optional-флаг и заготовку компетенций. Группа может ссылаться на действующий `curriculum_id`, а `CurriculumEngineService` возвращает дисциплины семестра группы, итоги и группировку по семестрам. Существующие `curricula` и legacy `curriculum_items` сохранены для совместимости.
+
+## ST-001B: Teaching Load generation from Curriculum
+
+Добавлен Teaching Load Engine: нагрузка может формироваться из `curriculum_subjects` выбранной группы через preview/apply. Generated-нагрузка хранит связь с учебным планом, группой и строками `curriculum_subjects`, рассчитывает planned/assigned/unassigned/overassigned часы и поддерживает ручное назначение преподавателей. Автоматический подбор преподавателей не реализован намеренно.

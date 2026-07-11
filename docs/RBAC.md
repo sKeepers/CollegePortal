@@ -187,3 +187,7 @@ Frontend получил единый слой проверки permissions:
 Добавлены permissions для registry документов заявления: `admissions.documents.view`, `admissions.documents.receive`, `admissions.documents.upload`, `admissions.documents.verify`, `admissions.documents.reject`, `admissions.documents.delete`, `admissions.documents.download`.
 
 Матрица: `admin` имеет полный доступ; `admission` может смотреть, принимать, загружать, проверять, отклонять и скачивать; `director` может смотреть и скачивать; `deputy` и `study` могут смотреть; `teacher`, `student`, `security` доступа не имеют.
+
+## ST-001B: Teaching Load Engine permissions
+
+Добавлены permissions `teaching_load.generate`, `teaching_load.assign`, `teaching_load.bulk_assign`, `teaching_load.view_coverage`. Учебная часть и заместитель директора могут формировать нагрузку и назначать преподавателей; директор видит coverage; преподаватель сохраняет просмотр своей нагрузки без генерации.

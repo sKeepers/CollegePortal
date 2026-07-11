@@ -113,6 +113,10 @@ class RoleSeeder extends Seeder
             ['module' => 'Curricula', 'code' => 'curricula.subjects.delete', 'name' => 'Учебные планы: дисциплины удаление', 'description' => 'Удаление дисциплин из учебного плана.'],
             ['module' => 'Teaching Load', 'code' => 'teachingload.view', 'name' => 'Нагрузка: просмотр', 'description' => 'Просмотр нагрузки преподавателей.'],
             ['module' => 'Teaching Load', 'code' => 'teachingload.edit', 'name' => 'Нагрузка: ведение', 'description' => 'Создание, изменение и импорт нагрузки.'],
+            ['module' => 'Teaching Load', 'code' => 'teaching_load.generate', 'name' => 'Нагрузка: генерация', 'description' => 'Формирование нагрузки из учебного плана.'],
+            ['module' => 'Teaching Load', 'code' => 'teaching_load.assign', 'name' => 'Нагрузка: назначение преподавателя', 'description' => 'Назначение преподавателя строке нагрузки.'],
+            ['module' => 'Teaching Load', 'code' => 'teaching_load.bulk_assign', 'name' => 'Нагрузка: массовое назначение', 'description' => 'Массовое назначение преподавателя строкам нагрузки.'],
+            ['module' => 'Teaching Load', 'code' => 'teaching_load.view_coverage', 'name' => 'Нагрузка: покрытие часов', 'description' => 'Просмотр покрытия плановых часов.'],
             ['module' => 'Exams', 'code' => 'exams.view', 'name' => 'Экзамены: просмотр', 'description' => 'Просмотр экзаменов и ГИА.'],
             ['module' => 'Exams', 'code' => 'exams.edit', 'name' => 'Экзамены: ведение', 'description' => 'Создание, изменение и импорт экзаменов.'],
             ['module' => 'Graduation', 'code' => 'graduation.view', 'name' => 'Выпуск: просмотр', 'description' => 'Просмотр выпускников и дипломов.'],
@@ -148,7 +152,7 @@ class RoleSeeder extends Seeder
         return [
             'dashboard.view', 'people.view', 'students.view', 'groups.view', 'teachers.view', 'subjects.view', 'classrooms.view',
             'schedule.view', 'journal.view', 'journal.export', 'attendance.view', 'attendance.reports',
-            'admissions.view', 'admissions.documents.view', 'admissions.documents.download', 'admissions.bulk_export', 'curricula.view', 'curricula.subjects.view', 'teachingload.view', 'exams.view', 'graduation.view',
+            'admissions.view', 'admissions.documents.view', 'admissions.documents.download', 'admissions.bulk_export', 'curricula.view', 'curricula.subjects.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'graduation.view',
             'frdo.view', 'fis.view', 'gate.reports', 'audit.view', 'reference.manage', 'view_reports',
         ];
     }
@@ -163,7 +167,7 @@ class RoleSeeder extends Seeder
             'classrooms.view', 'classrooms.create', 'classrooms.update', 'classrooms.delete',
             'schedule.view', 'schedule.update', 'journal.view', 'journal.edit', 'journal.export',
             'attendance.view', 'attendance.reports', 'admissions.documents.view', 'curricula.view', 'curricula.edit', 'curricula.subjects.view', 'curricula.subjects.create', 'curricula.subjects.update', 'curricula.subjects.delete',
-            'teachingload.view', 'teachingload.edit', 'exams.view', 'exams.edit',
+            'teachingload.view', 'teachingload.edit', 'teaching_load.generate', 'teaching_load.assign', 'teaching_load.bulk_assign', 'teaching_load.view_coverage', 'exams.view', 'exams.edit',
             'graduation.view', 'graduation.edit', 'people.update', 'people.link', 'frdo.view', 'fis.view', 'reference.manage', 'import.manage',
             'manage_dictionaries', 'manage_schedule', 'manage_journal', 'view_reports',
         ];
@@ -176,7 +180,7 @@ class RoleSeeder extends Seeder
 
     private function teacherPermissions(): array
     {
-        return ['dashboard.view', 'schedule.view', 'journal.view', 'journal.edit', 'journal.export', 'attendance.view', 'teachingload.view', 'exams.view', 'digitalpasses.manage', 'view_own_data', 'manage_journal'];
+        return ['dashboard.view', 'schedule.view', 'journal.view', 'journal.edit', 'journal.export', 'attendance.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'digitalpasses.manage', 'view_own_data', 'manage_journal'];
     }
 
     private function studentPermissions(): array
