@@ -52,6 +52,7 @@ const navGroups = [
   {
     label: 'Контингент',
     items: [
+      { label: 'Люди / Person', to: '/people', icon: UserRound, permission: 'people.view' },
       { label: 'Студенты', to: '/students', icon: GraduationCap, permission: 'students.view' },
       { label: 'Группы', to: '/groups', icon: UsersRound, permission: 'groups.view' },
     ],
@@ -89,7 +90,7 @@ const navGroups = [
     label: 'Идентификация',
     items: [
       { label: 'Проходная', to: '/access/gate', icon: DoorOpen, permission: 'gate.scan' },
-      { label: 'Мобильный сканер', to: '/access/mobile-scanner', icon: QrCode, roles: ['admin', 'security'] },
+      { label: 'Мобильный сканер', to: '/access/mobile-scanner', icon: QrCode, permission: 'gate.scan' },
       { label: 'Отчеты по проходам', to: '/access/reports', icon: FileText, permission: 'gate.reports' },
       { label: 'Тест QR-сканера', to: '/access/scanner-test', icon: QrCode, adminOnly: true },
       { label: 'Цифровые пропуска', to: '/identity/digital-passes', icon: QrCode, permission: 'digitalpasses.manage' },

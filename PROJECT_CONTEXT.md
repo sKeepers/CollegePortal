@@ -1097,3 +1097,7 @@ API: `/api/attendance/teachers/today`, `/api/attendance/students/today`. Fronten
 ### RBAC-001.1: Permission-aware CRUD UI
 
 Frontend action-level RBAC доведен до основных CRUD и системных страниц. Добавлены `usePermissions()`, `PermissionGuard.vue`, страница `/forbidden` и router guard для `meta.permission`, `meta.permissionsAny` и `meta.permissionsAll`. Кнопки создания, редактирования, удаления, импорта, экспорта и специальных действий скрываются без permission; обработчики действий также проверяют permission перед открытием формы или запуском операции. Backend middleware `permission:` остается источником истины.
+
+### PERSON-001: Unified Person Foundation
+
+Добавлена foundation-сущность `Person`: таблица `people`, nullable `person_id` в профилях студентов, преподавателей, заявлений абитуриентов, выпускников и цифровых пропусков, read-only API `/api/people`, frontend-раздел `/people` и команда `php artisan person:link-existing`. Старые API и таблицы остаются совместимыми; поля ФИО/контактов/фото в профилях не удаляются.

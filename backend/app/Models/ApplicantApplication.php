@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class ApplicantApplication extends Model
 {
     protected $fillable = [
+        'person_id',
         'education_program_id',
         'last_name',
         'first_name',
@@ -28,6 +29,11 @@ class ApplicantApplication extends Model
             'birth_date' => 'date',
             'submitted_at' => 'date',
         ];
+    }
+
+    public function person(): BelongsTo
+    {
+        return $this->belongsTo(Person::class);
     }
 
     public function educationProgram(): BelongsTo

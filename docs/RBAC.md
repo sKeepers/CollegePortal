@@ -172,3 +172,7 @@ Frontend получил единый слой проверки permissions:
 - ФРДО и ФИС;
 - цифровые пропуска;
 - системные разделы: пользователи, роли, permissions, настройки, справочники, импорт, управление демо-данными.
+
+## PERSON-001 permissions
+
+Добавлены permissions `people.view`, `people.create`, `people.update`, `people.link`, `people.merge`. На текущем этапе frontend `/people` и read-only API используют `people.view`; `people.link` используется как административное право для безопасного связывания профилей через command. `people.merge` зарезервирован для будущего этапа и не дает UI-действия.

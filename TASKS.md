@@ -596,3 +596,18 @@
 - [x] Закрыть системные действия Users, Roles, Permissions, Settings, Reference, Import, Data Management.
 - [x] Проверить `npm run build`.
 - [ ] Frontend unit/integration tests не добавлены: в текущем frontend нет test runner; проверка выполнена через build и API smoke.
+
+
+## PERSON-001: Unified Person Foundation
+
+- [x] Создать таблицу `people`.
+- [x] Добавить nullable `person_id` в профили и DigitalIdentity.
+- [x] Создать модель Person и связи с профилями.
+- [x] Создать PersonService.
+- [x] Создать `php artisan person:link-existing --dry-run/--apply`.
+- [x] Добавить read-only API `/api/people`.
+- [x] Добавить frontend `/people`.
+- [x] Добавить permissions `people.view/create/update/link/merge`.
+- [x] Добавить документацию `docs/PERSON_MODEL.md`.
+- [x] Сохранить обратную совместимость существующих API.
+- [ ] Реализовать ручной UI для проверки дублей и merge на отдельном этапе.

@@ -8,13 +8,14 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Graduate extends Model
 {
-    protected $fillable = ['student_id', 'group_id', 'education_program_id', 'specialty_id', 'graduation_year', 'qualification', 'photo_path', 'status', 'note'];
+    protected $fillable = ['person_id', 'student_id', 'group_id', 'education_program_id', 'specialty_id', 'graduation_year', 'qualification', 'photo_path', 'status', 'note'];
 
     protected function casts(): array
     {
         return ['graduation_year' => 'integer'];
     }
 
+    public function person(): BelongsTo { return $this->belongsTo(Person::class); }
     public function student(): BelongsTo { return $this->belongsTo(Student::class); }
     public function group(): BelongsTo { return $this->belongsTo(Group::class); }
     public function educationProgram(): BelongsTo { return $this->belongsTo(EducationProgram::class); }

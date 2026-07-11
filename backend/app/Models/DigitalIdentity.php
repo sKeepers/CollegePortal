@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DigitalIdentity extends Model
 {
@@ -15,6 +16,7 @@ class DigitalIdentity extends Model
     public const STATUS_EXPIRED = 'expired';
 
     protected $fillable = [
+        'person_id',
         'entity_type',
         'entity_id',
         'token',
@@ -31,6 +33,11 @@ class DigitalIdentity extends Model
             'expires_at' => 'datetime',
             'revoked_at' => 'datetime',
         ];
+    }
+
+    public function person(): BelongsTo
+    {
+        return $this->belongsTo(Person::class);
     }
 
     public function getOwnerAttribute(): ?Model

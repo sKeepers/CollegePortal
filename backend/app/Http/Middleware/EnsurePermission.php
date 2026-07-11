@@ -95,6 +95,7 @@ class EnsurePermission
             'api/admin/reference' => ['reference.manage', 'reference.manage', 'reference.manage', 'reference.manage'],
             'api/admin/import' => ['import.manage', 'import.manage', 'import.manage', 'import.manage'],
             'api/admin/demo-data' => ['import.manage', 'import.manage', 'import.manage', 'import.manage'],
+            'api/people' => ['people.view', 'people.create', 'people.update', 'people.merge'],
             'api/person-photos/student' => ['students.view', 'students.update', 'students.update', 'students.update'],
             'api/person-photos/teacher' => ['teachers.view', 'teachers.update', 'teachers.update', 'teachers.update'],
             'api/person-photos/alumni' => ['graduation.view', 'graduation.edit', 'graduation.edit', 'graduation.edit'],

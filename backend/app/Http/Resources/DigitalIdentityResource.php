@@ -15,6 +15,7 @@ class DigitalIdentityResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'person_id' => $this->person_id,
             'entity_type' => $this->entity_type,
             'entity_id' => $this->entity_id,
             'token' => $this->token,

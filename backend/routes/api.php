@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\ApplicantApplicationController;
 use App\Http\Controllers\Api\GroupController;
 use App\Http\Controllers\Api\MobileStudentController;
+use App\Http\Controllers\Api\PersonController;
 use App\Http\Controllers\Api\PersonPhotoController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AttendanceAnalysisController;
@@ -53,6 +54,13 @@ Route::middleware('api.token')->group(function (): void {
     Route::put('dashboard/layouts/{dashboardLayout}', [DashboardLayoutController::class, 'update']);
     Route::delete('dashboard/layouts/{dashboardLayout}', [DashboardLayoutController::class, 'destroy']);
     Route::post('dashboard/layouts/{dashboardLayout}/activate', [DashboardLayoutController::class, 'activate']);
+
+
+    Route::middleware('permission:people.view')->group(function (): void {
+        Route::get('people', [PersonController::class, 'index']);
+        Route::get('people/{person}', [PersonController::class, 'show']);
+        Route::get('people/{person}/profiles', [PersonController::class, 'profiles']);
+    });
 
     Route::middleware('permission:view_reports')->group(function (): void {
         Route::get('dashboard/analytics/executive', [DashboardAnalyticsController::class, 'executive']);

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Student extends Model
 {
     protected $fillable = [
+        'person_id',
         'user_id',
         'group_id',
         'last_name',
@@ -28,6 +29,11 @@ class Student extends Model
             'birth_date' => 'date',
             'enrollment_date' => 'date',
         ];
+    }
+
+    public function person(): BelongsTo
+    {
+        return $this->belongsTo(Person::class);
     }
 
     public function user(): BelongsTo

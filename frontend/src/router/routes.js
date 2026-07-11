@@ -4,6 +4,7 @@ import PublicLayout from '../layouts/PublicLayout.vue'
 import MobileStudentLayout from '../layouts/MobileStudentLayout.vue'
 const LoginPage = () => import('../pages/auth/LoginPage.vue')
 const DashboardPage = () => import('../pages/dashboard/DashboardPage.vue')
+const PeoplePage = () => import('../pages/people/PeoplePage.vue')
 const StudentsPage = () => import('../pages/students/StudentsPage.vue')
 const GroupsPage = () => import('../pages/groups/GroupsPage.vue')
 const TeachersPage = () => import('../pages/teachers/TeachersPage.vue')
@@ -111,6 +112,12 @@ export const routes = [
         name: 'dashboard',
         component: DashboardPage,
         meta: { title: 'Панель' },
+      },
+      {
+        path: 'people',
+        name: 'people',
+        component: PeoplePage,
+        meta: { title: 'Люди / Person', permission: 'people.view' },
       },
       {
         path: 'students',

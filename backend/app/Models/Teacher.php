@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Teacher extends Model
 {
     protected $fillable = [
+        'person_id',
         'user_id',
         'last_name',
         'first_name',
@@ -27,6 +28,11 @@ class Teacher extends Model
         return [
             'is_active' => 'boolean',
         ];
+    }
+
+    public function person(): BelongsTo
+    {
+        return $this->belongsTo(Person::class);
     }
 
     public function user(): BelongsTo

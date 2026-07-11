@@ -35,8 +35,9 @@ class DigitalIdentityController extends Controller
     {
         $validated = $request->validated();
         $this->ensureOwnerExists($validated['entity_type'], (int) $validated['entity_id']);
+        $personId = $this->ownerPersonId($validated['entity_type'], (int) $validated['entity_id']);
 
-        $identity = DB::transaction(function () use ($validated): DigitalIdentity {
+        $identity = DB::transaction(function () use ($validated, $personId): DigitalIdentity {
             DigitalIdentity::query()
                 ->where('entity_type', $validated['entity_type'])
                 ->where('entity_id', $validated['entity_id'])
@@ -48,6 +49,7 @@ class DigitalIdentityController extends Controller
                 ]);
 
             return DigitalIdentity::create([
+                'person_id' => $personId,
                 'entity_type' => $validated['entity_type'],
                 'entity_id' => $validated['entity_id'],
                 'token' => (string) Str::uuid(),
@@ -95,6 +97,15 @@ class DigitalIdentityController extends Controller
             'Cache-Control' => 'no-store, private',
             'X-QR-Content' => 'token',
         ]);
+    }
+
+    private function ownerPersonId(string $entityType, int $entityId): ?int
+    {
+        return match ($entityType) {
+            DigitalIdentity::ENTITY_STUDENT => Student::whereKey($entityId)->value('person_id'),
+            DigitalIdentity::ENTITY_TEACHER => Teacher::whereKey($entityId)->value('person_id'),
+            default => null,
+        };
     }
 
     private function ensureOwnerExists(string $entityType, int $entityId): void

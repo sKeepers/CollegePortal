@@ -11,6 +11,7 @@ class ApplicantApplicationResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'person_id' => $this->person_id,
             'education_program_id' => $this->education_program_id,
             'last_name' => $this->last_name,
             'first_name' => $this->first_name,

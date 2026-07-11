@@ -12,6 +12,7 @@ class GraduateResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'person_id' => $this->person_id,
             'student_id' => $this->student_id,
             'group_id' => $this->group_id,
             'education_program_id' => $this->education_program_id,

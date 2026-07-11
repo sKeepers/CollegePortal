@@ -51,6 +51,11 @@ class RoleSeeder extends Seeder
     {
         return [
             ['module' => 'Dashboard', 'code' => 'dashboard.view', 'name' => 'Просмотр Dashboard', 'description' => 'Открытие рабочего стола.'],
+            ['module' => 'Identity', 'code' => 'people.view', 'name' => 'Person: просмотр', 'description' => 'Просмотр единого реестра физических лиц.'],
+            ['module' => 'Identity', 'code' => 'people.create', 'name' => 'Person: создание', 'description' => 'Создание Person вручную на будущих этапах.'],
+            ['module' => 'Identity', 'code' => 'people.update', 'name' => 'Person: изменение', 'description' => 'Редактирование общих данных Person на будущих этапах.'],
+            ['module' => 'Identity', 'code' => 'people.link', 'name' => 'Person: связывание', 'description' => 'Связывание профилей с Person.'],
+            ['module' => 'Identity', 'code' => 'people.merge', 'name' => 'Person: объединение', 'description' => 'Будущая операция объединения Person.'],
             ['module' => 'Students', 'code' => 'students.view', 'name' => 'Студенты: просмотр', 'description' => 'Просмотр списка и карточек студентов.'],
             ['module' => 'Students', 'code' => 'students.create', 'name' => 'Студенты: создание', 'description' => 'Создание студентов.'],
             ['module' => 'Students', 'code' => 'students.update', 'name' => 'Студенты: изменение', 'description' => 'Редактирование студентов, импорт и фото.'],
@@ -117,7 +122,7 @@ class RoleSeeder extends Seeder
     private function directorPermissions(): array
     {
         return [
-            'dashboard.view', 'students.view', 'groups.view', 'teachers.view', 'subjects.view', 'classrooms.view',
+            'dashboard.view', 'people.view', 'students.view', 'groups.view', 'teachers.view', 'subjects.view', 'classrooms.view',
             'schedule.view', 'journal.view', 'journal.export', 'attendance.view', 'attendance.reports',
             'admissions.view', 'curricula.view', 'teachingload.view', 'exams.view', 'graduation.view',
             'frdo.view', 'fis.view', 'gate.reports', 'audit.view', 'reference.manage', 'view_reports',
@@ -127,7 +132,7 @@ class RoleSeeder extends Seeder
     private function academicEditorPermissions(): array
     {
         return [
-            'dashboard.view', 'students.view', 'students.create', 'students.update', 'students.delete',
+            'dashboard.view', 'people.view', 'students.view', 'students.create', 'students.update', 'students.delete',
             'groups.view', 'groups.create', 'groups.update', 'groups.delete',
             'teachers.view', 'teachers.create', 'teachers.update', 'teachers.delete',
             'subjects.view', 'subjects.create', 'subjects.update', 'subjects.delete',
@@ -135,14 +140,14 @@ class RoleSeeder extends Seeder
             'schedule.view', 'schedule.update', 'journal.view', 'journal.edit', 'journal.export',
             'attendance.view', 'attendance.reports', 'curricula.view', 'curricula.edit',
             'teachingload.view', 'teachingload.edit', 'exams.view', 'exams.edit',
-            'graduation.view', 'graduation.edit', 'frdo.view', 'fis.view', 'reference.manage', 'import.manage',
+            'graduation.view', 'graduation.edit', 'people.update', 'people.link', 'frdo.view', 'fis.view', 'reference.manage', 'import.manage',
             'manage_dictionaries', 'manage_schedule', 'manage_journal', 'view_reports',
         ];
     }
 
     private function admissionPermissions(): array
     {
-        return ['dashboard.view', 'admissions.view', 'admissions.edit', 'students.view', 'groups.view', 'reference.manage', 'import.manage', 'view_reports'];
+        return ['dashboard.view', 'people.view', 'admissions.view', 'admissions.edit', 'students.view', 'groups.view', 'reference.manage', 'import.manage', 'view_reports'];
     }
 
     private function teacherPermissions(): array
