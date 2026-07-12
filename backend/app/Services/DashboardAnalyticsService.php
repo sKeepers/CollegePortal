@@ -7,6 +7,7 @@ use App\Models\ApplicantApplication;
 use App\Models\ApplicantApplicationDocument;
 use App\Models\AuditLog;
 use App\Models\Classroom;
+use App\Models\Employee;
 use App\Models\Exam;
 use App\Models\FisPackage;
 use App\Models\FrdoPackage;
@@ -77,6 +78,12 @@ class DashboardAnalyticsService
                         'teachers_total' => Teacher::query()->count(),
                         'today_load_hours' => (int) TeachingLoadItem::query()->sum('hours_total'),
                         'absent_today' => 0,
+                    ],
+                    'hr' => [
+                        'employees_total' => Employee::query()->count(),
+                        'employees_active' => Employee::query()->whereNull('dismissed_at')->where('status', '!=', 'dismissed')->count(),
+                        'employees_unavailable' => Employee::query()->whereIn('status', Employee::UNAVAILABLE_STATUSES)->count(),
+                        'employees_dismissed' => Employee::query()->where(fn ($query) => $query->whereNotNull('dismissed_at')->orWhere('status', 'dismissed'))->count(),
                     ],
                     'learning' => [
                         'lessons_today' => ScheduleLesson::query()->whereDate('lesson_date', $today)->count(),

@@ -1146,3 +1146,7 @@ Electronic Journal Foundation adds schedule-linked journal lessons. New normaliz
 ## UAT-003 Role-based UAT
 
 Добавлен `/admin/uat` для закрытого пользовательского тестирования по ролям. Реестр хранит UAT-прогоны, результаты сценариев, скриншоты в private storage и feedback registry. В topbar добавлена кнопка `Сообщить о проблеме` с автоподстановкой URL, роли, версии, build и environment.
+
+## HR-001A: кадровый контур сотрудников
+
+Добавлен HR Domain MVP: Employee, Department, Position, EmployeeAssignment и EmployeeStatusPeriod. Employee связан с Person Foundation и может быть связан с Teacher через общий person_id. Добавлены маршруты `/hr/employees`, `/hr/departments`, `/hr/positions`, HR permissions, импорт сотрудников и read-only warning расписания при кадровой недоступности преподавателя.

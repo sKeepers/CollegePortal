@@ -217,3 +217,9 @@ Schedule Engine entries can now be opened as electronic journal lessons. Journal
 ## ST-003B Teacher Journal Workspace permissions
 
 Teacher workspace uses existing `journal.*` permissions with stricter UI behavior. Teachers can see and edit only their own lessons. `journal.view_all` enables study/deputy/admin control mode. Signed lessons are read-only unless the user has `journal.reopen`; reopening requires a reason and does not bypass Audit.
+
+## HR permissions
+
+Добавлена роль `hr` и permissions: `hr.employees.view`, `hr.employees.create`, `hr.employees.update`, `hr.employees.dismiss`, `hr.assignments.manage`, `hr.statuses.manage`, `hr.departments.manage`, `hr.positions.manage`, `hr.documents.view`, `hr.reports.view`.
+
+Матрица: `admin` получает все права; `hr` управляет кадровым контуром; `director` получает просмотр сотрудников и HR-отчеты; `deputy/study/academic_office` получают просмотр сотрудников, управление статусами и HR-отчеты; `teacher/student/security/admission` не получают общий доступ к HR-списку.

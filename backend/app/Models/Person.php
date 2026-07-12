@@ -38,7 +38,9 @@ class Person extends Model
     public function graduates(): HasMany { return $this->hasMany(Graduate::class); }
     public function users(): HasMany { return $this->hasMany(User::class); }
     public function digitalIdentities(): HasMany { return $this->hasMany(DigitalIdentity::class); }
+    public function employees(): HasMany { return $this->hasMany(Employee::class); }
 
     public function primaryStudent(): HasOne { return $this->hasOne(Student::class)->latestOfMany(); }
     public function primaryTeacher(): HasOne { return $this->hasOne(Teacher::class)->latestOfMany(); }
+    public function primaryEmployee(): HasOne { return $this->hasOne(Employee::class)->latestOfMany(); }
 }

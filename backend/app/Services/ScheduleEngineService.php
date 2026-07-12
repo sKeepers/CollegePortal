@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Classroom;
+use App\Models\Employee;
 use App\Models\Group;
 use App\Models\ReferenceItem;
 use App\Models\ScheduleEntry;
@@ -270,7 +271,21 @@ class ScheduleEngineService
 
     public function relations(): array
     {
-        return ['group', 'teacher', 'subject', 'classroom', 'teachingLoadItem', 'lessonType', 'legacyLesson'];
+        return ['group', 'teacher.employee.statusPeriods', 'teacher.employee.primaryDepartment', 'teacher.employee.primaryPosition', 'subject', 'classroom', 'teachingLoadItem', 'lessonType', 'legacyLesson'];
+    }
+
+    private function teacherHrWarning(?Teacher $teacher, array $entry): ?array
+    {
+        $employee = $teacher?->employee;
+        if (! $employee) {
+            return null;
+        }
+        $status = $employee->statusOn($entry['date'] ?? now()->toDateString());
+        if (! in_array($status, Employee::UNAVAILABLE_STATUSES, true)) {
+            return null;
+        }
+
+        return $this->conflict('teacher_hr_unavailable', 'warning', 'Преподаватель недоступен по кадровым данным', $entry);
     }
 
     private function normalize(array $payload): array
@@ -312,6 +327,10 @@ class ScheduleEngineService
 
         $group = Group::query()->withCount('students')->find($entry['group_id']);
         $classroom = $entry['classroom_id'] ? Classroom::find($entry['classroom_id']) : null;
+        $teacher = Teacher::query()->with('employee.statusPeriods')->find($entry['teacher_id']);
+        if ($teacher && ($hrWarning = $this->teacherHrWarning($teacher, $entry))) {
+            $conflicts[] = $hrWarning;
+        }
         $loadItem = $this->resolveLoadItem($entry);
 
         if (! $loadItem) {

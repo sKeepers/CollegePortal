@@ -141,3 +141,7 @@ Schedule Engine entries can now be opened as electronic journal lessons. Journal
 ## ST-003B Journal workspace audit
 
 Teacher Journal Workspace continues Journal Engine audit coverage and adds explicit reopen logging with reason. Attendance suggestions are preview-only and are not logged as mutations until applied. File audit stores safe metadata only, not private file contents.
+
+## HR audit events
+
+Логируются кадровые действия: создание сотрудника, изменение карточки, увольнение, создание/изменение/удаление назначения, создание/изменение/удаление периода кадрового статуса, создание/изменение/удаление подразделений и должностей.

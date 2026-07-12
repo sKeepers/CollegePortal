@@ -14,15 +14,18 @@ use App\Http\Controllers\Api\AdmissionBulkController;
 use App\Http\Controllers\Api\GroupController;
 use App\Http\Controllers\Api\MobileStudentController;
 use App\Http\Controllers\Api\PersonController;
+use App\Http\Controllers\Api\PositionController;
 use App\Http\Controllers\Api\PersonPhotoController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AttendanceAnalysisController;
 use App\Http\Controllers\Api\ClassroomController;
 use App\Http\Controllers\Api\CurriculumController;
+use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\DigitalIdentityController;
 use App\Http\Controllers\Api\DemoDataController;
 use App\Http\Controllers\Api\DashboardAnalyticsController;
 use App\Http\Controllers\Api\DashboardLayoutController;
+use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\ExamController;
 use App\Http\Controllers\Api\FrdoPackageController;
 use App\Http\Controllers\Api\FisPackageController;
@@ -76,6 +79,40 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('admin/uat/feedback/{feedback}/screenshot', [UatController::class, 'downloadFeedbackScreenshot']);
         Route::get('admin/uat/export/results.csv', [UatController::class, 'exportRuns']);
         Route::get('admin/uat/export/feedback.csv', [UatController::class, 'exportIssues']);
+    });
+
+
+    Route::middleware('permission:hr.employees.view')->group(function (): void {
+        Route::get('employees', [EmployeeController::class, 'index']);
+        Route::get('employees/{employee}', [EmployeeController::class, 'show']);
+        Route::post('employees', [EmployeeController::class, 'store'])->middleware('permission:hr.employees.create');
+        Route::put('employees/{employee}', [EmployeeController::class, 'update'])->middleware('permission:hr.employees.update');
+        Route::patch('employees/{employee}', [EmployeeController::class, 'update'])->middleware('permission:hr.employees.update');
+        Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->middleware('permission:hr.employees.dismiss');
+        Route::post('employees/{employee}/assignments', [EmployeeController::class, 'storeAssignment'])->middleware('permission:hr.assignments.manage');
+        Route::put('employee-assignments/{assignment}', [EmployeeController::class, 'updateAssignment'])->middleware('permission:hr.assignments.manage');
+        Route::patch('employee-assignments/{assignment}', [EmployeeController::class, 'updateAssignment'])->middleware('permission:hr.assignments.manage');
+        Route::delete('employee-assignments/{assignment}', [EmployeeController::class, 'destroyAssignment'])->middleware('permission:hr.assignments.manage');
+        Route::post('employees/{employee}/status-periods', [EmployeeController::class, 'storeStatusPeriod'])->middleware('permission:hr.statuses.manage');
+        Route::put('employee-status-periods/{period}', [EmployeeController::class, 'updateStatusPeriod'])->middleware('permission:hr.statuses.manage');
+        Route::patch('employee-status-periods/{period}', [EmployeeController::class, 'updateStatusPeriod'])->middleware('permission:hr.statuses.manage');
+        Route::delete('employee-status-periods/{period}', [EmployeeController::class, 'destroyStatusPeriod'])->middleware('permission:hr.statuses.manage');
+    });
+    Route::middleware('permission:hr.employees.view')->group(function (): void {
+        Route::get('departments', [DepartmentController::class, 'index']);
+        Route::get('positions', [PositionController::class, 'index']);
+    });
+    Route::middleware('permission:hr.departments.manage')->group(function (): void {
+        Route::post('departments', [DepartmentController::class, 'store']);
+        Route::put('departments/{department}', [DepartmentController::class, 'update']);
+        Route::patch('departments/{department}', [DepartmentController::class, 'update']);
+        Route::delete('departments/{department}', [DepartmentController::class, 'destroy']);
+    });
+    Route::middleware('permission:hr.positions.manage')->group(function (): void {
+        Route::post('positions', [PositionController::class, 'store']);
+        Route::put('positions/{position}', [PositionController::class, 'update']);
+        Route::patch('positions/{position}', [PositionController::class, 'update']);
+        Route::delete('positions/{position}', [PositionController::class, 'destroy']);
     });
 
     Route::middleware('permission:people.view')->group(function (): void {

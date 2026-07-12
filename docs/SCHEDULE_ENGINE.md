@@ -107,3 +107,7 @@ Visual Editor использует Schedule Engine как единственны
 ## ST-003A Journal Integration
 
 Schedule Engine entries can now be opened as electronic journal lessons. Journal Engine stores topic, homework, attendance, grades, private files and signature status while preserving the schedule entry as the source of group, subject, teacher, date and time. Access is controlled by `journal.*` permissions and all mutating journal actions are audited.
+
+## HR warnings
+
+Schedule Engine учитывает кадровые статусы преподавателей read-only. Если связанный Employee находится в отпуске, на больничном, в командировке, отстранен или уволен на дату занятия, preview возвращает warning `teacher_hr_unavailable`. Система не отменяет занятие автоматически.

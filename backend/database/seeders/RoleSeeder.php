@@ -19,6 +19,7 @@ class RoleSeeder extends Seeder
             ['code' => 'teacher', 'name' => 'Преподаватель', 'description' => 'Работа со своим расписанием, журналом и нагрузкой.'],
             ['code' => 'student', 'name' => 'Студент', 'description' => 'Просмотр личного кабинета, QR, расписания и оценок.'],
             ['code' => 'security', 'name' => 'Сотрудник проходной', 'description' => 'Сканирование QR и отчеты проходной.'],
+            ['code' => 'hr', 'name' => 'Отдел кадров', 'description' => 'Ведение сотрудников, подразделений, должностей и кадровых статусов.'],
             ['code' => 'academic_office', 'name' => 'Учебная часть (legacy)', 'description' => 'Legacy-роль для совместимости.'],
             ['code' => 'curator', 'name' => 'Куратор группы', 'description' => 'Сопровождение закрепленной учебной группы.'],
         ];
@@ -44,6 +45,7 @@ class RoleSeeder extends Seeder
         $this->syncPermissions('teacher', $this->ids($this->teacherPermissions()));
         $this->syncPermissions('student', $this->ids($this->studentPermissions()));
         $this->syncPermissions('security', $this->ids($this->securityPermissions()));
+        $this->syncPermissions('hr', $this->ids($this->hrPermissions()));
         $this->syncPermissions('curator', $this->ids(array_values(array_unique(array_merge($this->teacherPermissions(), ['students.view', 'groups.view', 'attendance.reports'])))));
     }
 
@@ -142,6 +144,17 @@ class RoleSeeder extends Seeder
             ['module' => 'Identity', 'code' => 'gate.scan', 'name' => 'Проходная: сканирование', 'description' => 'Сканирование QR на проходной.'],
             ['module' => 'Identity', 'code' => 'gate.reports', 'name' => 'Проходная: отчеты', 'description' => 'Просмотр событий и отчетов проходной.'],
             ['module' => 'Identity', 'code' => 'digitalpasses.manage', 'name' => 'Цифровые пропуска: управление', 'description' => 'Выпуск, отзыв и просмотр QR-пропусков.'],
+
+            ['module' => 'HR', 'code' => 'hr.employees.view', 'name' => 'Кадры: сотрудники просмотр', 'description' => 'Просмотр сотрудников.'],
+            ['module' => 'HR', 'code' => 'hr.employees.create', 'name' => 'Кадры: сотрудники создание', 'description' => 'Прием сотрудников.'],
+            ['module' => 'HR', 'code' => 'hr.employees.update', 'name' => 'Кадры: сотрудники изменение', 'description' => 'Изменение карточки сотрудника.'],
+            ['module' => 'HR', 'code' => 'hr.employees.dismiss', 'name' => 'Кадры: увольнение', 'description' => 'Оформление увольнения.'],
+            ['module' => 'HR', 'code' => 'hr.assignments.manage', 'name' => 'Кадры: назначения', 'description' => 'Назначения, переводы, ставки.'],
+            ['module' => 'HR', 'code' => 'hr.statuses.manage', 'name' => 'Кадры: статусы', 'description' => 'Отпуска, больничные, командировки и периоды статусов.'],
+            ['module' => 'HR', 'code' => 'hr.departments.manage', 'name' => 'Кадры: подразделения', 'description' => 'Управление подразделениями.'],
+            ['module' => 'HR', 'code' => 'hr.positions.manage', 'name' => 'Кадры: должности', 'description' => 'Управление должностями.'],
+            ['module' => 'HR', 'code' => 'hr.documents.view', 'name' => 'Кадры: документы просмотр', 'description' => 'Просмотр кадровых документов.'],
+            ['module' => 'HR', 'code' => 'hr.reports.view', 'name' => 'Кадры: отчеты', 'description' => 'Просмотр кадровых отчетов.'],
             ['module' => 'System', 'code' => 'users.manage', 'name' => 'Пользователи: управление', 'description' => 'Управление пользователями.'],
             ['module' => 'System', 'code' => 'roles.manage', 'name' => 'Роли: управление', 'description' => 'Управление ролями.'],
             ['module' => 'System', 'code' => 'permissions.manage', 'name' => 'Разрешения: управление', 'description' => 'Управление матрицей разрешений.'],
@@ -168,7 +181,7 @@ class RoleSeeder extends Seeder
             'dashboard.view', 'people.view', 'students.view', 'groups.view', 'teachers.view', 'subjects.view', 'classrooms.view',
             'schedule.view', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.view_all', 'journal.export', 'attendance.view', 'attendance.reports',
             'admissions.view', 'admissions.documents.view', 'admissions.documents.download', 'admissions.bulk_export', 'curricula.view', 'curricula.subjects.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'graduation.view',
-            'frdo.view', 'fis.view', 'gate.reports', 'audit.view', 'reference.manage', 'uat.manage', 'view_reports',
+            'frdo.view', 'fis.view', 'gate.reports', 'audit.view', 'reference.manage', 'uat.manage', 'hr.employees.view', 'hr.reports.view', 'view_reports',
         ];
     }
 
@@ -184,8 +197,13 @@ class RoleSeeder extends Seeder
             'attendance.view', 'attendance.reports', 'admissions.documents.view', 'curricula.view', 'curricula.edit', 'curricula.subjects.view', 'curricula.subjects.create', 'curricula.subjects.update', 'curricula.subjects.delete',
             'teachingload.view', 'teachingload.edit', 'teaching_load.generate', 'teaching_load.assign', 'teaching_load.bulk_assign', 'teaching_load.view_coverage', 'exams.view', 'exams.edit',
             'graduation.view', 'graduation.edit', 'people.update', 'people.link', 'frdo.view', 'fis.view', 'reference.manage', 'import.manage',
-            'manage_dictionaries', 'manage_schedule', 'manage_journal', 'uat.manage', 'view_reports',
+            'manage_dictionaries', 'manage_schedule', 'manage_journal', 'uat.manage', 'hr.employees.view', 'hr.statuses.manage', 'hr.reports.view', 'view_reports',
         ];
+    }
+
+    private function hrPermissions(): array
+    {
+        return ['dashboard.view', 'people.view', 'hr.employees.view', 'hr.employees.create', 'hr.employees.update', 'hr.employees.dismiss', 'hr.assignments.manage', 'hr.statuses.manage', 'hr.departments.manage', 'hr.positions.manage', 'hr.documents.view', 'hr.reports.view', 'teachers.view', 'schedule.view', 'attendance.reports', 'import.manage', 'view_reports'];
     }
 
     private function admissionPermissions(): array

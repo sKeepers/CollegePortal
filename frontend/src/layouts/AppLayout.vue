@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   BookOpen,
+  BriefcaseBusiness,
   Building2,
   CalendarDays,
   ClipboardList,
@@ -87,6 +88,14 @@ const navGroups = [
     items: [
       { label: 'Отчеты', to: '/reports', icon: FileText, permission: 'journal.view' },
       { label: 'Приемная комиссия', to: '/admissions', icon: School, permission: 'admissions.view' },
+    ],
+  },
+  {
+    label: 'Отдел кадров',
+    items: [
+      { label: 'Сотрудники', to: '/hr/employees', icon: BriefcaseBusiness, permission: 'hr.employees.view' },
+      { label: 'Подразделения', to: '/hr/departments', icon: Building2, permission: 'hr.departments.manage' },
+      { label: 'Должности', to: '/hr/positions', icon: UserCog, permission: 'hr.positions.manage' },
     ],
   },
   {

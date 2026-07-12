@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import {
   BookOpenCheck,
+  BriefcaseBusiness,
   CalendarDays,
   ClipboardList,
   DoorOpen,
@@ -54,6 +55,7 @@ const payload = computed(() => analytics.value?.data || {})
 const kpi = computed(() => payload.value.kpi || {})
 const contingent = computed(() => kpi.value.contingent || {})
 const teachers = computed(() => kpi.value.teachers || {})
+const hr = computed(() => kpi.value.hr || {})
 const learning = computed(() => kpi.value.learning || {})
 const access = computed(() => kpi.value.access || {})
 const attendance = computed(() => kpi.value.attendance || {})
@@ -74,6 +76,8 @@ const statItems = computed(() => [
   { label: 'Выпускников', value: contingent.value.graduates || 0, icon: GraduationCap },
   { label: 'Абитуриентов', value: contingent.value.applicants || 0, icon: FileCheck2 },
   { label: 'Преподавателей', value: teachers.value.teachers_total || 0, icon: UserRound },
+  { label: 'Сотрудников', value: hr.value.employees_total || 0, icon: BriefcaseBusiness },
+  { label: 'Активных сотрудников', value: hr.value.employees_active || 0, icon: BriefcaseBusiness },
   { label: 'Занятий сегодня', value: learning.value.lessons_today || 0, icon: BookOpenCheck },
   { label: 'Экзаменов сегодня', value: learning.value.exams_today || 0, icon: CalendarDays },
   { label: 'Свободных аудиторий', value: learning.value.free_classrooms || 0, icon: DoorOpen },
@@ -95,6 +99,7 @@ const quickActionsSource = [
   { label: 'ФРДО', description: 'Пакеты и ошибки', icon: FileWarning, to: '/frdo' },
   { label: 'ФИС', description: 'Пакеты приема и ГИА', icon: FileWarning, to: '/fis' },
   { label: 'Аудит', description: 'Действия пользователей', icon: ScrollText, to: '/admin/audit' },
+  { label: 'Сотрудники', description: 'Кадровый контур', icon: BriefcaseBusiness, to: '/hr/employees' },
 ]
 
 const quickActionPermissions = {
@@ -107,6 +112,7 @@ const quickActionPermissions = {
   '/frdo': 'frdo.view',
   '/fis': 'fis.view',
   '/admin/audit': 'audit.view',
+  '/hr/employees': 'hr.employees.view',
 }
 const quickActions = computed(() => quickActionsSource.filter((action) => !quickActionPermissions[action.to] || auth.can(quickActionPermissions[action.to])))
 

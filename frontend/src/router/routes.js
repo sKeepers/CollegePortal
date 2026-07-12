@@ -38,6 +38,7 @@ const AuditPage = () => import('../pages/admin/audit/AuditPage.vue')
 const SettingsPage = () => import('../pages/admin/settings/SettingsPage.vue')
 const ReferenceDataPage = () => import('../pages/admin/reference/ReferenceDataPage.vue')
 const UatPage = () => import('../pages/admin/uat/UatPage.vue')
+const HrEmployeesPage = () => import('../pages/hr/HrEmployeesPage.vue')
 const MobileStudentHomePage = () => import('../pages/mobile/student/MobileStudentHomePage.vue')
 const MobileStudentPassPage = () => import('../pages/mobile/student/MobileStudentPassPage.vue')
 
@@ -215,6 +216,24 @@ export const routes = [
         name: 'admissions',
         component: AdmissionsPage,
         meta: { title: 'Приемная комиссия', permission: 'admissions.view' },
+      },
+      {
+        path: 'hr/employees',
+        name: 'hr-employees',
+        component: HrEmployeesPage,
+        meta: { title: 'Сотрудники', permission: 'hr.employees.view' },
+      },
+      {
+        path: 'hr/departments',
+        name: 'hr-departments',
+        component: HrEmployeesPage,
+        meta: { title: 'Подразделения', permission: 'hr.departments.manage' },
+      },
+      {
+        path: 'hr/positions',
+        name: 'hr-positions',
+        component: HrEmployeesPage,
+        meta: { title: 'Должности', permission: 'hr.positions.manage' },
       },
       {
         path: 'access/gate',

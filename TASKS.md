@@ -722,3 +722,14 @@
 - [x] Добавить кнопку `Сообщить о проблеме`.
 - [x] Добавить private screenshots и CSV exports.
 - [x] Создать role guides и feedback process docs.
+
+## HR-001A: Employee and HR Foundation
+
+Статус: выполнено.
+
+- Добавлены таблицы и модели кадрового контура.
+- Добавлены API и frontend `/hr/employees`, `/hr/departments`, `/hr/positions`.
+- Добавлены HR permissions и роль `hr`.
+- Добавлен импорт сотрудников через `/admin/import`.
+- Schedule Engine показывает warning при недоступности преподавателя по кадровым данным.
+- Добавлены документы `docs/HR_DOMAIN.md` и `docs/HR_USER_GUIDE.md`.

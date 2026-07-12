@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\Import\AdmissionImportHandler;
 use App\Services\Import\ClassroomImportHandler;
 use App\Services\Import\CurriculumImportHandler;
+use App\Services\Import\EmployeeImportHandler;
 use App\Services\Import\GroupImportHandler;
 use App\Services\Import\ImportHandlerInterface;
 use App\Services\Import\ScheduleImportHandler;
@@ -15,6 +16,7 @@ use App\Services\Import\SubjectImportHandler;
 use App\Services\Import\TeacherImportHandler;
 use App\Services\Import\TeachingLoadImportHandler;
 use Illuminate\Http\UploadedFile;
+use App\Services\PersonService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use RuntimeException;
@@ -30,7 +32,7 @@ class UniversalImportService
     /** @var array<string, ImportHandlerInterface> */
     private array $handlers = [];
 
-    public function __construct(AutoCodeService $autoCodeService, ScheduleLessonService $scheduleLessonService)
+    public function __construct(AutoCodeService $autoCodeService, ScheduleLessonService $scheduleLessonService, PersonService $personService)
     {
         foreach ([
             new StudentImportHandler(),
@@ -42,6 +44,7 @@ class UniversalImportService
             new CurriculumImportHandler($autoCodeService),
             new TeachingLoadImportHandler(),
             new ScheduleImportHandler($scheduleLessonService),
+            new EmployeeImportHandler($personService),
         ] as $handler) {
             $this->handlers[$handler->type()] = $handler;
         }
