@@ -16,8 +16,15 @@ read -r confirm
 [[ "${confirm}" == "RESTORE COLLEGEPORTAL" ]] || fail "Restore cancelled."
 cd "${APP_DIR}"
 docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" stop worker scheduler backend nginx frontend || true
-docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" up -d postgres backend
-cat "${backup}/database.sql" | docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" exec -T postgres psql -U "$(env_value POSTGRES_USER)" "$(env_value POSTGRES_DB)"
+docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" up -d postgres
+docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" exec -T postgres psql \
+  -v ON_ERROR_STOP=1 \
+  -U "$(env_value POSTGRES_USER)" "$(env_value POSTGRES_DB)" \
+  -c 'DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;'
+cat "${backup}/database.sql" | docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" exec -T postgres psql \
+  -v ON_ERROR_STOP=1 \
+  -U "$(env_value POSTGRES_USER)" "$(env_value POSTGRES_DB)"
+docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" up -d backend
 cat "${backup}/storage.tar.gz" | docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" exec -T backend tar -xzf - -C /var/www/html
 docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" up -d
 "${APP_DIR}/installer/check.sh"

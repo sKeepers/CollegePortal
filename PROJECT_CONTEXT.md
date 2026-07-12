@@ -1154,3 +1154,7 @@ Electronic Journal Foundation adds schedule-linked journal lessons. New normaliz
 ## HR-001B: кадровый календарь и замены
 
 Добавлен `/hr/calendar`, lifecycle кадрового периода, внутренние HR events, preview/apply кадровых периодов, поиск затронутых занятий и flow назначения замен преподавателей через Schedule Engine. Dashboard дополнен кадровыми KPI отсутствий и занятий без замены.
+
+## INFRA-008 Installation Acceptance
+
+INFRA-008 completed on UAT server 192.168.34.17 using release artifact /srv/college-dev/releases/college-portal-0.8.0-rc2.tar.gz (SHA-256 17c360bc88043ad28bb2c5adea7020497affd422788fe94eb7c7326959fca611, build c76e90c). Clean install, API smoke, backup/restore, forced update, rollback via restore, HTTPS smoke, uninstall and reinstall passed with warnings documented in docs/INSTALLATION_ACCEPTANCE_TEST.md.

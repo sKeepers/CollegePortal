@@ -367,3 +367,7 @@ Role-based UAT center добавлен. Следующие этапы: пров�
 ## HR-001B выполнено
 
 Кадровый календарь и замены преподавателей реализованы как MVP. Следующие HR-этапы: кадровые документы, приказы, печатные формы, согласование замен и Notification Center.
+
+## INFRA-008 completed
+
+Installer acceptance on a clean UAT server is complete for 0.8.0-rc2. Remaining pre-PROD hardening: SSH keys/password rotation, trusted TLS certificate, and clearer repeated-install message.

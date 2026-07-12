@@ -55,7 +55,16 @@ install_docker() {
   fi
   log "Installing Docker Engine from Ubuntu repositories."
   run apt-get update
-  run apt-get install -y ca-certificates curl gnupg lsb-release docker.io docker-compose-plugin
+  local compose_package
+  if apt-cache show docker-compose-plugin >/dev/null 2>&1; then
+    compose_package=docker-compose-plugin
+  elif apt-cache show docker-compose-v2 >/dev/null 2>&1; then
+    compose_package=docker-compose-v2
+  else
+    compose_package=docker-compose
+  fi
+  log "Using ${compose_package} for Docker Compose."
+  run apt-get install -y ca-certificates curl gnupg lsb-release docker.io "${compose_package}"
   run systemctl enable --now docker
 }
 
@@ -122,6 +131,7 @@ write_env() {
       -e "s#^HTTPS_MODE=.*#HTTPS_MODE=${https_mode}#" \
       -e "s#^SESSION_SECURE_COOKIE=.*#SESSION_SECURE_COOKIE=${session_secure}#" \
       -e "s#^POSTGRES_PASSWORD=.*#POSTGRES_PASSWORD=${db_password}#" \
+      -e "s#^DB_PASSWORD=.*#DB_PASSWORD=${db_password}#" \
       "${ENV_FILE}"
     cat >> "${ENV_FILE}" <<ENVEOF
 INSTALL_ADMIN_EMAIL=${admin_email}
