@@ -1134,3 +1134,7 @@ Frontend action-level RBAC доведен до основных CRUD и сист
 ## INFRA-007 Installation Distribution
 
 Release 0.8 RC1 adds an installer distribution foundation under `installer/` and `scripts/release/build-release.sh`. The target production installation path is `/opt/college-portal` on a clean Ubuntu Server 24.04 LTS amd64 VM. Lifecycle scripts cover install, update, backup, restore, uninstall and health checks. Release archives are produced as `college-portal-<version>.tar.gz` and exclude secrets, runtime data, certificates, backups and development artifacts.
+
+## ST-003A Electronic Journal Foundation
+
+Electronic Journal Foundation adds schedule-linked journal lessons. New normalized tables are `journal_lessons`, `journal_attendance`, `journal_grades` and `journal_lesson_files`. The primary opening flow is `schedule_entries -> journal_lessons`; legacy `schedule_lessons`, `attendance` and `grades` remain available for compatibility. Journal actions are RBAC-protected, teacher edits are scoped to own lessons, signed lessons require `journal.reopen` for corrections, and changes are written to Audit.

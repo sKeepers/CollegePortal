@@ -110,6 +110,7 @@ export const useJournalStore = defineStore('journal', () => {
   const students = ref([])
   const attendance = ref([])
   const grades = ref([])
+  const files = ref([])
   const selectedLessonId = ref(null)
   const loading = ref(false)
   const detailsLoading = ref(false)
@@ -184,20 +185,20 @@ export const useJournalStore = defineStore('journal', () => {
   function journalCell(studentId, lessonId) {
     const grade = grades.value.find((entry) => (
       Number(entry.student_id) === Number(studentId)
-      && Number(entry.schedule_lesson_id) === Number(lessonId)
-      && entry.grade
+      && Number(entry.journal_lesson_id) === Number(lessonId)
+      && entry.value
     ))
 
     if (grade) {
       return {
-        value: String(grade.grade),
+        value: String(grade.value),
         type: 'grade',
       }
     }
 
     const attendanceEntry = attendance.value.find((entry) => (
       Number(entry.student_id) === Number(studentId)
-      && Number(entry.schedule_lesson_id) === Number(lessonId)
+      && Number(entry.journal_lesson_id) === Number(lessonId)
     ))
 
     return {
@@ -219,7 +220,7 @@ export const useJournalStore = defineStore('journal', () => {
       }
 
       const [lessonsPayload, groupsPayload, teachersPayload, subjectsPayload] = await Promise.all([
-        api.list('schedule-lessons', apiFilters),
+        api.list('journal/lessons', { ...apiFilters, per_page: 50 }),
         api.list('groups'),
         api.list('teachers', { active_only: 1 }),
         api.list('subjects'),
@@ -247,24 +248,23 @@ export const useJournalStore = defineStore('journal', () => {
 
     try {
       const lessonIds = journalLessons.value.map((lesson) => lesson.id)
-      const groupId = effectiveGroupId.value
 
-      if (!groupId || lessonIds.length === 0) {
+      if (lessonIds.length === 0) {
         students.value = []
         attendance.value = []
         grades.value = []
+        files.value = []
         return
       }
 
-      const [studentsPayload, attendancePayloads, gradePayloads] = await Promise.all([
-        api.list('students', { group_id: groupId }),
-        Promise.all(lessonIds.map((lessonId) => api.list('attendance', { schedule_lesson_id: lessonId }))),
-        Promise.all(lessonIds.map((lessonId) => api.list('grades', { schedule_lesson_id: lessonId }))),
-      ])
-
-      students.value = extractRows(studentsPayload)
-      attendance.value = attendancePayloads.flatMap(extractRows)
-      grades.value = gradePayloads.flatMap(extractRows)
+      const lessonPayloads = await Promise.all(lessonIds.map((lessonId) => api.get(`journal/lessons/${lessonId}`)))
+      const detailedLessons = lessonPayloads.map((payload) => payload.data).filter(Boolean)
+      const byId = new Map(detailedLessons.map((lesson) => [Number(lesson.id), lesson]))
+      lessons.value = lessons.value.map((lesson) => byId.get(Number(lesson.id)) || lesson)
+      attendance.value = detailedLessons.flatMap((lesson) => lesson.attendance || [])
+      grades.value = detailedLessons.flatMap((lesson) => lesson.grades || [])
+      files.value = detailedLessons.flatMap((lesson) => lesson.files || [])
+      students.value = [...new Map(attendance.value.map((entry) => [Number(entry.student_id), entry.student]).filter(([, student]) => student)).values()]
     } catch (err) {
       error.value = err.message || 'Не удалось загрузить данные журнала'
     } finally {
@@ -290,6 +290,49 @@ export const useJournalStore = defineStore('journal', () => {
     await loadJournalData()
   }
 
+  async function saveLesson(data) {
+    if (!selectedLesson.value?.id) return
+    const payload = await api.put(`journal/lessons/${selectedLesson.value.id}`, data)
+    const updated = payload.data
+    lessons.value = lessons.value.map((lesson) => Number(lesson.id) === Number(updated.id) ? updated : lesson)
+  }
+
+  async function completeLesson() {
+    if (!selectedLesson.value?.id) return
+    const payload = await api.post(`journal/lessons/${selectedLesson.value.id}/complete`)
+    const updated = payload.data
+    lessons.value = lessons.value.map((lesson) => Number(lesson.id) === Number(updated.id) ? updated : lesson)
+  }
+
+  async function signLesson() {
+    if (!selectedLesson.value?.id) return
+    const payload = await api.post(`journal/lessons/${selectedLesson.value.id}/sign`)
+    const updated = payload.data
+    lessons.value = lessons.value.map((lesson) => Number(lesson.id) === Number(updated.id) ? updated : lesson)
+  }
+
+  async function markAllPresent() {
+    if (!selectedLesson.value?.id) return
+    const payload = await api.put(`journal/lessons/${selectedLesson.value.id}/attendance`, {
+      attendance: students.value.map((student) => ({ student_id: student.id, status: 'present' })),
+    })
+    const updated = payload.data
+    lessons.value = lessons.value.map((lesson) => Number(lesson.id) === Number(updated.id) ? updated : lesson)
+    await loadJournalData()
+  }
+
+  async function openFromSchedule(scheduleEntryId) {
+    if (!scheduleEntryId) return
+    const payload = await api.post(`journal/from-schedule/${scheduleEntryId}/open`)
+    const opened = payload.data
+    const exists = lessons.value.some((lesson) => Number(lesson.id) === Number(opened.id))
+    lessons.value = exists
+      ? lessons.value.map((lesson) => Number(lesson.id) === Number(opened.id) ? opened : lesson)
+      : [opened, ...lessons.value]
+    selectedLessonId.value = opened.id
+    await loadJournalData()
+  }
+
   function lessonLabel(lesson) {
     return [
       lesson?.lesson_date,
@@ -310,6 +353,7 @@ export const useJournalStore = defineStore('journal', () => {
     studentRows,
     attendance,
     grades,
+    files,
     selectedLessonId,
     selectedLesson,
     effectiveGroupId,
@@ -325,6 +369,11 @@ export const useJournalStore = defineStore('journal', () => {
     setFilters,
     resetFilters,
     selectLesson,
+    saveLesson,
+    completeLesson,
+    signLesson,
+    markAllPresent,
+    openFromSchedule,
     lessonLabel,
     fullName,
     classroomLabel,

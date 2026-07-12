@@ -133,3 +133,7 @@ Schedule Engine логирует создание занятия, изменен
 ## Visual Schedule Editor audit (ST-002B)
 
 Drag & drop перенос фиксируется как `schedule_entry_moved`, применение шаблона как `schedule_template_applied`, создание шаблона как `schedule_template_created`. Preview не логируется как изменение.
+
+## ST-003A Journal Integration
+
+Schedule Engine entries can now be opened as electronic journal lessons. Journal Engine stores topic, homework, attendance, grades, private files and signature status while preserving the schedule entry as the source of group, subject, teacher, date and time. Access is controlled by `journal.*` permissions and all mutating journal actions are audited.

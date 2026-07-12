@@ -346,3 +346,8 @@ Visual Schedule Editor добавлен как MVP. Следующие этап�
 
 - [x] INFRA-007: installer distribution and lifecycle tools for clean Ubuntu Server deployments.
 - [ ] Future: validate installer on a separate VM with real TLS modes and backup/restore round-trip.
+
+## Study Process
+
+- [x] ST-003A: Electronic Journal Foundation linked to Schedule Engine.
+- [ ] ST-003B: printable journal forms and period exports.

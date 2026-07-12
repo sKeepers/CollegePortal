@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { RefreshCw } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
@@ -13,6 +14,7 @@ import JournalLessonPanel from './JournalLessonPanel.vue'
 import { useJournalStore } from '../../stores/journal'
 
 const store = useJournalStore()
+const route = useRoute()
 const selectedStudent = ref(null)
 
 const tableSubtitle = computed(() => {
@@ -70,6 +72,9 @@ async function refresh() {
 
 onMounted(async () => {
   await store.load()
+  if (route.query.lesson) {
+    await store.openFromSchedule(route.query.lesson)
+  }
 })
 </script>
 
@@ -172,6 +177,10 @@ onMounted(async () => {
         <JournalLessonPanel
           :lesson="store.selectedLesson"
           :student="selectedStudent"
+          @save="store.saveLesson"
+          @complete="store.completeLesson"
+          @sign="store.signLesson"
+          @mark-all-present="store.markAllPresent"
         />
       </aside>
     </div>

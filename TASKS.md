@@ -694,3 +694,11 @@
 - [x] Add release archive builder under `scripts/release/build-release.sh`.
 - [x] Add production installation, update, backup/restore and release documentation.
 - [x] Add health endpoints for installer checks.
+
+## ST-003A
+
+- [x] Add schedule-linked journal lesson model.
+- [x] Add attendance, grades and private lesson files for journal lessons.
+- [x] Add JournalService and journal lesson API.
+- [x] Add RBAC permissions for lesson lifecycle, attendance, grades, files and signing.
+- [x] Update `/journal` to open lessons from Schedule Engine and edit lesson details.

@@ -209,3 +209,7 @@ Frontend получил единый слой проверки permissions:
 ## Visual Schedule Editor (ST-002B)
 
 Редактор недели показывает действия только при наличии точечных permissions. Director видит расписание без edit-действий. Учебная часть и заместитель директора могут создавать, переносить и применять шаблоны. Teacher/student остаются в read-only сценариях.
+
+## ST-003A Journal Integration
+
+Schedule Engine entries can now be opened as electronic journal lessons. Journal Engine stores topic, homework, attendance, grades, private files and signature status while preserving the schedule entry as the source of group, subject, teacher, date and time. Access is controlled by `journal.*` permissions and all mutating journal actions are audited.

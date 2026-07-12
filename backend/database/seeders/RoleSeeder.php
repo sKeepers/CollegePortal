@@ -93,7 +93,14 @@ class RoleSeeder extends Seeder
             ['module' => 'Schedule', 'code' => 'schedule.view_conflicts', 'name' => 'Расписание: конфликты', 'description' => 'Просмотр конфликтов расписания.'],
             ['module' => 'Schedule', 'code' => 'schedule.view_coverage', 'name' => 'Расписание: покрытие нагрузки', 'description' => 'Просмотр покрытия часов нагрузки расписанием.'],
             ['module' => 'Journal', 'code' => 'journal.view', 'name' => 'Журнал: просмотр', 'description' => 'Просмотр журнала.'],
-            ['module' => 'Journal', 'code' => 'journal.edit', 'name' => 'Журнал: ведение', 'description' => 'Внесение посещаемости и оценок.'],
+            ['module' => 'Journal', 'code' => 'journal.edit', 'name' => 'Журнал: ведение', 'description' => 'Внесение темы, домашнего задания, посещаемости и оценок.'],
+            ['module' => 'Journal', 'code' => 'journal.attendance', 'name' => 'Журнал: посещаемость', 'description' => 'Ведение посещаемости занятия.'],
+            ['module' => 'Journal', 'code' => 'journal.grades', 'name' => 'Журнал: оценки', 'description' => 'Выставление оценок занятия.'],
+            ['module' => 'Journal', 'code' => 'journal.files', 'name' => 'Журнал: материалы', 'description' => 'Загрузка и удаление материалов занятия.'],
+            ['module' => 'Journal', 'code' => 'journal.complete', 'name' => 'Журнал: завершение', 'description' => 'Завершение занятия журнала.'],
+            ['module' => 'Journal', 'code' => 'journal.sign', 'name' => 'Журнал: подпись', 'description' => 'Подписание занятия журнала.'],
+            ['module' => 'Journal', 'code' => 'journal.reopen', 'name' => 'Журнал: исправление подписанного', 'description' => 'Исправление подписанных занятий.'],
+            ['module' => 'Journal', 'code' => 'journal.view_all', 'name' => 'Журнал: просмотр всех занятий', 'description' => 'Просмотр журналов всех преподавателей и групп.'],
             ['module' => 'Journal', 'code' => 'journal.export', 'name' => 'Журнал: экспорт', 'description' => 'Экспорт отчетов журнала.'],
             ['module' => 'Attendance', 'code' => 'attendance.view', 'name' => 'Посещаемость: просмотр', 'description' => 'Просмотр аналитики посещаемости.'],
             ['module' => 'Attendance', 'code' => 'attendance.reports', 'name' => 'Посещаемость: отчеты', 'description' => 'Исторические отчеты посещаемости.'],
@@ -158,7 +165,7 @@ class RoleSeeder extends Seeder
     {
         return [
             'dashboard.view', 'people.view', 'students.view', 'groups.view', 'teachers.view', 'subjects.view', 'classrooms.view',
-            'schedule.view', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.export', 'attendance.view', 'attendance.reports',
+            'schedule.view', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.view_all', 'journal.export', 'attendance.view', 'attendance.reports',
             'admissions.view', 'admissions.documents.view', 'admissions.documents.download', 'admissions.bulk_export', 'curricula.view', 'curricula.subjects.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'graduation.view',
             'frdo.view', 'fis.view', 'gate.reports', 'audit.view', 'reference.manage', 'view_reports',
         ];
@@ -172,7 +179,7 @@ class RoleSeeder extends Seeder
             'teachers.view', 'teachers.create', 'teachers.update', 'teachers.delete',
             'subjects.view', 'subjects.create', 'subjects.update', 'subjects.delete',
             'classrooms.view', 'classrooms.create', 'classrooms.update', 'classrooms.delete',
-            'schedule.view', 'schedule.create', 'schedule.update', 'schedule.delete', 'schedule.validate', 'schedule.manage_templates', 'schedule.manage_replacements', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.edit', 'journal.export',
+            'schedule.view', 'schedule.create', 'schedule.update', 'schedule.delete', 'schedule.validate', 'schedule.manage_templates', 'schedule.manage_replacements', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.reopen', 'journal.view_all', 'journal.export',
             'attendance.view', 'attendance.reports', 'admissions.documents.view', 'curricula.view', 'curricula.edit', 'curricula.subjects.view', 'curricula.subjects.create', 'curricula.subjects.update', 'curricula.subjects.delete',
             'teachingload.view', 'teachingload.edit', 'teaching_load.generate', 'teaching_load.assign', 'teaching_load.bulk_assign', 'teaching_load.view_coverage', 'exams.view', 'exams.edit',
             'graduation.view', 'graduation.edit', 'people.update', 'people.link', 'frdo.view', 'fis.view', 'reference.manage', 'import.manage',
@@ -187,7 +194,7 @@ class RoleSeeder extends Seeder
 
     private function teacherPermissions(): array
     {
-        return ['dashboard.view', 'schedule.view', 'journal.view', 'journal.edit', 'journal.export', 'attendance.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'digitalpasses.manage', 'view_own_data', 'manage_journal'];
+        return ['dashboard.view', 'schedule.view', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.export', 'attendance.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'digitalpasses.manage', 'view_own_data', 'manage_journal'];
     }
 
     private function studentPermissions(): array

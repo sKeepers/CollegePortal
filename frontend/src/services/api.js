@@ -66,6 +66,17 @@ export const api = {
     })
   },
 
+  async get(resource, params = {}) {
+    return this.list(resource, params)
+  },
+
+  async post(resource, data = {}) {
+    return request(`/${resource}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
   async list(resource, params = {}) {
     const query = new URLSearchParams()
 

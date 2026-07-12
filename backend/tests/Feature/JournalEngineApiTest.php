@@ -1,0 +1,200 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\AccessEvent;
+use App\Models\Classroom;
+use App\Models\Group;
+use App\Models\JournalLesson;
+use App\Models\Permission;
+use App\Models\Role;
+use App\Models\ScheduleEntry;
+use App\Models\Student;
+use App\Models\Subject;
+use App\Models\Teacher;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
+
+class JournalEngineApiTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_open_from_schedule_is_idempotent_and_creates_student_roster(): void
+    {
+        [$entry] = $this->journalFixture();
+        $admin = $this->createApiUser(roleCode: 'admin');
+
+        $first = $this->withApiAuth($admin)->postJson("/api/journal/from-schedule/{$entry->id}/open")
+            ->assertCreated()
+            ->assertJsonPath('data.schedule_entry_id', $entry->id)
+            ->assertJsonCount(2, 'data.attendance');
+
+        $this->withApiAuth($admin)->postJson("/api/journal/from-schedule/{$entry->id}/open")
+            ->assertOk()
+            ->assertJsonPath('data.id', $first->json('data.id'))
+            ->assertJsonCount(2, 'data.attendance');
+
+        $this->assertDatabaseCount('journal_lessons', 1);
+        $this->assertDatabaseCount('journal_attendance', 2);
+        $this->assertDatabaseHas('audit_logs', ['module' => 'journal', 'action' => 'open_from_schedule']);
+    }
+
+    public function test_it_saves_topic_homework_attendance_and_grades(): void
+    {
+        [$entry, , , , , $students] = $this->journalFixture();
+        $admin = $this->createApiUser(roleCode: 'admin');
+        $lessonId = $this->withApiAuth($admin)->postJson("/api/journal/from-schedule/{$entry->id}/open")->json('data.id');
+
+        $this->withApiAuth($admin)->putJson("/api/journal/lessons/{$lessonId}", [
+            'topic' => 'Тема 1',
+            'homework' => 'Выучить гаммы',
+            'teacher_comment' => 'Работаем спокойно',
+        ])->assertOk()->assertJsonPath('data.topic', 'Тема 1');
+
+        $this->withApiAuth($admin)->putJson("/api/journal/lessons/{$lessonId}/attendance", [
+            'attendance' => [
+                ['student_id' => $students[0]->id, 'status' => 'late', 'minutes_late' => 7],
+                ['student_id' => $students[1]->id, 'status' => 'absent'],
+            ],
+        ])->assertOk()->assertJsonPath('data.attendance.0.status', 'late');
+
+        $this->withApiAuth($admin)->putJson("/api/journal/lessons/{$lessonId}/grades", [
+            'grades' => [
+                ['student_id' => $students[0]->id, 'value' => '5', 'weight' => 1],
+            ],
+        ])->assertOk()->assertJsonPath('data.grades.0.value', '5');
+
+        $this->assertDatabaseHas('journal_attendance', ['journal_lesson_id' => $lessonId, 'student_id' => $students[0]->id, 'status' => 'late']);
+        $this->assertDatabaseHas('journal_grades', ['journal_lesson_id' => $lessonId, 'student_id' => $students[0]->id, 'value' => '5']);
+        $this->assertDatabaseHas('audit_logs', ['module' => 'journal', 'action' => 'grade_update']);
+    }
+
+    public function test_attendance_suggestion_preview_does_not_write_until_apply(): void
+    {
+        [$entry, , , , , $students] = $this->journalFixture();
+        $admin = $this->createApiUser(roleCode: 'admin');
+        $lessonId = $this->withApiAuth($admin)->postJson("/api/journal/from-schedule/{$entry->id}/open")->json('data.id');
+
+        AccessEvent::create([
+            'entity_type' => 'student',
+            'entity_id' => $students[0]->id,
+            'direction' => 'in',
+            'event_time' => '2026-07-12 08:55:00',
+            'result' => 'allowed',
+        ]);
+
+        $this->withApiAuth($admin)->getJson("/api/journal/lessons/{$lessonId}/attendance-suggestion")
+            ->assertOk()
+            ->assertJsonPath('data.0.suggestion', 'probably_present');
+
+        $this->assertDatabaseMissing('journal_attendance', ['journal_lesson_id' => $lessonId, 'student_id' => $students[0]->id, 'source' => 'access_gate_suggestion']);
+
+        $this->withApiAuth($admin)->postJson("/api/journal/lessons/{$lessonId}/attendance-suggestion/apply")
+            ->assertOk();
+
+        $this->assertDatabaseHas('journal_attendance', ['journal_lesson_id' => $lessonId, 'student_id' => $students[0]->id, 'source' => 'access_gate_suggestion']);
+    }
+
+    public function test_teacher_cannot_edit_other_teacher_lesson(): void
+    {
+        [$entry, , , $teacher] = $this->journalFixture();
+        $ownerUser = User::factory()->create(['is_active' => true]);
+        $teacher->update(['user_id' => $ownerUser->id]);
+        $otherUser = User::factory()->create(['is_active' => true]);
+        Teacher::create(['user_id' => $otherUser->id, 'last_name' => 'Other', 'first_name' => 'Teacher']);
+        $teacherRole = $this->roleWithPermissions('teacher', ['journal.view', 'journal.edit']);
+        $ownerUser->update(['role_id' => $teacherRole->id]);
+        $otherUser->update(['role_id' => $teacherRole->id]);
+
+        $lessonId = $this->withApiAuth($ownerUser)->postJson("/api/journal/from-schedule/{$entry->id}/open")->json('data.id');
+
+        $this->withApiAuth($otherUser)->putJson("/api/journal/lessons/{$lessonId}", ['topic' => 'Чужая тема'])
+            ->assertForbidden();
+    }
+
+    public function test_signed_lesson_blocks_regular_teacher_and_reopen_permission_allows_fix(): void
+    {
+        [$entry, , , $teacher] = $this->journalFixture();
+        $teacherUser = User::factory()->create(['is_active' => true]);
+        $teacher->update(['user_id' => $teacherUser->id]);
+        $teacherRole = $this->roleWithPermissions('teacher', ['journal.view', 'journal.edit', 'journal.sign']);
+        $teacherUser->update(['role_id' => $teacherRole->id]);
+        $lessonId = $this->withApiAuth($teacherUser)->postJson("/api/journal/from-schedule/{$entry->id}/open")->json('data.id');
+
+        $this->withApiAuth($teacherUser)->postJson("/api/journal/lessons/{$lessonId}/sign")->assertOk()->assertJsonPath('data.status', 'signed');
+        $this->withApiAuth($teacherUser)->putJson("/api/journal/lessons/{$lessonId}", ['topic' => 'После подписи'])->assertUnprocessable();
+
+        $admin = $this->createApiUser(roleCode: 'admin');
+        $this->withApiAuth($admin)->putJson("/api/journal/lessons/{$lessonId}", ['topic' => 'Исправлено учебной частью'])->assertOk();
+    }
+
+    public function test_private_files_and_csv_export(): void
+    {
+        Storage::fake('local');
+        [$entry] = $this->journalFixture();
+        $admin = $this->createApiUser(roleCode: 'admin');
+        $lessonId = $this->withApiAuth($admin)->postJson("/api/journal/from-schedule/{$entry->id}/open")->json('data.id');
+
+        $this->withApiAuth($admin)->postJson("/api/journal/lessons/{$lessonId}/files", [
+            'file' => UploadedFile::fake()->create('plan.pdf', 64, 'application/pdf'),
+        ])->assertCreated()->assertJsonPath('data.original_name', 'plan.pdf');
+
+        $filePath = \App\Models\JournalLessonFile::firstOrFail()->path;
+        Storage::disk('local')->assertExists($filePath);
+
+        $this->withApiAuth($admin)->get("/api/journal/lessons/{$lessonId}/export.csv")->assertOk();
+    }
+
+    public function test_cancelled_schedule_entry_does_not_create_regular_journal_lesson(): void
+    {
+        [$entry] = $this->journalFixture(['status' => 'cancelled']);
+        $admin = $this->createApiUser(roleCode: 'admin');
+
+        $this->withApiAuth($admin)->postJson("/api/journal/from-schedule/{$entry->id}/open")->assertUnprocessable();
+        $this->assertDatabaseCount('journal_lessons', 0);
+    }
+
+    private function journalFixture(array $entryOverrides = []): array
+    {
+        $teacher = Teacher::create(['last_name' => 'Иванов', 'first_name' => 'Иван', 'is_active' => true]);
+        $group = Group::create(['name' => 'ИСП-101', 'specialty' => 'Инструментальное исполнительство', 'course' => 1, 'year_start' => 2026, 'curator_id' => $teacher->id]);
+        $subject = Subject::create(['name' => 'Фортепиано', 'code' => 'PIANO']);
+        $classroom = Classroom::create(['number' => '101', 'building' => 'А']);
+        $students = collect([
+            Student::create(['group_id' => $group->id, 'last_name' => 'Петров', 'first_name' => 'Петр', 'status' => 'active']),
+            Student::create(['group_id' => $group->id, 'last_name' => 'Сидорова', 'first_name' => 'Анна', 'status' => 'active']),
+        ]);
+        $entry = ScheduleEntry::create(array_merge([
+            'academic_year' => '2026/2027',
+            'semester' => 1,
+            'date' => '2026-07-12',
+            'day_of_week' => 1,
+            'lesson_number' => 1,
+            'starts_at' => '09:00:00',
+            'ends_at' => '10:30:00',
+            'group_id' => $group->id,
+            'subject_id' => $subject->id,
+            'teacher_id' => $teacher->id,
+            'classroom_id' => $classroom->id,
+            'status' => 'published',
+            'source' => 'manual',
+        ], $entryOverrides));
+
+        return [$entry, $group, $subject, $teacher, $classroom, $students];
+    }
+
+    private function roleWithPermissions(string $code, array $permissions): Role
+    {
+        $role = Role::query()->firstOrCreate(['code' => $code], ['name' => ucfirst($code)]);
+        $ids = collect($permissions)->map(fn (string $permission) => Permission::query()->firstOrCreate(
+            ['code' => $permission],
+            ['name' => $permission, 'module' => 'Journal', 'description' => null, 'system' => true, 'active' => true],
+        )->id);
+        $role->permissions()->sync($ids);
+
+        return $role;
+    }
+}

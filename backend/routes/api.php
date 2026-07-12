@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\FisPackageController;
 use App\Http\Controllers\Api\FisAdmissionsImportController;
 use App\Http\Controllers\Api\EducationProgramController;
 use App\Http\Controllers\Api\GradeController;
+use App\Http\Controllers\Api\JournalLessonController;
 use App\Http\Controllers\Api\GraduateController;
 use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\StudentBulkController;
@@ -232,6 +233,23 @@ Route::middleware('api.token')->group(function (): void {
 
     Route::apiResource('schedule-lessons', ScheduleLessonController::class)
         ->middleware('permission:manage_schedule');
+
+    Route::middleware('permission:journal.view')->group(function (): void {
+        Route::get('journal/lessons', [JournalLessonController::class, 'index']);
+        Route::get('journal/lessons/{lesson}', [JournalLessonController::class, 'show']);
+        Route::post('journal/from-schedule/{scheduleEntry}/open', [JournalLessonController::class, 'openFromSchedule'])->middleware('permission:journal.edit');
+        Route::put('journal/lessons/{lesson}', [JournalLessonController::class, 'update'])->middleware('permission:journal.edit');
+        Route::post('journal/lessons/{lesson}/complete', [JournalLessonController::class, 'complete'])->middleware('permission:journal.complete');
+        Route::post('journal/lessons/{lesson}/sign', [JournalLessonController::class, 'sign'])->middleware('permission:journal.sign');
+        Route::put('journal/lessons/{lesson}/attendance', [JournalLessonController::class, 'attendance'])->middleware('permission:journal.attendance');
+        Route::put('journal/lessons/{lesson}/grades', [JournalLessonController::class, 'grades'])->middleware('permission:journal.grades');
+        Route::get('journal/lessons/{lesson}/attendance-suggestion', [JournalLessonController::class, 'attendanceSuggestion']);
+        Route::post('journal/lessons/{lesson}/attendance-suggestion/apply', [JournalLessonController::class, 'applyAttendanceSuggestion'])->middleware('permission:journal.attendance');
+        Route::post('journal/lessons/{lesson}/files', [JournalLessonController::class, 'storeFile'])->middleware('permission:journal.files');
+        Route::get('journal/lessons/{lesson}/files/{file}/download', [JournalLessonController::class, 'downloadFile']);
+        Route::delete('journal/lessons/{lesson}/files/{file}', [JournalLessonController::class, 'destroyFile'])->middleware('permission:journal.files');
+        Route::get('journal/lessons/{lesson}/export.csv', [JournalLessonController::class, 'exportLesson'])->middleware('permission:journal.export');
+    });
 
     Route::middleware('permission:manage_journal')->group(function (): void {
         Route::apiResource('attendance', AttendanceController::class);
