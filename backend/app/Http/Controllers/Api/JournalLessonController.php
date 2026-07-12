@@ -27,19 +27,18 @@ class JournalLessonController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $query = JournalLesson::query()
-            ->with(['group', 'subject', 'teacher', 'lessonType', 'scheduleEntry.classroom'])
+            ->with(['group', 'subject', 'teacher', 'lessonType', 'scheduleEntry.classroom', 'attendance.student', 'grades', 'files', 'signedBy', 'reopenedBy'])
             ->when($request->integer('group_id'), fn (Builder $q, int $id) => $q->where('group_id', $id))
             ->when($request->integer('subject_id'), fn (Builder $q, int $id) => $q->where('subject_id', $id))
             ->when($request->integer('teacher_id'), fn (Builder $q, int $id) => $q->where('teacher_id', $id))
             ->when($request->string('status')->toString(), fn (Builder $q, string $status) => $q->where('status', $status))
-            ->when($request->date('date'), fn (Builder $q, $date) => $q->whereDate('lesson_date', $date))
-            ->when($request->string('mode')->toString() === 'today', fn (Builder $q) => $q->whereDate('lesson_date', today()))
-            ->when($request->string('mode')->toString() === 'needs_fill', fn (Builder $q) => $q->whereIn('status', ['planned', 'opened', 'completed']))
-            ->when($request->string('mode')->toString() === 'signed', fn (Builder $q) => $q->where('status', 'signed'));
+            ->when($request->date('date'), fn (Builder $q, $date) => $q->whereDate('lesson_date', $date));
 
+        $this->applyDateRange($query, $request);
+        $this->applyMode($query, $request->string('mode')->toString());
         $this->applyScope($query, $request->user());
 
-        return JournalLessonResource::collection($query->orderByDesc('lesson_date')->orderBy('starts_at')->paginate($request->integer('per_page') ?: 20));
+        return JournalLessonResource::collection($query->orderBy('lesson_date')->orderBy('starts_at')->paginate($request->integer('per_page') ?: 20));
     }
 
     public function show(Request $request, JournalLesson $lesson): JournalLessonResource
@@ -66,7 +65,8 @@ class JournalLessonController extends Controller
             'topic' => ['nullable', 'string', 'max:2000'],
             'homework' => ['nullable', 'string', 'max:2000'],
             'teacher_comment' => ['nullable', 'string', 'max:2000'],
-            'status' => ['nullable', Rule::in(['planned', 'opened', 'completed', 'signed', 'cancelled'])],
+            'homework_due_at' => ['nullable', 'date'],
+            'status' => ['nullable', Rule::in(['draft', 'in_progress', 'completed', 'signed', 'reopened', 'cancelled', 'planned', 'opened'])],
         ]);
 
         return new JournalLessonResource($this->journalService->updateLesson($lesson, $data, $request->user()));
@@ -86,6 +86,17 @@ class JournalLessonController extends Controller
         $this->authorizeLesson($request->user(), $lesson, true);
 
         return new JournalLessonResource($this->journalService->sign($lesson, $request->user()));
+    }
+
+    public function reopen(Request $request, JournalLesson $lesson): JournalLessonResource
+    {
+        abort_unless($request->user()->hasPermission('journal.reopen'), 403);
+        $this->authorizeLesson($request->user(), $lesson, true);
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:1000'],
+        ]);
+
+        return new JournalLessonResource($this->journalService->reopen($lesson, $request->user(), $data['reason']));
     }
 
     public function attendance(Request $request, JournalLesson $lesson): JournalLessonResource
@@ -185,6 +196,97 @@ class JournalLessonController extends Controller
             }
             fclose($out);
         }, "journal-lesson-{$lesson->id}.csv", ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+
+    public function exportGroup(Request $request): StreamedResponse
+    {
+        abort_unless($request->user()->hasPermission('journal.export'), 403);
+        $data = $request->validate([
+            'group_id' => ['required', 'integer', 'exists:groups,id'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date'],
+        ]);
+
+        $query = JournalLesson::query()
+            ->with(['group', 'subject', 'teacher', 'attendance.student', 'grades'])
+            ->where('group_id', $data['group_id']);
+        $this->applyDateRange($query, $request);
+        $this->applyScope($query, $request->user());
+
+        return $this->streamLessonsCsv($query->orderBy('lesson_date')->orderBy('starts_at')->get(), 'journal-group.csv');
+    }
+
+    public function exportTeacher(Request $request): StreamedResponse
+    {
+        abort_unless($request->user()->hasPermission('journal.export'), 403);
+        $data = $request->validate([
+            'teacher_id' => ['nullable', 'integer', 'exists:teachers,id'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date'],
+        ]);
+
+        $query = JournalLesson::query()
+            ->with(['group', 'subject', 'teacher', 'attendance.student', 'grades'])
+            ->when($data['teacher_id'] ?? null, fn (Builder $q, int $id) => $q->where('teacher_id', $id));
+        $this->applyDateRange($query, $request);
+        $this->applyScope($query, $request->user());
+
+        return $this->streamLessonsCsv($query->orderBy('lesson_date')->orderBy('starts_at')->get(), 'journal-teacher.csv');
+    }
+
+    private function streamLessonsCsv($lessons, string $filename): StreamedResponse
+    {
+        return response()->streamDownload(function () use ($lessons): void {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['lesson_date', 'starts_at', 'group', 'subject', 'teacher', 'student', 'attendance', 'minutes_late', 'grade', 'comment']);
+            foreach ($lessons as $lesson) {
+                foreach ($lesson->attendance as $attendance) {
+                    $grade = $lesson->grades->firstWhere('student_id', $attendance->student_id);
+                    $student = $attendance->student;
+                    fputcsv($out, [
+                        $lesson->lesson_date,
+                        $lesson->starts_at,
+                        $lesson->group?->name,
+                        $lesson->subject?->name,
+                        trim("{$lesson->teacher?->last_name} {$lesson->teacher?->first_name} {$lesson->teacher?->middle_name}"),
+                        $student ? trim("{$student->last_name} {$student->first_name} {$student->middle_name}") : '',
+                        $attendance->status,
+                        $attendance->minutes_late,
+                        $grade?->value,
+                        $attendance->comment,
+                    ]);
+                }
+            }
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    private function applyDateRange(Builder $query, Request $request): void
+    {
+        if ($request->date('date_from')) {
+            $query->whereDate('lesson_date', '>=', $request->date('date_from'));
+        }
+        if ($request->date('date_to')) {
+            $query->whereDate('lesson_date', '<=', $request->date('date_to'));
+        }
+    }
+
+    private function applyMode(Builder $query, string $mode): void
+    {
+        match ($mode) {
+            'today' => $query->whereDate('lesson_date', today()),
+            'tomorrow' => $query->whereDate('lesson_date', today()->addDay()),
+            'week' => $query->whereBetween('lesson_date', [today()->startOfWeek(), today()->endOfWeek()]),
+            'completed' => $query->whereIn('status', ['completed', 'signed']),
+            'not_filled', 'needs_fill' => $query->where(function (Builder $q): void {
+                $q->whereIn('status', ['draft', 'in_progress', 'reopened', 'planned', 'opened'])
+                    ->orWhereNull('topic');
+            }),
+            'signed' => $query->where('status', 'signed'),
+            'control' => $query->whereIn('status', ['draft', 'in_progress', 'completed', 'signed', 'reopened', 'planned', 'opened']),
+            default => null,
+        };
     }
 
     private function applyScope(Builder $query, User $user): void

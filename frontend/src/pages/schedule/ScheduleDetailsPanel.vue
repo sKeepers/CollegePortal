@@ -21,7 +21,7 @@ const lessonMetrics = computed(() => [
   { label: 'Время', value: `${props.lesson?.starts_at || '—'}–${props.lesson?.ends_at || '—'}` },
 ])
 const lessonActions = computed(() => [
-  { label: 'Журнал', to: { path: '/journal', query: { lesson: props.lesson?.id } } },
+  { label: 'Открыть журнал', to: { path: '/journal', query: { lesson: props.lesson?.id } }, disabled: props.lesson?.status === 'cancelled' },
   { label: 'Группа', to: { path: '/groups', query: { selected: props.lesson?.group_id } }, disabled: !props.lesson?.group_id },
   { label: 'Преподаватель', to: { path: '/teachers', query: { selected: props.lesson?.teacher_id } }, disabled: !props.lesson?.teacher_id },
   { label: 'Аудитория', to: { path: '/classrooms', query: { selected: props.lesson?.classroom_id } }, disabled: !props.lesson?.classroom_id },

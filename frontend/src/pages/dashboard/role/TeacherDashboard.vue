@@ -38,15 +38,17 @@ const dashboardWidgets = [
 ]
 const teacherId = computed(() => teacher.value?.id || auth.user?.person_id || null)
 const nearestLesson = computed(() => todayLessons.value[0] || null)
+const journalsNeedFill = computed(() => journals.value.filter((lesson) => ['draft', 'in_progress', 'reopened', 'planned', 'opened'].includes(lesson.status) || !lesson.topic).length)
+const journalsAwaitSign = computed(() => journals.value.filter((lesson) => lesson.status === 'completed').length)
 const statItems = computed(() => [
   { label: 'Мои занятия сегодня', value: todayLessons.value.length, icon: CalendarDays },
-  { label: 'Мои группы', value: teacherGroups.value.length, icon: GraduationCap },
+  { label: 'Журналы не заполнены', value: journalsNeedFill.value, icon: NotebookTabs },
+  { label: 'Ожидают подписи', value: journalsAwaitSign.value, icon: BadgeCheck },
   { label: 'Моя нагрузка', value: teachingLoads.value.length, icon: ClipboardList },
-  { label: 'Ближайшие экзамены', value: exams.value.length, icon: BookOpen },
 ])
 const quickActions = computed(() => [
   { label: 'Мое расписание', description: 'Занятия преподавателя', icon: CalendarDays, to: teacherId.value ? { path: '/schedule', query: { teacher: teacherId.value } } : '/schedule' },
-  { label: 'Журнал', description: 'Посещаемость и оценки', icon: NotebookTabs, to: teacherId.value ? { path: '/journal', query: { teacher: teacherId.value } } : '/journal' },
+  { label: 'Журнал', description: 'Посещаемость и оценки', icon: NotebookTabs, to: teacherId.value ? { path: '/journal', query: { teacher: teacherId.value, mode: 'today' } } : { path: '/journal', query: { mode: 'today' } } },
   { label: 'Нагрузка', description: 'Учебная нагрузка', icon: ClipboardList, to: teacherId.value ? { path: '/teaching-load', query: { teacher: teacherId.value } } : '/teaching-load' },
   { label: 'Экзамены', description: 'Экзамены и ГИА', icon: BookOpen, to: teacherId.value ? { path: '/exams', query: { teacher: teacherId.value } } : '/exams' },
   { label: 'Мой QR-пропуск', description: 'Цифровая идентификация', icon: BadgeCheck, to: teacherId.value ? { path: '/identity/digital-passes', query: { owner: 'teacher', selected: teacherId.value } } : '/identity/digital-passes' },
@@ -94,10 +96,10 @@ async function loadDashboard() {
     const id = teacherId.value
     const today = todayIso()
     const [lessonsResult, loadsResult, examsResult, journalResult] = await Promise.allSettled([
-      api.list('schedule-lessons', id ? { teacher: id, date: today } : { date: today }),
+      api.list('journal/lessons', id ? { teacher_id: id, mode: 'today', per_page: 20 } : { mode: 'today', per_page: 20 }),
       api.list('teaching-loads', id ? { teacher_id: id } : {}),
       api.list('exams', id ? { teacher_id: id } : {}),
-      api.list('schedule-lessons', id ? { teacher: id } : {}),
+      api.list('journal/lessons', id ? { teacher_id: id, mode: 'week', per_page: 50 } : { mode: 'week', per_page: 50 }),
     ])
 
     if (lessonsResult.status === 'fulfilled') todayLessons.value = extractRows(lessonsResult.value)
@@ -156,6 +158,7 @@ onMounted(() => {
             <span>{{ groupName(nearestLesson.group) }}</span>
             <span>{{ nearestLesson.starts_at || '—' }}–{{ nearestLesson.ends_at || '—' }}</span>
             <AppStatusBadge label="Сегодня" tone="info" />
+            <q-btn dense color="primary" :to="{ path: '/journal', query: { mode: 'today' } }">Открыть журнал</q-btn>
           </div>
           <p v-else class="dashboard-role-empty">На сегодня ближайшее занятие не найдено.</p>
         </section>

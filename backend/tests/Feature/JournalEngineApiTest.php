@@ -124,11 +124,16 @@ class JournalEngineApiTest extends TestCase
         $teacherUser->update(['role_id' => $teacherRole->id]);
         $lessonId = $this->withApiAuth($teacherUser)->postJson("/api/journal/from-schedule/{$entry->id}/open")->json('data.id');
 
+        $this->withApiAuth($teacherUser)->putJson("/api/journal/lessons/{$lessonId}", ['topic' => 'Тема перед подписью'])->assertOk();
         $this->withApiAuth($teacherUser)->postJson("/api/journal/lessons/{$lessonId}/sign")->assertOk()->assertJsonPath('data.status', 'signed');
         $this->withApiAuth($teacherUser)->putJson("/api/journal/lessons/{$lessonId}", ['topic' => 'После подписи'])->assertUnprocessable();
 
         $admin = $this->createApiUser(roleCode: 'admin');
+        $this->withApiAuth($admin)->postJson("/api/journal/lessons/{$lessonId}/reopen", ['reason' => 'Исправление после проверки'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'reopened');
         $this->withApiAuth($admin)->putJson("/api/journal/lessons/{$lessonId}", ['topic' => 'Исправлено учебной частью'])->assertOk();
+        $this->assertDatabaseHas('audit_logs', ['module' => 'journal', 'action' => 'reopen']);
     }
 
     public function test_private_files_and_csv_export(): void
@@ -146,6 +151,47 @@ class JournalEngineApiTest extends TestCase
         Storage::disk('local')->assertExists($filePath);
 
         $this->withApiAuth($admin)->get("/api/journal/lessons/{$lessonId}/export.csv")->assertOk();
+        $this->withApiAuth($admin)->get("/api/journal/export/group.csv?group_id={$entry->group_id}")->assertOk();
+        $this->withApiAuth($admin)->get("/api/journal/export/teacher.csv?teacher_id={$entry->teacher_id}")->assertOk();
+    }
+
+    public function test_teacher_scope_and_control_mode_for_study_office(): void
+    {
+        [$entry, , , $teacher] = $this->journalFixture();
+        [$otherEntry] = $this->journalFixture(['starts_at' => '11:00:00', 'ends_at' => '12:30:00']);
+        $teacherUser = User::factory()->create(['is_active' => true]);
+        $teacher->update(['user_id' => $teacherUser->id]);
+        $teacherRole = $this->roleWithPermissions('teacher', ['journal.view', 'journal.edit']);
+        $teacherUser->update(['role_id' => $teacherRole->id]);
+        $admin = $this->createApiUser(roleCode: 'admin');
+        $study = User::factory()->create(['is_active' => true]);
+        $studyRole = $this->roleWithPermissions('study', ['journal.view', 'journal.view_all']);
+        $study->update(['role_id' => $studyRole->id]);
+
+        $this->withApiAuth($admin)->postJson("/api/journal/from-schedule/{$entry->id}/open")->assertCreated();
+        $this->withApiAuth($admin)->postJson("/api/journal/from-schedule/{$otherEntry->id}/open")->assertCreated();
+
+        $this->withApiAuth($teacherUser)->getJson('/api/journal/lessons?mode=week')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+
+        $this->withApiAuth($study)->getJson('/api/journal/lessons?mode=control')
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+    }
+
+    public function test_attendance_suggestion_marks_left_before_end(): void
+    {
+        [$entry, , , , , $students] = $this->journalFixture();
+        $admin = $this->createApiUser(roleCode: 'admin');
+        $lessonId = $this->withApiAuth($admin)->postJson("/api/journal/from-schedule/{$entry->id}/open")->json('data.id');
+
+        AccessEvent::create(['entity_type' => 'student', 'entity_id' => $students[0]->id, 'direction' => 'in', 'event_time' => '2026-07-12 08:55:00', 'result' => 'allowed']);
+        AccessEvent::create(['entity_type' => 'student', 'entity_id' => $students[0]->id, 'direction' => 'out', 'event_time' => '2026-07-12 09:30:00', 'result' => 'allowed']);
+
+        $this->withApiAuth($admin)->getJson("/api/journal/lessons/{$lessonId}/attendance-suggestion")
+            ->assertOk()
+            ->assertJsonPath('data.0.left_before_end', true);
     }
 
     public function test_cancelled_schedule_entry_does_not_create_regular_journal_lesson(): void
@@ -160,9 +206,10 @@ class JournalEngineApiTest extends TestCase
     private function journalFixture(array $entryOverrides = []): array
     {
         $teacher = Teacher::create(['last_name' => 'Иванов', 'first_name' => 'Иван', 'is_active' => true]);
-        $group = Group::create(['name' => 'ИСП-101', 'specialty' => 'Инструментальное исполнительство', 'course' => 1, 'year_start' => 2026, 'curator_id' => $teacher->id]);
-        $subject = Subject::create(['name' => 'Фортепиано', 'code' => 'PIANO']);
-        $classroom = Classroom::create(['number' => '101', 'building' => 'А']);
+        $groupNumber = Group::query()->count() + 101;
+        $group = Group::create(['name' => "ИСП-{$groupNumber}", 'specialty' => 'Инструментальное исполнительство', 'course' => 1, 'year_start' => 2026, 'curator_id' => $teacher->id]);
+        $subject = Subject::create(['name' => 'Фортепиано', 'code' => 'PIANO-'.$groupNumber]);
+        $classroom = Classroom::create(['number' => (string) $groupNumber, 'building' => 'А']);
         $students = collect([
             Student::create(['group_id' => $group->id, 'last_name' => 'Петров', 'first_name' => 'Петр', 'status' => 'active']),
             Student::create(['group_id' => $group->id, 'last_name' => 'Сидорова', 'first_name' => 'Анна', 'status' => 'active']),

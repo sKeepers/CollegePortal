@@ -82,3 +82,15 @@ After signing, regular edits are blocked. Corrections require `journal.reopen`; 
 - `journal.view_all`
 
 Teacher access is scoped to own `teacher_id`. Student access is read-only and scoped to own group/data.
+
+## ST-003B Teacher Journal Workspace
+
+`/journal` now provides teacher-focused modes for today, tomorrow, current week, completed, not filled and signed lessons. A `journal.view_all` control mode is available for study/deputy/admin roles. The selected lesson exposes an editable student table, attendance suggestion preview from access events, lesson files, completion, signature and reopen workflow.
+
+Additional API:
+
+- `POST /api/journal/lessons/{id}/reopen`
+- `GET /api/journal/export/group.csv`
+- `GET /api/journal/export/teacher.csv`
+
+The accepted status set now includes `draft`, `in_progress`, `completed`, `signed`, `reopened` and `cancelled`; legacy `planned/opened` are kept for compatibility.

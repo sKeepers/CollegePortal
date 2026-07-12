@@ -702,3 +702,14 @@
 - [x] Add JournalService and journal lesson API.
 - [x] Add RBAC permissions for lesson lifecycle, attendance, grades, files and signing.
 - [x] Update `/journal` to open lessons from Schedule Engine and edit lesson details.
+
+## ST-003B
+
+- [x] Добавить режимы рабочего места преподавателя на `/journal`.
+- [x] Добавить таблицу студентов выбранного занятия.
+- [x] Добавить bulk-посещаемость и сохранение оценок без перезагрузки.
+- [x] Добавить preview посещаемости по проходной.
+- [x] Добавить материалы занятия, завершение, подпись и reopen.
+- [x] Добавить контрольный режим для учебной части.
+- [x] Обновить Dashboard преподавателя.
+- [x] Добавить тесты, документацию и CSV exports.

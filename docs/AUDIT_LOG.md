@@ -137,3 +137,7 @@ Drag & drop перенос фиксируется как `schedule_entry_moved`,
 ## ST-003A Journal Integration
 
 Schedule Engine entries can now be opened as electronic journal lessons. Journal Engine stores topic, homework, attendance, grades, private files and signature status while preserving the schedule entry as the source of group, subject, teacher, date and time. Access is controlled by `journal.*` permissions and all mutating journal actions are audited.
+
+## ST-003B Journal workspace audit
+
+Teacher Journal Workspace continues Journal Engine audit coverage and adds explicit reopen logging with reason. Attendance suggestions are preview-only and are not logged as mutations until applied. File audit stores safe metadata only, not private file contents.

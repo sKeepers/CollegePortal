@@ -213,3 +213,7 @@ Frontend получил единый слой проверки permissions:
 ## ST-003A Journal Integration
 
 Schedule Engine entries can now be opened as electronic journal lessons. Journal Engine stores topic, homework, attendance, grades, private files and signature status while preserving the schedule entry as the source of group, subject, teacher, date and time. Access is controlled by `journal.*` permissions and all mutating journal actions are audited.
+
+## ST-003B Teacher Journal Workspace permissions
+
+Teacher workspace uses existing `journal.*` permissions with stricter UI behavior. Teachers can see and edit only their own lessons. `journal.view_all` enables study/deputy/admin control mode. Signed lessons are read-only unless the user has `journal.reopen`; reopening requires a reason and does not bypass Audit.

@@ -1138,3 +1138,7 @@ Release 0.8 RC1 adds an installer distribution foundation under `installer/` and
 ## ST-003A Electronic Journal Foundation
 
 Electronic Journal Foundation adds schedule-linked journal lessons. New normalized tables are `journal_lessons`, `journal_attendance`, `journal_grades` and `journal_lesson_files`. The primary opening flow is `schedule_entries -> journal_lessons`; legacy `schedule_lessons`, `attendance` and `grades` remain available for compatibility. Journal actions are RBAC-protected, teacher edits are scoped to own lessons, signed lessons require `journal.reopen` for corrections, and changes are written to Audit.
+
+## ST-003B Teacher Journal Workspace
+
+`/journal` now acts as a teacher workspace: modes for own lessons, tomorrow/week/completed/not-filled/signed, study office control mode, selected lesson student table, attendance suggestion preview, grade editing, lesson files, completion/signature and reopen workflow. Teacher Dashboard uses journal lessons for today's work and signature/fill indicators.

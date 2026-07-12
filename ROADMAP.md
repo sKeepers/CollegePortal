@@ -351,3 +351,7 @@ Visual Schedule Editor добавлен как MVP. Следующие этап�
 
 - [x] ST-003A: Electronic Journal Foundation linked to Schedule Engine.
 - [ ] ST-003B: printable journal forms and period exports.
+
+## ST-003B завершено
+
+Teacher Journal Workspace добавлен поверх Journal Engine. Следующие этапы: печатные формы журнала, расширенная клавиатурная навигация, групповые отчеты по периоду и UX-проверка преподавателями на реальном расписании.

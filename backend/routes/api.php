@@ -236,11 +236,14 @@ Route::middleware('api.token')->group(function (): void {
 
     Route::middleware('permission:journal.view')->group(function (): void {
         Route::get('journal/lessons', [JournalLessonController::class, 'index']);
+        Route::get('journal/export/group.csv', [JournalLessonController::class, 'exportGroup'])->middleware('permission:journal.export');
+        Route::get('journal/export/teacher.csv', [JournalLessonController::class, 'exportTeacher'])->middleware('permission:journal.export');
         Route::get('journal/lessons/{lesson}', [JournalLessonController::class, 'show']);
         Route::post('journal/from-schedule/{scheduleEntry}/open', [JournalLessonController::class, 'openFromSchedule'])->middleware('permission:journal.edit');
         Route::put('journal/lessons/{lesson}', [JournalLessonController::class, 'update'])->middleware('permission:journal.edit');
         Route::post('journal/lessons/{lesson}/complete', [JournalLessonController::class, 'complete'])->middleware('permission:journal.complete');
         Route::post('journal/lessons/{lesson}/sign', [JournalLessonController::class, 'sign'])->middleware('permission:journal.sign');
+        Route::post('journal/lessons/{lesson}/reopen', [JournalLessonController::class, 'reopen'])->middleware('permission:journal.reopen');
         Route::put('journal/lessons/{lesson}/attendance', [JournalLessonController::class, 'attendance'])->middleware('permission:journal.attendance');
         Route::put('journal/lessons/{lesson}/grades', [JournalLessonController::class, 'grades'])->middleware('permission:journal.grades');
         Route::get('journal/lessons/{lesson}/attendance-suggestion', [JournalLessonController::class, 'attendanceSuggestion']);

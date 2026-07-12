@@ -21,7 +21,7 @@ use Illuminate\Validation\ValidationException;
 class JournalService
 {
     private const ATTENDANCE_STATUSES = ['present', 'absent', 'late', 'excused', 'sick', 'remote'];
-    private const GRADE_VALUES = ['2', '3', '4', '5', 'зачет', 'незачет', ''];
+    private const GRADE_VALUES = ['2', '3', '4', '5', 'зачет', 'незачет', 'освобожден', 'освобождён', 'не аттестован', ''];
 
     public function openFromSchedule(ScheduleEntry $entry, User $user): JournalLesson
     {
@@ -43,7 +43,7 @@ class JournalService
                     'ends_at' => $this->timeValue($entry->ends_at),
                     'lesson_type_id' => $entry->lesson_type_id,
                     'teacher_comment' => $entry->comment,
-                    'status' => JournalLesson::STATUS_OPENED,
+                    'status' => JournalLesson::STATUS_IN_PROGRESS,
                     'opened_at' => now(),
                 ],
             );
@@ -61,7 +61,7 @@ class JournalService
     public function loadLesson(JournalLesson $lesson): JournalLesson
     {
         return $lesson->load([
-            'group', 'subject', 'teacher', 'lessonType', 'scheduleEntry.group', 'scheduleEntry.subject', 'scheduleEntry.teacher', 'scheduleEntry.classroom', 'scheduleEntry.lessonType',
+            'group', 'subject', 'teacher', 'lessonType', 'signedBy', 'reopenedBy', 'scheduleEntry.group', 'scheduleEntry.subject', 'scheduleEntry.teacher', 'scheduleEntry.classroom', 'scheduleEntry.lessonType',
             'attendance.student.group', 'grades.student.group', 'grades.gradeType', 'files',
         ]);
     }
@@ -88,14 +88,14 @@ class JournalService
     public function updateLesson(JournalLesson $lesson, array $data, User $user): JournalLesson
     {
         $this->guardSigned($lesson, $user);
-        $old = $lesson->only(['topic', 'homework', 'teacher_comment', 'status']);
-        $lesson->fill(collect($data)->only(['topic', 'homework', 'teacher_comment', 'status'])->all());
-        if ($lesson->status === JournalLesson::STATUS_PLANNED) {
-            $lesson->status = JournalLesson::STATUS_OPENED;
+        $old = $lesson->only(['topic', 'homework', 'homework_due_at', 'teacher_comment', 'status']);
+        $lesson->fill(collect($data)->only(['topic', 'homework', 'homework_due_at', 'teacher_comment', 'status'])->all());
+        if (in_array($lesson->status, [JournalLesson::STATUS_PLANNED, JournalLesson::STATUS_DRAFT], true)) {
+            $lesson->status = JournalLesson::STATUS_IN_PROGRESS;
             $lesson->opened_at ??= now();
         }
         $lesson->save();
-        AuditLogService::log('journal', 'update_lesson', $lesson, $old, $lesson->only(['topic', 'homework', 'teacher_comment', 'status']), request(), $user);
+        AuditLogService::log('journal', 'update_lesson', $lesson, $old, $lesson->only(['topic', 'homework', 'homework_due_at', 'teacher_comment', 'status']), request(), $user);
 
         return $this->loadLesson($lesson->refresh());
     }
@@ -176,9 +176,32 @@ class JournalService
     public function sign(JournalLesson $lesson, User $user): JournalLesson
     {
         $this->guardSigned($lesson, $user);
+        if (blank($lesson->topic)) {
+            throw ValidationException::withMessages(['topic' => ['Перед подписью нужно заполнить тему занятия.']]);
+        }
+        if ($lesson->attendance()->count() === 0) {
+            throw ValidationException::withMessages(['attendance' => ['Перед подписью нужно заполнить посещаемость.']]);
+        }
         $old = $lesson->getAttributes();
         $lesson->update(['status' => JournalLesson::STATUS_SIGNED, 'signed_at' => now(), 'signed_by' => $user->id]);
         AuditLogService::log('journal', 'sign', $lesson, $old, $lesson->getAttributes(), request(), $user);
+
+        return $this->loadLesson($lesson->refresh());
+    }
+
+    public function reopen(JournalLesson $lesson, User $user, string $reason): JournalLesson
+    {
+        if (! $user->hasPermission('journal.reopen')) {
+            throw ValidationException::withMessages(['permission' => ['Недостаточно прав для повторного открытия журнала.']]);
+        }
+        $old = $lesson->getAttributes();
+        $lesson->update([
+            'status' => JournalLesson::STATUS_REOPENED,
+            'reopened_at' => now(),
+            'reopened_by' => $user->id,
+            'reopen_reason' => $reason,
+        ]);
+        AuditLogService::log('journal', 'reopen', $lesson, $old, $lesson->getAttributes(), request(), $user);
 
         return $this->loadLesson($lesson->refresh());
     }
@@ -227,6 +250,7 @@ class JournalService
                 'minutes_late' => $minutesLate,
                 'first_in' => $firstIn?->event_time?->toISOString(),
                 'last_out' => $lastOut?->event_time?->toISOString(),
+                'left_before_end' => $lastOut ? Carbon::parse($lastOut->event_time)->lt($lessonEnd) : false,
             ];
         })->values()->all();
     }
