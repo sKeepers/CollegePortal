@@ -65,3 +65,39 @@ installer/*.sha256
 installer/.env
 installer/certs/
 installer/backups/
+
+# GITHUB-001 repository safety
+backend/.env
+frontend/.env
+.env.local
+.env.production
+.env.development
+!backend/storage/app/private/.gitignore
+backend/storage/app/private/applicant-documents/
+backend/storage/framework/testing/
+backend/database/database.sqlite
+uploads/
+dumps/
+temp/
+*.sql
+*.dump
+*.backup
+*.bak
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+# Real import/export files must stay outside Git. Official reference templates
+# under docs/external-services are intentionally allowed.
+*.xlsx
+*.csv
+!docs/external-services/**/*.xlsx
+!docs/import-templates/**/*.csv
+admin_credentials.txt
+**/admin_credentials.txt
+installer/runtime/
+playwright-report/
+test-results/
+screenshots/
+coverage/

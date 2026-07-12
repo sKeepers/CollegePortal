@@ -751,3 +751,12 @@
 - [x] Verify health, API smoke, backup/restore, update, rollback, HTTPS smoke, uninstall and reinstall.
 - [x] Document UAT server and acceptance results.
 - [ ] Improve repeated-install message to mention existing installation in addition to occupied ports.
+## GITHUB-001
+
+- [x] Verify GitHub CLI authorization.
+- [x] Harden `.gitignore` for secrets, imports, dumps, backups, certificates and runtime files.
+- [x] Add repository README, vision, security, support, governance, contributing and changelog documents.
+- [x] Add CI workflow and GitHub issue/PR templates.
+- [x] Run pre-push secret audit with git scans and gitleaks.
+- [ ] Create private GitHub repository and push branches.
+- [ ] Create Release 0.8.0-rc2 and initial Issues/Project.

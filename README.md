@@ -1,100 +1,155 @@
-# CollegePortal — стартовый пакет для Codex и VS Code
+# CollegePortal
 
-Проект: веб-портал для колледжа искусств.
+[![CI](https://github.com/sKeepers/CollegePortal/actions/workflows/ci.yml/badge.svg)](https://github.com/sKeepers/CollegePortal/actions/workflows/ci.yml)
 
-Цель: создать единую систему для учета студентов, групп, преподавателей, дисциплин, аудиторий, расписания, посещаемости, оценок, отчетов и дальнейшей интеграции с Moodle, ФРДО и ФИС ГИА.
+CollegePortal is a modular information system for managing educational and administrative processes in a college.
 
-## Рекомендуемый стек
+Current status: **0.8.0-rc2 / Private Release Candidate**. The repository is private and intended for controlled DEV/UAT work. It is not ready for public distribution or production use without a separate security and operations review.
 
-- Backend: Laravel 12, PHP 8.4
-- Frontend: Vue 3, Vite, Pinia, Tailwind CSS
-- База данных: PostgreSQL 17
-- Инфраструктура: Docker, Nginx, Ubuntu Server 24.04
-- Интеграции: Moodle API, LDAP/Active Directory, Telegram/email
+## Purpose
 
-## Как использовать в VS Code
+CollegePortal provides one platform for admissions, student records, academic planning, scheduling, journal work, access control, attendance analytics, HR, reporting and controlled preparation of external reporting data.
 
-1. Распакуйте архив.
-2. Откройте папку `college_portal_codex_starter` в Visual Studio Code.
-3. Установите расширение Codex от OpenAI.
-4. Откройте панель Codex.
-5. Вставьте содержимое файла `CODEX_PROMPT_START.md`.
-6. Попросите Codex начать с этапа 1: архитектура и каркас проекта.
+The project is designed for a Russian СПО / college context and is being developed incrementally as an MVP-first platform.
 
-## Главный файл для Codex
+## Main Modules
 
-- `AGENTS.md` — постоянные инструкции для Codex.
-- `CODEX_PROMPT_START.md` — первый промпт, который нужно вставить в Codex.
-- `PROJECT_BRIEF.md` — описание проекта.
-- `MVP_SPEC.md` — техническое задание первой версии.
-- `DATABASE_SCHEMA_MVP.md` — структура БД MVP.
-- `ROADMAP.md` — план разработки.
-- `TASKS.md` — чек-лист задач.
+- **Person**: unified person foundation for students, teachers, applicants, graduates, users and digital identities.
+- **Admissions and FIS import**: admissions registry, FIS GIA and Admissions XLS import, applicant document registry and bulk operations.
+- **Students, Groups, Teachers, Subjects, Classrooms**: core academic directories and CRUD modules.
+- **HR**: employees, departments, positions, absence calendar and teacher replacement workflow.
+- **Curricula**: Curriculum Engine foundation with normalized semester subjects and hours.
+- **Teaching Load**: generation from curricula, assignment and coverage tracking.
+- **Schedule Engine**: normalized schedule entries, conflict checks, weekly templates and visual editor.
+- **Journal**: schedule-linked electronic journal, attendance, grades, lesson files, completion and signature workflow.
+- **QR and Access Gate**: digital passes, USB HID scanner support, mobile camera scanner and access event reports.
+- **Attendance**: analysis of access events against schedule, daily and historical reports.
+- **Graduation, FRDO, FIS**: preparation, validation, export and status tracking without real external submission.
+- **RBAC**: role and permission matrix with backend middleware and permission-aware UI.
+- **Audit**: centralized audit log for security-relevant actions.
+- **Settings and Reference Data**: administrative settings center and shared reference catalogs.
+- **UAT Center**: role-based testing runs, feedback and private screenshots.
+- **Installer Lifecycle**: install, update, backup, restore, check and uninstall scripts for Ubuntu Server.
 
-## Быстрый старт разработки
+## High-Level Architecture
 
-### Ubuntu Server
+```mermaid
+flowchart LR
+    Browser[Vue 3 + Quasar SPA] --> Nginx[Nginx]
+    Nginx --> API[Laravel REST API]
+    API --> Postgres[(PostgreSQL 17)]
+    API --> Redis[(Redis)]
+    API --> Storage[Private/Public Storage]
+    API --> Audit[Audit Log]
+    API --> Import[Import Handlers]
+    API --> Domain[Domain Services]
+```
 
-Требования на сервере:
+The backend follows Laravel service/resource/request patterns. The frontend uses Vue 3, Vite, Pinia and Quasar components. Docker Compose is used for local and release deployments.
 
-- Docker Engine;
-- Docker Compose plugin;
-- доступ в интернет для загрузки Laravel, Vue и Docker-образов.
+## Technology Stack
 
-Создать локальные env-файлы:
+Backend:
+
+- Laravel 12
+- PHP 8.4
+- PostgreSQL 17
+- Redis
+- REST API
+
+Frontend:
+
+- Vue 3
+- Vite
+- Pinia
+- Quasar
+
+Infrastructure:
+
+- Docker / Docker Compose
+- Nginx
+- Ubuntu Server 24.04 LTS
+
+## System Requirements
+
+Recommended UAT server:
+
+- Ubuntu Server 24.04 LTS amd64
+- 4 vCPU
+- 8 GB RAM minimum, 16 GB recommended
+- 60 GB disk minimum
+- Internet access for package and image downloads during install/build
+
+## Quick Start With Installer
+
+Build or use a release archive from DEV:
 
 ```bash
-cp .env.example .env
+./scripts/release/build-release.sh
 ```
 
-Сгенерировать Laravel 12 в `backend/`, Vue 3/Vite в `frontend/` и собрать Docker-образ backend:
+Install on a clean Ubuntu Server:
 
 ```bash
-chmod +x scripts/*.sh
-./scripts/init-project.sh
+tar -xzf college-portal-0.8.0-rc2.tar.gz
+cd college-portal-0.8.0-rc2
+sudo ./installer/install.sh
 ```
 
-Запустить окружение:
+Check installation:
 
 ```bash
-docker compose up -d
+sudo /opt/college-portal/installer/check.sh
 ```
 
-### Windows
+Lifecycle documentation:
 
-Требования на машине разработчика:
+- `docs/INSTALLATION.md`
+- `docs/UPDATE.md`
+- `docs/BACKUP_RESTORE.md`
+- `docs/UNINSTALL.md`
+- `docs/INSTALLATION_ACCEPTANCE_TEST.md`
+- `docs/UAT_SERVER.md`
 
-- Docker Desktop;
-- PowerShell;
-- доступ в интернет для загрузки Laravel, Vue и Docker-образов.
+## Development
 
-Создать локальные env-файлы:
+DEV work happens in `/srv/college-dev` on the development server. PROD and UAT are not modified without a separate explicit task.
 
-```powershell
-Copy-Item .env.example .env
+Typical checks:
+
+```bash
+docker compose exec -T backend php artisan test
+docker compose exec -T frontend npm run build
 ```
 
-Сгенерировать Laravel 12 в `backend/`, Vue 3/Vite в `frontend/` и собрать Docker-образ backend:
+## Personal Data Rules
 
-```powershell
-.\scripts\init-project.ps1
-```
+Do not commit or upload:
 
-Запустить окружение:
+- `.env` files, passwords, tokens, private keys or certificates;
+- real imports/exports, XLS/XLSX/CSV with college data, dumps or backups;
+- private storage, applicant documents, photos, screenshots with personal data;
+- release archives or runtime files.
 
-```powershell
-docker compose up -d
-```
+Use anonymized fixtures only. Mask passport data, SNILS, addresses, phones and full personal identifiers in previews, logs and documentation.
 
-Адреса после запуска:
+## Documentation Map
 
-- Backend через Nginx: http://localhost:8080
-- Frontend Vite: http://localhost:5173
-- PostgreSQL: localhost:5432
+- Architecture: `docs/ARCHITECTURE_DOCUMENTATION.md`, `docs/DOMAIN_MODEL.md`
+- Identity and Person: `docs/IDENTITY_DOMAIN.md`, `docs/PERSON_MODEL.md`
+- RBAC: `docs/RBAC.md`
+- Audit: `docs/AUDIT_LOG.md`
+- Import: `docs/DATA_IMPORT.md`, `docs/FIS_ADMISSIONS_IMPORT.md`
+- Schedule and Journal: `docs/SCHEDULE_ENGINE.md`, `docs/JOURNAL_ENGINE.md`
+- HR: `docs/HR_DOMAIN.md`, `docs/HR_ABSENCE_CALENDAR.md`, `docs/HR_REPLACEMENTS.md`
+- UAT: `docs/UAT_PLAN.md`, `docs/UAT_EXECUTION_GUIDE.md`, `docs/INSTALLATION_ACCEPTANCE_TEST.md`
 
-Если PowerShell блокирует запуск локального скрипта, выполните из корня проекта:
+## Roadmap To 1.0
 
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\scripts\init-project.ps1
-```
+- 0.8: controlled private UAT, installer validation, role-based testing and data import hardening.
+- 0.9: pilot real data loading, UX hardening, reporting and operational documentation.
+- 1.0: production readiness review, security hardening, backup/restore drills, trusted TLS and controlled deployment process.
+
+## Status
+
+This repository is private. Treat all code, documents and screenshots as internal project material until a separate publication decision is made.

@@ -1158,3 +1158,6 @@ Electronic Journal Foundation adds schedule-linked journal lessons. New normaliz
 ## INFRA-008 Installation Acceptance
 
 INFRA-008 completed on UAT server 192.168.34.17 using release artifact /srv/college-dev/releases/college-portal-0.8.0-rc2.tar.gz (SHA-256 17c360bc88043ad28bb2c5adea7020497affd422788fe94eb7c7326959fca611, build c76e90c). Clean install, API smoke, backup/restore, forced update, rollback via restore, HTTPS smoke, uninstall and reinstall passed with warnings documented in docs/INSTALLATION_ACCEPTANCE_TEST.md.
+## GITHUB-001 GitHub repository preparation
+
+CollegePortal is prepared for private GitHub publication under account `sKeepers`, repository `CollegePortal`. Repository documentation, CI workflow, issue/PR templates, `.gitignore` hardening and pre-push secret audit are documented in `docs/GITHUB_REPOSITORY.md`.
