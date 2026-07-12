@@ -43,6 +43,7 @@ use App\Http\Controllers\Api\SpecialtyController;
 use App\Http\Controllers\Api\TeacherController;
 use App\Http\Controllers\Api\UniversalImportController;
 use App\Http\Controllers\Api\TeachingLoadController;
+use App\Http\Controllers\Api\UatController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('auth/login', [AuthController::class, 'login']);
@@ -60,7 +61,22 @@ Route::middleware('api.token')->group(function (): void {
     Route::put('dashboard/layouts/{dashboardLayout}', [DashboardLayoutController::class, 'update']);
     Route::delete('dashboard/layouts/{dashboardLayout}', [DashboardLayoutController::class, 'destroy']);
     Route::post('dashboard/layouts/{dashboardLayout}/activate', [DashboardLayoutController::class, 'activate']);
+    Route::post('uat/feedback', [UatController::class, 'storeFeedback']);
 
+    Route::middleware('permission:uat.manage')->group(function (): void {
+        Route::get('admin/uat/config', [UatController::class, 'config']);
+        Route::get('admin/uat/runs', [UatController::class, 'runs']);
+        Route::post('admin/uat/runs', [UatController::class, 'storeRun']);
+        Route::get('admin/uat/runs/{run}', [UatController::class, 'showRun']);
+        Route::post('admin/uat/runs/{run}/complete', [UatController::class, 'completeRun']);
+        Route::post('admin/uat/runs/{run}/results/{result}', [UatController::class, 'updateResult']);
+        Route::get('admin/uat/results/{result}/screenshot', [UatController::class, 'downloadResultScreenshot']);
+        Route::get('admin/uat/feedback', [UatController::class, 'feedback']);
+        Route::put('admin/uat/feedback/{feedback}', [UatController::class, 'updateFeedback']);
+        Route::get('admin/uat/feedback/{feedback}/screenshot', [UatController::class, 'downloadFeedbackScreenshot']);
+        Route::get('admin/uat/export/results.csv', [UatController::class, 'exportRuns']);
+        Route::get('admin/uat/export/feedback.csv', [UatController::class, 'exportIssues']);
+    });
 
     Route::middleware('permission:people.view')->group(function (): void {
         Route::get('people', [PersonController::class, 'index']);

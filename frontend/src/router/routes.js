@@ -37,6 +37,7 @@ const PermissionsPage = () => import('../pages/admin/permissions/PermissionsPage
 const AuditPage = () => import('../pages/admin/audit/AuditPage.vue')
 const SettingsPage = () => import('../pages/admin/settings/SettingsPage.vue')
 const ReferenceDataPage = () => import('../pages/admin/reference/ReferenceDataPage.vue')
+const UatPage = () => import('../pages/admin/uat/UatPage.vue')
 const MobileStudentHomePage = () => import('../pages/mobile/student/MobileStudentHomePage.vue')
 const MobileStudentPassPage = () => import('../pages/mobile/student/MobileStudentPassPage.vue')
 
@@ -292,6 +293,12 @@ export const routes = [
         name: 'admin-data-management',
         component: DataManagementPage,
         meta: { title: 'Управление данными', permission: 'import.manage' },
+      },
+      {
+        path: 'admin/uat',
+        name: 'admin-uat',
+        component: UatPage,
+        meta: { title: 'UAT', permission: 'uat.manage' },
       },
       {
         path: 'system/ui-foundation',

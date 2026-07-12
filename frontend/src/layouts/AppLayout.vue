@@ -24,6 +24,7 @@ import {
   UserCog,
   UserRound,
   UsersRound,
+  MessageSquareWarning,
 } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import { useWorkspaceStore } from '../stores/workspace'
@@ -33,6 +34,7 @@ import { getEnvironmentCssVars } from '../services/environmentService'
 import GlobalSearch from '../components/search/GlobalSearch.vue'
 import EnvironmentBadge from '../components/system/EnvironmentBadge.vue'
 import SystemInfoPanel from '../components/system/SystemInfoPanel.vue'
+import UatFeedbackDialog from '../components/uat/UatFeedbackDialog.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -41,6 +43,7 @@ const workspace = useWorkspaceStore()
 const settingsStore = useSettingsStore()
 useLayoutService()
 const drawerOpen = ref(true)
+const feedbackOpen = ref(false)
 
 const navGroups = [
   {
@@ -107,6 +110,7 @@ const navGroups = [
       { label: 'Справочники', to: '/admin/reference', icon: Tags, permission: 'reference.manage' },
       { label: 'Импорт данных', to: '/admin/import', icon: FileSpreadsheet, permission: 'import.manage' },
       { label: 'Управление данными', to: '/admin/data-management', icon: Database, permission: 'import.manage' },
+      { label: 'UAT', to: '/admin/uat', icon: MessageSquareWarning, permission: 'uat.manage' },
       { label: 'UI Foundation', to: '/system/ui-foundation', icon: Settings, adminOnly: true },
     ],
   },
@@ -184,6 +188,10 @@ watch(
         </q-toolbar-title>
 
         <div class="cp-topbar-tools">
+          <q-btn flat no-caps color="primary" @click="feedbackOpen = true">
+            <MessageSquareWarning :size="16" />
+            <span>Сообщить о проблеме</span>
+          </q-btn>
           <EnvironmentBadge />
           <GlobalSearch />
         </div>
@@ -253,6 +261,8 @@ watch(
 
       <SystemInfoPanel />
     </q-drawer>
+
+    <UatFeedbackDialog v-model="feedbackOpen" />
 
     <q-page-container>
       <q-page class="cp-page">

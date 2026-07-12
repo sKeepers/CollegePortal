@@ -713,3 +713,12 @@
 - [x] Добавить контрольный режим для учебной части.
 - [x] Обновить Dashboard преподавателя.
 - [x] Добавить тесты, документацию и CSV exports.
+
+## UAT-003
+
+- [x] Добавить `/admin/uat`.
+- [x] Добавить UAT test runs/results и feedback registry.
+- [x] Добавить сценарии по ролям и UAT-аккаунты без паролей.
+- [x] Добавить кнопку `Сообщить о проблеме`.
+- [x] Добавить private screenshots и CSV exports.
+- [x] Создать role guides и feedback process docs.

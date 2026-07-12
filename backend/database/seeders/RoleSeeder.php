@@ -147,6 +147,7 @@ class RoleSeeder extends Seeder
             ['module' => 'System', 'code' => 'permissions.manage', 'name' => 'Разрешения: управление', 'description' => 'Управление матрицей разрешений.'],
             ['module' => 'System', 'code' => 'settings.manage', 'name' => 'Настройки: управление', 'description' => 'Управление настройками колледжа.'],
             ['module' => 'System', 'code' => 'audit.view', 'name' => 'Аудит: просмотр', 'description' => 'Просмотр журнала аудита.'],
+            ['module' => 'UAT', 'code' => 'uat.manage', 'name' => 'UAT: управление', 'description' => 'Управление закрытым пользовательским тестированием и реестром замечаний.'],
             ['module' => 'System', 'code' => 'reference.manage', 'name' => 'Справочники: управление', 'description' => 'Управление нормативно-справочной информацией.'],
             ['module' => 'System', 'code' => 'import.manage', 'name' => 'Импорт: управление', 'description' => 'Универсальный импорт и демо-данные.'],
             ['module' => 'System', 'code' => 'ui.foundation.view', 'name' => 'UI Foundation: просмотр', 'description' => 'Просмотр витрины UI-компонентов.'],
@@ -167,7 +168,7 @@ class RoleSeeder extends Seeder
             'dashboard.view', 'people.view', 'students.view', 'groups.view', 'teachers.view', 'subjects.view', 'classrooms.view',
             'schedule.view', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.view_all', 'journal.export', 'attendance.view', 'attendance.reports',
             'admissions.view', 'admissions.documents.view', 'admissions.documents.download', 'admissions.bulk_export', 'curricula.view', 'curricula.subjects.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'graduation.view',
-            'frdo.view', 'fis.view', 'gate.reports', 'audit.view', 'reference.manage', 'view_reports',
+            'frdo.view', 'fis.view', 'gate.reports', 'audit.view', 'reference.manage', 'uat.manage', 'view_reports',
         ];
     }
 
@@ -183,7 +184,7 @@ class RoleSeeder extends Seeder
             'attendance.view', 'attendance.reports', 'admissions.documents.view', 'curricula.view', 'curricula.edit', 'curricula.subjects.view', 'curricula.subjects.create', 'curricula.subjects.update', 'curricula.subjects.delete',
             'teachingload.view', 'teachingload.edit', 'teaching_load.generate', 'teaching_load.assign', 'teaching_load.bulk_assign', 'teaching_load.view_coverage', 'exams.view', 'exams.edit',
             'graduation.view', 'graduation.edit', 'people.update', 'people.link', 'frdo.view', 'fis.view', 'reference.manage', 'import.manage',
-            'manage_dictionaries', 'manage_schedule', 'manage_journal', 'view_reports',
+            'manage_dictionaries', 'manage_schedule', 'manage_journal', 'uat.manage', 'view_reports',
         ];
     }
 

@@ -1142,3 +1142,7 @@ Electronic Journal Foundation adds schedule-linked journal lessons. New normaliz
 ## ST-003B Teacher Journal Workspace
 
 `/journal` now acts as a teacher workspace: modes for own lessons, tomorrow/week/completed/not-filled/signed, study office control mode, selected lesson student table, attendance suggestion preview, grade editing, lesson files, completion/signature and reopen workflow. Teacher Dashboard uses journal lessons for today's work and signature/fill indicators.
+
+## UAT-003 Role-based UAT
+
+Добавлен `/admin/uat` для закрытого пользовательского тестирования по ролям. Реестр хранит UAT-прогоны, результаты сценариев, скриншоты в private storage и feedback registry. В topbar добавлена кнопка `Сообщить о проблеме` с автоподстановкой URL, роли, версии, build и environment.
