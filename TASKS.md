@@ -733,3 +733,14 @@
 - Добавлен импорт сотрудников через `/admin/import`.
 - Schedule Engine показывает warning при недоступности преподавателя по кадровым данным.
 - Добавлены документы `docs/HR_DOMAIN.md` и `docs/HR_USER_GUIDE.md`.
+
+## HR-001B: HR absence calendar and teacher replacements
+
+Статус: выполнено.
+
+- Добавлен `/hr/calendar`.
+- Добавлен lifecycle кадрового периода.
+- Добавлен preview/apply/cancel для отсутствий.
+- Добавлены affected lessons, replacement candidates, replacement preview/apply.
+- Добавлены HR events, RBAC, Audit, CSV report.
+- Добавлена документация `HR_ABSENCE_CALENDAR.md` и `HR_REPLACEMENTS.md`.

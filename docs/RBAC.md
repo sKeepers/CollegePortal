@@ -223,3 +223,9 @@ Teacher workspace uses existing `journal.*` permissions with stricter UI behavio
 Добавлена роль `hr` и permissions: `hr.employees.view`, `hr.employees.create`, `hr.employees.update`, `hr.employees.dismiss`, `hr.assignments.manage`, `hr.statuses.manage`, `hr.departments.manage`, `hr.positions.manage`, `hr.documents.view`, `hr.reports.view`.
 
 Матрица: `admin` получает все права; `hr` управляет кадровым контуром; `director` получает просмотр сотрудников и HR-отчеты; `deputy/study/academic_office` получают просмотр сотрудников, управление статусами и HR-отчеты; `teacher/student/security/admission` не получают общий доступ к HR-списку.
+
+## HR-001B permissions
+
+Добавлены permissions: `hr.calendar.view`, `hr.calendar.manage`, `hr.absences.manage`, `hr.dismissals.manage`, `hr.replacements.view`, `hr.replacements.manage`, `hr.reports.view`.
+
+Роли: `hr` управляет календарем и заменами; `deputy/study/academic_office` видят отсутствия и управляют заменами; `director` видит календарь и отчеты; `teacher` получает read-only доступ только к собственным периодам; `student/security/admission` доступа не имеют.

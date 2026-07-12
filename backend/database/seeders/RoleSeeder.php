@@ -155,6 +155,12 @@ class RoleSeeder extends Seeder
             ['module' => 'HR', 'code' => 'hr.positions.manage', 'name' => 'Кадры: должности', 'description' => 'Управление должностями.'],
             ['module' => 'HR', 'code' => 'hr.documents.view', 'name' => 'Кадры: документы просмотр', 'description' => 'Просмотр кадровых документов.'],
             ['module' => 'HR', 'code' => 'hr.reports.view', 'name' => 'Кадры: отчеты', 'description' => 'Просмотр кадровых отчетов.'],
+            ['module' => 'HR', 'code' => 'hr.calendar.view', 'name' => 'Кадры: календарь просмотр', 'description' => 'Просмотр календаря отсутствий.'],
+            ['module' => 'HR', 'code' => 'hr.calendar.manage', 'name' => 'Кадры: календарь управление', 'description' => 'Управление кадровым календарем.'],
+            ['module' => 'HR', 'code' => 'hr.absences.manage', 'name' => 'Кадры: отсутствия', 'description' => 'Preview/apply отпусков, больничных, командировок и отстранений.'],
+            ['module' => 'HR', 'code' => 'hr.dismissals.manage', 'name' => 'Кадры: увольнения', 'description' => 'Управление периодами увольнения.'],
+            ['module' => 'HR', 'code' => 'hr.replacements.view', 'name' => 'Кадры: замены просмотр', 'description' => 'Просмотр кандидатов и затронутых занятий.'],
+            ['module' => 'HR', 'code' => 'hr.replacements.manage', 'name' => 'Кадры: замены управление', 'description' => 'Назначение замен преподавателей.'],
             ['module' => 'System', 'code' => 'users.manage', 'name' => 'Пользователи: управление', 'description' => 'Управление пользователями.'],
             ['module' => 'System', 'code' => 'roles.manage', 'name' => 'Роли: управление', 'description' => 'Управление ролями.'],
             ['module' => 'System', 'code' => 'permissions.manage', 'name' => 'Разрешения: управление', 'description' => 'Управление матрицей разрешений.'],
@@ -181,7 +187,7 @@ class RoleSeeder extends Seeder
             'dashboard.view', 'people.view', 'students.view', 'groups.view', 'teachers.view', 'subjects.view', 'classrooms.view',
             'schedule.view', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.view_all', 'journal.export', 'attendance.view', 'attendance.reports',
             'admissions.view', 'admissions.documents.view', 'admissions.documents.download', 'admissions.bulk_export', 'curricula.view', 'curricula.subjects.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'graduation.view',
-            'frdo.view', 'fis.view', 'gate.reports', 'audit.view', 'reference.manage', 'uat.manage', 'hr.employees.view', 'hr.reports.view', 'view_reports',
+            'frdo.view', 'fis.view', 'gate.reports', 'audit.view', 'reference.manage', 'uat.manage', 'hr.employees.view', 'hr.calendar.view', 'hr.replacements.view', 'hr.reports.view', 'view_reports',
         ];
     }
 
@@ -197,13 +203,13 @@ class RoleSeeder extends Seeder
             'attendance.view', 'attendance.reports', 'admissions.documents.view', 'curricula.view', 'curricula.edit', 'curricula.subjects.view', 'curricula.subjects.create', 'curricula.subjects.update', 'curricula.subjects.delete',
             'teachingload.view', 'teachingload.edit', 'teaching_load.generate', 'teaching_load.assign', 'teaching_load.bulk_assign', 'teaching_load.view_coverage', 'exams.view', 'exams.edit',
             'graduation.view', 'graduation.edit', 'people.update', 'people.link', 'frdo.view', 'fis.view', 'reference.manage', 'import.manage',
-            'manage_dictionaries', 'manage_schedule', 'manage_journal', 'uat.manage', 'hr.employees.view', 'hr.statuses.manage', 'hr.reports.view', 'view_reports',
+            'manage_dictionaries', 'manage_schedule', 'manage_journal', 'uat.manage', 'hr.employees.view', 'hr.calendar.view', 'hr.statuses.manage', 'hr.replacements.view', 'hr.replacements.manage', 'hr.reports.view', 'view_reports',
         ];
     }
 
     private function hrPermissions(): array
     {
-        return ['dashboard.view', 'people.view', 'hr.employees.view', 'hr.employees.create', 'hr.employees.update', 'hr.employees.dismiss', 'hr.assignments.manage', 'hr.statuses.manage', 'hr.departments.manage', 'hr.positions.manage', 'hr.documents.view', 'hr.reports.view', 'teachers.view', 'schedule.view', 'attendance.reports', 'import.manage', 'view_reports'];
+        return ['dashboard.view', 'people.view', 'hr.employees.view', 'hr.employees.create', 'hr.employees.update', 'hr.employees.dismiss', 'hr.assignments.manage', 'hr.statuses.manage', 'hr.departments.manage', 'hr.positions.manage', 'hr.documents.view', 'hr.calendar.view', 'hr.calendar.manage', 'hr.absences.manage', 'hr.dismissals.manage', 'hr.replacements.view', 'hr.replacements.manage', 'hr.reports.view', 'teachers.view', 'schedule.view', 'attendance.reports', 'import.manage', 'view_reports'];
     }
 
     private function admissionPermissions(): array
@@ -213,7 +219,7 @@ class RoleSeeder extends Seeder
 
     private function teacherPermissions(): array
     {
-        return ['dashboard.view', 'schedule.view', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.export', 'attendance.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'digitalpasses.manage', 'view_own_data', 'manage_journal'];
+        return ['dashboard.view', 'hr.calendar.view', 'schedule.view', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.export', 'attendance.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'digitalpasses.manage', 'view_own_data', 'manage_journal'];
     }
 
     private function studentPermissions(): array

@@ -342,7 +342,7 @@ class ScheduleEngineService
             if (! $loadItem->teacher_id) {
                 $conflicts[] = $this->conflict('teacher_assignment', 'warning', 'В строке нагрузки преподаватель еще не назначен.', $entry);
             } elseif ((int) $loadItem->teacher_id !== (int) $entry['teacher_id']) {
-                $conflicts[] = $this->conflict('teacher_assignment', 'blocking', 'Преподаватель не соответствует назначению в нагрузке.', $entry);
+                $conflicts[] = $this->conflict('teacher_assignment', ! empty($entry['is_replacement']) ? 'warning' : 'blocking', 'Преподаватель не соответствует назначению в нагрузке.', $entry);
             }
             $planned = (int) ($loadItem->planned_hours ?: $loadItem->hours_total);
             $scheduled = $this->scheduledHoursForItem($loadItem->id, $ignoreEntryId) + $this->academicHours($entry['starts_at'], $entry['ends_at']);

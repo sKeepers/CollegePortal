@@ -1150,3 +1150,7 @@ Electronic Journal Foundation adds schedule-linked journal lessons. New normaliz
 ## HR-001A: кадровый контур сотрудников
 
 Добавлен HR Domain MVP: Employee, Department, Position, EmployeeAssignment и EmployeeStatusPeriod. Employee связан с Person Foundation и может быть связан с Teacher через общий person_id. Добавлены маршруты `/hr/employees`, `/hr/departments`, `/hr/positions`, HR permissions, импорт сотрудников и read-only warning расписания при кадровой недоступности преподавателя.
+
+## HR-001B: кадровый календарь и замены
+
+Добавлен `/hr/calendar`, lifecycle кадрового периода, внутренние HR events, preview/apply кадровых периодов, поиск затронутых занятий и flow назначения замен преподавателей через Schedule Engine. Dashboard дополнен кадровыми KPI отсутствий и занятий без замены.

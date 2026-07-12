@@ -43,6 +43,65 @@ export const useHrStore = defineStore('hr', () => {
   const saving = ref(false)
   const error = ref('')
 
+  const calendar = ref({ periods: [], summary: {} })
+  const affectedLessons = ref([])
+  const candidates = ref([])
+  const replacementPreview = ref(null)
+
+  async function loadCalendar(params = {}) {
+    loading.value = true
+    error.value = ''
+    try {
+      const payload = await api.list('hr/calendar', params)
+      calendar.value = payload?.data || { periods: [], summary: {} }
+      return calendar.value
+    } catch (err) {
+      error.value = err.message || 'Не удалось загрузить кадровый календарь'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function previewPeriod(employeeId, payload) {
+    return api.create(`hr/employees/${employeeId}/status-periods/preview`, payload)
+  }
+
+  async function applyPeriod(employeeId, payload) {
+    const response = await api.create(`hr/employees/${employeeId}/status-periods/apply`, payload)
+    await loadEmployees()
+    return response?.data || response
+  }
+
+  async function cancelPeriod(periodId, reason = '') {
+    const response = await api.create(`hr/status-periods/${periodId}/cancel`, { reason })
+    await loadEmployees()
+    return response?.data || response
+  }
+
+  async function loadAffectedLessons(periodId) {
+    const payload = await api.list(`hr/status-periods/${periodId}/affected-lessons`)
+    affectedLessons.value = rows(payload)
+    return affectedLessons.value
+  }
+
+  async function loadReplacementCandidates(scheduleEntryId, employeeId) {
+    const payload = await api.list(`hr/replacements/candidates/${scheduleEntryId}/${employeeId}`)
+    candidates.value = rows(payload)
+    return candidates.value
+  }
+
+  async function previewReplacements(items) {
+    replacementPreview.value = await api.create('hr/replacements/preview', { items })
+    return replacementPreview.value
+  }
+
+  async function applyReplacements(items) {
+    const response = await api.create('hr/replacements/apply', { items })
+    replacementPreview.value = null
+    return response?.data || response
+  }
+
   const selectedEmployee = computed(() => employees.value.find((item) => Number(item.id) === Number(selectedId.value)) || null)
   const departmentOptions = computed(() => departments.value.map((item) => ({ label: item.name, value: item.id })))
   const positionOptions = computed(() => positions.value.map((item) => ({ label: item.name, value: item.id })))
@@ -172,5 +231,17 @@ export const useHrStore = defineStore('hr', () => {
     removePosition,
     addAssignment,
     addStatusPeriod,
+    calendar,
+    affectedLessons,
+    candidates,
+    replacementPreview,
+    loadCalendar,
+    previewPeriod,
+    applyPeriod,
+    cancelPeriod,
+    loadAffectedLessons,
+    loadReplacementCandidates,
+    previewReplacements,
+    applyReplacements,
   }
 })

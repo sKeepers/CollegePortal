@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\ApplicantApplicationController;
 use App\Http\Controllers\Api\ApplicantDocumentController;
 use App\Http\Controllers\Api\AdmissionBulkController;
 use App\Http\Controllers\Api\GroupController;
+use App\Http\Controllers\Api\HrCalendarController;
 use App\Http\Controllers\Api\MobileStudentController;
 use App\Http\Controllers\Api\PersonController;
 use App\Http\Controllers\Api\PositionController;
@@ -97,6 +98,22 @@ Route::middleware('api.token')->group(function (): void {
         Route::put('employee-status-periods/{period}', [EmployeeController::class, 'updateStatusPeriod'])->middleware('permission:hr.statuses.manage');
         Route::patch('employee-status-periods/{period}', [EmployeeController::class, 'updateStatusPeriod'])->middleware('permission:hr.statuses.manage');
         Route::delete('employee-status-periods/{period}', [EmployeeController::class, 'destroyStatusPeriod'])->middleware('permission:hr.statuses.manage');
+    });
+    Route::middleware('permission:hr.calendar.view')->group(function (): void {
+        Route::get('hr/calendar', [HrCalendarController::class, 'calendar']);
+        Route::get('hr/reports/absences', [HrCalendarController::class, 'report'])->middleware('permission:hr.reports.view');
+        Route::get('hr/reports/absences.csv', [HrCalendarController::class, 'export'])->middleware('permission:hr.reports.view');
+        Route::get('hr/status-periods/{period}/affected-lessons', [HrCalendarController::class, 'affectedLessons']);
+        Route::get('hr/replacements/candidates/{scheduleEntry}/{employee}', [HrCalendarController::class, 'candidates'])->middleware('permission:hr.replacements.view');
+    });
+    Route::middleware('permission:hr.absences.manage')->group(function (): void {
+        Route::post('hr/employees/{employee}/status-periods/preview', [HrCalendarController::class, 'previewPeriod']);
+        Route::post('hr/employees/{employee}/status-periods/apply', [HrCalendarController::class, 'applyPeriod']);
+        Route::post('hr/status-periods/{period}/cancel', [HrCalendarController::class, 'cancelPeriod']);
+    });
+    Route::middleware('permission:hr.replacements.manage')->group(function (): void {
+        Route::post('hr/replacements/preview', [HrCalendarController::class, 'replacementPreview']);
+        Route::post('hr/replacements/apply', [HrCalendarController::class, 'replacementApply']);
     });
     Route::middleware('permission:hr.employees.view')->group(function (): void {
         Route::get('departments', [DepartmentController::class, 'index']);

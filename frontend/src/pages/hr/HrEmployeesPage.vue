@@ -113,6 +113,7 @@ const quickActions = computed(() => selected.value ? [
   selected.value.teacher?.id ? { label: 'Расписание', to: `/schedule?teacher_id=${selected.value.teacher.id}` } : null,
   selected.value.teacher?.id ? { label: 'Нагрузка', to: `/teaching-load?teacher_id=${selected.value.teacher.id}` } : null,
   { label: 'История проходов', to: `/access/reports?type=employee&person_id=${selected.value.person_id}` },
+  { label: 'Кадровый календарь', to: `/hr/calendar?employee_id=${selected.value.id}` },
 ].filter(Boolean) : [])
 
 function statusLabel(value) {
@@ -356,11 +357,11 @@ watch(() => route.path, (path) => {
             </q-list>
           </q-tab-panel>
           <q-tab-panel name="statuses" class="q-px-none">
-            <q-btn v-if="canManageStatuses" color="primary" no-caps class="q-mb-sm" @click="openStatusDialog()">Добавить период</q-btn>
+            <div class="q-gutter-sm q-mb-sm"><q-btn v-if="canManageStatuses" color="primary" no-caps @click="openStatusDialog()">Добавить период</q-btn><q-btn outline no-caps color="primary" to="/hr/calendar">Открыть календарь</q-btn></div>
             <q-list bordered separator class="rounded-borders">
               <q-item v-for="item in selected.status_periods || []" :key="item.id">
                 <q-item-section>
-                  <q-item-label>{{ statusLabel(item.status) }}</q-item-label>
+                  <q-item-label>{{ statusLabel(item.status) }} · {{ item.period_status || 'planned' }}</q-item-label>
                   <q-item-label caption>{{ formatDate(item.date_from) }} — {{ formatDate(item.date_to) }} · {{ item.reason || 'Без причины' }}</q-item-label>
                 </q-item-section>
               </q-item>

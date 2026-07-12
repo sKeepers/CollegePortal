@@ -39,6 +39,7 @@ const SettingsPage = () => import('../pages/admin/settings/SettingsPage.vue')
 const ReferenceDataPage = () => import('../pages/admin/reference/ReferenceDataPage.vue')
 const UatPage = () => import('../pages/admin/uat/UatPage.vue')
 const HrEmployeesPage = () => import('../pages/hr/HrEmployeesPage.vue')
+const HrCalendarPage = () => import('../pages/hr/HrCalendarPage.vue')
 const MobileStudentHomePage = () => import('../pages/mobile/student/MobileStudentHomePage.vue')
 const MobileStudentPassPage = () => import('../pages/mobile/student/MobileStudentPassPage.vue')
 
@@ -222,6 +223,12 @@ export const routes = [
         name: 'hr-employees',
         component: HrEmployeesPage,
         meta: { title: 'Сотрудники', permission: 'hr.employees.view' },
+      },
+      {
+        path: 'hr/calendar',
+        name: 'hr-calendar',
+        component: HrCalendarPage,
+        meta: { title: 'Кадровый календарь', permission: 'hr.calendar.view' },
       },
       {
         path: 'hr/departments',

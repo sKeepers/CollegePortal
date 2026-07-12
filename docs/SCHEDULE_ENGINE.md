@@ -111,3 +111,7 @@ Schedule Engine entries can now be opened as electronic journal lessons. Journal
 ## HR warnings
 
 Schedule Engine учитывает кадровые статусы преподавателей read-only. Если связанный Employee находится в отпуске, на больничном, в командировке, отстранен или уволен на дату занятия, preview возвращает warning `teacher_hr_unavailable`. Система не отменяет занятие автоматически.
+
+## HR replacements
+
+HR replacement flow использует существующий Schedule Engine replacement endpoint. Для `is_replacement=true` несоответствие преподавателя строке нагрузки считается warning, а не blocking, потому что замена намеренно отличается от исходного назначения.

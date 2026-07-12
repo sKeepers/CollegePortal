@@ -94,6 +94,7 @@ const navGroups = [
     label: 'Отдел кадров',
     items: [
       { label: 'Сотрудники', to: '/hr/employees', icon: BriefcaseBusiness, permission: 'hr.employees.view' },
+      { label: 'Календарь', to: '/hr/calendar', icon: CalendarDays, permission: 'hr.calendar.view' },
       { label: 'Подразделения', to: '/hr/departments', icon: Building2, permission: 'hr.departments.manage' },
       { label: 'Должности', to: '/hr/positions', icon: UserCog, permission: 'hr.positions.manage' },
     ],

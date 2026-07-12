@@ -78,6 +78,8 @@ const statItems = computed(() => [
   { label: 'Преподавателей', value: teachers.value.teachers_total || 0, icon: UserRound },
   { label: 'Сотрудников', value: hr.value.employees_total || 0, icon: BriefcaseBusiness },
   { label: 'Активных сотрудников', value: hr.value.employees_active || 0, icon: BriefcaseBusiness },
+  { label: 'Отсутствуют сегодня', value: hr.value.absence_calendar?.absent_today || 0, icon: BriefcaseBusiness },
+  { label: 'Занятия без замены', value: hr.value.absence_calendar?.lessons_without_replacement || 0, icon: CalendarDays },
   { label: 'Занятий сегодня', value: learning.value.lessons_today || 0, icon: BookOpenCheck },
   { label: 'Экзаменов сегодня', value: learning.value.exams_today || 0, icon: CalendarDays },
   { label: 'Свободных аудиторий', value: learning.value.free_classrooms || 0, icon: DoorOpen },
@@ -100,6 +102,7 @@ const quickActionsSource = [
   { label: 'ФИС', description: 'Пакеты приема и ГИА', icon: FileWarning, to: '/fis' },
   { label: 'Аудит', description: 'Действия пользователей', icon: ScrollText, to: '/admin/audit' },
   { label: 'Сотрудники', description: 'Кадровый контур', icon: BriefcaseBusiness, to: '/hr/employees' },
+  { label: 'Календарь HR', description: 'Отсутствия и замены', icon: CalendarDays, to: '/hr/calendar' },
 ]
 
 const quickActionPermissions = {
@@ -113,6 +116,7 @@ const quickActionPermissions = {
   '/fis': 'fis.view',
   '/admin/audit': 'audit.view',
   '/hr/employees': 'hr.employees.view',
+  '/hr/calendar': 'hr.calendar.view',
 }
 const quickActions = computed(() => quickActionsSource.filter((action) => !quickActionPermissions[action.to] || auth.can(quickActionPermissions[action.to])))
 

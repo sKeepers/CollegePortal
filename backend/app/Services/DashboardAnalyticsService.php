@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\File;
 
 class DashboardAnalyticsService
 {
-    public function __construct(private readonly AttendanceAnalysisService $attendanceAnalysis)
+    public function __construct(private readonly AttendanceAnalysisService $attendanceAnalysis, private readonly HrAbsenceService $hrAbsence)
     {
     }
 
@@ -84,6 +84,7 @@ class DashboardAnalyticsService
                         'employees_active' => Employee::query()->whereNull('dismissed_at')->where('status', '!=', 'dismissed')->count(),
                         'employees_unavailable' => Employee::query()->whereIn('status', Employee::UNAVAILABLE_STATUSES)->count(),
                         'employees_dismissed' => Employee::query()->where(fn ($query) => $query->whereNotNull('dismissed_at')->orWhere('status', 'dismissed'))->count(),
+                        'absence_calendar' => $this->hrAbsence->dashboardKpi(),
                     ],
                     'learning' => [
                         'lessons_today' => ScheduleLesson::query()->whereDate('lesson_date', $today)->count(),
