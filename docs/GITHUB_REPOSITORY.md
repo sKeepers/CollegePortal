@@ -44,3 +44,33 @@ Result: no leaks found by gitleaks. The only tracked XLSX files are official ext
 ## Release
 
 GitHub Release `v0.8.0-rc2` should be private-repository release notes for the validated RC. The source release archive remains generated from `/srv/college-dev` and must be reviewed before attaching as a release asset.
+
+
+## Publication Result
+
+- Repository: `https://github.com/sKeepers/CollegePortal`
+- Visibility: private
+- Remote: `https://github.com/sKeepers/CollegePortal.git`
+- Branches pushed: `develop`, `main`
+- Default branch: `develop`
+- Latest pushed development commit: `c71b92b`
+- Release tag: `v0.8.0-rc2`
+- Release URL: `https://github.com/sKeepers/CollegePortal/releases/tag/v0.8.0-rc2`
+- Initial issues: #1 through #5
+- CI status after workflow fix: success on `develop` and `main`
+
+## GitHub Project Status
+
+GitHub Projects v2 was not created because the current GitHub CLI token does not include `project` and `read:project` scopes. Classic repo project API also returned unavailable.
+
+To complete this item, run outside the project directory if needed:
+
+```bash
+gh auth refresh -s project,read:project
+```
+
+Then create the project:
+
+```bash
+gh project create --owner sKeepers --title "CollegePortal Roadmap"
+```

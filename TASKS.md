@@ -758,5 +758,6 @@
 - [x] Add repository README, vision, security, support, governance, contributing and changelog documents.
 - [x] Add CI workflow and GitHub issue/PR templates.
 - [x] Run pre-push secret audit with git scans and gitleaks.
-- [ ] Create private GitHub repository and push branches.
-- [ ] Create Release 0.8.0-rc2 and initial Issues/Project.
+- [x] Create private GitHub repository and push `develop` / `main`.
+- [x] Create Release 0.8.0-rc2 and initial Issues.
+- [ ] Create GitHub Project after refreshing gh scopes: `gh auth refresh -s project,read:project`.
