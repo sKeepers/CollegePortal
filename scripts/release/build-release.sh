@@ -29,6 +29,16 @@ cat > "${tmp}/release-metadata.json" <<JSON
   "buildDate": "${build_date}"
 }
 JSON
+cat > "${tmp}/frontend/public/version.json" <<JSON
+{
+  "name": "${name}",
+  "version": "${version}",
+  "release": "${release}",
+  "build": "${commit}",
+  "buildDate": "${build_date}",
+  "environment": "production"
+}
+JSON
 rm -rf "${tmp}/.env" "${tmp}/backend/.env" "${tmp}/frontend/.env" "${tmp}/node_modules" "${tmp}/vendor" "${tmp}/frontend/dist" "${tmp}/tmp" "${tmp}/logs" "${tmp}/certs" "${tmp}/releases"
 tar -czf "${archive}" -C "${tmp}" .
 sha256sum "${archive}" > "${checksum}"

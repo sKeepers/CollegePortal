@@ -744,3 +744,10 @@
 - Добавлены affected lessons, replacement candidates, replacement preview/apply.
 - Добавлены HR events, RBAC, Audit, CSV report.
 - Добавлена документация `HR_ABSENCE_CALENDAR.md` и `HR_REPLACEMENTS.md`.
+
+## INFRA-008
+
+- [x] Validate autonomous installer on clean UAT server.
+- [x] Verify health, API smoke, backup/restore, update, rollback, HTTPS smoke, uninstall and reinstall.
+- [x] Document UAT server and acceptance results.
+- [ ] Improve repeated-install message to mention existing installation in addition to occupied ports.
