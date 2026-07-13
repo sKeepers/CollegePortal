@@ -201,3 +201,6 @@
 ## ФИС ГИА и Приема
 
 Для заявлений абитуриентов используется специализированный источник `ФИС ГИА и Приема` на странице `/admin/import`. Он читает `.xls/.xlsx`, выполняет analyze/dry-run/apply, использует Person Foundation и не сохраняет паспортные данные в открытом виде. Подробности: `docs/FIS_ADMISSIONS_IMPORT.md`.
+## Контингент студентов из DOC
+
+Добавлен специализированный источник `student_contingent_doc` для действующего контингента студентов. Поток: upload -> analyze -> review XLSX -> dry-run -> apply. Исходный DOC и производные CSV/XLSX/JSON хранятся только в private storage `backend/storage/app/private/imports/students/` и не коммитятся. Подробности: `docs/STUDENT_CONTINGENT_IMPORT.md`.

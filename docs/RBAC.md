@@ -234,3 +234,6 @@ Teacher workspace uses existing `journal.*` permissions with stricter UI behavio
 ## FIS Outbound Permissions
 
 Added permissions: `fis.outbound.view`, `fis.outbound.create`, `fis.outbound.generate`, `fis.outbound.validate`, `fis.outbound.send_test`, `fis.outbound.send_production`, `fis.outbound.status`, `fis.outbound.download`, `fis.settings.manage`. Production send is feature-flagged and not active in FIS-API-001.
+## Student contingent import permissions
+
+Для импорта действующего контингента используются отдельные permissions: `students.import_contingent`, `students.import_contingent_review`, `students.import_contingent_apply`, `students.view_private_contacts`. `admin` получает полный доступ, `deputy/study/academic_office` получают upload/review/apply в рамках учебной части. Apply защищен отдельным permission и backend-проверками dry-run.

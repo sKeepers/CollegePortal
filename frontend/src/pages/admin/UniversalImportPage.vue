@@ -21,6 +21,7 @@ const dataType = ref('students')
 const mode = ref('skip_duplicates')
 const file = ref(null)
 const fisFile = ref(null)
+const studentContingentFile = ref(null)
 const mapping = reactive({})
 const previewColumns = computed(() => (store.currentJob?.headers || []).map((header) => ({ name: header, label: header, field: header, align: 'left' })))
 const historyColumns = [
@@ -35,7 +36,10 @@ const fieldOptions = computed(() => (selectedTypeConfig.value?.fields || []).map
 const headerOptions = computed(() => (store.currentJob?.headers || []).map((header) => ({ label: header, value: header })))
 const result = computed(() => store.currentJob?.result || null)
 const fisResult = computed(() => store.currentJob?.source === 'fis_admissions' ? (store.currentJob?.result || store.currentJob?.metadata || null) : null)
+const studentContingentResult = computed(() => store.currentJob?.source === 'student_contingent_doc' ? (store.currentJob?.result || store.currentJob?.metadata || null) : null)
 const isFisJob = computed(() => store.currentJob?.source === 'fis_admissions')
+const isStudentContingentJob = computed(() => store.currentJob?.source === 'student_contingent_doc')
+const canStudentContingentApply = computed(() => Boolean(store.currentJob?.source === 'student_contingent_doc' && store.currentJob?.id && studentContingentResult.value && (studentContingentResult.value.error_rows || 0) === 0 && (studentContingentResult.value.review_required || 0) === 0 && (studentContingentResult.value.blockers || 0) === 0))
 const canFisApply = computed(() => Boolean(store.currentJob?.source === 'fis_admissions' && store.currentJob?.id && fisResult.value && (fisResult.value.critical_errors || 0) === 0 && (fisResult.value.ambiguous_duplicates || 0) === 0 && (fisResult.value.unresolved_competitions || 0) === 0 && (fisResult.value.total_rows || 0) === 149))
 const errors = computed(() => store.currentJob?.validation_errors || [])
 const canPreview = computed(() => Boolean(dataType.value && file.value))
@@ -78,6 +82,38 @@ async function handleDownloadTemplate() {
   $q.notify({ type: 'positive', message: 'Шаблон CSV скачан', position: 'top-right' })
 }
 
+
+
+async function handleStudentContingentAnalyze() {
+  if (!canManage.value || !studentContingentFile.value) return
+  await store.studentContingentAnalyze(studentContingentFile.value)
+  $q.notify({ type: 'positive', message: 'DOC контингента распознан', position: 'top-right' })
+}
+async function handleStudentContingentDryRun() {
+  if (!canManage.value || !studentContingentFile.value) return
+  await store.studentContingentDryRun(studentContingentFile.value)
+  const hasBlockers = (studentContingentResult.value?.error_rows || 0) > 0 || (studentContingentResult.value?.review_required || 0) > 0 || (studentContingentResult.value?.blockers || 0) > 0
+  $q.notify({ type: hasBlockers ? 'warning' : 'positive', message: hasBlockers ? 'Dry-run контингента требует проверки' : 'Dry-run контингента прошел без блокеров', position: 'top-right' })
+}
+async function handleStudentContingentApply() {
+  if (!canManage.value || !canStudentContingentApply.value) return
+  await store.studentContingentApply(store.currentJob.id)
+  $q.notify({ type: 'positive', message: 'Импорт контингента применен', position: 'top-right' })
+}
+async function handleStudentContingentReviewDownload() {
+  if (!store.currentJob?.id) return
+  const blob = await store.downloadStudentContingentReview(store.currentJob.id)
+  if (!blob) return
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'student-contingent-review.xlsx'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+function studentStat(label, value) { return { label, value: value ?? 0 } }
 
 async function handleFisAnalyze() {
   if (!canManage.value || !fisFile.value) return
@@ -172,6 +208,38 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
           ]" :pagination="{ rowsPerPage: 5 }" :rows-per-page-options="[5, 10, 20]" /></div>
         </AppCard>
 
+
+
+        <AppCard title="Контингент студентов" subtitle="Импорт действующего контингента из DOC: распознавание, таблица проверки, dry-run и подтверждение без публикации персональных данных.">
+          <div class="fis-import-controls">
+            <q-file v-if="canManage" v-model="studentContingentFile" outlined dense accept=".doc,.txt" label="DOC контингента студентов"><template #prepend><Upload :size="16" /></template></q-file>
+            <q-btn v-if="canManage" outline color="primary" :disable="!studentContingentFile" :loading="store.saving" @click="handleStudentContingentAnalyze">Распознать</q-btn>
+            <q-btn v-if="canManage" color="primary" :disable="!studentContingentFile" :loading="store.saving" @click="handleStudentContingentDryRun">Dry-run</q-btn>
+            <q-btn v-if="canManage" outline color="primary" :disable="!store.currentJob?.id || !studentContingentResult" @click="handleStudentContingentReviewDownload">Скачать таблицу проверки</q-btn>
+            <q-btn v-if="canManage" color="negative" outline :disable="!canStudentContingentApply" :loading="store.saving" @click="handleStudentContingentApply">Подтвердить apply</q-btn>
+          </div>
+          <q-banner rounded class="universal-import-hint q-mt-md">Apply выполняется только после dry-run без блокеров. Исходный DOC, CSV/XLSX проверки и отчет хранятся в private storage и не коммитятся.</q-banner>
+          <div v-if="studentContingentResult" class="fis-import-report q-mt-md">
+            <div v-for="item in [studentStat('Строк', studentContingentResult.total_rows), studentStat('Валидных', studentContingentResult.valid_rows), studentStat('Требуют проверки', studentContingentResult.review_required), studentStat('Ошибок', studentContingentResult.error_rows), studentStat('Блокеров', studentContingentResult.blockers), studentStat('Создано', studentContingentResult.created_count), studentStat('Обновлено', studentContingentResult.updated_count), studentStat('Неизвестных специальностей', studentContingentResult.unknown_specialties_count), studentStat('Неизвестных групп', studentContingentResult.unknown_groups_count)]" :key="item.label">
+              <span>{{ item.label }}</span><strong>{{ item.value }}</strong>
+            </div>
+          </div>
+          <div v-if="studentContingentResult?.section_types?.length" class="q-mt-md">
+            <strong>Разделы источника</strong>
+            <div class="universal-import-chips"><q-chip v-for="section in studentContingentResult.section_types" :key="section" dense color="blue-1" text-color="blue-9">{{ section }}</q-chip></div>
+          </div>
+          <div v-if="studentContingentResult?.preview_rows?.length" class="import-preview-scroll import-preview-scroll--fis q-mt-md"><AppTable :rows="studentContingentResult.preview_rows" :columns="[
+            { name: 'source_row_number', label: 'Строка', field: 'source_row_number', align: 'left' },
+            { name: 'group', label: 'Группа', field: 'group', align: 'left' },
+            { name: 'student', label: 'Студент', field: 'student', align: 'left' },
+            { name: 'birth_year', label: 'Год рождения', field: 'birth_year', align: 'left' },
+            { name: 'status', label: 'Статус проверки', field: 'status', align: 'left' },
+            { name: 'specialty', label: 'Специальность', field: 'specialty', align: 'left' },
+            { name: 'person', label: 'Person', field: 'person', align: 'left' },
+            { name: 'blockers', label: 'Блокеры', field: 'blockers', align: 'left' },
+          ]" :pagination="{ rowsPerPage: 5 }" :rows-per-page-options="[5, 10, 20]" /></div>
+        </AppCard>
+
         <AppCard title="1. Файл и тип данных" subtitle="Выберите раздел, файл CSV/XLSX и режим обработки дублей.">
           <div class="universal-import-controls">
             <q-select v-model="dataType" outlined dense emit-value map-options label="Тип данных" :options="store.typeOptions" />
@@ -207,7 +275,7 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
           </div>
         </AppCard>
 
-        <AppCard v-if="store.currentJob && !isFisJob" title="2. Сопоставление колонок" subtitle="Проверьте, какие колонки файла соответствуют полям CollegePortal.">
+        <AppCard v-if="store.currentJob && !isFisJob && !isStudentContingentJob" title="2. Сопоставление колонок" subtitle="Проверьте, какие колонки файла соответствуют полям CollegePortal.">
           <div class="universal-import-mapping">
             <div v-for="field in fieldOptions" :key="field.value" class="universal-import-mapping__row">
               <span>{{ field.label }}</span>
@@ -220,7 +288,7 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
           </div>
         </AppCard>
 
-        <AppCard v-if="store.currentJob && !isFisJob" title="3. Предварительный просмотр" :subtitle="`Строк в файле: ${store.currentJob.total_rows || 0}`">
+        <AppCard v-if="store.currentJob && !isFisJob && !isStudentContingentJob" title="3. Предварительный просмотр" :subtitle="`Строк в файле: ${store.currentJob.total_rows || 0}`">
           <div v-if="store.currentJob.preview_rows?.length" class="import-preview-scroll"><AppTable :rows="store.currentJob.preview_rows" :columns="previewColumns" :pagination="{ rowsPerPage: 5 }" :rows-per-page-options="[5, 10, 20, 0]" /></div>
           <q-banner v-else rounded class="universal-import-hint">В файле не найдено строк для предварительного просмотра.</q-banner>
         </AppCard>
@@ -233,7 +301,7 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
             <div><span>Создано</span><strong>{{ fisResult?.created_count ?? store.currentJob?.created_count ?? result?.created ?? 0 }}</strong></div>
             <div><span>Обновлено</span><strong>{{ fisResult?.updated_count ?? store.currentJob?.updated_count ?? result?.updated ?? 0 }}</strong></div>
             <div><span>Пропущено</span><strong>{{ store.currentJob?.skipped_count || result?.skipped || 0 }}</strong></div>
-            <div><span>Ошибок</span><strong>{{ fisResult?.critical_errors ?? store.currentJob?.error_count ?? 0 }}</strong></div>
+            <div><span>Ошибок</span><strong>{{ studentContingentResult?.error_rows ?? fisResult?.critical_errors ?? store.currentJob?.error_count ?? 0 }}</strong></div>
           </div>
           <div v-if="store.currentJob?.status" class="q-mt-md"><AppStatusBadge :label="statusLabel(store.currentJob.status)" :tone="statusTone(store.currentJob.status)" /></div>
         </AppCard>
