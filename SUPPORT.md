@@ -1,33 +1,48 @@
-# Support
+# Support / Поддержка
 
-CollegePortal is currently in private RC/UAT stage.
+[Русский](#русский) | [English](#english)
 
-## For Users In UAT
+## Русский
 
-Use the UAT feedback flow in the application when available:
+CollegePortal сейчас находится на этапе **private RC/UAT**. Поддержка ведется через private GitHub Issues, UAT Center и согласованные внутренние каналы проекта.
 
-- open the relevant page;
-- click `Сообщить о проблеме`;
-- include expected behavior, actual behavior and role;
-- avoid attaching screenshots with unnecessary personal data.
+### Что прикладывать к ошибке
 
-## For Developers
+- версия и build;
+- роль пользователя;
+- страница или API endpoint;
+- шаги воспроизведения;
+- ожидаемый результат;
+- фактический результат;
+- критичность;
+- environment: браузер, ОС, DEV/UAT, Docker/installer;
+- обезличенный скриншот или фрагмент лога, если нужен.
 
-Check:
+### Что нельзя прикладывать
 
-- `docs/UAT_EXECUTION_GUIDE.md`
-- `docs/KNOWN_LIMITATIONS.md`
-- `docs/INSTALLATION_ACCEPTANCE_TEST.md`
-- `docs/BACKUP_RESTORE.md`
+- реальные базы, backups, dumps;
+- `.env`, пароли, токены, приватные ключи и сертификаты;
+- реальные XLS/XLSX/CSV импорты и экспорты;
+- документы абитуриентов, фотографии, private storage;
+- скриншоты с персональными данными.
 
-## Operational Incidents
+### Эксплуатационные инциденты
 
-For install/update/backup/restore incidents, collect:
+Для проблем установки, обновления, backup/restore или health-check соберите:
 
-- release version and build;
-- `installer/check.sh` output;
-- affected URL or API endpoint;
-- relevant container status;
-- sanitized logs only.
+- версию release archive;
+- вывод `sudo /opt/college-portal/installer/check.sh`;
+- статус контейнеров;
+- затронутый URL/API;
+- обезличенные логи.
 
-Do not share `.env`, passwords, tokens, dumps or private documents.
+Полезные документы:
+
+- [docs/UAT_EXECUTION_GUIDE.md](docs/UAT_EXECUTION_GUIDE.md)
+- [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md)
+- [docs/INSTALLATION_ACCEPTANCE_TEST.md](docs/INSTALLATION_ACCEPTANCE_TEST.md)
+- [docs/BACKUP_RESTORE.md](docs/BACKUP_RESTORE.md)
+
+## English
+
+CollegePortal is currently in private RC/UAT. Use private GitHub Issues, the UAT Center and agreed internal project channels for support. Include version, build, role, page/API, reproduction steps, expected and actual results, severity and sanitized evidence. Never attach secrets, real personal data, dumps, backups, `.env`, tokens or private documents.

@@ -4,6 +4,8 @@
 
 ## Правила работы
 
+- [x] GITHUB-002: добавить полноценное русскоязычное представление CollegePortal на GitHub
+
 - После каждой выполненной задачи делать Git checkpoint в `/srv/college-dev`: `git status`, проверка файлов, commit с номером задачи, без `.env`, `vendor`, `node_modules`, `tmp` и logs.
 
 ## Сначала

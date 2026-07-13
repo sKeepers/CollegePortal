@@ -1,79 +1,79 @@
-# CollegePortal Vision
+# Видение CollegePortal
 
-## Mission
+[Русский](VISION.md) | [English](VISION.en.md)
 
-CollegePortal exists to give the college one coherent digital workspace for educational, administrative and security processes without scattering data across spreadsheets, legacy pages and isolated services.
+## Миссия
 
-The system should help employees work with reliable data, clear responsibilities and traceable actions while protecting personal data by default.
+CollegePortal должен стать единым цифровым рабочим пространством колледжа: от приемной комиссии и учебного процесса до кадрового контура, пропускного режима, отчетности и подготовки данных для внешних государственных систем.
 
-## Users
+Цель платформы — заменить разрозненные таблицы, legacy-страницы и ручные журналы надежной, расширяемой и проверяемой системой, где действия пользователей прозрачны, данные не дублируются без необходимости, а персональные данные защищены по умолчанию.
 
-Primary users:
+## Ключевые роли
 
-- director and deputies;
-- study office;
-- admissions office;
-- teachers;
-- students;
-- HR staff;
-- access gate/security staff;
-- system administrators.
+- директор и заместители директора;
+- учебная часть;
+- приемная комиссия;
+- преподаватели;
+- студенты;
+- кадровая служба;
+- сотрудники проходной;
+- системные администраторы.
 
-## Core Business Processes
+## Основные процессы
 
-- applicant registration, document tracking and enrollment;
-- student/group/teacher directory management;
-- curricula and teaching load planning;
-- schedule creation and replacements;
-- electronic journal, attendance and grades;
-- QR passes and access events;
-- HR absence calendar and replacements;
-- graduation and diploma preparation;
-- FRDO/FIS data quality preparation;
-- UAT, audit and operational control.
+- регистрация абитуриента, проверка документов и зачисление;
+- ведение студентов, групп, преподавателей, сотрудников и выпускников;
+- планирование учебных планов, нагрузки и расписания;
+- электронный журнал, посещаемость, оценки и подпись занятий;
+- QR-пропуска, проходная и аналитика присутствия;
+- HR-статусы, отсутствия и замены преподавателей;
+- экзамены, выпуск, дипломы и подготовка ФРДО;
+- подготовка пакетов ФИС ГИА / ФИС Приема;
+- UAT, аудит, настройки, справочники и эксплуатационный контроль.
 
-## Modularity And Safety Principles
+## Версия 1.0
 
-CollegePortal is built as a modular platform. Each domain owns its data and services, while shared foundations provide identity, reference data, settings, RBAC and audit.
+К версии 1.0 CollegePortal должен быть готов к контролируемой production-эксплуатации:
 
-Security principles:
+- проверенный installer lifecycle;
+- понятный backup/restore/update;
+- trusted TLS и production security checklist;
+- устойчивые роли и permission matrix;
+- аудит критичных действий;
+- эксплуатационная документация;
+- пилотная загрузка реальных данных и пользовательская приемка.
 
-- permission checks belong on the API, not only in the UI;
-- personal data is minimized in previews, logs and exports;
-- all sensitive runtime data stays outside Git;
-- destructive actions require preview, confirmation and audit;
-- integrations are introduced through official APIs and documented contracts.
+## Workflow Engine
 
-## Person Lifecycle
+Будущее направление — единый Workflow Engine для процессов, где нужны preview, согласование, выполнение и audit:
 
-One `Person` can have several profiles over time or simultaneously:
+- зачисление;
+- проверка документов;
+- замены преподавателей;
+- выпуск и дипломы;
+- подготовка ФРДО/ФИС;
+- массовые операции с контингентом.
 
-Applicant -> Student -> Graduate
+## Уведомления: Telegram / MAX / Email
 
-and independently:
+Платформа должна поддерживать внутренние уведомления, а затем интеграции с email и разрешенными мессенджерами, включая Telegram или MAX, если это допускается политикой организации. Уведомления не должны раскрывать лишние персональные данные.
 
-Teacher / Employee / User / Digital Identity
+## AI-помощник
 
-This allows the platform to preserve history without duplicating identity data or forcing risky automatic merges.
+AI-помощник рассматривается как будущий слой поддержки сотрудников:
 
-## Employee Lifecycle
+- объяснение ошибок импорта;
+- подсказки по UAT;
+- помощь в поиске данных;
+- подготовка черновиков регламентов;
+- анализ качества данных.
 
-The HR domain tracks employees, departments, positions, assignments, status periods, absences and teacher replacements. It is the foundation for future HR documents, orders, work time accounting and notifications.
+AI-функции не должны принимать решения вместо ответственных сотрудников и не должны отправлять персональные данные во внешние сервисы без отдельной политики безопасности.
 
-## Workflow Engine Direction
+## ФИС / ФРДО
 
-Future workflows should support preview, approval, execution and audit for operations such as enrollment, replacements, document verification, graduation preparation and external reporting packages.
+CollegePortal должен поддерживать подготовку, проверку полноты, экспорт и журнал статусов для ФИС и ФРДО. Реальная отправка во внешние системы должна добавляться только через официальные API или утвержденные регламенты.
 
-## Notifications
+## Применимость в других колледжах
 
-The notification model should support internal notifications first, then email and approved messaging channels such as Telegram or MAX where policy permits. Notifications must not leak sensitive personal data.
-
-## Identity Providers
-
-Future external authentication must use official identity mechanisms only: LDAP/Active Directory, SAML/OIDC or another approved provider. The architecture should not depend on scraping, password sharing or unofficial APIs.
-
-## Roadmap To 1.0
-
-- 0.8: private release candidate and UAT readiness.
-- 0.9: pilot real data import, operational hardening and workflow polish.
-- 1.0: production readiness, security review, backup drills, trusted TLS and support process.
+Архитектура должна оставаться достаточно общей для других колледжей СПО: модульные домены, справочники, настройки, роли, импорт данных и installer lifecycle должны позволять адаптацию без переписывания ядра.

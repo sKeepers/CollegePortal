@@ -139,3 +139,23 @@ HTTP 403: Upgrade to GitHub Pro or make this repository public to enable this fe
 ```
 
 Required status checks and direct-push restrictions cannot be enabled for this private repository on the current GitHub plan. Until the plan supports branch protection, keep the manual rule: push fixes to `develop`, wait for green CI, then fast-forward `main` from `develop`.
+
+## GITHUB-002 Russian Repository Presentation
+
+Task: GITHUB-002.
+
+Result:
+
+- `README.md` is the primary Russian repository overview.
+- `README.en.md` preserves the English overview for future publication.
+- README files include relative language switch links.
+- GitHub issue templates were localized and expanded for Russian UAT users:
+  - `.github/ISSUE_TEMPLATE/bug_report.yml`;
+  - `.github/ISSUE_TEMPLATE/feature_request.yml`.
+- Pull request template is available at `.github/PULL_REQUEST_TEMPLATE.md` and includes private data checks.
+- `SECURITY.md`, `SUPPORT.md` and `VISION.md` include Russian-first guidance.
+- The GitHub About description is Russian and repository topics are preserved.
+- Release `v0.8.0-rc2` has Russian RC/UAT notes while keeping the existing assets.
+- Project `CollegePortal Roadmap` keeps issues `#1` through `#5` and has a Russian description/readme.
+
+Repository-facing safety rules remain unchanged: no personal data, secrets, real imports, dumps, backups, runtime files, private documents or screenshots with personal data in GitHub Issues, Pull Requests or release notes.

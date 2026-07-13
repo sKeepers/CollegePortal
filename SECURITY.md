@@ -1,37 +1,52 @@
-# Security Policy
+# Security Policy / Политика безопасности
 
-## Supported Version
+[Русский](#русский) | [English](#english)
 
-Current private RC: `0.8.0-rc2`.
+## Русский
 
-## Reporting Security Issues
+Текущая поддерживаемая версия: **0.8.0-rc2 / Private Release Candidate**.
 
-Do not open public issues containing secrets, credentials, personal data, screenshots with private data or exploit details.
+### Как сообщить об уязвимости
 
-For the private project stage, report security issues to the repository maintainers through private GitHub channels or the agreed internal communication channel.
+На этапе private RC/UAT не публикуйте сведения об уязвимостях, exploit details, персональные данные или секреты в открытых комментариях. Сообщайте о проблемах владельцам private-репозитория через приватные GitHub-каналы или согласованный внутренний канал связи.
 
-## Never Commit
+В сообщении укажите:
 
-- `.env`, passwords, tokens, SSH keys, TLS private keys or certificates;
-- dumps, backups, release archives and runtime logs;
-- real XLS/XLSX/CSV imports or exports;
-- applicant documents, photos and private storage;
-- screenshots containing passport data, SNILS, addresses or full identifiers.
+- версию и build;
+- затронутую страницу/API;
+- роль пользователя;
+- краткое описание риска;
+- шаги воспроизведения на обезличенных данных;
+- ожидаемый и фактический результат.
 
-## Required Checks
+### Нельзя публиковать
 
-Before publishing or deploying:
+- `.env`, пароли, токены, SSH-ключи, TLS private keys и сертификаты;
+- реальные базы данных, дампы, backups и runtime storage;
+- реальные XLS/XLSX/CSV импорты или экспорты;
+- документы абитуриентов, фотографии и private storage;
+- скриншоты с паспортными данными, СНИЛС, адресами, телефонами или полными идентификаторами.
 
-- run tests and frontend build;
-- review `git status --ignored` for runtime/private files;
-- run secret scanning where available;
-- verify `.gitignore` covers local artifacts;
-- check that release artifacts contain only source and public assets.
+### Обязательные проверки перед релизом или деплоем
 
-## Production Readiness
+- `php artisan test`;
+- `npm run build`;
+- `git diff --check`;
+- secret scan / gitleaks, если доступен;
+- проверка `.gitignore` и `git status --ignored`;
+- проверка release artifacts на отсутствие секретов и runtime-данных;
+- backup перед обновлением или переносом.
 
-See:
+См. также:
 
-- `docs/PRODUCTION_SECURITY_CHECKLIST.md`
-- `docs/PRODUCTION_DEPLOYMENT_READINESS.md`
-- `docs/INSTALLATION_ACCEPTANCE_TEST.md`
+- [docs/PRODUCTION_SECURITY_CHECKLIST.md](docs/PRODUCTION_SECURITY_CHECKLIST.md)
+- [docs/PRODUCTION_DEPLOYMENT_READINESS.md](docs/PRODUCTION_DEPLOYMENT_READINESS.md)
+- [docs/INSTALLATION_ACCEPTANCE_TEST.md](docs/INSTALLATION_ACCEPTANCE_TEST.md)
+
+## English
+
+Supported private RC: **0.8.0-rc2**.
+
+Report security issues through private repository maintainer channels or the agreed internal communication channel. Do not publish secrets, credentials, personal data, exploit details, database dumps, backups, private documents or screenshots with personal data in issues or pull requests.
+
+Before release or deployment, run tests, frontend build, whitespace checks, secret scanning where available, `.gitignore` review and release artifact review.

@@ -1,0 +1,63 @@
+name: Улучшение / Feature request
+description: Предложить улучшение или новый сценарий
+title: "FEATURE: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Опишите потребность без персональных данных и внутренних секретов.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Какая задача или проблема решается?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Предлагаемое решение
+    validations:
+      required: true
+  - type: dropdown
+    id: module
+    attributes:
+      label: Модуль
+      options:
+        - Приемная комиссия
+        - Контингент
+        - Учебные планы
+        - Нагрузка
+        - Расписание
+        - Электронный журнал
+        - Проходная / QR
+        - Посещаемость
+        - HR
+        - ФРДО / ФИС
+        - Dashboard
+        - RBAC / Audit / System
+        - Installer / Infrastructure
+        - Другое
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Приоритет
+      options:
+        - P0 Critical
+        - P1 High
+        - P2 Medium
+        - P3 Low
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Критерии приемки
+      placeholder: |
+        - Пользователь может ...
+        - Проверяется ...
+        - Ошибка не возникает ...
+    validations:
+      required: false

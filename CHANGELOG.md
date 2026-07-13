@@ -22,6 +22,14 @@
 - Restore resets schema before import to avoid duplicate/relation conflicts.
 - Update recreates nginx after service rebuilds and waits for health.
 
+
+### Documentation
+
+- README.md is now the primary Russian GitHub entrypoint.
+- Added README.en.md for future English publication.
+- Localized GitHub issue and pull request templates.
+- Added Russian security, support and vision materials for private RC/UAT.
+
 ### Security
 
 - Private runtime data, credentials, certificates, backups, dumps and release archives are excluded from Git.

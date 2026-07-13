@@ -1,37 +1,77 @@
 # CollegePortal
 
+**Русский** | [English](README.en.md)
+
 [![CI](https://github.com/sKeepers/CollegePortal/actions/workflows/ci.yml/badge.svg)](https://github.com/sKeepers/CollegePortal/actions/workflows/ci.yml)
 
-CollegePortal is a modular information system for managing educational and administrative processes in a college.
+CollegePortal — модульная информационная система для управления образовательными и административными процессами колледжа.
 
-Current status: **0.8.0-rc2 / Private Release Candidate**. The repository is private and intended for controlled DEV/UAT work. It is not ready for public distribution or production use without a separate security and operations review.
+Текущий статус: **Private Release Candidate 0.8.0-rc2**. Репозиторий остается **PRIVATE** и используется для контролируемой разработки, DEV/UAT-проверок и подготовки пилотной эксплуатации. Система проходит UAT и не должна переноситься в production без отдельной проверки безопасности, резервного копирования и эксплуатационной готовности.
 
-## Purpose
+## Для кого предназначена система
 
-CollegePortal provides one platform for admissions, student records, academic planning, scheduling, journal work, access control, attendance analytics, HR, reporting and controlled preparation of external reporting data.
+CollegePortal создается для российских колледжей и организаций СПО, включая колледжи искусств, где нужно объединить приемную комиссию, контингент, учебный процесс, расписание, электронный журнал, пропускной режим, кадровый контур, отчеты и подготовку внешней отчетности в одной расширяемой платформе.
 
-The project is designed for a Russian СПО / college context and is being developed incrementally as an MVP-first platform.
+## Основные возможности
 
-## Main Modules
+- Приемная комиссия: заявления, статусы, документы абитуриентов, массовые операции и зачисление.
+- Импорт ФИС ГИА и Приема: загрузка XLS/XLSX, распознавание, dry-run, apply и журнал импорта.
+- Person foundation: единая основа для абитуриентов, студентов, преподавателей, сотрудников, выпускников и пользователей.
+- Контингент: студенты, группы, преподаватели, дисциплины, аудитории и справочники.
+- Отдел кадров: сотрудники, подразделения, должности, HR-статусы, отсутствия и замены преподавателей.
+- Учебные планы: Curriculum Engine, дисциплины по семестрам, часы, формы контроля и связь с группами.
+- Нагрузка: формирование нагрузки из учебного плана, назначение преподавателей и контроль покрытия часов.
+- Расписание: Schedule Engine, конфликты, шаблоны, визуальный редактор и действия из расписания.
+- Электронный журнал: журнал занятия из расписания, посещаемость, оценки, материалы, завершение и подпись.
+- Экзамены и ГИА: экзамены, результаты, связь с группами, дисциплинами, преподавателями и аудиториями.
+- Выпуск: выпускники, дипломы, приложения, история и подготовка к ФРДО.
+- ФРДО и ФИС: подготовка пакетов, проверка полноты, ошибки, экспорт CSV/JSON и статусы без реальной отправки.
+- QR-пропуска: цифровые идентификаторы, QR, USB HID-сканер, мобильный сканер и отзыв пропусков.
+- Проходная и посещаемость: события входа/выхода, отчеты, аналитика по расписанию и учет времени.
+- Dashboard: ролевые и аналитические рабочие столы для руководства, учебной части и преподавателей.
+- RBAC: роли, permissions, backend-проверки и permission-aware UI.
+- Audit: централизованный журнал действий пользователей.
+- UAT Center: подготовка пользовательского тестирования, сценарии, роли и обратная связь.
+- Установщик: автономная установка, update, backup, restore, check и uninstall для Ubuntu Server.
 
-- **Person**: unified person foundation for students, teachers, applicants, graduates, users and digital identities.
-- **Admissions and FIS import**: admissions registry, FIS GIA and Admissions XLS import, applicant document registry and bulk operations.
-- **Students, Groups, Teachers, Subjects, Classrooms**: core academic directories and CRUD modules.
-- **HR**: employees, departments, positions, absence calendar and teacher replacement workflow.
-- **Curricula**: Curriculum Engine foundation with normalized semester subjects and hours.
-- **Teaching Load**: generation from curricula, assignment and coverage tracking.
-- **Schedule Engine**: normalized schedule entries, conflict checks, weekly templates and visual editor.
-- **Journal**: schedule-linked electronic journal, attendance, grades, lesson files, completion and signature workflow.
-- **QR and Access Gate**: digital passes, USB HID scanner support, mobile camera scanner and access event reports.
-- **Attendance**: analysis of access events against schedule, daily and historical reports.
-- **Graduation, FRDO, FIS**: preparation, validation, export and status tracking without real external submission.
-- **RBAC**: role and permission matrix with backend middleware and permission-aware UI.
-- **Audit**: centralized audit log for security-relevant actions.
-- **Settings and Reference Data**: administrative settings center and shared reference catalogs.
-- **UAT Center**: role-based testing runs, feedback and private screenshots.
-- **Installer Lifecycle**: install, update, backup, restore, check and uninstall scripts for Ubuntu Server.
+## Роли пользователей
 
-## High-Level Architecture
+- Администратор системы.
+- Директор и заместители директора.
+- Учебная часть.
+- Приемная комиссия.
+- Преподаватель.
+- Студент.
+- Сотрудник проходной.
+- Кадровая служба.
+
+## Схема бизнес-процессов
+
+```text
+Абитуриент
+-> заявление
+-> проверка документов
+-> зачисление
+-> студент
+-> учебный план
+-> нагрузка
+-> расписание
+-> журнал
+-> экзамены
+-> выпуск
+-> ФРДО
+```
+
+```text
+Person
+-> Employee
+-> Teacher
+-> HR-статусы
+-> доступность
+-> замены в расписании
+```
+
+## Архитектура
 
 ```mermaid
 flowchart LR
@@ -42,114 +82,133 @@ flowchart LR
     API --> Storage[Private/Public Storage]
     API --> Audit[Audit Log]
     API --> Import[Import Handlers]
-    API --> Domain[Domain Services]
+    API --> Domains[Domain Services]
 ```
 
-The backend follows Laravel service/resource/request patterns. The frontend uses Vue 3, Vite, Pinia and Quasar components. Docker Compose is used for local and release deployments.
+Backend построен на Laravel-модулях, миграциях, Eloquent-моделях, Form Request Validation, Resource-классах, Policy/Gate, middleware и сервисном слое. Frontend построен на Vue 3, Vite, Pinia и Quasar. DEV/UAT/release-сценарии используют Docker Compose и Nginx.
 
-## Technology Stack
+## Технологический стек
 
 Backend:
 
-- Laravel 12
-- PHP 8.4
-- PostgreSQL 17
-- Redis
-- REST API
+- Laravel 12;
+- PHP 8.4;
+- PostgreSQL 17;
+- Redis;
+- REST API.
 
 Frontend:
 
-- Vue 3
-- Vite
-- Pinia
-- Quasar
+- Vue 3;
+- Vite;
+- Pinia;
+- Quasar.
 
-Infrastructure:
+Инфраструктура:
 
-- Docker / Docker Compose
-- Nginx
-- Ubuntu Server 24.04 LTS
+- Docker / Docker Compose;
+- Nginx;
+- Ubuntu Server 24.04 LTS.
 
-## System Requirements
+## Системные требования
 
-Recommended UAT server:
+Рекомендуемый UAT-сервер:
 
-- Ubuntu Server 24.04 LTS amd64
-- 4 vCPU
-- 8 GB RAM minimum, 16 GB recommended
-- 60 GB disk minimum
-- Internet access for package and image downloads during install/build
+- Ubuntu Server 24.04 LTS amd64;
+- 4 vCPU;
+- минимум 8 GB RAM, рекомендуется 16 GB;
+- минимум 60 GB диска;
+- доступ в интернет для установки пакетов и загрузки Docker-образов.
 
-## Quick Start With Installer
-
-Build or use a release archive from DEV:
-
-```bash
-./scripts/release/build-release.sh
-```
-
-Install on a clean Ubuntu Server:
+## Быстрая установка
 
 ```bash
 tar -xzf college-portal-0.8.0-rc2.tar.gz
 cd college-portal-0.8.0-rc2
 sudo ./installer/install.sh
-```
-
-Check installation:
-
-```bash
 sudo /opt/college-portal/installer/check.sh
 ```
 
-Lifecycle documentation:
+Подробно: [docs/INSTALLATION.md](docs/INSTALLATION.md).
 
-- `docs/INSTALLATION.md`
-- `docs/UPDATE.md`
-- `docs/BACKUP_RESTORE.md`
-- `docs/UNINSTALL.md`
-- `docs/INSTALLATION_ACCEPTANCE_TEST.md`
-- `docs/UAT_SERVER.md`
-
-## Development
-
-DEV work happens in `/srv/college-dev` on the development server. PROD and UAT are not modified without a separate explicit task.
-
-Typical checks:
+## Обновление
 
 ```bash
-docker compose exec -T backend php artisan test
-docker compose exec -T frontend npm run build
+sudo /opt/college-portal/installer/update.sh college-portal-0.8.0-rc2.tar.gz
+sudo /opt/college-portal/installer/check.sh
 ```
 
-## Personal Data Rules
+Перед обновлением обязательно сделать backup.
 
-Do not commit or upload:
+## Backup / Restore
 
-- `.env` files, passwords, tokens, private keys or certificates;
-- real imports/exports, XLS/XLSX/CSV with college data, dumps or backups;
-- private storage, applicant documents, photos, screenshots with personal data;
-- release archives or runtime files.
+```bash
+sudo /opt/college-portal/installer/backup.sh
+sudo /opt/college-portal/installer/restore.sh /srv/backups/college-portal/<backup-file>
+```
 
-Use anonymized fixtures only. Mask passport data, SNILS, addresses, phones and full personal identifiers in previews, logs and documentation.
+Документация: [docs/BACKUP_RESTORE.md](docs/BACKUP_RESTORE.md).
 
-## Documentation Map
+## Безопасность
 
-- Architecture: `docs/ARCHITECTURE_DOCUMENTATION.md`, `docs/DOMAIN_MODEL.md`
-- Identity and Person: `docs/IDENTITY_DOMAIN.md`, `docs/PERSON_MODEL.md`
-- RBAC: `docs/RBAC.md`
-- Audit: `docs/AUDIT_LOG.md`
-- Import: `docs/DATA_IMPORT.md`, `docs/FIS_ADMISSIONS_IMPORT.md`
-- Schedule and Journal: `docs/SCHEDULE_ENGINE.md`, `docs/JOURNAL_ENGINE.md`
-- HR: `docs/HR_DOMAIN.md`, `docs/HR_ABSENCE_CALENDAR.md`, `docs/HR_REPLACEMENTS.md`
-- UAT: `docs/UAT_PLAN.md`, `docs/UAT_EXECUTION_GUIDE.md`, `docs/INSTALLATION_ACCEPTANCE_TEST.md`
+Не публикуйте и не прикладывайте в Issues/PR:
 
-## Roadmap To 1.0
+- `.env`, пароли, токены, приватные ключи и сертификаты;
+- реальные XLS/XLSX/CSV импорты и экспорты;
+- дампы БД, backups, runtime storage и release-архивы без отдельной проверки;
+- документы абитуриентов, фотографии, паспортные данные, СНИЛС, адреса и телефоны;
+- скриншоты с персональными данными.
 
-- 0.8: controlled private UAT, installer validation, role-based testing and data import hardening.
-- 0.9: pilot real data loading, UX hardening, reporting and operational documentation.
-- 1.0: production readiness review, security hardening, backup/restore drills, trusted TLS and controlled deployment process.
+Используйте обезличенные данные. Подробно: [SECURITY.md](SECURITY.md) и [SUPPORT.md](SUPPORT.md).
 
-## Status
+## Интеграции
 
-This repository is private. Treat all code, documents and screenshots as internal project material until a separate publication decision is made.
+В текущем RC реализована подготовка данных и контроль качества для ФИС ГИА/Приема и ФРДО без реальной отправки во внешние системы. Архитектура предусматривает будущие интеграции с Moodle, LDAP/Active Directory, email, Telegram/MAX и официальными внешними API.
+
+## Дорожная карта
+
+- 0.8: private RC, UAT, проверка установки, ролей, импорта данных и документации.
+- 0.9: пилотная загрузка реальных данных, полировка UX, отчеты и эксплуатационные регламенты.
+- 1.0: production readiness, security hardening, backup/restore drills, trusted TLS и поддержка.
+
+GitHub Project: [CollegePortal Roadmap](https://github.com/users/sKeepers/projects/2)
+
+Release: [v0.8.0-rc2](https://github.com/sKeepers/CollegePortal/releases/tag/v0.8.0-rc2)
+
+## Документация
+
+- [Архитектура](docs/ARCHITECTURE_DOCUMENTATION.md)
+- [Доменная модель](docs/DOMAIN_MODEL.md)
+- [Person Model](docs/PERSON_MODEL.md)
+- [RBAC](docs/RBAC.md)
+- [Audit Log](docs/AUDIT_LOG.md)
+- [Импорт данных](docs/DATA_IMPORT.md)
+- [Импорт ФИС](docs/FIS_ADMISSIONS_IMPORT.md)
+- [Schedule Engine](docs/SCHEDULE_ENGINE.md)
+- [Journal Engine](docs/JOURNAL_ENGINE.md)
+- [HR Domain](docs/HR_DOMAIN.md)
+- [Установка](docs/INSTALLATION.md)
+- [Обновление](docs/UPDATE.md)
+- [Backup / Restore](docs/BACKUP_RESTORE.md)
+- [UAT Plan](docs/UAT_PLAN.md)
+- [GitHub Repository](docs/GITHUB_REPOSITORY.md)
+
+## Как сообщать об ошибках
+
+Создавайте Issue в private-репозитории и указывайте:
+
+- версию и build;
+- роль пользователя;
+- страницу или API;
+- шаги воспроизведения;
+- ожидаемый результат;
+- фактический результат;
+- критичность;
+- environment;
+- обезличенный скриншот или лог, если он нужен.
+
+Не прикладывайте персональные данные, реальные базы, `.env`, токены, приватные документы и backups.
+
+## CI
+
+Статус CI отображается badge в начале README. Workflow проверяет backend tests, frontend build и secret scan.

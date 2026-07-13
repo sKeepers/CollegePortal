@@ -1,0 +1,89 @@
+name: Ошибка / Bug report
+description: Сообщить об ошибке без публикации персональных данных
+title: "BUG: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо за отчет. Не прикладывайте реальные базы, `.env`, токены, документы, фото или скриншоты с персональными данными.
+  - type: input
+    id: version
+    attributes:
+      label: Версия / build
+      description: Например, 0.8.0-rc2, build hash или дата сборки.
+      placeholder: "0.8.0-rc2 / build ..."
+    validations:
+      required: true
+  - type: dropdown
+    id: role
+    attributes:
+      label: Роль пользователя
+      options:
+        - Администратор
+        - Директор
+        - Заместитель директора
+        - Учебная часть
+        - Приемная комиссия
+        - Преподаватель
+        - Студент
+        - Сотрудник проходной
+        - Кадровая служба
+        - Другое
+    validations:
+      required: true
+  - type: input
+    id: page
+    attributes:
+      label: Страница или API
+      placeholder: "/admissions, /journal, /api/..."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Шаги воспроизведения
+      placeholder: |
+        1. Открыть ...
+        2. Нажать ...
+        3. Получить ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Ожидаемый результат
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Фактический результат
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Критичность
+      options:
+        - Critical - блокирует работу или есть риск потери данных
+        - High - ломает ключевой сценарий
+        - Medium - есть обходной путь
+        - Low - косметика или незначительная проблема
+        - UX - неудобно или непонятно пользователю
+    validations:
+      required: true
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Скриншот или лог
+      description: Только обезличенные материалы. Не прикладывайте ПДн, документы, токены, дампы или backups.
+    validations:
+      required: false
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "DEV/UAT, браузер, ОС, Docker/installer, дата проверки"
+    validations:
+      required: true
