@@ -69,6 +69,10 @@ class RoleSeeder extends Seeder
             ['module' => 'Students', 'code' => 'students.bulk_passes', 'name' => 'Студенты: массовый выпуск QR', 'description' => 'Массовый выпуск цифровых пропусков студентам.'],
             ['module' => 'Students', 'code' => 'students.bulk_archive', 'name' => 'Студенты: массовое архивирование', 'description' => 'Массовое архивирование студентов без удаления.'],
             ['module' => 'Students', 'code' => 'students.bulk_export', 'name' => 'Студенты: массовый экспорт', 'description' => 'Экспорт выбранных студентов.'],
+            ['module' => 'Students', 'code' => 'students.import_contingent', 'name' => 'Студенты: импорт контингента', 'description' => 'Загрузка и распознавание DOC с действующим контингентом студентов.'],
+            ['module' => 'Students', 'code' => 'students.import_contingent_review', 'name' => 'Студенты: проверка импорта контингента', 'description' => 'Просмотр отчета и таблицы проверки импорта контингента.'],
+            ['module' => 'Students', 'code' => 'students.import_contingent_apply', 'name' => 'Студенты: применение импорта контингента', 'description' => 'Подтверждение безопасного применения импорта контингента.'],
+            ['module' => 'Students', 'code' => 'students.view_private_contacts', 'name' => 'Студенты: приватные контакты', 'description' => 'Просмотр адресов и телефонов студентов при наличии служебной необходимости.'],
             ['module' => 'Groups', 'code' => 'groups.view', 'name' => 'Группы: просмотр', 'description' => 'Просмотр групп.'],
             ['module' => 'Groups', 'code' => 'groups.create', 'name' => 'Группы: создание', 'description' => 'Создание групп.'],
             ['module' => 'Groups', 'code' => 'groups.update', 'name' => 'Группы: изменение', 'description' => 'Редактирование групп и импорт.'],
@@ -203,7 +207,7 @@ class RoleSeeder extends Seeder
     private function academicEditorPermissions(): array
     {
         return [
-            'dashboard.view', 'people.view', 'students.view', 'students.create', 'students.update', 'students.delete', 'students.bulk_group', 'students.bulk_status', 'students.bulk_course', 'students.bulk_education', 'students.bulk_passes', 'students.bulk_archive', 'students.bulk_export',
+            'dashboard.view', 'people.view', 'students.view', 'students.create', 'students.update', 'students.delete', 'students.bulk_group', 'students.bulk_status', 'students.bulk_course', 'students.bulk_education', 'students.bulk_passes', 'students.bulk_archive', 'students.bulk_export', 'students.import_contingent', 'students.import_contingent_review', 'students.import_contingent_apply', 'students.view_private_contacts',
             'groups.view', 'groups.create', 'groups.update', 'groups.delete',
             'teachers.view', 'teachers.create', 'teachers.update', 'teachers.delete',
             'subjects.view', 'subjects.create', 'subjects.update', 'subjects.delete',

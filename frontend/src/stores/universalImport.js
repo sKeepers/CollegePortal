@@ -107,6 +107,63 @@ export const useUniversalImportStore = defineStore('universalImport', () => {
   }
 
 
+  async function studentContingentAnalyze(file) {
+    return studentContingentUpload('admin/import/student-contingent/analyze', file, 'Не удалось распознать DOC контингента студентов')
+  }
+
+  async function studentContingentDryRun(file) {
+    return studentContingentUpload('admin/import/student-contingent/dry-run', file, 'Не удалось выполнить dry-run контингента студентов')
+  }
+
+  async function studentContingentApply(jobId) {
+    saving.value = true
+    error.value = ''
+    try {
+      const payload = await api.create('admin/import/student-contingent/apply', { job_id: jobId })
+      currentJob.value = extractData(payload)
+      await loadHistory('students')
+      return currentJob.value
+    } catch (err) {
+      error.value = err.message || 'Не удалось применить импорт контингента студентов'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function studentContingentUpload(path, file, fallbackMessage) {
+    if (!file) return null
+    saving.value = true
+    error.value = ''
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const payload = await api.upload(`/${path}`, formData)
+      currentJob.value = extractData(payload)
+      await loadHistory('students')
+      return currentJob.value
+    } catch (err) {
+      error.value = err.message || fallbackMessage
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function downloadStudentContingentReview(jobId) {
+    if (!jobId) return null
+    saving.value = true
+    error.value = ''
+    try {
+      return await api.download(`/admin/import/student-contingent/jobs/${jobId}/review`)
+    } catch (err) {
+      error.value = err.message || 'Не удалось скачать таблицу проверки контингента'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
   async function fisAnalyze(file) {
     return fisUpload('admin/import/fis-admissions/analyze', file, 'Не удалось распознать файл ФИС')
   }
@@ -159,5 +216,5 @@ export const useUniversalImportStore = defineStore('universalImport', () => {
 
   function resetJob() { currentJob.value = null }
 
-  return { config, history, currentJob, loading, saving, error, typeOptions, modeOptions, selectedTypeConfig, loadConfig, loadHistory, preview, validate, confirm, downloadTemplate, fisAnalyze, fisDryRun, fisApply, resetJob }
+  return { config, history, currentJob, loading, saving, error, typeOptions, modeOptions, selectedTypeConfig, loadConfig, loadHistory, preview, validate, confirm, downloadTemplate, studentContingentAnalyze, studentContingentDryRun, studentContingentApply, downloadStudentContingentReview, fisAnalyze, fisDryRun, fisApply, resetJob }
 })

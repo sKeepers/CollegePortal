@@ -809,3 +809,13 @@
 ## REPO-SYNC-001
 
 - [x] REPO-SYNC-001: merge FIS gateway PR, sync Linux DEV, inventory repository copies, add sync helpers and docs
+
+## STUDENT-IMPORT-001
+
+- [x] Добавить источник `/admin/import` для DOC действующего контингента студентов.
+- [x] Сохранять исходный DOC и generated review artifacts только в private storage.
+- [x] Реализовать analyze, dry-run, apply и скачивание review XLSX.
+- [x] Сопоставлять специальности, группы, Person и активных студентов.
+- [x] Блокировать apply при ambiguous Person, неизвестной группе/специальности, некорректной дате рождения и review_required.
+- [x] Добавить permissions и audit без ПДн.
+- [x] Покрыть анонимизированными feature-тестами.

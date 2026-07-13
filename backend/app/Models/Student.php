@@ -61,4 +61,9 @@ class Student extends Model
     {
         return $this->hasMany(Grade::class);
     }
+
+    public function statusHistories(): HasMany
+    {
+        return $this->hasMany(StudentStatusHistory::class);
+    }
 }

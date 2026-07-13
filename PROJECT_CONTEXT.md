@@ -1181,3 +1181,7 @@ FIS-GATEWAY-001 adds a Windows 7 compatible ViPNet Gateway Agent foundation and 
 ## REPO-SYNC-001
 
 REPO-SYNC-001 merged PR #8 into develop, synchronized Linux DEV and documented repository/environment synchronization rules.
+
+## STUDENT-IMPORT-001 Student Contingent DOC Import
+
+Добавлен специализированный импорт действующего контингента студентов из DOC через `/admin/import`. Источник `student_contingent_doc` сохраняет исходник и review artifacts только в private storage, строит нормализованную таблицу, выполняет dry-run с сопоставлением `Specialty`, `Group`, `Person` и применяет данные только без блокеров. Добавлена история статусов студента `student_status_histories`.
