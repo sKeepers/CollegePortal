@@ -7,6 +7,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -63,6 +64,49 @@ class FisOutboundApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('validation.ok', false)
             ->assertJsonPath('validation.errors.0.code', 'xsd_missing');
+    }
+
+
+    public function test_gateway_transport_uses_redacted_package_hash_and_requires_configuration(): void
+    {
+        Storage::fake('local');
+        $user = $this->userWith(['fis.outbound.view','fis.outbound.create','fis.outbound.send_test','fis.outbound.status']);
+        $this->withApiAuth($user);
+
+        $package = FisOutboundPackage::create([
+            'package_type' => 'admission',
+            'schema_version' => 'pending-official-spec',
+            'environment' => 'test',
+            'status' => 'validated',
+            'created_by' => $user->id,
+            'payload_path' => 'fis/outbound/gateway.xml',
+        ]);
+        Storage::disk('local')->put($package->payload_path, '<Package><Person>Secret Name</Person></Package>');
+
+        config(['fis_api.transport' => 'gateway', 'fis_api.gateway_url' => 'http://fis-agent.test', 'fis_api.gateway_token' => 'test-token']);
+        Http::fake([
+            'fis-agent.test/fis/test/send' => Http::response(['ok' => false, 'status' => 'blocked', 'message' => 'send disabled'], 200),
+        ]);
+
+        $this->postJson("/api/fis/outbound/packages/{$package->id}/send", ['mock' => false])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'failed')
+            ->assertJsonPath('data.package_id', null)
+            ->assertJsonPath('data.last_error_message', 'send disabled')
+            ->assertJsonPath('data.response_metadata.transport', 'gateway');
+
+        Http::assertSent(function ($request) {
+            $data = $request->data();
+            return $request->url() === 'http://fis-agent.test/fis/test/send'
+                && $request->hasHeader('Authorization', 'Bearer test-token')
+                && isset($data['package_hash'])
+                && $data['payload'] === base64_encode('<Package><Person>Secret Name</Person></Package>')
+                && ! str_contains(json_encode($data), 'Secret Name');
+        });
+
+        config(['fis_api.gateway_url' => null, 'fis_api.gateway_token' => null]);
+        $this->postJson("/api/fis/outbound/packages/{$package->id}/send", ['mock' => false])
+            ->assertStatus(500);
     }
 
     public function test_production_is_blocked_and_permissions_are_required(): void

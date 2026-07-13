@@ -31,13 +31,18 @@ class FisPackageSender
             return ['ok' => true, 'request_id' => $requestId, 'payload_sha256' => hash('sha256', $xml), 'redacted_preview' => $this->redact($xml)];
         }
 
-        $transport = $mock ? new MockFisTransport() : new SoapFisTransport();
+        $transport = $mock ? new MockFisTransport() : $this->transport();
         $package->update(['status' => 'sending', 'request_id' => $requestId]);
         $result = $transport->send($package, $xml);
         $package->update(['status' => $result->ok ? 'accepted' : 'failed', 'package_id' => $result->packageId, 'sent_at' => now(), 'accepted_at' => $result->ok ? now() : null, 'failed_at' => $result->ok ? null : now(), 'last_error_code' => $result->errorCode, 'last_error_message' => $result->errorMessage, 'response_metadata' => $result->metadata]);
         $this->event($package, $result->ok ? 'sent_test' : 'send_failed', ['request_id' => $requestId, 'package_id' => $result->packageId, 'status' => $result->status, 'error_code' => $result->errorCode]);
         AuditLogService::log('fis_outbound', $result->ok ? 'send_test' : 'send_failed', $package, null, ['request_id' => $requestId, 'package_id' => $result->packageId, 'status' => $result->status, 'error_code' => $result->errorCode]);
         return ['ok' => $result->ok, 'package_id' => $result->packageId, 'status' => $result->status, 'error_code' => $result->errorCode, 'error_message' => $result->errorMessage];
+    }
+
+    private function transport(): FisTransportInterface
+    {
+        return config('fis_api.transport') === 'gateway' ? new GatewayFisTransport() : new SoapFisTransport();
     }
 
     private function event(FisOutboundPackage $package, string $type, array $metadata = []): void

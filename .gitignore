@@ -104,3 +104,8 @@ coverage/
 
 # Official FIS reference materials are downloaded locally and may be license-restricted
 backend/storage/app/private/reference/fis/
+
+# Runtime secrets
+.secrets/
+backend/.secrets/
+backend/storage/app/private/fis-specs/

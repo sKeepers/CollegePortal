@@ -46,3 +46,12 @@ php artisan fis:connection-check --environment=test
 ```
 
 Команда выполняет только TCP connect без credentials и SOAP payload.
+
+
+## FIS-API-001.1 Checkpoint 13.07.2026
+
+Official contract version 4.9 has not been loaded into DEV yet. The official instructions page cannot be downloaded from the current DEV/Windows environment, and no binary specification/XSD/test-client files were provided in the workspace.
+
+Therefore the following fields remain `TBD from official spec`: SOAP version, WSDL, service/port/binding, namespaces, methods, authentication, PackageID format, status methods, error codes, payload limits, signing/certificate requirements and retry semantics.
+
+Implementation rule remains strict: no SOAP envelope, XML namespace, auth header or package type may be implemented from guesses.

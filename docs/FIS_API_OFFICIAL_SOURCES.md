@@ -28,7 +28,7 @@ scripts/fis/download-official-specs.sh
 Он сохраняет материалы и manifest в private storage:
 
 ```text
-backend/storage/app/private/reference/fis/
+backend/storage/app/private/fis-specs/4.9/
 ```
 
 Эта папка добавлена в `.gitignore`, потому что официальные документы и XSD могут иметь ограничения на распространение.
@@ -46,3 +46,21 @@ Manifest должен хранить:
 - статус загрузки.
 
 Текущий статус: `READY FOR OFFICIAL SPECS`.
+
+
+## Manual Intake For Version 4.9
+
+If DEV cannot download files, download them through an approved browser/ARM and copy them to:
+
+```text
+/srv/college-dev/backend/storage/app/private/fis-specs/4.9/
+```
+
+Then run:
+
+```bash
+scripts/fis/build-spec-manifest.sh
+php artisan fis:spec-info
+```
+
+Do not commit binary documents until redistribution terms are reviewed.

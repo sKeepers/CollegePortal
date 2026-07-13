@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SOURCE_URL="${FIS_OFFICIAL_INSTRUCTIONS_URL:-https://priem.rustest.ru/instructions}"
-TARGET_DIR="${FIS_SPEC_TARGET_DIR:-backend/storage/app/private/reference/fis}"
+TARGET_DIR="${FIS_SPEC_TARGET_DIR:-backend/storage/app/private/fis-specs/4.9}"
 MANIFEST="$TARGET_DIR/manifest.json"
 FETCHED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 mkdir -p "$TARGET_DIR"

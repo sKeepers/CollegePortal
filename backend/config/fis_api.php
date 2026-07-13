@@ -8,8 +8,11 @@ return [
     'production_endpoint' => env('FIS_API_PRODUCTION_ENDPOINT', 'http://10.0.3.1:8080/api/import/importservice.svc'),
     'connect_timeout' => (int) env('FIS_API_CONNECT_TIMEOUT', 5),
     'request_timeout' => (int) env('FIS_API_REQUEST_TIMEOUT', 30),
+    'transport' => env('FIS_API_TRANSPORT', 'soap'),
+    'gateway_url' => env('FIS_GATEWAY_URL'),
+    'gateway_token' => env('FIS_GATEWAY_TOKEN'),
     'schema_version' => env('FIS_API_SCHEMA_VERSION', 'pending-official-spec'),
-    'spec_manifest_path' => env('FIS_API_SPEC_MANIFEST_PATH', storage_path('app/private/reference/fis/manifest.json')),
+    'spec_manifest_path' => env('FIS_API_SPEC_MANIFEST_PATH', storage_path('app/private/fis-specs/4.9/manifest.json')),
     'xsd_path' => env('FIS_API_XSD_PATH'),
     'wsdl_path' => env('FIS_API_WSDL_PATH'),
 ];

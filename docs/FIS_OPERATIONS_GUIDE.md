@@ -22,3 +22,17 @@
 ## Production
 
 Production activation запрещена в FIS-API-001 и должна быть вынесена в FIS-API-002 после сертификации и письменного подтверждения.
+
+
+## FIS-API-001.1 Operational Status
+
+Current status: `READY FOR OFFICIAL SPECS / READY FOR ZKSPD NODE`.
+
+A first real TEST send is blocked until all conditions are true:
+
+- official version 4.9 spec/WSDL/XSD/test client are stored in private storage;
+- manifest has SHA-256 for each file;
+- authentication method is confirmed by spec;
+- TEST credentials are present in `.secrets/fis-test.env`;
+- either DEV or Gateway Agent has TCP access to `10.0.3.1:8383`;
+- XSD validation passes for the selected minimal package.

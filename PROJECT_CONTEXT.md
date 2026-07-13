@@ -1168,3 +1168,8 @@ GitHub publication completed: private repository `sKeepers/CollegePortal`, branc
 ## FIS-API-001 Official Outbound Connector Foundation
 
 Added a separate outbound FIS integration foundation under `backend/app/Services/FisIntegration`. It is intentionally separate from inbound XLS/XLSX FIS import. Official XML generation and SOAP transport remain blocked until official WSDL/XSD/spec materials are loaded. Production send is disabled by default and reserved for FIS-API-002.
+
+
+## FIS-API-001.1 Official Contract Intake
+
+DEV cannot currently download official FIS 4.9 materials or reach `10.0.3.1:8383`. Added ZKSPD diagnostics and Gateway Agent skeleton. Exact SOAP/XML implementation remains blocked until official WSDL/XSD/spec files and TEST credentials are provided.

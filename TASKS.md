@@ -788,3 +788,13 @@
 - [ ] Получить официальные WSDL/XSD/spec материалы через разрешенный доступ ФЦТ
 - [ ] Подключить реальные SOAP methods строго по спецификации
 - [ ] Провести TEST отправку только после credentials и доступа ЗКСПД
+
+
+## FIS-API-001.1
+
+- [x] Проверить route/TCP/curl к TEST endpoint с DEV host и backend container
+- [x] Подготовить `scripts/fis/check-zkspd-access.sh`
+- [x] Подготовить Gateway Agent skeleton для узла ЗКСПД
+- [ ] Получить официальные документы ФЦТ 4.9 и сформировать SHA-256 manifest
+- [ ] Реализовать точный SOAP/XML контракт строго по WSDL/XSD
+- [ ] Выполнить первую TEST-отправку после credentials и доступа ЗКСПД
