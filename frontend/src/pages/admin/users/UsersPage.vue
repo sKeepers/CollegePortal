@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { usePermissions } from '../../../composables/usePermissions'
 import { useQuasar } from 'quasar'
 import { Ban, CheckCircle2, Edit, Plus, RefreshCw, ShieldCheck, Trash2, UserRound } from '@lucide/vue'
@@ -23,6 +23,7 @@ const permissions = usePermissions()
 const canManage = computed(() => permissions.hasPermission('users.manage'))
 const $q = useQuasar()
 const formOpen = ref(false)
+const formError = ref('')
 const editingUser = ref(null)
 const deleteDialog = ref(false)
 const blockDialog = ref(false)
@@ -31,6 +32,11 @@ const rolesDialog = ref(false)
 const pendingUser = ref(null)
 const pagination = ref(createTablePagination(rowsPerPageKey, { rowsPerPage: 20 }))
 const rolesForm = reactive({ role_ids: [], primary_role_id: null })
+const nameInput = ref(null)
+const emailInput = ref(null)
+const passwordInput = ref(null)
+const roleInput = ref(null)
+const personIdInput = ref(null)
 const form = reactive({
   name: '',
   email: '',
@@ -40,6 +46,24 @@ const form = reactive({
   person_type: null,
   person_id: null,
 })
+const formErrors = reactive({
+  name: '',
+  email: '',
+  password: '',
+  role_id: '',
+  person_type: '',
+  person_id: '',
+})
+
+const validationMessages = {
+  nameRequired: 'Введите имя пользователя.',
+  emailRequired: 'Введите email.',
+  emailInvalid: 'Введите корректный email.',
+  passwordRequired: 'Введите пароль.',
+  passwordMin: 'Пароль должен содержать не менее 8 символов.',
+  roleRequired: 'Выберите роль.',
+}
+
 
 const columns = [
   { name: 'name', label: 'Пользователь', field: 'name', align: 'left', sortable: true },
@@ -52,6 +76,79 @@ const columns = [
 const selectedUser = computed(() => store.selectedUser)
 const activeCount = computed(() => store.users.filter((user) => user.is_active).length)
 const blockedCount = computed(() => store.users.filter((user) => !user.is_active).length)
+
+
+function resetFormErrors() {
+  Object.keys(formErrors).forEach((key) => {
+    formErrors[key] = ''
+  })
+  formError.value = ''
+}
+
+function clearFieldError(field) {
+  if (formErrors[field]) {
+    formErrors[field] = ''
+  }
+  formError.value = ''
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+}
+
+function firstErrorField() {
+  return ['name', 'email', 'password', 'role_id', 'person_id'].find((field) => Boolean(formErrors[field]))
+}
+
+async function focusFirstError() {
+  await nextTick()
+  const refs = {
+    name: nameInput,
+    email: emailInput,
+    password: passwordInput,
+    role_id: roleInput,
+    person_id: personIdInput,
+  }
+  const field = firstErrorField()
+  refs[field]?.value?.focus?.()
+}
+
+function validateUserForm() {
+  resetFormErrors()
+  if (!form.name?.trim()) {
+    formErrors.name = validationMessages.nameRequired
+  }
+  if (!form.email?.trim()) {
+    formErrors.email = validationMessages.emailRequired
+  } else if (!isValidEmail(form.email.trim())) {
+    formErrors.email = validationMessages.emailInvalid
+  }
+  if (!editingUser.value && !form.password?.trim()) {
+    formErrors.password = validationMessages.passwordRequired
+  } else if (form.password?.trim() && form.password.trim().length < 8) {
+    formErrors.password = validationMessages.passwordMin
+  }
+  if (!form.role_id) {
+    formErrors.role_id = validationMessages.roleRequired
+  }
+
+  if (firstErrorField()) {
+    focusFirstError()
+    return false
+  }
+  return true
+}
+
+function applyServerErrors(errors = {}) {
+  resetFormErrors()
+  Object.entries(errors).forEach(([field, messages]) => {
+    const target = field === 'role' ? 'role_id' : field
+    if (Object.prototype.hasOwnProperty.call(formErrors, target)) {
+      formErrors[target] = Array.isArray(messages) ? messages[0] : String(messages || '')
+    }
+  })
+  focusFirstError()
+}
 
 function statusLabel(user) {
   return user?.is_active ? 'Активен' : 'Заблокирован'
@@ -85,6 +182,7 @@ function personTypeLabel(type) {
 }
 
 function resetForm() {
+  resetFormErrors()
   Object.assign(form, {
     name: '',
     email: '',
@@ -100,10 +198,12 @@ function openCreate() {
   editingUser.value = null
   resetForm()
   formOpen.value = true
+  nextTick(() => nameInput.value?.focus?.())
 }
 
 function openEdit(user) {
   editingUser.value = user
+  resetFormErrors()
   Object.assign(form, {
     name: user.name || '',
     email: user.email || '',
@@ -117,9 +217,20 @@ function openEdit(user) {
 }
 
 async function saveUser() {
-  await store.save({ ...form }, editingUser.value?.id || null)
-  formOpen.value = false
-  $q.notify({ type: 'positive', message: editingUser.value ? 'Пользователь обновлен' : 'Пользователь создан', position: 'top-right' })
+  if (!validateUserForm()) return
+
+  try {
+    await store.save({ ...form }, editingUser.value?.id || null)
+    resetFormErrors()
+    formOpen.value = false
+    $q.notify({ type: 'positive', message: editingUser.value ? 'Пользователь обновлен' : 'Пользователь создан', position: 'top-right' })
+  } catch (err) {
+    if (err.status === 422 && err.errors) {
+      applyServerErrors(err.errors)
+      return
+    }
+    formError.value = err.message || 'Не удалось сохранить пользователя'
+  }
 }
 
 function askDelete(user) {
@@ -184,6 +295,17 @@ function openPerson(user) {
   return null
 }
 
+watch(() => form.name, () => clearFieldError('name'))
+watch(() => form.email, () => clearFieldError('email'))
+watch(() => form.password, () => clearFieldError('password'))
+watch(() => form.role_id, () => clearFieldError('role_id'))
+watch(() => form.person_type, () => clearFieldError('person_type'))
+watch(() => form.person_id, () => clearFieldError('person_id'))
+watch(formOpen, (open) => {
+  if (!open) {
+    resetFormErrors()
+  }
+})
 watch(pagination, (value) => persistTablePagination(rowsPerPageKey, value), { deep: true })
 onMounted(async () => {
   await store.load()
@@ -305,12 +427,13 @@ onMounted(async () => {
           <div class="text-h6">{{ editingUser ? 'Редактировать пользователя' : 'Создать пользователя' }}</div>
         </q-card-section>
         <q-card-section class="users-form">
-          <q-input v-model="form.name" outlined dense label="Имя" />
-          <q-input v-model="form.email" outlined dense label="Email" type="email" />
-          <q-input v-model="form.password" outlined dense :label="editingUser ? 'Новый пароль, если нужно' : 'Пароль'" type="password" />
-          <q-select v-model="form.role_id" outlined dense emit-value map-options label="Роль" :options="store.roleOptions" />
-          <q-select v-model="form.person_type" outlined dense clearable emit-value map-options label="Тип Person" :options="store.personTypeOptions" />
-          <q-input v-model.number="form.person_id" outlined dense clearable label="ID Person" type="number" />
+          <AppErrorBanner v-if="formError" :message="formError" />
+          <q-input ref="nameInput" v-model="form.name" outlined dense label="Имя *" :error="Boolean(formErrors.name)" :error-message="formErrors.name" bottom-slots />
+          <q-input ref="emailInput" v-model="form.email" outlined dense label="Email *" type="email" :error="Boolean(formErrors.email)" :error-message="formErrors.email" bottom-slots />
+          <q-input ref="passwordInput" v-model="form.password" outlined dense :label="editingUser ? 'Новый пароль, если нужно' : 'Пароль *'" type="password" :error="Boolean(formErrors.password)" :error-message="formErrors.password" bottom-slots />
+          <q-select ref="roleInput" v-model="form.role_id" outlined dense emit-value map-options label="Роль *" :options="store.roleOptions" :error="Boolean(formErrors.role_id)" :error-message="formErrors.role_id" bottom-slots />
+          <q-select v-model="form.person_type" outlined dense clearable emit-value map-options label="Тип Person" :options="store.personTypeOptions" :error="Boolean(formErrors.person_type)" :error-message="formErrors.person_type" bottom-slots />
+          <q-input ref="personIdInput" v-model.number="form.person_id" outlined dense clearable label="Связанная запись Person" type="number" hint="Укажите ID только если учетная запись уже связана с существующей записью Person." :error="Boolean(formErrors.person_id)" :error-message="formErrors.person_id" bottom-slots />
           <q-toggle v-model="form.is_active" label="Активен" />
         </q-card-section>
         <q-card-actions align="right">

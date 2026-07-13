@@ -770,3 +770,11 @@
 - [x] Verified targeted test 10 consecutive times.
 - [x] Verified full backend suite and frontend build locally.
 - [x] Checked branch protection availability; GitHub private repo plan blocks it with HTTP 403.
+
+## BUG-009
+
+- [x] Localize `/admin/users` validation messages for user-facing errors.
+- [x] Return `422` payload with `message` and field-level `errors` for user form validation.
+- [x] Show user create/edit validation errors inline inside the modal.
+- [x] Keep global banners for non-field and unexpected errors only.
+- [x] Add backend coverage for required name/email/password/role, invalid email, duplicate email, missing Person and edit without password change.

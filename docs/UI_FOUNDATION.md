@@ -298,3 +298,28 @@ Dashboard строится как набор рабочих виджетов:
 6. Запрещенный прямой переход должен вести на `/forbidden`, а не оставлять пользователя на пустой странице.
 
 Frontend RBAC нужен для чистого интерфейса, но не является защитой данных. Источником истины остается backend middleware `permission:`.
+
+## Inline Validation Standard
+
+Form validation errors returned by API status `422` must be shown next to the matching field inside the active form, drawer or modal. Use Quasar field props `error`, `error-message` and `bottom-slots` for `q-input`, `q-select` and related controls.
+
+Rules:
+
+- keep the form/modal open after a `422` response;
+- map backend `errors.<field>` to the corresponding UI control;
+- move focus to the first invalid field when practical;
+- clear a field error when the user edits that field;
+- do not duplicate the same field error in the global page banner;
+- use the global banner only for network errors, `500`, unexpected server errors or validation errors without field mapping;
+- required fields must be visually marked with `*` in the label.
+
+Backend validation messages intended for users must be Russian. The standard API payload is:
+
+```json
+{
+  "message": "Проверьте заполнение формы.",
+  "errors": {
+    "name": ["Введите имя пользователя."]
+  }
+}
+```

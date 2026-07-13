@@ -9,10 +9,12 @@ use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
 use App\Services\AuditLogService;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -197,14 +199,33 @@ class AdminUserController extends Controller
 
     private function validated(Request $request, ?User $user = null): array
     {
-        return $request->validate([
-            'role_id' => ['nullable', 'integer', 'exists:roles,id'],
+        $validator = Validator::make($request->all(), [
+            'role_id' => ['required', 'integer', 'exists:roles,id'],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user?->id)],
             'password' => [$user ? 'nullable' : 'required', 'string', 'min:8', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
             'person_type' => ['nullable', Rule::in(['student', 'teacher', 'employee', 'applicant', 'guest', 'alumni'])],
-            'person_id' => ['nullable', 'integer', 'min:1'],
+            'person_id' => ['nullable', 'integer', 'min:1', 'exists:people,id'],
+        ], [
+            'name.required' => 'Введите имя пользователя.',
+            'email.required' => 'Введите email.',
+            'email.email' => 'Введите корректный email.',
+            'email.unique' => 'Пользователь с таким email уже существует.',
+            'password.required' => 'Введите пароль.',
+            'password.min' => 'Пароль должен содержать не менее :min символов.',
+            'role_id.required' => 'Выберите роль.',
+            'role_id.exists' => 'Выбранная роль не найдена.',
+            'person_id.exists' => 'Выбранная запись Person не найдена.',
         ]);
+
+        if ($validator->fails()) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'Проверьте заполнение формы.',
+                'errors' => $validator->errors(),
+            ], Response::HTTP_UNPROCESSABLE_ENTITY));
+        }
+
+        return $validator->validated();
     }
 }

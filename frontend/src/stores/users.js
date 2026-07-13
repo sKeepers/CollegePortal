@@ -94,7 +94,9 @@ export const useUsersStore = defineStore('users', () => {
       selectedId.value = response?.data?.id || id
       return response?.data || null
     } catch (err) {
-      error.value = err.message || 'Не удалось сохранить пользователя'
+      if (err.status !== 422 || !err.errors) {
+        error.value = err.message || 'Не удалось сохранить пользователя'
+      }
       throw err
     } finally {
       saving.value = false

@@ -53,3 +53,17 @@ At the end of each UAT day:
 3. Confirm reproducibility.
 4. Move accepted issues to `in_progress`.
 5. Mark fixed issues as `retest` before asking users to check again.
+
+## Validation Feedback Standard
+
+During UAT, field validation defects should be recorded when a form shows a server validation error outside the form, uses English text, closes the modal after a validation error, or does not identify the exact field that needs correction.
+
+Expected behavior for `422` field errors:
+
+- the active modal/form remains open;
+- the field with invalid data is highlighted;
+- the message is displayed under that field in Russian;
+- focus moves to the first invalid field where the browser/component supports it;
+- global banners are reserved for non-field errors such as server or network failures.
+
+Example expected message for user creation without a name: `Введите имя пользователя.`
