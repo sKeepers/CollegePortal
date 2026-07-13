@@ -55,3 +55,11 @@ Official contract version 4.9 has not been loaded into DEV yet. The official ins
 Therefore the following fields remain `TBD from official spec`: SOAP version, WSDL, service/port/binding, namespaces, methods, authentication, PackageID format, status methods, error codes, payload limits, signing/certificate requirements and retry semantics.
 
 Implementation rule remains strict: no SOAP envelope, XML namespace, auth header or package type may be implemented from guesses.
+
+## FIS-GATEWAY-001: ViPNet Gateway Checkpoint
+
+Actual WSDL/XSD/DISCO XML files were not available in this Codex/DEV workspace during implementation. After they are copied to `backend/storage/app/private/fis-specs/discovered/`, verify SOAP version, binding, port, transport, endpoint location, Content-Type, SOAPAction, WCF policies and authentication by XML parser before enabling any write operation.
+
+Task input says service is `ImportService`, contract is `IImportService`, target namespace is `http://tempuri.org/`, and SOAP action follows `http://tempuri.org/IImportService/<MethodName>`. This remains pending parser verification.
+
+`xsd0` is treated as WCF wrapper XSD with `xs:any processContents="lax"`; it is not the official application XSD and must not be used to invent real `DoValidate` or `DoImport` payloads.

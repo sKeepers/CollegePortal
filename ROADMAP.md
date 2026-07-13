@@ -381,3 +381,7 @@ Official outbound connector foundation is started for Release 0.9: official sour
 ## FIS-API-001.1
 
 Official FIS outbound connector remains in 0.9 track. Next required step: obtain FCT 4.9 specification/XSD/test client and run Gateway Agent on a ZKSPD-connected node for TEST endpoint verification.
+
+## FIS-GATEWAY-001
+
+FIS-GATEWAY-001: ViPNet Gateway Agent for FIS TEST diagnostics and future official outbound connector.

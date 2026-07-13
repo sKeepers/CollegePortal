@@ -51,3 +51,7 @@ Backend container check:
 - `curl` to TEST endpoint also timed out.
 
 Conclusion: current DEV host/container do not have working ZKSPD access to FIS TEST.
+
+## FIS-GATEWAY-001 TEST Node
+
+Direct DEV access to `10.0.3.1:8383` remains unavailable. The selected TEST path is through ViPNet workstation `192.168.34.223` running the Gateway Agent. Production `10.0.3.1:8080` is not used.

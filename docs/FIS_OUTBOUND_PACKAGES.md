@@ -37,3 +37,7 @@
 - Production send всегда заблокирован.
 - Официальная генерация XML заблокирована до загрузки XSD/spec.
 - Mock transport доступен для DEV/test без обращения к ФИС.
+
+## FIS-GATEWAY-001
+
+Outbound packages can use Gateway diagnostics for safe TEST checks. Real `DoValidate`, `DoImport` and `DoImportApplicationSingle` remain disabled until official application XSD and authentication are confirmed.
