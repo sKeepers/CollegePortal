@@ -760,4 +760,13 @@
 - [x] Run pre-push secret audit with git scans and gitleaks.
 - [x] Create private GitHub repository and push `develop` / `main`.
 - [x] Create Release 0.8.0-rc2 and initial Issues.
-- [ ] Create GitHub Project after refreshing gh scopes: `gh auth refresh -s project,read:project`.
+- [x] Create GitHub Project after refreshing gh scopes: `CollegePortal Roadmap`.
+
+## CI-001
+
+- [x] Reproduced `JournalEngineApiTest` teacher scope failure locally in the backend container.
+- [x] Identified date-dependent `mode=week` fixture as the root cause.
+- [x] Froze Journal Engine test clock and strengthened teacher/study RBAC assertions.
+- [x] Verified targeted test 10 consecutive times.
+- [x] Verified full backend suite and frontend build locally.
+- [x] Checked branch protection availability; GitHub private repo plan blocks it with HTTP 403.

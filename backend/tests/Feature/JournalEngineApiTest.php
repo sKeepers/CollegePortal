@@ -14,6 +14,7 @@ use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -21,6 +22,18 @@ use Tests\TestCase;
 class JournalEngineApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Carbon::setTestNow(Carbon::parse('2026-07-12 09:00:00'));
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
 
     public function test_open_from_schedule_is_idempotent_and_creates_student_roster(): void
     {
@@ -168,16 +181,33 @@ class JournalEngineApiTest extends TestCase
         $studyRole = $this->roleWithPermissions('study', ['journal.view', 'journal.view_all']);
         $study->update(['role_id' => $studyRole->id]);
 
-        $this->withApiAuth($admin)->postJson("/api/journal/from-schedule/{$entry->id}/open")->assertCreated();
-        $this->withApiAuth($admin)->postJson("/api/journal/from-schedule/{$otherEntry->id}/open")->assertCreated();
+        $ownLessonId = $this->withApiAuth($admin)->postJson("/api/journal/from-schedule/{$entry->id}/open")
+            ->assertCreated()
+            ->json('data.id');
+        $otherLessonId = $this->withApiAuth($admin)->postJson("/api/journal/from-schedule/{$otherEntry->id}/open")
+            ->assertCreated()
+            ->json('data.id');
 
-        $this->withApiAuth($teacherUser)->getJson('/api/journal/lessons?mode=week')
+        $teacherResponse = $this->withApiAuth($teacherUser)->getJson('/api/journal/lessons?mode=week')
             ->assertOk()
             ->assertJsonCount(1, 'data');
+        $this->assertSame([$ownLessonId], collect($teacherResponse->json('data'))->pluck('id')->all());
+        $this->assertNotContains($otherLessonId, collect($teacherResponse->json('data'))->pluck('id')->all());
 
-        $this->withApiAuth($study)->getJson('/api/journal/lessons?mode=control')
+        $teacherControlResponse = $this->withApiAuth($teacherUser)->getJson('/api/journal/lessons?mode=control')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+        $this->assertSame([$ownLessonId], collect($teacherControlResponse->json('data'))->pluck('id')->all());
+
+        $orphanTeacherUser = User::factory()->create(['is_active' => true, 'role_id' => $teacherRole->id]);
+        $this->withApiAuth($orphanTeacherUser)->getJson('/api/journal/lessons?mode=week')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+
+        $studyResponse = $this->withApiAuth($study)->getJson('/api/journal/lessons?mode=control')
             ->assertOk()
             ->assertJsonCount(2, 'data');
+        $this->assertEqualsCanonicalizing([$ownLessonId, $otherLessonId], collect($studyResponse->json('data'))->pluck('id')->all());
     }
 
     public function test_attendance_suggestion_marks_left_before_end(): void
