@@ -798,3 +798,10 @@
 - [ ] Получить официальные документы ФЦТ 4.9 и сформировать SHA-256 manifest
 - [ ] Реализовать точный SOAP/XML контракт строго по WSDL/XSD
 - [ ] Выполнить первую TEST-отправку после credentials и доступа ЗКСПД
+
+## FIS-GATEWAY-001
+
+- [x] FIS-GATEWAY-001: add ViPNet Gateway Agent source, HMAC transport, diagnostics UI and installation docs
+- [ ] Build and run the agent on real Windows 7 ViPNet workstation
+- [ ] Copy official WSDL/XSD/DISCO files into private storage and regenerate manifest
+- [ ] Confirm FIS authentication with one controlled TEST read-only call

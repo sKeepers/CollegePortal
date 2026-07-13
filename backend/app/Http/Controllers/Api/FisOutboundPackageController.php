@@ -14,6 +14,7 @@ use App\Services\FisIntegration\FisPackageBuilder;
 use App\Services\FisIntegration\FisPackageSender;
 use App\Services\FisIntegration\FisPackageStatusService;
 use App\Services\FisIntegration\FisPackageValidator;
+use App\Services\FisIntegration\GatewayFisTransport;
 use App\Services\FisIntegration\FisSpecificationRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -133,6 +134,51 @@ class FisOutboundPackageController extends Controller
     public function events(FisOutboundPackage $package): AnonymousResourceCollection
     {
         return FisOutboundPackageEventResource::collection($package->events()->orderByDesc('created_at')->get());
+    }
+
+
+    public function gatewayHealth(GatewayFisTransport $gateway): JsonResponse
+    {
+        return $this->gatewayResponse(fn () => $gateway->health());
+    }
+
+    public function gatewayVersion(GatewayFisTransport $gateway): JsonResponse
+    {
+        return $this->gatewayResponse(fn () => $gateway->version());
+    }
+
+    public function gatewayZkspdCheck(GatewayFisTransport $gateway): JsonResponse
+    {
+        return $this->gatewayResponse(fn () => $gateway->zkspdCheck());
+    }
+
+    public function gatewayDictionariesList(GatewayFisTransport $gateway): JsonResponse
+    {
+        return $this->gatewayResponse(fn () => $gateway->dictionariesList());
+    }
+
+    public function gatewayDictionaryDetails(Request $request, GatewayFisTransport $gateway): JsonResponse
+    {
+        return $this->gatewayResponse(fn () => $gateway->dictionaryDetails($request->string('code')->toString() ?: null));
+    }
+
+    public function gatewayInstitutionInfo(GatewayFisTransport $gateway): JsonResponse
+    {
+        return $this->gatewayResponse(fn () => $gateway->institutionInfo());
+    }
+
+    public function gatewayTestCheckApplication(Request $request, GatewayFisTransport $gateway): JsonResponse
+    {
+        return $this->gatewayResponse(fn () => $gateway->testCheckApplication($request->all()));
+    }
+
+    private function gatewayResponse(callable $callback): JsonResponse
+    {
+        try {
+            return response()->json(['data' => $callback()]);
+        } catch (FisIntegrationException $exception) {
+            return response()->json(['message' => $exception->getMessage()], Response::HTTP_CONFLICT);
+        }
     }
 
     public function download(FisOutboundPackage $package): Response|JsonResponse

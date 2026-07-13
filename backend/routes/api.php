@@ -250,6 +250,13 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('frdo-packages/{frdoPackage}/export.json', [FrdoPackageController::class, 'exportJson']);
         Route::apiResource('frdo-packages', FrdoPackageController::class)->only(['index', 'store', 'show']);
         Route::get('fis/outbound/spec-info', [FisOutboundPackageController::class, 'specInfo'])->middleware('permission:fis.outbound.view');
+        Route::get('fis/outbound/gateway/health', [FisOutboundPackageController::class, 'gatewayHealth'])->middleware('permission:fis.outbound.view');
+        Route::get('fis/outbound/gateway/version', [FisOutboundPackageController::class, 'gatewayVersion'])->middleware('permission:fis.outbound.view');
+        Route::post('fis/outbound/gateway/zkspd-check', [FisOutboundPackageController::class, 'gatewayZkspdCheck'])->middleware('permission:fis.outbound.view');
+        Route::post('fis/outbound/gateway/dictionaries/list', [FisOutboundPackageController::class, 'gatewayDictionariesList'])->middleware('permission:fis.outbound.view');
+        Route::post('fis/outbound/gateway/dictionaries/details', [FisOutboundPackageController::class, 'gatewayDictionaryDetails'])->middleware('permission:fis.outbound.view');
+        Route::post('fis/outbound/gateway/institution/info', [FisOutboundPackageController::class, 'gatewayInstitutionInfo'])->middleware('permission:fis.outbound.view');
+        Route::post('fis/outbound/gateway/check-application', [FisOutboundPackageController::class, 'gatewayTestCheckApplication'])->middleware('permission:fis.outbound.view');
         Route::get('fis/outbound/packages', [FisOutboundPackageController::class, 'index'])->middleware('permission:fis.outbound.view');
         Route::post('fis/outbound/packages', [FisOutboundPackageController::class, 'store'])->middleware('permission:fis.outbound.create');
         Route::get('fis/outbound/packages/{package}', [FisOutboundPackageController::class, 'show'])->middleware('permission:fis.outbound.view');

@@ -83,9 +83,9 @@ class FisOutboundApiTest extends TestCase
         ]);
         Storage::disk('local')->put($package->payload_path, '<Package><Person>Secret Name</Person></Package>');
 
-        config(['fis_api.transport' => 'gateway', 'fis_api.gateway_url' => 'http://fis-agent.test', 'fis_api.gateway_token' => 'test-token']);
+        config(['fis_api.transport' => 'gateway', 'fis_api.gateway_enabled' => true, 'fis_api.gateway_allowed_environment' => 'test', 'fis_api.gateway_url' => 'http://fis-agent.test', 'fis_api.gateway_shared_secret' => 'test-secret']);
         Http::fake([
-            'fis-agent.test/fis/test/send' => Http::response(['ok' => false, 'status' => 'blocked', 'message' => 'send disabled'], 200),
+            'fis-agent.test/fis/test/import' => Http::response(['ok' => false, 'status' => 'blocked', 'message' => 'send disabled', 'gateway_version' => '0.1.0-dev'], 200),
         ]);
 
         $this->postJson("/api/fis/outbound/packages/{$package->id}/send", ['mock' => false])
@@ -97,16 +97,56 @@ class FisOutboundApiTest extends TestCase
 
         Http::assertSent(function ($request) {
             $data = $request->data();
-            return $request->url() === 'http://fis-agent.test/fis/test/send'
-                && $request->hasHeader('Authorization', 'Bearer test-token')
+            return $request->url() === 'http://fis-agent.test/fis/test/import'
+                && $request->hasHeader('X-FIS-Signature')
+                && $request->hasHeader('X-FIS-Timestamp')
+                && $request->hasHeader('X-FIS-Nonce')
+                && $request->hasHeader('X-FIS-Body-SHA256')
                 && isset($data['package_hash'])
                 && $data['payload'] === base64_encode('<Package><Person>Secret Name</Person></Package>')
                 && ! str_contains(json_encode($data), 'Secret Name');
         });
 
-        config(['fis_api.gateway_url' => null, 'fis_api.gateway_token' => null]);
+        config(['fis_api.gateway_url' => null, 'fis_api.gateway_shared_secret' => null]);
         $this->postJson("/api/fis/outbound/packages/{$package->id}/send", ['mock' => false])
             ->assertStatus(500);
+    }
+
+
+    public function test_gateway_diagnostics_are_signed_and_disabled_when_feature_flag_is_off(): void
+    {
+        $user = $this->userWith(['fis.outbound.view','manage_dictionaries']);
+        $this->withApiAuth($user);
+
+        config(['fis_api.gateway_enabled' => false, 'fis_api.gateway_url' => 'http://fis-agent.test', 'fis_api.gateway_shared_secret' => 'test-secret']);
+        $this->postJson('/api/fis/outbound/gateway/zkspd-check')
+            ->assertStatus(409)
+            ->assertJsonFragment(['message' => 'FIS Gateway is disabled. Set FIS_GATEWAY_ENABLED=true for TEST diagnostics.']);
+
+        config(['fis_api.gateway_enabled' => true, 'fis_api.gateway_allowed_environment' => 'test']);
+        Http::fake([
+            'fis-agent.test/health' => Http::response(['ok' => true, 'message' => 'healthy'], 200),
+            'fis-agent.test/zkspd/check' => Http::response(['ok' => false, 'error_code' => 'zkspd_unreachable', 'message' => 'timeout', 'latency_ms' => 5000], 200),
+            'fis-agent.test/fis/test/dictionaries/list' => Http::response(['ok' => true, 'message' => 'soap_ok', 'gateway_version' => '0.1.0-dev'], 200),
+        ]);
+
+        $this->getJson('/api/fis/outbound/gateway/health')
+            ->assertOk()
+            ->assertJsonPath('data.ok', true);
+
+        $this->postJson('/api/fis/outbound/gateway/zkspd-check')
+            ->assertOk()
+            ->assertJsonPath('data.error_code', 'zkspd_unreachable');
+
+        $this->postJson('/api/fis/outbound/gateway/dictionaries/list')
+            ->assertOk()
+            ->assertJsonPath('data.gateway_version', '0.1.0-dev');
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'http://fis-agent.test/zkspd/check'
+                && $request->hasHeader('X-FIS-Signature')
+                && $request->hasHeader('X-FIS-Body-SHA256');
+        });
     }
 
     public function test_production_is_blocked_and_permissions_are_required(): void

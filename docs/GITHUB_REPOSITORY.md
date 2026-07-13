@@ -172,3 +172,7 @@ Project fields set:
 - Target release: `0.9`
 
 The requested `Type=Feature` and `Module=FIS` options were not present in the existing single-select fields. GitHub GraphQL rejected automated option update attempts, so the item is temporarily marked as `Type=Task` and `Module=Data Import` until the project options are extended manually or by a separate project-configuration task.
+
+## FIS-GATEWAY-001
+
+Issue #7 tracks the ViPNet Gateway Agent. It is added to CollegePortal Roadmap with Status `In Progress`, Priority `P1 High`, Type `Task` and Module `Data Import` because `Feature` and `FIS` options are not available in the project fields.
