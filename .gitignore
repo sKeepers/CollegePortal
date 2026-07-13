@@ -101,3 +101,6 @@ playwright-report/
 test-results/
 screenshots/
 coverage/
+
+# Official FIS reference materials are downloaded locally and may be license-restricted
+backend/storage/app/private/reference/fis/

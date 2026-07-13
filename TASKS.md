@@ -780,3 +780,11 @@
 - [x] Show user create/edit validation errors inline inside the modal.
 - [x] Keep global banners for non-field and unexpected errors only.
 - [x] Add backend coverage for required name/email/password/role, invalid email, duplicate email, missing Person and edit without password change.
+
+
+## FIS-API-001
+
+- [x] FIS-API-001: создать foundation официального outbound-коннектора ФИС без production-отправки
+- [ ] Получить официальные WSDL/XSD/spec материалы через разрешенный доступ ФЦТ
+- [ ] Подключить реальные SOAP methods строго по спецификации
+- [ ] Провести TEST отправку только после credentials и доступа ЗКСПД

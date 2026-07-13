@@ -229,3 +229,8 @@ Teacher workspace uses existing `journal.*` permissions with stricter UI behavio
 Добавлены permissions: `hr.calendar.view`, `hr.calendar.manage`, `hr.absences.manage`, `hr.dismissals.manage`, `hr.replacements.view`, `hr.replacements.manage`, `hr.reports.view`.
 
 Роли: `hr` управляет календарем и заменами; `deputy/study/academic_office` видят отсутствия и управляют заменами; `director` видит календарь и отчеты; `teacher` получает read-only доступ только к собственным периодам; `student/security/admission` доступа не имеют.
+
+
+## FIS Outbound Permissions
+
+Added permissions: `fis.outbound.view`, `fis.outbound.create`, `fis.outbound.generate`, `fis.outbound.validate`, `fis.outbound.send_test`, `fis.outbound.send_production`, `fis.outbound.status`, `fis.outbound.download`, `fis.settings.manage`. Production send is feature-flagged and not active in FIS-API-001.

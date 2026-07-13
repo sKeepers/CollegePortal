@@ -40,3 +40,8 @@ Demo data is disabled by default and is created only after an explicit `yes`.
 ## Result
 
 The installer creates `/opt/college-portal`, starts Docker containers, runs migrations, seeds roles/permissions/reference data, creates the first admin and checks `/health/ready`.
+
+
+## FIS API Settings
+
+The official FIS outbound connector is disabled by default. Configure only in DEV/TEST after official specs are loaded: `FIS_API_ENABLED`, `FIS_API_MODE`, `FIS_API_TEST_ENDPOINT`, `FIS_API_XSD_PATH`, `FIS_API_WSDL_PATH`. Keep credentials in secrets/secret mounts, not Git or frontend settings.

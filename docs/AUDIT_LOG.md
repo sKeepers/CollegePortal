@@ -149,3 +149,8 @@ Teacher Journal Workspace continues Journal Engine audit coverage and adds expli
 ## HR-001B audit
 
 Логируются preview/apply значимые изменения кадровых периодов, отмена периода, создание замены преподавателя, массовая замена и сохранение с warning. Preview без apply не изменяет БД и не создает audit event.
+
+
+## FIS Outbound Audit
+
+FIS outbound logs package creation, generation attempts, validation, send preview, test send, status refresh and cancellation. Audit payloads must not include credentials, XML with personal data, passport, SNILS or raw secrets.

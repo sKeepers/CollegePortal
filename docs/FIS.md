@@ -44,3 +44,8 @@
 ## Импорт заявлений ФИС
 
 Заявления из экспорта ФИС ГИА и Приема загружаются через отдельный connector `fis_admissions`. Реальная отправка в ФИС по-прежнему не выполняется; модуль использует выгрузку как источник данных приемной комиссии.
+
+
+## Official Outbound Connector Foundation
+
+FIS-API-001 adds a separate official outbound foundation: `/api/fis/outbound/*`, private XML payload storage, local XSD validation, mock transport and safe connection diagnostics. This does not replace the existing inbound FIS XLS/XLSX import. Production send remains blocked until FIS-API-002. See `docs/FIS_OUTBOUND_PACKAGES.md`.

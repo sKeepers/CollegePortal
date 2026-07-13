@@ -141,6 +141,15 @@ class RoleSeeder extends Seeder
             ['module' => 'FRDO', 'code' => 'frdo.export', 'name' => 'ФРДО: экспорт', 'description' => 'Подготовка, проверка и экспорт пакетов ФРДО.'],
             ['module' => 'FIS', 'code' => 'fis.view', 'name' => 'ФИС: просмотр', 'description' => 'Просмотр пакетов ФИС.'],
             ['module' => 'FIS', 'code' => 'fis.export', 'name' => 'ФИС: экспорт', 'description' => 'Подготовка, проверка и экспорт пакетов ФИС.'],
+            ['module' => 'FIS', 'code' => 'fis.outbound.view', 'name' => 'ФИС outbound: просмотр', 'description' => 'Просмотр исходящих официальных пакетов ФИС.'],
+            ['module' => 'FIS', 'code' => 'fis.outbound.create', 'name' => 'ФИС outbound: создание', 'description' => 'Создание исходящих пакетов ФИС.'],
+            ['module' => 'FIS', 'code' => 'fis.outbound.generate', 'name' => 'ФИС outbound: формирование', 'description' => 'Формирование XML исходящего пакета.'],
+            ['module' => 'FIS', 'code' => 'fis.outbound.validate', 'name' => 'ФИС outbound: XSD-валидация', 'description' => 'Проверка пакета по официальной XSD.'],
+            ['module' => 'FIS', 'code' => 'fis.outbound.send_test', 'name' => 'ФИС outbound: тестовая отправка', 'description' => 'Отправка в тестовый контур ФИС.'],
+            ['module' => 'FIS', 'code' => 'fis.outbound.send_production', 'name' => 'ФИС outbound: production отправка', 'description' => 'Контролируемая production-отправка после отдельной активации.'],
+            ['module' => 'FIS', 'code' => 'fis.outbound.status', 'name' => 'ФИС outbound: статус', 'description' => 'Получение статуса обработки исходящего пакета.'],
+            ['module' => 'FIS', 'code' => 'fis.outbound.download', 'name' => 'ФИС outbound: скачать XML', 'description' => 'Скачивание XML из private storage.'],
+            ['module' => 'FIS', 'code' => 'fis.settings.manage', 'name' => 'ФИС: настройки подключения', 'description' => 'Управление настройками официального подключения ФИС.'],
             ['module' => 'Identity', 'code' => 'gate.scan', 'name' => 'Проходная: сканирование', 'description' => 'Сканирование QR на проходной.'],
             ['module' => 'Identity', 'code' => 'gate.reports', 'name' => 'Проходная: отчеты', 'description' => 'Просмотр событий и отчетов проходной.'],
             ['module' => 'Identity', 'code' => 'digitalpasses.manage', 'name' => 'Цифровые пропуска: управление', 'description' => 'Выпуск, отзыв и просмотр QR-пропусков.'],
@@ -187,7 +196,7 @@ class RoleSeeder extends Seeder
             'dashboard.view', 'people.view', 'students.view', 'groups.view', 'teachers.view', 'subjects.view', 'classrooms.view',
             'schedule.view', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.view_all', 'journal.export', 'attendance.view', 'attendance.reports',
             'admissions.view', 'admissions.documents.view', 'admissions.documents.download', 'admissions.bulk_export', 'curricula.view', 'curricula.subjects.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'graduation.view',
-            'frdo.view', 'fis.view', 'gate.reports', 'audit.view', 'reference.manage', 'uat.manage', 'hr.employees.view', 'hr.calendar.view', 'hr.replacements.view', 'hr.reports.view', 'view_reports',
+            'frdo.view', 'fis.view', 'fis.outbound.view', 'fis.outbound.status', 'gate.reports', 'audit.view', 'reference.manage', 'uat.manage', 'hr.employees.view', 'hr.calendar.view', 'hr.replacements.view', 'hr.reports.view', 'view_reports',
         ];
     }
 
@@ -202,7 +211,7 @@ class RoleSeeder extends Seeder
             'schedule.view', 'schedule.create', 'schedule.update', 'schedule.delete', 'schedule.validate', 'schedule.manage_templates', 'schedule.manage_replacements', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.reopen', 'journal.view_all', 'journal.export',
             'attendance.view', 'attendance.reports', 'admissions.documents.view', 'curricula.view', 'curricula.edit', 'curricula.subjects.view', 'curricula.subjects.create', 'curricula.subjects.update', 'curricula.subjects.delete',
             'teachingload.view', 'teachingload.edit', 'teaching_load.generate', 'teaching_load.assign', 'teaching_load.bulk_assign', 'teaching_load.view_coverage', 'exams.view', 'exams.edit',
-            'graduation.view', 'graduation.edit', 'people.update', 'people.link', 'frdo.view', 'fis.view', 'reference.manage', 'import.manage',
+            'graduation.view', 'graduation.edit', 'people.update', 'people.link', 'frdo.view', 'fis.view', 'fis.outbound.view', 'fis.outbound.create', 'fis.outbound.generate', 'fis.outbound.validate', 'fis.outbound.send_test', 'fis.outbound.status', 'reference.manage', 'import.manage',
             'manage_dictionaries', 'manage_schedule', 'manage_journal', 'uat.manage', 'hr.employees.view', 'hr.calendar.view', 'hr.statuses.manage', 'hr.replacements.view', 'hr.replacements.manage', 'hr.reports.view', 'view_reports',
         ];
     }
@@ -214,7 +223,7 @@ class RoleSeeder extends Seeder
 
     private function admissionPermissions(): array
     {
-        return ['dashboard.view', 'people.view', 'admissions.view', 'admissions.edit', 'admissions.documents.view', 'admissions.documents.receive', 'admissions.documents.upload', 'admissions.documents.verify', 'admissions.documents.reject', 'admissions.documents.download', 'admissions.bulk_status', 'admissions.bulk_documents', 'admissions.bulk_recommend', 'admissions.bulk_assign', 'admissions.bulk_export', 'admissions.bulk_enroll', 'students.view', 'groups.view', 'reference.manage', 'import.manage', 'view_reports'];
+        return ['dashboard.view', 'people.view', 'admissions.view', 'admissions.edit', 'admissions.documents.view', 'admissions.documents.receive', 'admissions.documents.upload', 'admissions.documents.verify', 'admissions.documents.reject', 'admissions.documents.download', 'admissions.bulk_status', 'admissions.bulk_documents', 'admissions.bulk_recommend', 'admissions.bulk_assign', 'admissions.bulk_export', 'admissions.bulk_enroll', 'students.view', 'groups.view', 'fis.outbound.view', 'fis.outbound.create', 'fis.outbound.generate', 'fis.outbound.validate', 'fis.outbound.send_test', 'fis.outbound.status', 'reference.manage', 'import.manage', 'view_reports'];
     }
 
     private function teacherPermissions(): array

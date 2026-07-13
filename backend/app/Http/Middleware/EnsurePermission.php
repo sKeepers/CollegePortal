@@ -110,6 +110,7 @@ class EnsurePermission
             'api/exam-results' => ['exams.view', 'exams.edit', 'exams.edit', 'exams.edit'],
             'api/exams' => ['exams.view', 'exams.edit', 'exams.edit', 'exams.edit'],
             'api/frdo-packages' => ['frdo.view', 'frdo.export', 'frdo.export', 'frdo.export'],
+            'api/fis/outbound' => ['fis.outbound.view', 'fis.outbound.create', 'fis.outbound.generate', 'fis.outbound.generate'],
             'api/fis-packages' => ['fis.view', 'fis.export', 'fis.export', 'fis.export'],
             'api/groups' => ['groups.view', 'groups.create', 'groups.update', 'groups.delete'],
             'api/graduates' => ['graduation.view', 'graduation.edit', 'graduation.edit', 'graduation.edit'],

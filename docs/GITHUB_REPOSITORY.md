@@ -159,3 +159,16 @@ Result:
 - Project `CollegePortal Roadmap` keeps issues `#1` through `#5` and has a Russian description/readme.
 
 Repository-facing safety rules remain unchanged: no personal data, secrets, real imports, dumps, backups, runtime files, private documents or screenshots with personal data in GitHub Issues, Pull Requests or release notes.
+
+
+## FIS-API-001 Roadmap Item
+
+Created GitHub Issue `#6`: `FIS-API-001: Official outbound connector for FIS GIA and Admissions` and added it to `CollegePortal Roadmap`.
+
+Project fields set:
+
+- Status: `In Progress`
+- Priority: `P1 High`
+- Target release: `0.9`
+
+The requested `Type=Feature` and `Module=FIS` options were not present in the existing single-select fields. GitHub GraphQL rejected automated option update attempts, so the item is temporarily marked as `Type=Task` and `Module=Data Import` until the project options are extended manually or by a separate project-configuration task.

@@ -1163,3 +1163,8 @@ INFRA-008 completed on UAT server 192.168.34.17 using release artifact /srv/coll
 CollegePortal is prepared for private GitHub publication under account `sKeepers`, repository `CollegePortal`. Repository documentation, CI workflow, issue/PR templates, `.gitignore` hardening and pre-push secret audit are documented in `docs/GITHUB_REPOSITORY.md`.
 
 GitHub publication completed: private repository `sKeepers/CollegePortal`, branches `develop` and `main`, Release `v0.8.0-rc2`, initial labels/issues and green CI after workflow fix. GitHub Project remains pending until gh receives `project/read:project` scopes.
+
+
+## FIS-API-001 Official Outbound Connector Foundation
+
+Added a separate outbound FIS integration foundation under `backend/app/Services/FisIntegration`. It is intentionally separate from inbound XLS/XLSX FIS import. Official XML generation and SOAP transport remain blocked until official WSDL/XSD/spec materials are loaded. Production send is disabled by default and reserved for FIS-API-002.

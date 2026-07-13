@@ -371,3 +371,8 @@ Role-based UAT center добавлен. Следующие этапы: пров�
 ## INFRA-008 completed
 
 Installer acceptance on a clean UAT server is complete for 0.8.0-rc2. Remaining pre-PROD hardening: SSH keys/password rotation, trusted TLS certificate, and clearer repeated-install message.
+
+
+## FIS-API-001 / 0.9
+
+Official outbound connector foundation is started for Release 0.9: official sources manifest, private XSD validation, outbound package lifecycle, mock transport, connection diagnostics and production lock. Next blocker: official specification/WSDL/XSD and TEST credentials/access through ZKSPD.
