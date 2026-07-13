@@ -59,18 +59,43 @@ GitHub Release `v0.8.0-rc2` should be private-repository release notes for the v
 - Initial issues: #1 through #5
 - CI status after workflow fix: success on `develop` and `main`
 
-## GitHub Project Status
+## GitHub Project Roadmap
 
-GitHub Projects v2 was not created because the current GitHub CLI token does not include `project` and `read:project` scopes. Classic repo project API also returned unavailable.
+- Project: `CollegePortal Roadmap`
+- Owner: `sKeepers`
+- Project number: `2`
+- URL: `https://github.com/users/sKeepers/projects/2`
+- Type: GitHub Projects v2
 
-To complete this item, run outside the project directory if needed:
+Configured board statuses:
 
-```bash
-gh auth refresh -s project,read:project
-```
+- `Backlog`
+- `Ready`
+- `In Progress`
+- `Review`
+- `Testing`
+- `Done`
 
-Then create the project:
+Configured fields:
 
-```bash
-gh project create --owner sKeepers --title "CollegePortal Roadmap"
-```
+- `Status`: single select, used as the board column field;
+- `Priority`: `P0 Critical`, `P1 High`, `P2 Medium`, `P3 Low`;
+- `Type`: `Bug`, `Task`, `Security`, `UAT`, `Infra`, `Release`, `Data Import`;
+- `Module`: `Infrastructure`, `Security`, `Data Import`, `UAT`, `Release`, `Repository`;
+- `Target release`: text field for release labels such as `0.8.0-rc2`, `0.9`, `1.0`.
+
+Issues added to the roadmap:
+
+| Issue | Status | Priority | Type | Module | Target release |
+| --- | --- | --- | --- | --- | --- |
+| `#1` INFRA: harden SSH and trusted TLS before PROD | Ready | P1 High | Security | Infrastructure | 0.9 |
+| `#2` DATA: pilot real data import checklist | Ready | P1 High | Data Import | Data Import | 0.8.0-rc2 |
+| `#3` INFRA: improve repeated install protection message | Backlog | P2 Medium | Infra | Infrastructure | 0.8.x |
+| `#4` UAT: run first role-based acceptance cycle | Ready | P1 High | UAT | UAT | 0.8.0-rc2 |
+| `#5` SECURITY: review private data handling before wider pilot | Ready | P1 High | Security | Security | 0.9 |
+
+Maintenance rules:
+
+- Keep all roadmap items linked to GitHub Issues, not draft-only cards, whenever a task requires traceability.
+- Use `Status` for board movement and keep `Priority`, `Type`, `Module`, and `Target release` filled before moving an item to `Ready`.
+- Do not put real personal data, import files, passwords, private keys, dumps, backups, or production certificates into issues or project notes.
