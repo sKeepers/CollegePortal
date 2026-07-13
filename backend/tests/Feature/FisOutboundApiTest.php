@@ -85,7 +85,7 @@ class FisOutboundApiTest extends TestCase
 
         config(['fis_api.transport' => 'gateway', 'fis_api.gateway_enabled' => true, 'fis_api.gateway_allowed_environment' => 'test', 'fis_api.gateway_url' => 'http://fis-agent.test', 'fis_api.gateway_shared_secret' => 'test-secret']);
         Http::fake([
-            'fis-agent.test/fis/test/import' => Http::response(['ok' => false, 'status' => 'blocked', 'message' => 'send disabled', 'gateway_version' => '0.1.0-dev'], 200),
+            'fis-agent.test/adapters/fis/test/import' => Http::response(['ok' => false, 'status' => 'blocked', 'message' => 'send disabled', 'gateway_version' => '0.1.0-dev'], 200),
         ]);
 
         $this->postJson("/api/fis/outbound/packages/{$package->id}/send", ['mock' => false])
@@ -93,11 +93,11 @@ class FisOutboundApiTest extends TestCase
             ->assertJsonPath('data.status', 'failed')
             ->assertJsonPath('data.package_id', null)
             ->assertJsonPath('data.last_error_message', 'send disabled')
-            ->assertJsonPath('data.response_metadata.transport', 'gateway');
+            ->assertJsonPath('data.response_metadata.transport', 'collegeportal_gateway');
 
         Http::assertSent(function ($request) {
             $data = $request->data();
-            return $request->url() === 'http://fis-agent.test/fis/test/import'
+            return $request->url() === 'http://fis-agent.test/adapters/fis/test/import'
                 && $request->hasHeader('X-FIS-Signature')
                 && $request->hasHeader('X-FIS-Timestamp')
                 && $request->hasHeader('X-FIS-Nonce')
@@ -121,13 +121,13 @@ class FisOutboundApiTest extends TestCase
         config(['fis_api.gateway_enabled' => false, 'fis_api.gateway_url' => 'http://fis-agent.test', 'fis_api.gateway_shared_secret' => 'test-secret']);
         $this->postJson('/api/fis/outbound/gateway/zkspd-check')
             ->assertStatus(409)
-            ->assertJsonFragment(['message' => 'FIS Gateway is disabled. Set FIS_GATEWAY_ENABLED=true for TEST diagnostics.']);
+            ->assertJsonFragment(['message' => 'CollegePortal Gateway is disabled. Set FIS_GATEWAY_ENABLED=true for TEST diagnostics.']);
 
         config(['fis_api.gateway_enabled' => true, 'fis_api.gateway_allowed_environment' => 'test']);
         Http::fake([
             'fis-agent.test/health' => Http::response(['ok' => true, 'message' => 'healthy'], 200),
-            'fis-agent.test/zkspd/check' => Http::response(['ok' => false, 'error_code' => 'zkspd_unreachable', 'message' => 'timeout', 'latency_ms' => 5000], 200),
-            'fis-agent.test/fis/test/dictionaries/list' => Http::response(['ok' => true, 'message' => 'soap_ok', 'gateway_version' => '0.1.0-dev'], 200),
+            'fis-agent.test/adapters/fis/zkspd/check' => Http::response(['ok' => false, 'error_code' => 'zkspd_unreachable', 'message' => 'timeout', 'latency_ms' => 5000], 200),
+            'fis-agent.test/adapters/fis/test/dictionaries/list' => Http::response(['ok' => true, 'message' => 'soap_ok', 'gateway_version' => '0.1.0-dev'], 200),
         ]);
 
         $this->getJson('/api/fis/outbound/gateway/health')
@@ -143,7 +143,7 @@ class FisOutboundApiTest extends TestCase
             ->assertJsonPath('data.gateway_version', '0.1.0-dev');
 
         Http::assertSent(function ($request) {
-            return $request->url() === 'http://fis-agent.test/zkspd/check'
+            return $request->url() === 'http://fis-agent.test/adapters/fis/zkspd/check'
                 && $request->hasHeader('X-FIS-Signature')
                 && $request->hasHeader('X-FIS-Body-SHA256');
         });

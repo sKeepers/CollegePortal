@@ -147,6 +147,27 @@ class FisOutboundPackageController extends Controller
         return $this->gatewayResponse(fn () => $gateway->version());
     }
 
+
+    public function gatewayCapabilities(GatewayFisTransport $gateway): JsonResponse
+    {
+        return $this->gatewayResponse(fn () => $gateway->capabilities());
+    }
+
+    public function gatewayAdapters(GatewayFisTransport $gateway): JsonResponse
+    {
+        return $this->gatewayResponse(fn () => $gateway->listAdapters());
+    }
+
+    public function gatewayFisAdapterHealth(GatewayFisTransport $gateway): JsonResponse
+    {
+        return $this->gatewayResponse(fn () => $gateway->adapterHealth());
+    }
+
+    public function gatewayDiagnostics(GatewayFisTransport $gateway): JsonResponse
+    {
+        return $this->gatewayResponse(fn () => $gateway->diagnostics());
+    }
+
     public function gatewayZkspdCheck(GatewayFisTransport $gateway): JsonResponse
     {
         return $this->gatewayResponse(fn () => $gateway->zkspdCheck());

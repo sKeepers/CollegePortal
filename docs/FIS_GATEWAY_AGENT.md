@@ -1,4 +1,4 @@
-# FIS Gateway Agent
+# CollegePortal Gateway
 
 ## Why It Is Needed
 
@@ -7,7 +7,7 @@ DEV `/srv/college-dev` currently has no TCP access to `10.0.3.1:8383`. If only a
 ```text
 CollegePortal DEV
 -> internal protected API
--> FIS Gateway Agent on ZKSPD node
+-> CollegePortal Gateway on ZKSPD node
 -> FIS TEST 10.0.3.1:8383
 ```
 
@@ -40,4 +40,4 @@ Actual SOAP send/status must be implemented only after official WSDL/XSD/spec 4.
 
 ## FIS-GATEWAY-001: Windows Agent
 
-The target agent source is now under `integrations/fis-gateway-agent/` and targets .NET Framework 4.8 for Windows 7 compatibility. Portal-to-Agent requests use HMAC-SHA256 over `HTTP method`, `path`, `timestamp`, `nonce` and `body SHA-256`. The agent keeps dangerous TEST write operations disabled until the official application XSD and authentication contract are confirmed.
+The target agent source is now under `integrations/collegeportal-gateway/` and targets .NET Framework 4.8 for Windows 7 compatibility. Portal-to-Agent requests use HMAC-SHA256 over `HTTP method`, `path`, `timestamp`, `nonce` and `body SHA-256`. The agent keeps dangerous TEST write operations disabled until the official application XSD and authentication contract are confirmed.

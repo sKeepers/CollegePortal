@@ -1,0 +1,18 @@
+# Copy to C:\CollegePortalGateway\config\gateway.private.config and protect ACL.
+BindPrefix=http://+:8099/
+AllowedPortalIps=192.168.34.104
+SharedSecret=CHANGE_ME_GENERATE_LONG_RANDOM_SECRET
+InstallRoot=C:\CollegePortalGateway
+FisTestEndpoint=http://10.0.3.1:8383/api/import/ImportService.svc
+EnableDangerousOperations=false
+FisProductionEnabled=false
+MaxBodyBytes=1048576
+RequestWindowSeconds=300
+RateLimitPerMinute=60
+ConnectTimeoutSeconds=5
+RequestTimeoutSeconds=30
+AuditLogPath=C:\CollegePortalGateway\logs\audit.log
+NonceStorePath=C:\CollegePortalGateway\cache\nonces.txt
+DiagnosticsPath=C:\CollegePortalGateway\diagnostics\latest.json
+OfficialSpecStatus=not_imported
+ServiceVersion=0.2.0-dev

@@ -1,5 +1,6 @@
 param(
-    [string]$RepoPath = "C:\!Projects\college_portal"
+    [string]$RepoPath = "C:\!Projects\CollegePortal",
+    [string]$RemoteUrl = "https://github.com/sKeepers/CollegePortal.git"
 )
 
 $ErrorActionPreference = "Stop"
@@ -10,11 +11,19 @@ if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
 }
 
 if (-not (Test-Path -LiteralPath $RepoPath)) {
-    Write-Error "Repository path not found: $RepoPath"
+    $parent = Split-Path -Parent $RepoPath
+    if ($parent -and -not (Test-Path -LiteralPath $parent)) {
+        New-Item -ItemType Directory -Force -Path $parent | Out-Null
+    }
+    git clone --branch develop $RemoteUrl $RepoPath
 }
 
 Push-Location $RepoPath
 try {
+    if (-not (Test-Path -LiteralPath ".git")) {
+        Write-Error "Path is not a Git repository: $RepoPath"
+    }
+
     $remote = git remote get-url origin 2>$null
     if (-not $remote -or $remote -notlike "*$expectedRemote*") {
         Write-Error "Unexpected origin remote: $remote"
