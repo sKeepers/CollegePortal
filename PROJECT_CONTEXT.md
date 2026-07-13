@@ -1177,3 +1177,7 @@ DEV cannot currently download official FIS 4.9 materials or reach `10.0.3.1:8383
 ## FIS-GATEWAY-001
 
 FIS-GATEWAY-001 adds a Windows 7 compatible ViPNet Gateway Agent foundation and HMAC protected CollegePortal diagnostics for FIS TEST.
+
+## REPO-SYNC-001
+
+REPO-SYNC-001 merged PR #8 into develop, synchronized Linux DEV and documented repository/environment synchronization rules.

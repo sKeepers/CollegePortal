@@ -385,3 +385,7 @@ Official FIS outbound connector remains in 0.9 track. Next required step: obtain
 ## FIS-GATEWAY-001
 
 FIS-GATEWAY-001: ViPNet Gateway Agent for FIS TEST diagnostics and future official outbound connector.
+
+## REPO-SYNC-001
+
+REPO-SYNC-001 completed: repository sync documentation and safe Linux/Windows helpers.

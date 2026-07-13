@@ -805,3 +805,7 @@
 - [ ] Build and run the agent on real Windows 7 ViPNet workstation
 - [ ] Copy official WSDL/XSD/DISCO files into private storage and regenerate manifest
 - [ ] Confirm FIS authentication with one controlled TEST read-only call
+
+## REPO-SYNC-001
+
+- [x] REPO-SYNC-001: merge FIS gateway PR, sync Linux DEV, inventory repository copies, add sync helpers and docs

@@ -130,3 +130,50 @@ VITE_APP_ENV=production
 - Не запускать TEST с PROD-базой.
 - Не скрывать бейдж окружения в рабочем интерфейсе.
 - Не считать окружение безопасным, если `VITE_APP_ENV` не задан.
+
+## REPO-SYNC-001: инвентаризация копий
+
+GitHub является canonical repository:
+
+```text
+https://github.com/sKeepers/CollegePortal
+```
+
+Linux DEV:
+
+- host: `moodle`;
+- OS: Ubuntu 24.04.3 LTS;
+- path: `/srv/college-dev`;
+- branch после merge PR #8: `develop`;
+- HEAD после merge PR #8: `a64b341`;
+- remote: `https://github.com/sKeepers/CollegePortal.git`;
+- state: clean, ahead 0 / behind 0.
+
+UAT:
+
+- host/IP: `192.168.34.17`;
+- path: `/opt/college-portal`;
+- обновляется только через installer/update script и release archive;
+- `git pull` на UAT в рамках repository sync не выполняется.
+
+ViPNet Gateway:
+
+- host/IP: `192.168.34.223`;
+- OS: Windows 7;
+- полный CollegePortal туда не клонируется;
+- устанавливается только Gateway Agent в `C:\CollegePortalFisGateway` через отдельный ZIP release.
+
+PROD:
+
+- в REPO-SYNC-001 не инвентаризировался;
+- credentials не искать, подключение не выполнять;
+- статус: untouched / unknown until dedicated deployment inventory.
+
+Windows local development copy:
+
+- возможный путь: `C:\!Projects\college_portal`;
+- подтверждается и синхронизируется вручную через `scripts/repository/sync-collegeportal-windows.ps1`;
+- скрипт отказывается от pull при dirty working tree.
+
+Не включать в документы пароли, токены, private config и другие секреты.
+
