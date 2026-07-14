@@ -59,7 +59,7 @@ Route::post('auth/login', [AuthController::class, 'login']);
 Route::get('settings/public', [AdminSettingController::class, 'publicSettings']);
 Route::get('public/specialties', [SpecialtyController::class, 'index']);
 Route::get('public/education-programs', [EducationProgramController::class, 'index']);
-Route::get('public/documents/{publicId}/verify', PublicDocumentVerificationController::class);
+Route::get('public/documents/{publicId}/verify', PublicDocumentVerificationController::class)->middleware('throttle:30,1');
 
 Route::middleware('api.token')->group(function (): void {
     Route::get('auth/me', [AuthController::class, 'me']);

@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 
 return new class extends Migration
 {
@@ -24,6 +25,14 @@ return new class extends Migration
         );
 
         $typeId = DB::table('document_types')->where('code', 'student_enrollment_certificate')->value('id');
+        $templatePath = 'document-templates/demo/student_enrollment_certificate.docx';
+        $sourceTemplate = resource_path('document-templates/student_enrollment_certificate.docx');
+        $targetTemplate = storage_path('app/private/'.$templatePath);
+
+        if (is_file($sourceTemplate) && ! is_file($targetTemplate)) {
+            File::ensureDirectoryExists(dirname($targetTemplate));
+            File::copy($sourceTemplate, $targetTemplate);
+        }
 
         DB::table('document_templates')->updateOrInsert(
             ['document_type_id' => $typeId, 'version' => '1.0-demo'],
@@ -31,7 +40,7 @@ return new class extends Migration
                 'name' => 'Демонстрационный шаблон справки об обучении',
                 'status' => 'active',
                 'source_format' => 'docx',
-                'template_path' => 'document-templates/demo/student_enrollment_certificate.docx',
+                'template_path' => $templatePath,
                 'output_formats' => json_encode(['docx', 'pdf'], JSON_UNESCAPED_UNICODE),
                 'variables_schema' => json_encode([
                     'organization.full_name',

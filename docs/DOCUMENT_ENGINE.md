@@ -9,6 +9,7 @@ Document Engine - отдельный домен CollegePortal для генер�
 - журнал сформированных документов;
 - транзакционная регистрационная нумерация;
 - DOCX-генерация в private storage;
+- QR-код проверки как PNG-изображение внутри DOCX;
 - PDF через LibreOffice headless, если он установлен;
 - публичная проверка по `verification_public_id`;
 - события документа;
@@ -26,6 +27,16 @@ backend/storage/app/private/generated-documents/{year}/{document_type}/{uuid}/
 
 Публичная verify-страница не отдает DOCX/PDF.
 
+## QR и проверка
+
+QR генерируется локально библиотекой `endroid/qr-code` и содержит только публичный URL проверки `/verify/document/{publicId}`. `publicId` является UUID и не раскрывает ID базы данных.
+
+PNG-файл QR сохраняется рядом с документом в private storage и также включается в DOCX как `word/media/verification-qr.png`.
+
+## PDF
+
+PDF создается через LibreOffice/soffice, если конвертер доступен в backend-среде. Если LibreOffice отсутствует, DOCX продолжает формироваться, а PDF API возвращает понятную ошибку `PDF недоступен`.
+
 ## Ограничения MVP
 
-QR в DOCX представлен через verification URL. Встраивание bitmap QR в DOCX и электронная подпись выносятся в следующие этапы.
+Электронная подпись, печатная форма с реальной печатью и advanced validation пользовательских DOCX-шаблонов выносятся в следующие этапы.

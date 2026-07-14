@@ -142,11 +142,18 @@ https://github.com/sKeepers/CollegePortal
 Linux DEV:
 
 - host: `moodle`;
+- IP: `192.168.34.104`;
 - OS: Ubuntu 24.04.3 LTS;
 - path: `/srv/college-dev`;
 - branch после merge PR #8: `develop`;
 - HEAD после merge PR #8: `a64b341`;
 - remote: `https://github.com/sKeepers/CollegePortal.git`;
+
+Infrastructure clarification INFRA-ACCESS-001.1:
+
+- `192.168.34.104` / hostname `moodle` is the current factual CollegePortal DEV host and contains the active `/srv/college-dev` repository;
+- `192.168.34.114` is a separate Linux server; SSH is reachable, but key-based login for `andale` is not configured yet, so its role requires clarification before it can be treated as DEV;
+- Moodle service and CollegePortal DEV currently share the same host; do not move the project to another server without a separate infrastructure decision.
 - state: clean, ahead 0 / behind 0.
 
 UAT:

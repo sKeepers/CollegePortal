@@ -11,6 +11,7 @@ use App\Models\Student;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use ZipArchive;
 
 class DocumentEngineApiTest extends TestCase
 {
@@ -22,6 +23,7 @@ class DocumentEngineApiTest extends TestCase
             'documents.view',
             'documents.create',
             'documents.generate',
+            'documents.issue',
             'documents.download_docx',
         ]);
         $student = $this->studentFixture();
@@ -40,11 +42,13 @@ class DocumentEngineApiTest extends TestCase
             'document_type_code' => 'student_enrollment_certificate',
             'student_id' => $student->id,
         ])
-            ->assertOk()
+            ->assertCreated()
             ->assertJsonPath('data.subject_type', 'student')
             ->json('data.id');
 
         $document = GeneratedDocument::query()->findOrFail($documentId);
+        $this->assertDocxContainsQrMedia($document->output_docx_path);
+        $this->assertFileExists(dirname($document->output_docx_path).'/verification-qr.png');
 
         $this->assertDatabaseHas('document_events', [
             'generated_document_id' => $document->id,
@@ -55,6 +59,14 @@ class DocumentEngineApiTest extends TestCase
         $this->getJson('/api/public/documents/'.$document->verification_public_id.'/verify')
             ->assertOk()
             ->assertJsonPath('registration_number', $document->registration_number)
+            ->assertJsonPath('status', 'не выдан')
+            ->assertJsonMissing(['subject' => 'Иванов Иван Иванович']);
+
+        $this->withApiAuth($user)->postJson("/api/documents/{$document->id}/issue")->assertOk();
+
+        $this->getJson('/api/public/documents/'.$document->verification_public_id.'/verify')
+            ->assertOk()
+            ->assertJsonPath('status', 'действителен')
             ->assertJsonMissing(['subject' => 'Иванов Иван Иванович']);
     }
 
@@ -117,5 +129,16 @@ class DocumentEngineApiTest extends TestCase
         $role->permissions()->sync($ids);
 
         return User::factory()->create(['role_id' => $role->id, 'is_active' => true]);
+    }
+
+    private function assertDocxContainsQrMedia(string $path): void
+    {
+        $zip = new ZipArchive();
+        $this->assertTrue($zip->open($path));
+        $this->assertNotFalse($zip->locateName('word/media/verification-qr.png'));
+        $this->assertNotFalse($zip->locateName('word/_rels/document.xml.rels'));
+        $rels = $zip->getFromName('word/_rels/document.xml.rels');
+        $this->assertStringContainsString('verification-qr.png', $rels);
+        $zip->close();
     }
 }

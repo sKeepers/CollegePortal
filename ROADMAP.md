@@ -397,4 +397,5 @@ CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a 
 ### Document Engine
 
 - DOCS-ENGINE-001: печатные формы и справка об обучении - MVP foundation.
-- Следующее: DOCS-SIGN-001 электронная подпись, QR bitmap embedding в DOCX/PDF, расширение типов документов.
+- DOCS-ENGINE-001.1: техническая приемка, real QR PNG в DOCX, hardened public verification и private seed template.
+- Следующее: DOCS-SIGN-001 электронная подпись, расширение типов документов и печатные PDF-формы при наличии LibreOffice.

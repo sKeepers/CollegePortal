@@ -1189,3 +1189,11 @@ CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a 
 ## DOCS-ENGINE-001
 
 Добавлен foundation Document Engine: типы документов, шаблоны, журнал сформированных документов, регистрационная нумерация, private DOCX storage, публичная проверка подлинности и foundation `student_orders` для приказов студентов.
+
+## INFRA-ACCESS-001.1
+
+Фактический CollegePortal DEV подтвержден на `192.168.34.104` / hostname `moodle`, путь `/srv/college-dev`, remote `https://github.com/sKeepers/CollegePortal.git`. Сервер `192.168.34.114` доступен по SSH-порту, но key login для `andale` пока не настроен; назначение требует уточнения.
+
+## DOCS-ENGINE-001.1
+
+Document Engine hardened перед PR: DOCX теперь содержит реальный QR PNG с публичным verification URL, seed template перенесен в `backend/resources/document-templates` и копируется в private storage при seed/install, публичная проверка различает `issued` и невыданные документы, endpoint проверки ограничен rate limit.

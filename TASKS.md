@@ -815,3 +815,4 @@
 CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a modular Windows service architecture for protected integrations. FIS remains the only implemented adapter; future FRDO/Moodle/LDAP/MAX/Telegram/Email adapters are planned. Windows repo path is `C:\!Projects\CollegePortal`; ViPNet installation remains a separate task.
 
 - [x] DOCS-ENGINE-001: foundation Document Engine и справка, подтверждающая обучение студента
+- [x] DOCS-ENGINE-001.1: verify/harden Document Engine, real QR PNG in DOCX, private seed template and public verification status

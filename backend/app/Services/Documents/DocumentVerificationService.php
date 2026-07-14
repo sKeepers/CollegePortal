@@ -30,9 +30,10 @@ class DocumentVerificationService
             'subject' => $this->maskName($studentName),
             'organization' => data_get($snapshot, 'organization.short_name') ?: data_get($snapshot, 'organization.full_name'),
             'status' => match ($document->status) {
+                'issued' => 'действителен',
                 'cancelled' => 'отменен',
                 'superseded' => 'заменен',
-                default => 'действителен',
+                default => 'не выдан',
             },
             'checked_at' => now()->format('d.m.Y H:i'),
         ];
