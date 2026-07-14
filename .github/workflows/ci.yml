@@ -73,3 +73,148 @@ jobs:
 
       - name: Run gitleaks
         run: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest detect --source /repo --redact --no-banner --exit-code 1
+
+  migration-smoke:
+    name: PostgreSQL migration smoke
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: college_portal_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d college_portal_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: college_portal_test
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, intl, zip, gd, redis
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare Laravel
+        run: |
+          cp .env.example .env
+          mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
+          php artisan key:generate
+
+      - name: Migrate clean PostgreSQL
+        run: |
+          php artisan migrate:fresh --force
+          php artisan migrate:status
+
+  playwright-smoke:
+    name: Playwright smoke
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run anonymized smoke tests
+        run: npm run test:e2e:smoke
+
+      - name: Upload Playwright diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-smoke-diagnostics
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          retention-days: 7
+
+  repository-safety:
+    name: Private storage and forbidden files
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check tracked files
+        run: bash scripts/security/check-forbidden-files.sh
+
+  gateway-windows:
+    name: Gateway Windows build
+    runs-on: windows-2022
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build and package Gateway
+        shell: pwsh
+        run: ./scripts/codex/build-gateway-ci.ps1
+
+      - name: Upload Gateway CI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: collegeportal-gateway-windows
+          path: |
+            .ci-artifacts/gateway/*.zip
+            .ci-artifacts/gateway/*.sha256
+          retention-days: 7
+
+  release-package-structure:
+    name: Release package structure
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build source-only archive snapshot
+        run: git archive --format=tar HEAD -o "$RUNNER_TEMP/collegeportal.tar"
+
+      - name: Verify required installer files
+        run: |
+          tar -tf "$RUNNER_TEMP/collegeportal.tar" > "$RUNNER_TEMP/archive-files.txt"
+          for file in installer/install.sh installer/update.sh installer/backup.sh installer/restore.sh installer/check.sh installer/docker-compose.yml installer/VERSION; do
+            grep -Fx "$file" "$RUNNER_TEMP/archive-files.txt" >/dev/null || {
+              echo "Missing release file: $file" >&2
+              exit 1
+            }
+          done
+
+      - name: Check archive source for forbidden files
+        run: bash scripts/security/check-forbidden-files.sh

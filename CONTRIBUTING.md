@@ -6,7 +6,7 @@ CollegePortal is currently a private RC/UAT project. Contributions are accepted 
 
 - `main`: stable release-ready history.
 - `develop`: active integration branch.
-- `feature/<task-id>`: optional task branches for larger changes.
+- `feature/<task-id>`: task branches; каждая параллельная задача выполняется в отдельном worktree.
 
 ## Commit Format
 
@@ -27,7 +27,10 @@ docker compose exec -T backend php artisan test
 docker compose exec -T frontend npm run build
 git status
 git diff --check
+./scripts/security/check-forbidden-files.sh
 ```
+
+Для стандартной Linux DEV-проверки можно использовать `scripts/codex/run-quality-gates.sh`. Windows helper выполняет доступные локальные проверки и явно сообщает, что нужно перенести на Linux DEV/CI.
 
 Never commit secrets, real personal data, dumps, backups, private documents, runtime storage, certificates or release archives.
 
@@ -45,3 +48,5 @@ Each PR should include:
 ## Production Safety
 
 Development work is done in `/srv/college-dev`. PROD and UAT must not be changed unless the task explicitly says so.
+
+Codex workflow, stop-gates и task templates описаны в `docs/CODEX_WORKFLOW.md` и `docs/CODEX_TASK_TEMPLATE.md`.

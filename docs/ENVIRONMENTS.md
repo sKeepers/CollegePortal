@@ -171,7 +171,7 @@ PROD:
 
 Windows local development copy:
 
-- возможный путь: `C:\!Projects\college_portal`;
+- основная копия: `C:\!Projects\CollegePortal`;
 - подтверждается и синхронизируется вручную через `scripts/repository/sync-collegeportal-windows.ps1`;
 - скрипт отказывается от pull при dirty working tree.
 
@@ -186,3 +186,14 @@ Route to ViPNet PC `192.168.34.223`: direct via `eth0` from `192.168.34.104`.
 Docker bridge addresses `172.17.0.1`, `172.18.0.1` and `172.19.0.1` are not server LAN addresses and must not be used in Gateway allowlists.
 
 ViPNet workstation installs only CollegePortal Gateway in `C:\CollegePortalGateway`; do not clone the full repository there. UAT and PROD are not changed by Integration Hub tasks.
+
+## Codex environment roles
+
+- Windows 11 (`192.168.34.212`) — Codex, VS Code, Git и Windows Gateway build host.
+- Текущий Linux DEV подтвержден в `/srv/college-dev` на host `moodle`, LAN IP `192.168.34.104`. Название host не означает, что код Moodle и CollegePortal объединены.
+- UAT (`192.168.34.17`) обновляется только release archive через installer/update flow.
+- Zabbix (`192.168.34.105`) используется только для мониторинга.
+- ViPNet-ПК (`192.168.34.223`) содержит только CollegePortal Gateway.
+- PROD не использовать в Codex-задаче без отдельного явного разрешения.
+
+Для параллельных задач использовать отдельные worktrees: Windows `C:\!Projects\CollegePortal-worktrees\<task-id>`, Linux DEV `/srv/college-worktrees/<task-id>`.

@@ -813,3 +813,14 @@
 ## INTEGRATION-HUB-001
 
 CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a modular Windows service architecture for protected integrations. FIS remains the only implemented adapter; future FRDO/Moodle/LDAP/MAX/Telegram/Email adapters are planned. Windows repo path is `C:\!Projects\CollegePortal`; ViPNet installation remains a separate task.
+
+## CODEX-WORKFLOW-001
+
+- [x] Создать GitHub Issue #13 и добавить его в CollegePortal Roadmap с полями P1/Task/Infrastructure/0.9
+- [x] Создать изолированный Windows worktree от `origin/develop`
+- [x] Добавить root/module `AGENTS.md`, CollegePortal skills и project agents
+- [x] Добавить Playwright foundation без credentials в Git
+- [x] Добавить worktree, environment, quality и forbidden-file helpers
+- [x] Расширить CI migration/Playwright/Gateway/release checks
+- [ ] Добавить реальные role-based E2E secrets только через GitHub/DEV secret store
+- [ ] Включить Document Engine smoke после merge соответствующей feature-ветки в `develop`

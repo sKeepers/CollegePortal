@@ -1,0 +1,4 @@
+interface:
+  display_name: "CollegePortal UAT"
+  short_description: "Ролевое приемочное тестирование CollegePortal"
+  default_prompt: "Use $collegeportal-uat to run a role-based CollegePortal UAT scenario."

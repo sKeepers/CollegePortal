@@ -192,6 +192,11 @@ Release: [v0.8.0-rc2](https://github.com/sKeepers/CollegePortal/releases/tag/v0.
 - [Backup / Restore](docs/BACKUP_RESTORE.md)
 - [UAT Plan](docs/UAT_PLAN.md)
 - [GitHub Repository](docs/GITHUB_REPOSITORY.md)
+- [Codex Workflow](docs/CODEX_WORKFLOW.md)
+- [Codex Skills](docs/CODEX_SKILLS.md)
+- [Codex Agents](docs/CODEX_AGENTS.md)
+- [Codex Worktrees](docs/CODEX_WORKTREES.md)
+- [Playwright](docs/CODEX_PLAYWRIGHT.md)
 
 ## Как сообщать об ошибках
 
@@ -211,4 +216,4 @@ Release: [v0.8.0-rc2](https://github.com/sKeepers/CollegePortal/releases/tag/v0.
 
 ## CI
 
-Статус CI отображается badge в начале README. Workflow проверяет backend tests, frontend build и secret scan.
+Статус CI отображается badge в начале README. Workflow проверяет backend tests, frontend build, PostgreSQL migration smoke, Playwright smoke, private/forbidden files, Windows Gateway package, release structure и secret scan.

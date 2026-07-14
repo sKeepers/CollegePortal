@@ -1,0 +1,4 @@
+interface:
+  display_name: "CollegePortal Feature"
+  short_description: "Безопасная реализация feature-задач"
+  default_prompt: "Use $collegeportal-feature to implement a CollegePortal feature safely."

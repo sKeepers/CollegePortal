@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!frontend/.env.e2e.example
 
 # Dependencies
 node_modules/
@@ -101,6 +102,7 @@ playwright-report/
 test-results/
 screenshots/
 coverage/
+.ci-artifacts/
 
 # Official FIS reference materials are downloaded locally and may be license-restricted
 backend/storage/app/private/reference/fis/
@@ -109,3 +111,7 @@ backend/storage/app/private/reference/fis/
 .secrets/
 backend/.secrets/
 backend/storage/app/private/fis-specs/
+
+# CollegePortal Gateway local build output
+integrations/collegeportal-gateway/src/**/bin/
+integrations/collegeportal-gateway/src/**/obj/
