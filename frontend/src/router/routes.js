@@ -40,6 +40,8 @@ const ReferenceDataPage = () => import('../pages/admin/reference/ReferenceDataPa
 const UatPage = () => import('../pages/admin/uat/UatPage.vue')
 const HrEmployeesPage = () => import('../pages/hr/HrEmployeesPage.vue')
 const HrCalendarPage = () => import('../pages/hr/HrCalendarPage.vue')
+const DocumentsPage = () => import('../pages/documents/DocumentsPage.vue')
+const DocumentVerifyPage = () => import('../pages/public/DocumentVerifyPage.vue')
 const MobileStudentHomePage = () => import('../pages/mobile/student/MobileStudentHomePage.vue')
 const MobileStudentPassPage = () => import('../pages/mobile/student/MobileStudentPassPage.vue')
 
@@ -67,6 +69,19 @@ export const routes = [
         name: 'public-applicant',
         component: ApplicantPublicPage,
         meta: { title: 'Абитуриенту' },
+      },
+    ],
+  },
+  {
+    path: '/verify/document/:publicId',
+    component: PublicLayout,
+    meta: { public: true },
+    children: [
+      {
+        path: '',
+        name: 'document-verify',
+        component: DocumentVerifyPage,
+        meta: { title: 'Проверка документа' },
       },
     ],
   },
@@ -217,6 +232,36 @@ export const routes = [
         name: 'admissions',
         component: AdmissionsPage,
         meta: { title: 'Приемная комиссия', permission: 'admissions.view' },
+      },
+      {
+        path: 'documents',
+        name: 'documents',
+        component: DocumentsPage,
+        meta: { title: 'Документы', permission: 'documents.view' },
+      },
+      {
+        path: 'documents/templates',
+        name: 'documents-templates',
+        component: DocumentsPage,
+        meta: { title: 'Шаблоны документов', permission: 'documents.templates.view' },
+      },
+      {
+        path: 'documents/types',
+        name: 'documents-types',
+        component: DocumentsPage,
+        meta: { title: 'Типы документов', permission: 'documents.view' },
+      },
+      {
+        path: 'documents/journal',
+        name: 'documents-journal',
+        component: DocumentsPage,
+        meta: { title: 'Журнал документов', permission: 'documents.view' },
+      },
+      {
+        path: 'documents/new',
+        name: 'documents-new',
+        component: DocumentsPage,
+        meta: { title: 'Создать документ', permission: 'documents.create' },
       },
       {
         path: 'hr/employees',

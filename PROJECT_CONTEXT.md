@@ -1185,3 +1185,7 @@ REPO-SYNC-001 merged PR #8 into develop, synchronized Linux DEV and documented r
 ## INTEGRATION-HUB-001
 
 CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a modular Windows service architecture for protected integrations. FIS remains the only implemented adapter; future FRDO/Moodle/LDAP/MAX/Telegram/Email adapters are planned. Windows repo path is `C:\!Projects\CollegePortal`; ViPNet installation remains a separate task.
+
+## DOCS-ENGINE-001
+
+Добавлен foundation Document Engine: типы документов, шаблоны, журнал сформированных документов, регистрационная нумерация, private DOCX storage, публичная проверка подлинности и foundation `student_orders` для приказов студентов.

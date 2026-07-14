@@ -149,7 +149,7 @@ export const api = {
     const token = localStorage.getItem('college_portal_token')
     const response = await fetch(`${API_BASE_URL}${path}`, {
       headers: {
-        Accept: 'text/csv',
+        Accept: 'application/octet-stream',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
     })

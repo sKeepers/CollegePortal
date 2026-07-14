@@ -22,6 +22,8 @@ use App\Http\Controllers\Api\AttendanceAnalysisController;
 use App\Http\Controllers\Api\ClassroomController;
 use App\Http\Controllers\Api\CurriculumController;
 use App\Http\Controllers\Api\DepartmentController;
+use App\Http\Controllers\Api\DocumentTemplateController;
+use App\Http\Controllers\Api\DocumentTypeController;
 use App\Http\Controllers\Api\DigitalIdentityController;
 use App\Http\Controllers\Api\DemoDataController;
 use App\Http\Controllers\Api\DashboardAnalyticsController;
@@ -36,11 +38,13 @@ use App\Http\Controllers\Api\EducationProgramController;
 use App\Http\Controllers\Api\GradeController;
 use App\Http\Controllers\Api\JournalLessonController;
 use App\Http\Controllers\Api\GraduateController;
+use App\Http\Controllers\Api\GeneratedDocumentController;
 use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\StudentBulkController;
 use App\Http\Controllers\Api\SubjectController;
 use App\Http\Controllers\Api\ScheduleLessonController;
 use App\Http\Controllers\Api\ScheduleEngineController;
+use App\Http\Controllers\Api\PublicDocumentVerificationController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ReferenceCatalogController;
 use App\Http\Controllers\Api\ReferenceItemController;
@@ -55,6 +59,7 @@ Route::post('auth/login', [AuthController::class, 'login']);
 Route::get('settings/public', [AdminSettingController::class, 'publicSettings']);
 Route::get('public/specialties', [SpecialtyController::class, 'index']);
 Route::get('public/education-programs', [EducationProgramController::class, 'index']);
+Route::get('public/documents/{publicId}/verify', PublicDocumentVerificationController::class);
 
 Route::middleware('api.token')->group(function (): void {
     Route::get('auth/me', [AuthController::class, 'me']);
@@ -137,6 +142,28 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('people', [PersonController::class, 'index']);
         Route::get('people/{person}', [PersonController::class, 'show']);
         Route::get('people/{person}/profiles', [PersonController::class, 'profiles']);
+    });
+
+    Route::middleware('permission:documents.view')->group(function (): void {
+        Route::get('document-types', [DocumentTypeController::class, 'index']);
+        Route::get('document-types/{documentType}', [DocumentTypeController::class, 'show']);
+        Route::get('document-templates', [DocumentTemplateController::class, 'index'])->middleware('permission:documents.templates.view');
+        Route::post('document-templates', [DocumentTemplateController::class, 'store'])->middleware('permission:documents.templates.manage');
+        Route::get('document-templates/{documentTemplate}', [DocumentTemplateController::class, 'show'])->middleware('permission:documents.templates.view');
+        Route::put('document-templates/{documentTemplate}', [DocumentTemplateController::class, 'update'])->middleware('permission:documents.templates.manage');
+        Route::post('document-templates/{documentTemplate}/publish', [DocumentTemplateController::class, 'publish'])->middleware('permission:documents.templates.publish');
+        Route::post('document-templates/{documentTemplate}/archive', [DocumentTemplateController::class, 'archive'])->middleware('permission:documents.templates.manage');
+        Route::post('document-templates/{documentTemplate}/upload', [DocumentTemplateController::class, 'upload'])->middleware('permission:documents.templates.manage');
+        Route::post('documents/preview', [GeneratedDocumentController::class, 'preview'])->middleware('permission:documents.create');
+        Route::post('documents/generate', [GeneratedDocumentController::class, 'generate'])->middleware('permission:documents.generate');
+        Route::get('documents', [GeneratedDocumentController::class, 'index']);
+        Route::get('documents/{document}', [GeneratedDocumentController::class, 'show']);
+        Route::get('documents/{document}/events', [GeneratedDocumentController::class, 'events']);
+        Route::get('documents/{document}/download/docx', [GeneratedDocumentController::class, 'downloadDocx'])->middleware('permission:documents.download_docx');
+        Route::get('documents/{document}/download/pdf', [GeneratedDocumentController::class, 'downloadPdf'])->middleware('permission:documents.download_pdf');
+        Route::post('documents/{document}/issue', [GeneratedDocumentController::class, 'issue'])->middleware('permission:documents.issue');
+        Route::post('documents/{document}/cancel', [GeneratedDocumentController::class, 'cancel'])->middleware('permission:documents.cancel');
+        Route::post('documents/{document}/reprint', [GeneratedDocumentController::class, 'reprint'])->middleware('permission:documents.reprint');
     });
 
     Route::middleware('permission:view_reports')->group(function (): void {
