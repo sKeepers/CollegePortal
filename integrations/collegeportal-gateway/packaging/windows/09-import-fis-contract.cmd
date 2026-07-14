@@ -1,4 +1,5 @@
 @echo off
+chcp 866 >nul
 setlocal
 set ROOT=C:\CollegePortalGateway
 set SRC=%ROOT%\specs\fis\discovered
