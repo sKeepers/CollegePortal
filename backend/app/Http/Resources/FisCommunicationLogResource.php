@@ -20,7 +20,7 @@ class FisCommunicationLogResource extends JsonResource
             'status' => $this->status,
             'http_code' => $this->http_code,
             'soap_fault_code' => $this->soap_fault_code,
-            'soap_fault_message' => $this->soap_fault_message,
+            'soap_fault_hash' => $this->metadata['soap_fault_hash'] ?? null,
             'error_code' => $this->error_code,
             'metadata' => $this->metadata,
         ];

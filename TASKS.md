@@ -823,8 +823,14 @@ CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a 
 - [x] Добавить `/fis/diagnostics` и API диагностики.
 - [x] Добавить обезличенный FIS Communication Log.
 - [x] Добавить RBAC coverage и Windows Gateway build job в CI.
+- [x] Добавить evidence-only Portal/Gateway/TCP diagnostics без SOAP-вызова.
+- [x] Инвентаризировать private registry: type, MIME, size, SHA-256, manifest match и parser summary.
+- [x] Исключить raw SOAP Fault text и response bodies из diagnostics/logging.
+- [x] Перевести Gateway ZKSPD health на TCP-only fixed TEST allowlist.
+- [x] Зафиксировать `tcp_refused` для Gateway `8099` и `tcp_timeout` для DEV → TEST.
 - [ ] Получить официальный WSDL/DISCO 4.9 на DEV.
 - [ ] Восстановить доступность Gateway `192.168.34.223:8099`.
+- [ ] Через безопасный канал подтвердить Windows-service/bind/firewall evidence на ViPNet-PC.
 - [ ] Подтвердить SOAP version, binding, actions, methods, faults и transport по parser output.
 - [ ] Подтвердить FIS transport authentication по официальной спецификации.
 - [ ] Выполнить первый read-only TEST запрос и зафиксировать обезличенный результат.

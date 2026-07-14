@@ -1,5 +1,3 @@
-using System;
-
 namespace CollegePortal.Gateway
 {
     public class FisIntegrationAdapter : IIntegrationAdapter
@@ -19,8 +17,8 @@ namespace CollegePortal.Gateway
 
         public string GetCapabilitiesJson()
         {
-            return "[{\"code\":\"zkspd_check\",\"enabled\":true},"
-                + "{\"code\":\"test_service_check\",\"enabled\":true},"
+            return "[{\"code\":\"zkspd_tcp_check\",\"enabled\":true},"
+                + "{\"code\":\"test_service_check\",\"enabled\":true,\"mode\":\"tcp_only\"},"
                 + "{\"code\":\"dictionaries_list\",\"enabled\":false,\"reason\":\"official_wsdl_missing\"},"
                 + "{\"code\":\"dictionaries_details\",\"enabled\":false,\"reason\":\"official_wsdl_missing\"},"
                 + "{\"code\":\"institution_info\",\"enabled\":false,\"reason\":\"official_wsdl_missing\"},"

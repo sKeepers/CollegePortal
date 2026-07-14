@@ -1188,6 +1188,8 @@ CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a 
 
 ## EPIC-001 / GIA-001
 
-Linux DEV now has a contract-driven FIS diagnostics foundation: `FisWsdlAnalyzer`, `/fis/diagnostics`, technical `fis_communication_logs`, automatic WSDL analysis documentation and a Windows Gateway build job in CI. Official application XSD is registered in private storage with SHA-256 `7158ae7d523d3b08784a29ed0cdb4ace025695e30526285ebabb3d93c093f840`; it confirms root elements `PackageData`/`Root` and payload `AuthData` fields `Login`, `Pass`, `InstitutionID`.
+Linux DEV has an evidence-only FIS diagnostics foundation: Portal/Gateway TCP and public endpoint probes, explicit Windows-service uncertainty, direct TEST TCP evidence, private contract inventory, manifest SHA verification and strict SOAP/auth/read-only stop-gates. Gateway ZKSPD diagnostics are TCP-only and restricted to fixed TEST host `10.0.3.1:8383`; production remains hard-disabled.
 
-Stop-gate remains active: official WSDL/DISCO are absent, Gateway `192.168.34.223:8099` is unavailable from DEV, and no FIS SOAP operation has been confirmed or executed. Import and production remain disabled. GIA-002 starts only after Gateway recovery and parser verification of the official TEST contract.
+Snapshot 14.07.2026: Portal is available; Gateway host responds to ICMP, but TCP `192.168.34.223:8099` returns `tcp_refused`; remote evidence cannot determine Windows-service state. Direct DEV to `10.0.3.1:8383` times out. Private registry contains one XSD with SHA-256 `7158ae7d523d3b08784a29ed0cdb4ace025695e30526285ebabb3d93c093f840` and matching manifest; WSDL/DISCO are absent.
+
+No SOAP operation, binding, action or authentication method is claimed. First read-only call was not attempted. GIA-002 starts only after Gateway recovery, approved WSDL/DISCO bundle verification, authentication confirmation and one separately permitted TEST read-only call.

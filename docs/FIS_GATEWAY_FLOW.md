@@ -3,43 +3,54 @@
 ## Целевая цепочка
 
 ```text
-CollegePortal Portal
+CollegePortal Portal (Linux DEV)
   -> Integration Hub client
-  -> CollegePortal Gateway (192.168.34.223:8099)
+  -> CollegePortal Gateway (ViPNet-PC 192.168.34.223:8099)
   -> ViPNet / ЗКСПД
   -> ФИС TEST (10.0.3.1:8383)
 ```
 
-Production endpoint `10.0.3.1:8080` в GIA-001 запрещен и не проверяется.
+Production `10.0.3.1:8080` не проверяется и hard-disabled.
+
+## Фактический evidence snapshot
+
+Контрольная проверка: 14.07.2026 17:40 UTC.
+
+| Узел | Наблюдаемый результат |
+|---|---|
+| SSH / Linux DEV | `moodle`, user `andale`, `/srv/college-dev`, feature branch, clean до изменений |
+| CollegePortal backend | `ok`, snapshot сформирован backend-контейнером |
+| Portal → Gateway host | ICMP доступен |
+| Portal → Gateway TCP `8099` | `tcp_refused`, latency 1 мс |
+| Windows-служба Gateway | `unknown`: remote TCP evidence недостаточно |
+| `/health`, `/version`, `/adapters` | не запрашивались после закрытого TCP gate |
+| `/adapters/fis/health` | заблокирован: Gateway недоступен и HMAC не используется для обхода gate |
+| Gateway → ViPNet/ЗКСПД | не подтвержден |
+| DEV → FIS TEST `10.0.3.1:8383` | `tcp_timeout`, около 5 с |
+| Official WSDL / DISCO | отсутствуют |
+| Official XSD | найден, manifest SHA совпадает |
+
+`tcp_refused` не доказывает конкретную причину. Без безопасного локального доступа к Windows нельзя различить остановленную службу, bind failure, active reject firewall или падение процесса.
 
 ## Границы ответственности
 
-- Portal хранит бизнес-пакеты, RBAC, diagnostics и обезличенный communication log.
-- Integration Hub подписывает запросы Portal -> Gateway через HMAC, request id, timestamp и nonce.
-- Gateway хранит FIS credentials и официальный контракт на ViPNet-ПК.
-- FIS adapter формирует SOAP только по активному официальному WSDL/XSD/DISCO.
-- ViPNet обеспечивает доступ к закрытому TEST-контуру.
-
-## Фактическое состояние DEV
-
-| Узел | Результат |
-|---|---|
-| Portal backend | Работает в Docker на `moodle` |
-| Portal -> Gateway TCP/8099 | Connection refused 14.07.2026 |
-| Gateway health/version | Не получены из-за недоступности службы |
-| DEV -> FIS TEST напрямую | Маршрут отсутствует/timeout, прямой путь не используется |
-| Gateway -> FIS TEST | Не проверен в текущем запуске |
-| WSDL/DISCO в DEV | Отсутствуют |
-| Официальный XSD | Загружен локально, SHA-256 зафиксирован |
-
-## Безопасность
-
-- Shared secret и FIS credentials не записываются в Git и communication log.
-- Portal передает Gateway только технический request id и разрешенную команду.
-- SOAP payload не сохраняется в `fis_communication_logs`.
-- Production hard-disabled независимо от UI.
-- Ошибка диагностики не должна включать login, password, token или HMAC signature.
+- Portal хранит RBAC, business state и обезличенный communication log.
+- Portal выполняет публичные Gateway probes только после успешного TCP-check.
+- Integration Hub подписывает protected requests HMAC request-id/timestamp/nonce.
+- Gateway хранит credentials и выполняет network/SOAP действия внутри ViPNet-контура.
+- ViPNet-PC configuration изменяется только оператором через подтвержденный безопасный канал.
+- Официальный contract bundle хранится в private storage и проверяется по SHA-256.
 
 ## Stop-gate
 
-Первый read-only SOAP request не выполнен: Gateway не слушает `192.168.34.223:8099`, а официальный WSDL/DISCO отсутствует на DEV. Следующее действие выполняется на ViPNet-ПК: запустить/проверить службу Gateway, скачать официальный TEST contract скриптом `08-download-fis-contract.cmd`, импортировать его скриптом `09-import-fis-contract.cmd` и безопасно передать manifest/WSDL/DISCO на DEV для parser verification.
+Первый read-only SOAP call не выполнялся. Одновременно действуют блокеры:
+
+- `tcp_refused` для Gateway `8099`;
+- `tcp_timeout` для прямого DEV→TEST пути;
+- `official_wsdl_missing`;
+- `official_disco_missing`;
+- `active_xsd_missing` до approval полного bundle;
+- `fis_authentication_unknown`;
+- `read_only_operation_unconfirmed`.
+
+Следующий безопасный шаг: на ViPNet-PC вручную собрать evidence `sc query`, local `127.0.0.1:8099/health`, bind/firewall/event log без изменения configuration, затем получить WSDL/DISCO официальным способом. Одна контролируемая read-only попытка разрешается только после закрытия всех gates.

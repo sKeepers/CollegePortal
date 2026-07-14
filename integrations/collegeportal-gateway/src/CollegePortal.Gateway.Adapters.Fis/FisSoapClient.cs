@@ -1,10 +1,13 @@
 using System;
-using System.Net;
+using System.Net.Sockets;
 
 namespace CollegePortal.Gateway
 {
     public class FisSoapClient
     {
+        private const string AllowedTestHost = "10.0.3.1";
+        private const int AllowedTestPort = 8383;
+        private const string AllowedTestPath = "/api/import/importservice.svc";
         private readonly GatewayConfig _config;
 
         public FisSoapClient(GatewayConfig config)
@@ -15,28 +18,44 @@ namespace CollegePortal.Gateway
         public GatewayPayload ZkspdCheck()
         {
             var started = DateTime.UtcNow;
-
-            try
+            Uri endpoint;
+            if (!Uri.TryCreate(_config.FisTestEndpoint, UriKind.Absolute, out endpoint)
+                || endpoint.Scheme != Uri.UriSchemeHttp
+                || !string.Equals(endpoint.Host, AllowedTestHost, StringComparison.OrdinalIgnoreCase)
+                || endpoint.Port != AllowedTestPort
+                || !string.Equals(endpoint.AbsolutePath, AllowedTestPath, StringComparison.OrdinalIgnoreCase))
             {
-                var request = (HttpWebRequest)WebRequest.Create(_config.FisTestEndpoint);
-                request.Method = "GET";
-                request.Timeout = _config.ConnectTimeoutSeconds * 1000;
+                return GatewayPayload.Fail("test_endpoint_not_allowed", 0, "Configured endpoint is outside the fixed FIS TEST allowlist.");
+            }
 
-                using (var response = (HttpWebResponse)request.GetResponse())
+            using (var client = new TcpClient())
+            {
+                try
                 {
-                    return GatewayPayload.Success(
-                        "zkspd_reachable",
-                        (int)(DateTime.UtcNow - started).TotalMilliseconds,
-                        "HTTP " + (int)response.StatusCode);
+                    var pending = client.BeginConnect(endpoint.Host, endpoint.Port, null, null);
+                    var connected = pending.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(_config.ConnectTimeoutSeconds));
+                    if (!connected)
+                    {
+                        return GatewayPayload.Fail("fis_test_tcp_timeout", Elapsed(started), "TCP connection timed out.");
+                    }
+
+                    client.EndConnect(pending);
+                    return GatewayPayload.Success("fis_test_tcp_reachable", Elapsed(started), "FIS TEST TCP endpoint is reachable.");
+                }
+                catch (SocketException exception)
+                {
+                    return GatewayPayload.Fail("fis_test_tcp_unreachable", Elapsed(started), exception.SocketErrorCode.ToString());
+                }
+                catch (Exception exception)
+                {
+                    return GatewayPayload.Fail("fis_test_tcp_unreachable", Elapsed(started), exception.GetType().Name);
                 }
             }
-            catch (Exception exception)
-            {
-                return GatewayPayload.Fail(
-                    "zkspd_unreachable",
-                    (int)(DateTime.UtcNow - started).TotalMilliseconds,
-                    exception.GetType().Name);
-            }
+        }
+
+        private static int Elapsed(DateTime started)
+        {
+            return (int)(DateTime.UtcNow - started).TotalMilliseconds;
         }
     }
 

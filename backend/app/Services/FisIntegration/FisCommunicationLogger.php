@@ -13,12 +13,17 @@ class FisCommunicationLogger
         'latency_ms',
         'operation',
         'endpoint_class',
+        'soap_fault_hash',
     ];
 
     public function record(array $entry): void
     {
         try {
             $metadata = array_intersect_key((array) ($entry['metadata'] ?? []), array_flip(self::METADATA_ALLOWLIST));
+            $faultMessage = $entry['soap_fault_message'] ?? null;
+            if ($faultMessage !== null && $faultMessage !== '') {
+                $metadata['soap_fault_hash'] = hash('sha256', (string) $faultMessage);
+            }
 
             FisCommunicationLog::create([
                 'occurred_at' => $entry['occurred_at'] ?? now(),
@@ -30,7 +35,7 @@ class FisCommunicationLogger
                 'status' => (string) ($entry['status'] ?? 'failed'),
                 'http_code' => $entry['http_code'] ?? null,
                 'soap_fault_code' => $this->redact($entry['soap_fault_code'] ?? null),
-                'soap_fault_message' => $this->redact($entry['soap_fault_message'] ?? null),
+                'soap_fault_message' => null,
                 'error_code' => $this->redact($entry['error_code'] ?? null),
                 'metadata' => $metadata ?: null,
             ]);

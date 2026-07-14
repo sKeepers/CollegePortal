@@ -396,12 +396,15 @@ CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a 
 
 ## EPIC-001 / GIA-001 — in progress, stop-gate
 
-Completed: official XSD intake and SHA manifest, contract parser, automatic WSDL analysis report, `/fis/diagnostics`, communication metadata log, RBAC and Windows Gateway CI build job.
+Completed: official XSD intake and SHA manifest, contract parser, evidence-only `/fis/diagnostics`, private registry inventory, communication metadata log, TCP-only Gateway safety probe, RBAC and Windows Gateway CI safety checks.
 
-Blocked: official WSDL/DISCO are not present and Gateway is not listening on `192.168.34.223:8099`. No SOAP method or read-only response is claimed. Next order:
+Observed 14.07.2026: Portal works; Gateway host is reachable by ICMP but TCP `8099` is refused; direct DEV → FIS TEST `8383` times out; XSD SHA matches manifest; WSDL/DISCO and authentication are absent. No SOAP method or read-only response is claimed.
 
-1. Restore Gateway service on ViPNet-PC.
-2. Download/import TEST WSDL/XSD/DISCO and transfer the manifest to DEV.
-3. Regenerate the method map from the official contract.
-4. Confirm authentication and execute one controlled read-only TEST operation.
-5. Start GIA-002 only after the read-only gate is green.
+Next order:
+
+1. Collect local Windows service/bind/firewall evidence through a confirmed safe channel and restore Gateway `8099`.
+2. Obtain official TEST WSDL/DISCO, transfer only the approved private bundle and verify manifest SHA/import closure.
+3. Regenerate service/port/binding/action/method map from the contract.
+4. Confirm authentication and read-only semantics.
+5. Execute one separately permitted TEST read-only operation without PII.
+6. Start GIA-002 only after the gate and CI are green.

@@ -9,44 +9,80 @@ class FisDiagnosticsService
     public function __construct(
         private FisSpecificationRegistry $registry,
         private GatewayFisTransport $gateway,
+        private FisInfrastructureProbe $infrastructure,
     ) {}
 
     public function snapshot(bool $probeGateway = false): array
     {
         $analysis = $this->registry->analysis();
-        $gatewayConfigured = (bool) config('fis_api.gateway_enabled') && filled(config('fis_api.gateway_url'));
-        $contractLoaded = ($analysis['status'] ?? 'missing') === 'loaded';
+        $registry = $this->registry->inventory();
+        $infrastructure = $this->infrastructure->snapshot($probeGateway);
+        $contractVerified = (bool) ($registry['bundle']['verified'] ?? false);
+        $gatewayProtected = $this->gatewayProtectedConfigurationReady();
+        $authenticationConfirmed = (bool) config('fis_api.authentication_confirmed', false);
+        $confirmedReadOnlyOperations = array_values(array_filter((array) config('fis_api.confirmed_read_only_operations', [])));
+        $productionDrift = (bool) config('fis_api.allow_production_send', false)
+            || config('fis_api.mode') === 'production';
+        $checks = $infrastructure['checks'];
 
-        $checks = [
-            'gateway' => $this->state($gatewayConfigured ? 'configured' : 'blocked', $gatewayConfigured ? 'Gateway configured for TEST.' : 'Gateway URL or feature flag is not configured.'),
-            'test_endpoint' => $this->endpointState((string) config('fis_api.test_endpoint')),
-            'soap' => $this->soapState($analysis),
-            'tls' => $this->tlsState(),
-            'auth' => $this->authState($analysis),
-            'dictionary' => $this->state($contractLoaded ? 'ready_for_probe' : 'blocked', $contractLoaded ? 'A confirmed dictionary method must be selected from the official method map.' : 'Official WSDL method map is not loaded.'),
-            'read_only' => $this->state($contractLoaded ? 'ready_for_probe' : 'blocked', $contractLoaded ? 'A confirmed read-only operation can be executed after method mapping.' : 'Read-only SOAP call is blocked until WSDL/DISCO verification.'),
-        ];
+        $checks['production_guard'] = $productionDrift
+            ? $this->state('failed', 'Production configuration drift detected. Diagnostics and SOAP calls remain blocked.')
+            : $this->state('ok', 'Production mode and production send are disabled.');
+        $checks['soap'] = $this->soapState($analysis, $registry);
+        $checks['auth'] = $this->authState($gatewayProtected, $authenticationConfirmed, $analysis);
+        $checks['dictionary'] = $confirmedReadOnlyOperations
+            ? $this->state('contract_confirmed', 'Read-only operation identifiers are configured from the approved contract.', ['operations' => $confirmedReadOnlyOperations])
+            : $this->state('blocked', 'No read-only SOAP operation is confirmed by the official contract.');
 
-        if ($probeGateway && $gatewayConfigured) {
-            $checks['gateway'] = $this->probe(fn () => $this->gateway->health());
-            $checks['gateway_version'] = $this->probe(fn () => $this->gateway->version());
-            $checks['gateway_capabilities'] = $this->probe(fn () => $this->gateway->capabilities());
+        if ($probeGateway && $gatewayProtected && ($checks['gateway_port']['status'] ?? null) === 'ok') {
             $checks['gateway_adapter'] = $this->probe(fn () => $this->gateway->adapterHealth());
-            $checks['zkspd'] = $this->probe(fn () => $this->gateway->zkspdCheck());
+            $checks['zkspd'] = $checks['gateway_adapter'];
+        } elseif (! $gatewayProtected) {
+            $checks['gateway_adapter'] = $this->state('blocked', 'Protected adapter health requires TEST-only Gateway configuration and HMAC.');
+            $checks['zkspd'] = $this->state('blocked', 'ViPNet/ZKSPD cannot be inferred without a signed Gateway adapter health response.');
         }
 
-        $probeFailed = $probeGateway && collect(['gateway', 'gateway_adapter', 'zkspd'])
-            ->contains(fn (string $key) => ($checks[$key]['status'] ?? null) === 'failed');
-        $readOnlyConfirmed = ($checks['read_only']['status'] ?? null) === 'ok';
+        $readOnlyReady = $contractVerified
+            && $authenticationConfirmed
+            && $confirmedReadOnlyOperations !== []
+            && $gatewayProtected
+            && ($checks['gateway_health']['status'] ?? null) === 'ok'
+            && ($checks['gateway_adapter']['status'] ?? null) === 'ok';
+        $checks['read_only'] = $readOnlyReady
+            ? $this->state('ready_for_permit', 'Prerequisites are satisfied; a separate one-time permit is still required before a controlled call.')
+            : $this->state('blocked', 'The first read-only SOAP call is blocked until contract, authentication, Gateway and route evidence are confirmed.');
+
+        $blockers = array_values(array_unique(array_merge(
+            $infrastructure['blockers'] ?? [],
+            $registry['bundle']['blockers'] ?? [],
+            $productionDrift ? ['production_configuration_drift'] : [],
+            $gatewayProtected ? [] : ['gateway_hmac_or_test_configuration_missing'],
+            ($checks['gateway_health']['status'] ?? null) === 'ok' ? [] : ['gateway_health_unconfirmed'],
+            ($checks['gateway_adapter']['status'] ?? null) === 'ok' ? [] : ['gateway_fis_adapter_unconfirmed'],
+            $authenticationConfirmed ? [] : ['fis_authentication_unknown'],
+            $confirmedReadOnlyOperations ? [] : ['read_only_operation_unconfirmed'],
+            $readOnlyReady ? ['one_time_probe_permit_not_implemented'] : [],
+        )));
 
         return [
             'checked_at' => now()->toISOString(),
             'environment' => 'test',
-            'production_enabled' => false,
-            'stop_gate' => ! $contractLoaded || ! $gatewayConfigured || ! $readOnlyConfirmed || $probeFailed,
+            'production_enabled' => $productionDrift,
+            'capability_state' => $readOnlyReady ? 'awaiting_permit' : 'observed',
+            'stop_gate' => true,
+            'blockers' => $blockers,
             'contract' => $analysis,
+            'registry' => $registry,
             'checks' => $checks,
         ];
+    }
+
+    private function gatewayProtectedConfigurationReady(): bool
+    {
+        return (bool) config('fis_api.gateway_enabled')
+            && filled(config('fis_api.gateway_url'))
+            && filled(config('fis_api.gateway_shared_secret'))
+            && config('fis_api.gateway_allowed_environment') === 'test';
     }
 
     private function probe(callable $callback): array
@@ -54,50 +90,55 @@ class FisDiagnosticsService
         try {
             $result = $callback();
             $ok = (bool) ($result['ok'] ?? false);
-            return $this->state($ok ? 'ok' : 'failed', (string) ($result['message'] ?? ($ok ? 'Check passed.' : 'Check failed.')), $result);
-        } catch (FisIntegrationException $exception) {
-            return $this->state('failed', $exception->getMessage());
+
+            return $this->state(
+                $ok ? 'ok' : 'failed',
+                $ok ? 'Gateway adapter health succeeded.' : 'Gateway adapter health reported a failure.',
+                [
+                    'error_code' => $result['error_code'] ?? null,
+                    'latency_ms' => $result['latency_ms'] ?? null,
+                    'gateway_version' => $result['gateway_version'] ?? null,
+                ],
+            );
+        } catch (FisIntegrationException) {
+            return $this->state('failed', 'Gateway adapter health request failed.', ['error_code' => 'gateway_adapter_request_failed']);
         }
     }
 
-    private function endpointState(string $endpoint): array
+    private function soapState(array $analysis, array $registry): array
     {
-        $parts = parse_url($endpoint);
-        return $this->state($endpoint !== '' ? 'configured' : 'blocked', $endpoint !== '' ? 'TEST endpoint configured; production is hard-disabled.' : 'TEST endpoint is not configured.', [
-            'scheme' => $parts['scheme'] ?? null,
-            'host' => $parts['host'] ?? null,
-            'port' => $parts['port'] ?? null,
-        ]);
-    }
-
-    private function soapState(array $analysis): array
-    {
-        if (($analysis['status'] ?? null) !== 'loaded') {
-            return $this->state('blocked', 'SOAP version, bindings and actions cannot be confirmed without official WSDL.');
+        if (($registry['counts']['wsdl'] ?? 0) === 0) {
+            return $this->state('blocked', 'Official WSDL is absent; SOAP version, binding, port, actions and operations are unconfirmed.');
         }
 
-        return $this->state('confirmed', 'SOAP metadata parsed from the loaded WSDL.', [
+        if (! ($registry['bundle']['verified'] ?? false)) {
+            return $this->state('parsed_unverified', 'Contract artifacts were parsed, but bundle integrity and approval are incomplete.', [
+                'versions' => $analysis['soap_versions'] ?? [],
+                'bindings' => count($analysis['bindings'] ?? []),
+                'operations' => count($analysis['operations'] ?? []),
+            ]);
+        }
+
+        return $this->state('contract_verified', 'SOAP metadata is backed by the approved immutable contract bundle.', [
             'versions' => $analysis['soap_versions'] ?? [],
             'bindings' => count($analysis['bindings'] ?? []),
             'operations' => count($analysis['operations'] ?? []),
         ]);
     }
 
-    private function tlsState(): array
+    private function authState(bool $gatewayProtected, bool $authenticationConfirmed, array $analysis): array
     {
-        $fisScheme = parse_url((string) config('fis_api.test_endpoint'), PHP_URL_SCHEME);
-        $gatewayScheme = parse_url((string) config('fis_api.gateway_url'), PHP_URL_SCHEME);
-        return $this->state('observed', 'TLS is not inferred: FIS TEST is inside ZKSPD and Portal-to-Gateway integrity uses HMAC.', [
-            'fis_test_scheme' => $fisScheme,
-            'gateway_scheme' => $gatewayScheme,
-        ]);
-    }
+        if (! $gatewayProtected) {
+            return $this->state('blocked', 'Portal-to-Gateway HMAC or TEST-only Gateway configuration is missing.');
+        }
 
-    private function authState(array $analysis): array
-    {
-        return $this->state(filled(config('fis_api.gateway_shared_secret')) ? 'gateway_hmac_configured' : 'blocked', filled(config('fis_api.gateway_shared_secret')) ? 'Portal-to-Gateway HMAC is configured. FIS authentication still requires official contract confirmation.' : 'Gateway HMAC secret is not configured.', [
-            'fis_authentication' => $analysis['authentication'] ?? 'unknown',
-        ]);
+        if (! $authenticationConfirmed) {
+            return $this->state('blocked', 'Gateway HMAC is configured, but FIS authentication is not confirmed by the official contract.', [
+                'fis_authentication' => $analysis['authentication'] ?? 'unknown',
+            ]);
+        }
+
+        return $this->state('confirmed', 'Portal-to-Gateway HMAC and FIS authentication evidence are confirmed.');
     }
 
     private function state(string $status, string $message, array $details = []): array
