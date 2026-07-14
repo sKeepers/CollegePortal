@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\ExamController;
 use App\Http\Controllers\Api\FrdoPackageController;
 use App\Http\Controllers\Api\FisPackageController;
 use App\Http\Controllers\Api\FisOutboundPackageController;
+use App\Http\Controllers\Api\FisDiagnosticsController;
 use App\Http\Controllers\Api\FisAdmissionsImportController;
 use App\Http\Controllers\Api\EducationProgramController;
 use App\Http\Controllers\Api\GradeController;
@@ -67,6 +68,12 @@ Route::middleware('api.token')->group(function (): void {
     Route::delete('dashboard/layouts/{dashboardLayout}', [DashboardLayoutController::class, 'destroy']);
     Route::post('dashboard/layouts/{dashboardLayout}/activate', [DashboardLayoutController::class, 'activate']);
     Route::post('uat/feedback', [UatController::class, 'storeFeedback']);
+
+    Route::middleware('permission:fis.outbound.view')->group(function (): void {
+        Route::get('fis/diagnostics', [FisDiagnosticsController::class, 'show']);
+        Route::post('fis/diagnostics/run', [FisDiagnosticsController::class, 'run']);
+        Route::get('fis/communication-logs', [FisDiagnosticsController::class, 'logs']);
+    });
 
     Route::middleware('permission:uat.manage')->group(function (): void {
         Route::get('admin/uat/config', [UatController::class, 'config']);

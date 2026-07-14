@@ -19,4 +19,5 @@ return [
     'spec_manifest_path' => env('FIS_API_SPEC_MANIFEST_PATH', storage_path('app/private/fis-specs/4.9/manifest.json')),
     'xsd_path' => env('FIS_API_XSD_PATH'),
     'wsdl_path' => env('FIS_API_WSDL_PATH'),
+    'disco_path' => env('FIS_API_DISCO_PATH'),
 ];

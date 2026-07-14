@@ -393,3 +393,15 @@ REPO-SYNC-001 completed: repository sync documentation and safe Linux/Windows he
 ## INTEGRATION-HUB-001
 
 CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a modular Windows service architecture for protected integrations. FIS remains the only implemented adapter; future FRDO/Moodle/LDAP/MAX/Telegram/Email adapters are planned. Windows repo path is `C:\!Projects\CollegePortal`; ViPNet installation remains a separate task.
+
+## EPIC-001 / GIA-001 — in progress, stop-gate
+
+Completed: official XSD intake and SHA manifest, contract parser, automatic WSDL analysis report, `/fis/diagnostics`, communication metadata log, RBAC and Windows Gateway CI build job.
+
+Blocked: official WSDL/DISCO are not present and Gateway is not listening on `192.168.34.223:8099`. No SOAP method or read-only response is claimed. Next order:
+
+1. Restore Gateway service on ViPNet-PC.
+2. Download/import TEST WSDL/XSD/DISCO and transfer the manifest to DEV.
+3. Regenerate the method map from the official contract.
+4. Confirm authentication and execute one controlled read-only TEST operation.
+5. Start GIA-002 only after the read-only gate is green.

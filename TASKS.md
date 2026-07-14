@@ -813,3 +813,19 @@
 ## INTEGRATION-HUB-001
 
 CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a modular Windows service architecture for protected integrations. FIS remains the only implemented adapter; future FRDO/Moodle/LDAP/MAX/Telegram/Email adapters are planned. Windows repo path is `C:\!Projects\CollegePortal`; ViPNet installation remains a separate task.
+
+## EPIC-001 / GIA-001
+
+- [x] Создать feature-ветку от актуального `develop`.
+- [x] Зарегистрировать официальный XSD 4.9 в private storage и сформировать SHA-256 manifest.
+- [x] Реализовать локальный WSDL/XSD parser с `LIBXML_NONET`.
+- [x] Автоматически формировать `docs/FIS_WSDL_ANALYSIS.md`.
+- [x] Добавить `/fis/diagnostics` и API диагностики.
+- [x] Добавить обезличенный FIS Communication Log.
+- [x] Добавить RBAC coverage и Windows Gateway build job в CI.
+- [ ] Получить официальный WSDL/DISCO 4.9 на DEV.
+- [ ] Восстановить доступность Gateway `192.168.34.223:8099`.
+- [ ] Подтвердить SOAP version, binding, actions, methods, faults и transport по parser output.
+- [ ] Подтвердить FIS transport authentication по официальной спецификации.
+- [ ] Выполнить первый read-only TEST запрос и зафиксировать обезличенный результат.
+- [ ] Не включать Import до отдельной задачи.

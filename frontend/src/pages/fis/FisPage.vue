@@ -44,8 +44,8 @@ const gatewayCards = computed(() => [
   { label: 'Версия Gateway', value: store.gatewayStatus.version?.gateway_version || store.gatewayStatus.version?.message || '—', tone: store.gatewayStatus.version?.ok ? 'info' : 'neutral', detail: 'GET /version' },
   { label: 'ViPNet / ЗКСПД', value: store.gatewayStatus.zkspd?.ok ? 'доступен' : 'недоступен', tone: store.gatewayStatus.zkspd?.ok ? 'success' : 'danger', detail: store.gatewayStatus.zkspd?.message || 'Не проверен' },
   { label: 'TEST WCF Service', value: store.gatewayStatus.zkspd?.ok ? 'доступен' : 'недоступен', tone: store.gatewayStatus.zkspd?.ok ? 'success' : 'warning', detail: store.gatewayStatus.zkspd?.error_code || 'Ожидает проверки' },
-  { label: 'WSDL / wrapper XSD', value: store.specInfo?.manifest_exists ? 'обнаружены' : 'ожидаются', tone: store.specInfo?.manifest_exists ? 'success' : 'warning', detail: 'Private storage manifest' },
-  { label: 'Прикладная XSD', value: store.specInfo?.xsd_loaded ? 'загружена' : 'отсутствует', tone: store.specInfo?.xsd_loaded ? 'success' : 'danger', detail: 'Validate/Import отключены без XSD' },
+  { label: 'Официальный WSDL', value: store.specInfo?.wsdl_loaded ? 'загружен' : 'отсутствует', tone: store.specInfo?.wsdl_loaded ? 'success' : 'danger', detail: 'SOAP methods блокируются без WSDL' },
+  { label: 'Прикладная XSD', value: store.specInfo?.xsd_loaded ? 'загружена' : 'отсутствует', tone: store.specInfo?.xsd_loaded ? 'success' : 'danger', detail: 'Validate/Import требуют WSDL и XSD' },
   { label: 'Authentication ФИС', value: 'не проверена', tone: 'warning', detail: 'Только после официального контракта' },
   { label: 'Справочники', value: store.gatewayStatus.dictionaries?.ok ? 'доступны' : 'недоступны', tone: store.gatewayStatus.dictionaries?.ok ? 'success' : 'neutral', detail: store.gatewayStatus.dictionaries?.message || 'Не проверены' },
 ])
@@ -92,8 +92,11 @@ onMounted(async () => { store.selectById(routeSelectedId()); await store.load();
 
     <section class="fis-gateway-panel">
       <div class="fis-gateway-panel__header">
-        <div><h2>CollegePortal Gateway — адаптер ФИС</h2><p>Диагностика модульной службы CollegePortal Gateway на ViPNet-ПК. Validate/Import отключены до загрузки официальной прикладной XSD пакета ФИС.</p></div>
-        <div class="fis-gateway-panel__actions"><q-btn dense outline :loading="store.saving" @click="runGateway(store.checkGatewayHealth, 'Шлюз проверен')">Проверить шлюз</q-btn><q-btn dense outline :loading="store.saving" @click="runGateway(store.checkGatewayVersion, 'Версия получена')">Версия Gateway</q-btn><q-btn dense color="primary" :loading="store.saving" @click="runGateway(store.checkZkspd, 'ЗКСПД проверен')">Проверить ЗКСПД</q-btn><q-btn dense outline :loading="store.saving" @click="runGateway(store.loadGatewayDictionaries, 'Запрошен тестовый список справочников')">Тестовые справочники</q-btn><q-btn dense outline :loading="store.saving" @click="runGateway(store.loadGatewayInstitution, 'Запрошены сведения организации')">Сведения организации</q-btn><q-btn dense disable color="warning">Validate отключен</q-btn><q-btn dense disable color="negative">Import отключен</q-btn></div>
+        <div><h2>CollegePortal Gateway — адаптер ФИС</h2><p>Диагностика модульной службы CollegePortal Gateway на ViPNet-ПК. SOAP methods, Validate и Import отключены до проверки официальных WSDL/XSD/DISCO.</p></div>
+        <div class="fis-gateway-panel__actions">
+          <q-btn dense flat to="/fis/diagnostics">Полная диагностика</q-btn>
+          <q-btn dense outline :loading="store.saving" @click="runGateway(store.checkGatewayHealth, 'Шлюз проверен')">Проверить шлюз</q-btn><q-btn dense outline :loading="store.saving" @click="runGateway(store.checkGatewayVersion, 'Версия получена')">Версия Gateway</q-btn><q-btn dense color="primary" :loading="store.saving" @click="runGateway(store.checkZkspd, 'ЗКСПД проверен')">Проверить ЗКСПД</q-btn><q-btn dense outline disable title="Станет доступно после проверки WSDL">Тестовые справочники</q-btn><q-btn dense outline disable title="Станет доступно после проверки WSDL">Сведения организации</q-btn><q-btn dense disable color="warning">Validate отключен</q-btn><q-btn dense disable color="negative">Import отключен</q-btn>
+        </div>
       </div>
       <div class="fis-gateway-grid"><article v-for="item in gatewayCards" :key="item.label" class="fis-gateway-card"><span>{{ item.label }}</span><AppStatusBadge :label="item.value" :tone="item.tone" /><small>{{ item.detail }}</small></article></div>
     </section>

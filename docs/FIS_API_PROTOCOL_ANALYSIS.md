@@ -2,7 +2,7 @@
 
 ## Статус
 
-Протокол не реализован на основании догадок. Официальная спецификация и XSD пока не загружены в DEV из-за недоступности официальной страницы с сервера.
+Протокол не реализован на основании догадок. Доступная официальная прикладная XSD версии 4.9 разобрана локально, но WSDL/DISCO и полная спецификация сервиса пока не получены из-за TLS-ошибки официальной страницы на DEV. XSD не активируется как runtime SOAP-контракт без подтвержденного WSDL.
 
 ## Что должно быть извлечено строго из спецификации
 
@@ -67,3 +67,18 @@ Task input says service is `ImportService`, contract is `IImportService`, target
 ## Gateway Naming Update
 
 Portal-to-workstation communication now uses CollegePortal Gateway terminology. FIS remains the first adapter. Official SOAP/WSDL/XSD analysis is still required before enabling validate/import operations; production remains disabled.
+
+## EPIC-001 / GIA-001 Checkpoint 14.07.2026
+
+The official application XSD available in the repository was registered in DEV private storage. SHA-256: `7158ae7d523d3b08784a29ed0cdb4ace025695e30526285ebabb3d93c093f840`.
+
+Confirmed from this XSD only:
+
+- no `targetNamespace` is declared;
+- top-level elements are `PackageData` and `Root`;
+- no XSD imports/includes are declared;
+- `Root/AuthData` contains `Login`, `Pass` and optional `InstitutionID`.
+
+This confirms payload-level credentials but does not confirm HTTP/SOAP transport authentication. WSDL/DISCO remain absent, so SOAP version, service/port/binding, operations, actions, headers, request/response wrappers and faults are still unconfirmed.
+
+`FisWsdlAnalyzer` now derives these fields from local official XML with network access disabled. The generated result is stored in `docs/FIS_WSDL_ANALYSIS.md`. Current result is an explicit stop-gate; no SOAP method was called.

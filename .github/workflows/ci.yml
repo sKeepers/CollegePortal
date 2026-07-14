@@ -62,6 +62,27 @@ jobs:
       - name: Build
         run: npm run build
 
+  gateway:
+    name: Gateway build
+    runs-on: windows-2022
+    defaults:
+      run:
+        working-directory: integrations/collegeportal-gateway
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build .NET Framework 4.8 Gateway
+        shell: cmd
+        run: build.cmd
+
+      - name: Verify executable
+        shell: pwsh
+        run: if (-not (Test-Path 'bin/CollegePortal.Gateway.Host.exe')) { throw 'Gateway executable was not produced.' }
+
   secret-scan:
     name: Secret scan
     runs-on: ubuntu-24.04

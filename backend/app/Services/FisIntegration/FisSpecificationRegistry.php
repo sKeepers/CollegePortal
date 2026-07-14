@@ -4,6 +4,11 @@ namespace App\Services\FisIntegration;
 
 class FisSpecificationRegistry
 {
+    public function __construct(private ?FisWsdlAnalyzer $analyzer = null)
+    {
+        $this->analyzer ??= new FisWsdlAnalyzer();
+    }
+
     public function manifest(): array
     {
         $path = config('fis_api.spec_manifest_path');
@@ -20,8 +25,29 @@ class FisSpecificationRegistry
         return $path && is_file($path) ? $path : null;
     }
 
+    public function wsdlPath(): ?string
+    {
+        $path = config('fis_api.wsdl_path');
+        return $path && is_file($path) ? $path : null;
+    }
+
+    public function discoPath(): ?string
+    {
+        $path = config('fis_api.disco_path');
+        return $path && is_file($path) ? $path : null;
+    }
+
     public function schemaVersion(): string
     {
         return (string) config('fis_api.schema_version', 'pending-official-spec');
+    }
+
+    public function analysis(): array
+    {
+        return $this->analyzer->analyze(
+            $this->wsdlPath(),
+            $this->xsdPath(),
+            $this->discoPath(),
+        );
     }
 }

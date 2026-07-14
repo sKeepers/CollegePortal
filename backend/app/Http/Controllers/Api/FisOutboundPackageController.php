@@ -212,6 +212,19 @@ class FisOutboundPackageController extends Controller
 
     public function specInfo(FisSpecificationRegistry $registry): JsonResponse
     {
-        return response()->json(['enabled' => config('fis_api.enabled'), 'mode' => config('fis_api.mode'), 'schema_version' => $registry->schemaVersion(), 'manifest' => $registry->manifest(), 'xsd_loaded' => (bool) $registry->xsdPath(), 'production_send_allowed' => (bool) config('fis_api.allow_production_send')]);
+        $analysis = $registry->analysis();
+
+        return response()->json([
+            'enabled' => config('fis_api.enabled'),
+            'mode' => config('fis_api.mode'),
+            'schema_version' => $registry->schemaVersion(),
+            'manifest' => $registry->manifest(),
+            'xsd_loaded' => (bool) $registry->xsdPath(),
+            'wsdl_loaded' => (bool) $registry->wsdlPath(),
+            'disco_loaded' => (bool) $registry->discoPath(),
+            'contract_status' => $analysis['status'] ?? 'missing',
+            'operation_count' => count($analysis['operations'] ?? []),
+            'production_send_allowed' => (bool) config('fis_api.allow_production_send'),
+        ]);
     }
 }

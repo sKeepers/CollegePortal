@@ -1185,3 +1185,9 @@ REPO-SYNC-001 merged PR #8 into develop, synchronized Linux DEV and documented r
 ## INTEGRATION-HUB-001
 
 CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a modular Windows service architecture for protected integrations. FIS remains the only implemented adapter; future FRDO/Moodle/LDAP/MAX/Telegram/Email adapters are planned. Windows repo path is `C:\!Projects\CollegePortal`; ViPNet installation remains a separate task.
+
+## EPIC-001 / GIA-001
+
+Linux DEV now has a contract-driven FIS diagnostics foundation: `FisWsdlAnalyzer`, `/fis/diagnostics`, technical `fis_communication_logs`, automatic WSDL analysis documentation and a Windows Gateway build job in CI. Official application XSD is registered in private storage with SHA-256 `7158ae7d523d3b08784a29ed0cdb4ace025695e30526285ebabb3d93c093f840`; it confirms root elements `PackageData`/`Root` and payload `AuthData` fields `Login`, `Pass`, `InstitutionID`.
+
+Stop-gate remains active: official WSDL/DISCO are absent, Gateway `192.168.34.223:8099` is unavailable from DEV, and no FIS SOAP operation has been confirmed or executed. Import and production remain disabled. GIA-002 starts only after Gateway recovery and parser verification of the official TEST contract.
