@@ -38,14 +38,14 @@ namespace CollegePortal.Gateway
             if (operation == "dictionaries_details") return _soap.CallReadOnly("GetTestDictionaryDetails", "");
             if (operation == "institution_info") return _soap.CallReadOnly("GetInstitutionInfo", "");
             if (operation == "check_application") return _soap.CallReadOnly("GetTestCheckApplication", "");
-            return GatewayPayload.Fail("unsupported_operation", 0, "FIS adapter read-only operation is not supported.");
+            return GatewayPayload.Failure("unsupported_operation", 0, "FIS adapter read-only operation is not supported.");
         }
 
         public GatewayPayload ExecuteCommand(string operation, string bodyJson)
         {
-            if (operation == "validate" || operation == "import" || operation == "import-result" || operation == "import_result") return GatewayPayload.Fail("operation_disabled", 0, operation + " is disabled until the official TEST contract is verified.");
-            if (operation == "production") return GatewayPayload.Fail("production_disabled", 0, "FIS production endpoint is hard-disabled in CollegePortal Gateway.");
-            return GatewayPayload.Fail("unsupported_operation", 0, "FIS adapter command is not supported.");
+            if (operation == "validate" || operation == "import" || operation == "import-result" || operation == "import_result") return GatewayPayload.Failure("operation_disabled", 0, operation + " is disabled until the official TEST contract is verified.");
+            if (operation == "production") return GatewayPayload.Failure("production_disabled", 0, "FIS production endpoint is hard-disabled in CollegePortal Gateway.");
+            return GatewayPayload.Failure("unsupported_operation", 0, "FIS adapter command is not supported.");
         }
 
         public string RedactDiagnosticData(string value)
