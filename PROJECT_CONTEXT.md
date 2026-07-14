@@ -1181,3 +1181,7 @@ FIS-GATEWAY-001 adds a Windows 7 compatible ViPNet Gateway Agent foundation and 
 ## REPO-SYNC-001
 
 REPO-SYNC-001 merged PR #8 into develop, synchronized Linux DEV and documented repository/environment synchronization rules.
+
+## INTEGRATION-HUB-001
+
+CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a modular Windows service architecture for protected integrations. FIS remains the only implemented adapter; future FRDO/Moodle/LDAP/MAX/Telegram/Email adapters are planned. Windows repo path is `C:\!Projects\CollegePortal`; ViPNet installation remains a separate task.

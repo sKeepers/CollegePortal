@@ -29,6 +29,6 @@ Do not print this file in terminal logs and do not commit it. Authentication for
 
 ## FIS-GATEWAY-001 Security Notes
 
-Gateway secrets are stored only in `/srv/college-dev/.secrets/fis-gateway.env` and `C:\CollegePortalFisGateway\config\gateway.private.config`. Do not put shared secrets, FIS credentials, certificates, Authorization/HMAC headers, SOAP bodies or personal data in Git, markdown, database settings or logs.
+Gateway secrets are stored only in `/srv/college-dev/.secrets/collegeportal-gateway.env` and `C:\CollegePortalGateway\config\gateway.private.config`. Do not put shared secrets, FIS credentials, certificates, Authorization/HMAC headers, SOAP bodies or personal data in Git, markdown, database settings or logs.
 
 Gateway controls: IP allowlist, HMAC-SHA256, timestamp, nonce replay protection, body hash, constant-time comparison, request size limit, rate limit and redacted structured audit.

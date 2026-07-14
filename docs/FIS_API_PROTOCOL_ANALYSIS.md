@@ -63,3 +63,7 @@ Actual WSDL/XSD/DISCO XML files were not available in this Codex/DEV workspace d
 Task input says service is `ImportService`, contract is `IImportService`, target namespace is `http://tempuri.org/`, and SOAP action follows `http://tempuri.org/IImportService/<MethodName>`. This remains pending parser verification.
 
 `xsd0` is treated as WCF wrapper XSD with `xs:any processContents="lax"`; it is not the official application XSD and must not be used to invent real `DoValidate` or `DoImport` payloads.
+
+## Gateway Naming Update
+
+Portal-to-workstation communication now uses CollegePortal Gateway terminology. FIS remains the first adapter. Official SOAP/WSDL/XSD analysis is still required before enabling validate/import operations; production remains disabled.

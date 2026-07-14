@@ -161,7 +161,7 @@ ViPNet Gateway:
 - host/IP: `192.168.34.223`;
 - OS: Windows 7;
 - полный CollegePortal туда не клонируется;
-- устанавливается только Gateway Agent в `C:\CollegePortalFisGateway` через отдельный ZIP release.
+- устанавливается только CollegePortal Gateway в `C:\CollegePortalGateway` через отдельный ZIP release.
 
 PROD:
 
@@ -177,3 +177,12 @@ Windows local development copy:
 
 Не включать в документы пароли, токены, private config и другие секреты.
 
+## Integration Gateway Update
+
+Linux DEV hostname: `moodle`.
+Primary IPv4 for LAN access: `192.168.34.104` on `eth0`.
+Default gateway: `192.168.34.1`.
+Route to ViPNet PC `192.168.34.223`: direct via `eth0` from `192.168.34.104`.
+Docker bridge addresses `172.17.0.1`, `172.18.0.1` and `172.19.0.1` are not server LAN addresses and must not be used in Gateway allowlists.
+
+ViPNet workstation installs only CollegePortal Gateway in `C:\CollegePortalGateway`; do not clone the full repository there. UAT and PROD are not changed by Integration Hub tasks.

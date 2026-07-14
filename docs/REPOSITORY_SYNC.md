@@ -37,3 +37,7 @@ No other Linux copy with origin `github.com/sKeepers/CollegePortal` was found in
 ## UAT and PROD
 
 UAT (`192.168.34.17`, `/opt/college-portal`) must be updated only by installer/update release flow, not by Git pull. PROD was not contacted or inventoried.
+
+## Windows Development Copy
+
+The primary Windows development copy is now `C:\!Projects\CollegePortal`. The old `C:\!Projects\college_portal` copy is considered stale/dirty and must not be used for Gateway builds. Use `scripts/repository/sync-collegeportal-windows.ps1`; it clones `develop` if missing, refuses dirty trees and uses `pull --ff-only`.

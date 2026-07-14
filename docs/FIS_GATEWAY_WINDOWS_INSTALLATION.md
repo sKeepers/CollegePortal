@@ -1,4 +1,4 @@
-# Установка FIS Gateway Agent на ViPNet-ПК
+# Установка CollegePortal Gateway на ViPNet-ПК
 
 ## Назначение
 
@@ -7,9 +7,9 @@ Gateway Agent устанавливается на отдельный Windows 7 V
 ## Перед установкой
 
 1. Создать отдельную локальную service account, например `cp-fis-gateway`.
-2. Распаковать пакет в `C:\CollegePortalFisGateway`.
+2. Распаковать пакет в `C:\CollegePortalGateway`.
 3. Создать каталоги `config`, `logs`, `data`.
-4. Скопировать `config.example` в `C:\CollegePortalFisGateway\config\gateway.private.config`.
+4. Скопировать `config.example` в `C:\CollegePortalGateway\config\gateway.private.config`.
 5. Ограничить ACL каталога config: `SYSTEM` и service account.
 6. Сгенерировать длинный `SharedSecret` и записать только в private config и `/srv/college-dev/.secrets/fis-gateway.env`.
 7. Указать IP CollegePortal сервера: `AllowedPortalIps=192.168.34.104`.
@@ -30,7 +30,7 @@ firewall-install.cmd
 
 ```cmd
 install-service.cmd
-net start CollegePortalFisGateway
+net start CollegePortalGateway
 check.cmd
 ```
 
@@ -70,7 +70,7 @@ chmod 600 /srv/college-dev/.secrets/fis-gateway.env
 
 ## Rollback
 
-1. `net stop CollegePortalFisGateway`.
+1. `net stop CollegePortalGateway`.
 2. `uninstall-service.cmd`.
 3. `firewall-remove.cmd`.
 4. Сохранить `logsudit.log` и private config в backup.
@@ -79,3 +79,7 @@ chmod 600 /srv/college-dev/.secrets/fis-gateway.env
 ## Ограничения FIS-GATEWAY-001
 
 DEV/Linux не содержит MSBuild/.NET Framework 4.8, поэтому сборка `.exe` и реальный запуск на Windows 7 не проверены в этой задаче. Пакет содержит исходники, scripts и инструкции для сборки на Windows.
+
+## Migration Note
+
+CollegePortal Gateway has been generalized into CollegePortal Gateway. New installations use `C:\CollegePortalGateway`, service name `CollegePortalGateway`, and package name `collegeportal-gateway-<version>.zip`. Old `C:\CollegePortalGateway` instructions are retained only for historical migration review.
