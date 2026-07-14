@@ -1,28 +1,43 @@
 @echo off
-chcp 866 >nul
-setlocal
+chcp 1251 >nul
+setlocal EnableExtensions EnableDelayedExpansion
 set ROOT=C:\CollegePortalGateway
-set REPORT=%ROOT%\diagnostics\install-report.txt
+set REPORT=%ROOT%\diagnostics\install.log
+if not exist "%ROOT%\diagnostics" mkdir "%ROOT%\diagnostics" >nul 2>&1
 
-echo CollegePortal Gateway:  ўв®¬ вЁзҐбЄ п гбв ­®ўЄ  ¤«п Windows 7
-echo PROD/FIS production ­Ґ ЁбЇ®«м§гҐвбп.
+echo CollegePortal Gateway: автоматическая установка для Windows 7
+echo PROD и ФИС production :8080 не используются.
+echo Лог установки: %REPORT%
 echo.
 
-call "%~dp000-check-prerequisites.cmd" || exit /b 1
-call "%~dp001-install.cmd" || exit /b 1
-call "%~dp002-configure.cmd" || exit /b 1
-call "%~dp003-start.cmd" || exit /b 1
-call "%~dp004-health.cmd" || (call "%~dp011-rollback.cmd" & exit /b 1)
-
-if not exist "%ROOT%\diagnostics" mkdir "%ROOT%\diagnostics"
 (
-  echo CollegePortal Gateway installation completed.
-  echo Date: %DATE% %TIME%
-  echo Install root: %ROOT%
-  sc qc CollegePortalGateway
+  echo Установка CollegePortal Gateway
+  echo Дата: %DATE% %TIME%
+  echo Пакет: %~dp0..\..
+  echo.
 ) > "%REPORT%"
 
-echo.
-echo “бв ­®ўЄ  § ўҐаиҐ­  гбЇҐи­®.
-echo ЋвзҐв: %REPORT%
+call "%~dp000-check-prerequisites.cmd" >> "%REPORT%" 2>&1
+if errorlevel 1 goto fail
+call "%~dp001-install.cmd" >> "%REPORT%" 2>&1
+if errorlevel 1 goto fail
+call "%~dp002-configure.cmd" >> "%REPORT%" 2>&1
+if errorlevel 1 goto fail
+call "%~dp003-start.cmd" >> "%REPORT%" 2>&1
+if errorlevel 1 goto fail
+call "%~dp004-health.cmd" >> "%REPORT%" 2>&1
+if errorlevel 1 goto fail
+call "%~dp007-collect-diagnostics.cmd" >> "%REPORT%" 2>&1
+
+echo Установка завершена успешно.
+echo Лог: %REPORT%
+echo Диагностика: %ROOT%\diagnostics\gateway-diagnostics.txt
 exit /b 0
+
+:fail
+echo.
+echo ОШИБКА: установка прервана.
+echo Подробности записаны в %REPORT%.
+echo Последние строки лога:
+powershell -NoProfile -ExecutionPolicy Bypass -Command "if(Test-Path -LiteralPath '%REPORT%'){ Get-Content -LiteralPath '%REPORT%' -Tail 40 }"
+exit /b 1

@@ -1,3 +1,7 @@
 @echo off
-chcp 866 >nul
-echo Rollback: stop CollegePortalGateway, restore latest C:\CollegePortalGateway\backup package, start service, run 04-health.cmd.
+chcp 1251 >nul
+setlocal EnableExtensions EnableDelayedExpansion
+echo Откат Gateway: автоматический откат пока ограничен остановкой службы и подсказкой по backup.
+net stop CollegePortalGateway >nul 2>&1
+echo Проверьте каталог C:\CollegePortalGateway\backup и восстановите нужный EXE/config вручную.
+exit /b 0

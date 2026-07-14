@@ -1,24 +1,29 @@
 @echo off
-chcp 866 >nul
-setlocal
+chcp 1251 >nul
+setlocal EnableExtensions EnableDelayedExpansion
 set ROOT=C:\CollegePortalGateway
 set CFG=%ROOT%\config\gateway.private.config
 
-echo [3/5] Џа®ўҐаЄ  Є®­дЁЈга жЁЁ...
+echo [8/12] Проверка конфигурации Gateway
 if not exist "%CFG%" (
-  echo Ћ€ЃЉЂ: Є®­дЁЈга жЁп ­Ґ ­ ©¤Ґ­ : %CFG%
+  echo ОШИБКА: конфигурация не найдена.
+  echo Файл: %CFG%
   exit /b 1
 )
-
-findstr /I "SharedSecret=CHANGE_ME" "%CFG%" >nul 2>&1 && (
-  echo ‚Ќ€ЊЂЌ€…: SharedSecret ўбҐ ҐйҐ б®¤Ґа¦Ёв CHANGE_ME.
-  echo ЏҐаҐ¤ Ї®¤Є«озҐ­ЁҐ¬ Є CollegePortal § ¬Ґ­ЁвҐ secret ўагз­го.
+findstr /I "SharedSecret=CHANGE_ME" "%CFG%" >nul 2>&1
+if not errorlevel 1 (
+  echo ВНИМАНИЕ: SharedSecret содержит значение CHANGE_ME.
+  echo Перед подключением CollegePortal замените секрет в файле: %CFG%
 )
-
-findstr /I "FisProductionEnabled=true" "%CFG%" >nul 2>&1 && (
-  echo Ћ€ЃЉЂ: FisProductionEnabled=true § ЇаҐйҐ­ ¤«п нв®Ј® Ї ЄҐв .
+findstr /I "FisProductionEnabled=true" "%CFG%" >nul 2>&1
+if not errorlevel 1 (
+  echo ОШИБКА: FisProductionEnabled=true запрещен для DEV/TEST Gateway.
+  echo Файл: %CFG%
   exit /b 1
 )
-
-echo OK: Є®­дЁЈга жЁп ­ ©¤Ґ­ . ‘ҐЄаҐвл бЄаЁЇв ­Ґ ўлў®¤Ёв.
+findstr /I "FisTestEndpoint=http://10.0.3.1:8383" "%CFG%" >nul 2>&1
+if errorlevel 1 (
+  echo ВНИМАНИЕ: тестовый endpoint ФИС отличается от ожидаемого 10.0.3.1:8383.
+)
+echo OK: конфигурация проверена. Секреты не выводятся.
 exit /b 0

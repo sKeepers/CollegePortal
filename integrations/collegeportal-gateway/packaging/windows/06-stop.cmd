@@ -1,3 +1,6 @@
 @echo off
-chcp 866 >nul
+chcp 1251 >nul
+setlocal EnableExtensions EnableDelayedExpansion
+echo Остановка службы CollegePortalGateway
 net stop CollegePortalGateway
+exit /b %ERRORLEVEL%

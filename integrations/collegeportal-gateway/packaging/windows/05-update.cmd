@@ -1,4 +1,6 @@
 @echo off
-chcp 866 >nul
-echo Manual update only: download package, verify SHA256, backup C:\CollegePortalGateway\bin, stop service, replace binaries, start service, run 04-health.cmd.
-echo Automatic update remains disabled until signed release packages are introduced.
+chcp 1251 >nul
+setlocal EnableExtensions EnableDelayedExpansion
+echo Обновление Gateway выполняется через install-all.cmd: он сохраняет private config, обновляет EXE и binPath службы.
+call "%~dp0install-all.cmd"
+exit /b %ERRORLEVEL%
