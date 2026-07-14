@@ -21,10 +21,10 @@ namespace CollegePortal.Gateway
         {
             return "[{\"code\":\"zkspd_check\",\"enabled\":true},"
                 + "{\"code\":\"test_service_check\",\"enabled\":true},"
-                + "{\"code\":\"dictionaries_list\",\"enabled\":true},"
-                + "{\"code\":\"dictionaries_details\",\"enabled\":true},"
-                + "{\"code\":\"institution_info\",\"enabled\":true},"
-                + "{\"code\":\"check_application\",\"enabled\":true},"
+                + "{\"code\":\"dictionaries_list\",\"enabled\":false,\"reason\":\"official_wsdl_missing\"},"
+                + "{\"code\":\"dictionaries_details\",\"enabled\":false,\"reason\":\"official_wsdl_missing\"},"
+                + "{\"code\":\"institution_info\",\"enabled\":false,\"reason\":\"official_wsdl_missing\"},"
+                + "{\"code\":\"check_application\",\"enabled\":false,\"reason\":\"official_wsdl_missing\"},"
                 + "{\"code\":\"validate\",\"enabled\":false,\"reason\":\"official_application_xsd_missing\"},"
                 + "{\"code\":\"import\",\"enabled\":false,\"reason\":\"disabled_until_official_contract_verified\"},"
                 + "{\"code\":\"import_result\",\"enabled\":false,\"reason\":\"disabled_until_official_contract_verified\"},"
@@ -34,11 +34,8 @@ namespace CollegePortal.Gateway
         public GatewayPayload ExecuteReadOnly(string operation, string bodyJson)
         {
             if (operation == "zkspd_check" || operation == "test_service_check") return _soap.ZkspdCheck();
-            if (operation == "dictionaries_list") return _soap.CallReadOnly("GetTestDictionariesList", "");
-            if (operation == "dictionaries_details") return _soap.CallReadOnly("GetTestDictionaryDetails", "");
-            if (operation == "institution_info") return _soap.CallReadOnly("GetInstitutionInfo", "");
-            if (operation == "check_application") return _soap.CallReadOnly("GetTestCheckApplication", "");
-            return GatewayPayload.Fail("unsupported_operation", 0, "FIS adapter read-only operation is not supported.");
+            return GatewayPayload.Fail("operation_disabled", 0,
+                "FIS read-only SOAP operations are disabled until the official WSDL is parsed and verified.");
         }
 
         public GatewayPayload ExecuteCommand(string operation, string bodyJson)
