@@ -81,7 +81,7 @@ jobs:
 
       - name: Verify executable
         shell: pwsh
-        run: if (-not (Test-Path 'bin/CollegePortal.Gateway.Host.exe')) { throw 'Gateway executable was not produced.' }
+        run: if (-not (Test-Path 'bin/CollegePortal.Gateway.exe')) { throw 'Gateway executable was not produced.' }
 
   secret-scan:
     name: Secret scan
