@@ -111,3 +111,7 @@ backend/storage/app/private/reference/fis/
 .secrets/
 backend/.secrets/
 backend/storage/app/private/fis-specs/
+
+# CollegePortal Gateway local build output
+integrations/collegeportal-gateway/src/**/bin/
+integrations/collegeportal-gateway/src/**/obj/
