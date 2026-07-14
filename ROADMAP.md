@@ -393,3 +393,7 @@ REPO-SYNC-001 completed: repository sync documentation and safe Linux/Windows he
 ## INTEGRATION-HUB-001
 
 CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a modular Windows service architecture for protected integrations. FIS remains the only implemented adapter; future FRDO/Moodle/LDAP/MAX/Telegram/Email adapters are planned. Windows repo path is `C:\!Projects\CollegePortal`; ViPNet installation remains a separate task.
+
+## CODEX-WORKFLOW-001 / 0.9
+
+Professional Codex workflow foundation: task worktrees, hierarchical instructions, reusable skills, specialized read-only agents, Playwright smoke and expanded CI. Следующий этап — наращивать обезличенные role-based E2E после подготовки test accounts/secrets и включать Document Engine smoke после его merge в `develop`.

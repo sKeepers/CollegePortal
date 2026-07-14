@@ -1,0 +1,4 @@
+interface:
+  display_name: "CollegePortal Infrastructure"
+  short_description: "Безопасные инфраструктурные изменения"
+  default_prompt: "Use $collegeportal-infrastructure to inspect or change CollegePortal infrastructure safely."

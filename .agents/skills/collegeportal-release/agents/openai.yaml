@@ -1,0 +1,4 @@
+interface:
+  display_name: "CollegePortal Release"
+  short_description: "Контролируемая подготовка релиза"
+  default_prompt: "Use $collegeportal-release to prepare and verify a CollegePortal release."

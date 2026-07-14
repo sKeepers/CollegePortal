@@ -1185,3 +1185,7 @@ REPO-SYNC-001 merged PR #8 into develop, synchronized Linux DEV and documented r
 ## INTEGRATION-HUB-001
 
 CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a modular Windows service architecture for protected integrations. FIS remains the only implemented adapter; future FRDO/Moodle/LDAP/MAX/Telegram/Email adapters are planned. Windows repo path is `C:\!Projects\CollegePortal`; ViPNet installation remains a separate task.
+
+## CODEX-WORKFLOW-001
+
+Добавлен project workflow Codex: иерархия `AGENTS.md`, repo-scoped skills, read-only project agents, Playwright E2E foundation, безопасные worktree/environment/quality helpers и расширенные CI gates. Подробности находятся в `docs/CODEX_WORKFLOW.md`; ни business logic, ни UAT/PROD не изменяются.

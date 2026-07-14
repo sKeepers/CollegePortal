@@ -1,0 +1,4 @@
+interface:
+  display_name: "CollegePortal Security Review"
+  short_description: "Проверка RBAC, ПДн и секретов"
+  default_prompt: "Use $collegeportal-security-review to perform a read-only CollegePortal security review."

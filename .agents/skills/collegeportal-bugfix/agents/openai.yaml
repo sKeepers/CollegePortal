@@ -1,0 +1,4 @@
+interface:
+  display_name: "CollegePortal Bugfix"
+  short_description: "Воспроизводимые исправления регрессий"
+  default_prompt: "Use $collegeportal-bugfix to diagnose and fix a CollegePortal defect."

@@ -176,3 +176,11 @@ The requested `Type=Feature` and `Module=FIS` options were not present in the ex
 ## FIS-GATEWAY-001
 
 Issue #7 tracks the ViPNet Gateway Agent. It is added to CollegePortal Roadmap with Status `In Progress`, Priority `P1 High`, Type `Task` and Module `Data Import` because `Feature` and `FIS` options are not available in the project fields.
+
+## CODEX-WORKFLOW-001
+
+Codex changes use one task branch and one isolated worktree from `origin/develop`. Repo-scoped instructions live in `AGENTS.md`, reusable skills in `.agents/skills/`, project agents in `.codex/agents/`, and browser tests in `frontend/e2e/`.
+
+GitHub Issue: `#13` — `CODEX-WORKFLOW-001: Codex project workflow, skills, agents and Playwright`. Roadmap fields: Status `In Progress`, Priority `P1 High`, Type `Task`, Module `Infrastructure`, Target release `0.9`.
+
+Pull requests for Codex tasks must include tests/build, browser/security checks, limitations and stop-gate status. CI additionally validates PostgreSQL migrations, Playwright smoke, forbidden files, Windows Gateway packaging and release structure. `main`, UAT and PROD remain outside this workflow unless separately approved.

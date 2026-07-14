@@ -1,128 +1,35 @@
-# Codex Workflow
+# Профессиональный workflow Codex
 
-Дата: 2026-06-30
+Codex работает в CollegePortal как контролируемый engineering worker: одна задача, одна ветка, один write-worker и отдельный worktree. Canonical repository — GitHub, интеграционная ветка — `develop`.
 
-Документ описывает стандартный порядок работы Codex над CollegePortal после настройки DEV/PROD и Git workflow.
+## Последовательность
 
-## Основные правила
+1. Прочитать `AGENTS.md`, `PROJECT_CONTEXT.md`, `ROADMAP.md`, `TASKS.md` и локальный `AGENTS.md` модуля.
+2. Проверить environment по `docs/ENVIRONMENTS.md`, remote, branch, HEAD и clean state.
+3. Создать task worktree от актуального `origin/develop`.
+4. Исследовать существующий execution path; для read-heavy анализа использовать project agents.
+5. Сформировать короткий план, выполнить минимальные изменения и сохранить обратную совместимость.
+6. Выполнить migrations, targeted/full tests, build, route/API smoke и browser UAT по риску задачи.
+7. Выполнить `git diff --check`, forbidden-file и secret scan.
+8. Обновить документацию, создать commit/push/PR в `develop` и дождаться green CI.
 
-- Работать только в `/srv/college-dev`, если задача явно не разрешает другое.
-- PROD `/home/andale/college_portal` не трогать без отдельного подтверждения.
-- Не выполнять реальный deploy без отдельного подтверждения.
-- Не коммитить секреты, `.env`, зависимости, runtime-файлы, logs, `tmp` и backup-файлы.
-- Каждая выполненная задача завершается Git checkpoint.
+`main`, UAT и PROD изменяются только по отдельному разрешению. Private files из других worktree не копируются.
 
-## Стандартный порядок
+## Stop-gates
 
-1. Перейти в DEV:
+Работа прекращается без фиктивного commit, если:
 
-```bash
-cd /srv/college-dev
-```
+- `origin/develop` не синхронизирован или worktree нельзя создать безопасно;
+- текущие изменения конфликтуют с другой feature-веткой;
+- тесты, build, YAML/TOML/shell validation или CI остаются красными;
+- Playwright требует реальные credentials, которых нет в secret store;
+- найден секрет, ПДн или private storage file;
+- необходимы UAT/PROD/main, destructive Git или breaking change без разрешения.
 
-2. Проверить текущее состояние:
+## Parallel work
 
-```bash
-git status --short --branch
-```
+Subagents подходят для независимого read-only анализа. Не запускать два write-agent в одном worktree и не давать subagent параллельно редактировать те же файлы. Основной worker принимает отчеты и единолично пишет код.
 
-3. Выполнить задачу.
+## Итоговый отчет
 
-4. Запустить проверки, подходящие задаче.
-
-Frontend:
-
-```bash
-docker compose exec -T frontend npm run build
-```
-
-Backend/API:
-
-```bash
-docker compose exec -T backend php artisan test
-```
-
-Shell-скрипты:
-
-```bash
-bash -n scripts/deploy/*.sh
-```
-
-Полная DEV-проверка перед деплоем:
-
-```bash
-scripts/deploy/check-dev.sh
-```
-
-5. Проверить изменения:
-
-```bash
-git status
-git diff --check
-git diff --name-only
-```
-
-6. Убедиться, что в commit не попадут запрещенные файлы:
-
-- `.env`;
-- `backend/.env`;
-- `frontend/.env`;
-- `vendor/`;
-- `node_modules/`;
-- `tmp/`;
-- logs;
-- runtime/cache-файлы;
-- docker volumes;
-- backups.
-
-7. Добавить файлы:
-
-```bash
-git add .
-```
-
-Если задача затрагивает рискованные области, добавлять файлы точечно:
-
-```bash
-git add docs/GIT_WORKFLOW.md TASKS.md
-```
-
-8. Проверить staged-файлы:
-
-```bash
-git status --short
-git diff --cached --name-only
-```
-
-9. Сделать commit с номером задачи:
-
-```bash
-git commit -m "INFRA-005: document Codex git workflow"
-```
-
-10. Подготовить отчет пользователю:
-
-- что изменено;
-- какие проверки выполнены;
-- hash commit;
-- текущий `git status`;
-- что PROD не трогался.
-
-## Если проверка упала
-
-- Исправить ошибку в DEV.
-- Повторить проверки.
-- Не делать commit с падающими обязательными проверками, если пользователь не просит сохранить промежуточное состояние.
-- В отчете указать, что именно падало и как исправлено.
-
-## Если изменений нет
-
-Если задача была аналитической или после проверки файловых изменений нет:
-
-- выполнить `git status`;
-- commit не создавать;
-- в отчете явно написать: `Git checkpoint не создан, потому что файловых изменений нет`.
-
-## Deploy
-
-Обычная работа Codex заканчивается commit в DEV. Перенос в PROD выполняется только по `docs/DEPLOYMENT.md` и только после отдельного подтверждения.
+Указывать environment, branch, base/final commits, root cause или цель, файлы, migrations, tests/assertions, frontend build, browser UAT, security checks, ограничения, Issue/PR, CI и commit hash.
