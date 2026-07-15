@@ -1,3 +1,5 @@
 @echo off
-echo Manual update only: download package, verify SHA256, backup C:\CollegePortalGateway\bin, stop service, replace binaries, start service, run 04-health.cmd.
-echo Automatic update remains disabled until signed release packages are introduced.
+chcp 65001 >nul
+echo Обновление использует тот же проверяемый repair-поток и сохраняет private config.
+call "%~dp001-install.cmd"
+exit /b %errorlevel%

@@ -60,6 +60,14 @@ backend/storage/app/private/imports/
 
 # Release artifacts and installer runtime output
 releases/
+integrations/collegeportal-gateway/artifacts/
+integrations/collegeportal-gateway/build-output/
+integrations/collegeportal-gateway/bin/*
+!integrations/collegeportal-gateway/bin/README.txt
+integrations/collegeportal-gateway/src/**/bin/
+integrations/collegeportal-gateway/src/**/obj/
+integrations/collegeportal-gateway/tests/bin/
+integrations/collegeportal-gateway/tests/obj/
 installer/*.tar.gz
 installer/*.sha256
 installer/.env

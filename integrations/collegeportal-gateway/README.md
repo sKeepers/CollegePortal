@@ -1,51 +1,39 @@
-# CollegePortal Gateway
+# CollegePortal Gateway 0.2.1-dev
 
-CollegePortal Gateway is a modular Windows service for protected integrations. It replaces the FIS-specific Gateway Agent naming while preserving the FIS adapter and old `/fis/test/...` routes as deprecated aliases.
+Windows-служба для защищенных интеграций CollegePortal. Текущий FIS adapter выполняет только TCP-диагностику фиксированного TEST endpoint `10.0.3.1:8383`. SOAP, Import, Validate, Delete и production `:8080` заблокированы до подтверждения официального контракта.
 
-## Compatibility
+## Совместимость
 
-- Windows 7
-- .NET Framework 4.8
-- Windows Service: `CollegePortalGateway`
-- Install path: `C:\CollegePortalGateway`
-- No Docker, IIS or modern .NET runtime required
+- Windows 7 SP1 / 10 / 11;
+- .NET Framework 4.8;
+- Windows PowerShell 3.0 или новее;
+- служба `CollegePortalGateway`;
+- каталог `C:\CollegePortalGateway`;
+- порт `8099`, разрешенный извне только для Linux DEV `192.168.34.104`; loopback используется для local health.
 
-## Projects
+## Сборка
 
-```text
-src/CollegePortal.Gateway.Contracts
-src/CollegePortal.Gateway.Core
-src/CollegePortal.Gateway.Adapters.Fis
-src/CollegePortal.Gateway.Host
+На Windows с Visual Studio Build Tools и .NET Framework 4.8 Developer Pack:
+
+```cmd
+build.cmd
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File package.ps1
 ```
 
-## Endpoints
+Артефакт создается в `releases\collegeportal-gateway-<version>.zip`. ZIP содержит `CollegePortal.Gateway.Host.exe`, installer scripts, `config.example`, `VERSION`, `BUILD_INFO` и внутренний `SHA256SUMS`. Рядом создается SHA-256 самого ZIP.
 
-Common:
+## Установка и repair
 
-- `GET /health`
-- `GET /version`
-- `GET /capabilities`
-- `GET /adapters`
-- `GET /adapters/fis/health`
-- `POST /diagnostics/run`
-- `GET /diagnostics/latest`
+1. Передать ZIP на ViPNet-ПК только утвержденным способом.
+2. Сверить внешний SHA-256 с отдельно полученным ожидаемым значением.
+3. Распаковать ZIP в новый каталог.
+4. Запустить `install-all.cmd` от имени администратора.
+5. Открыть `gateway-menu.cmd` и выполнить health/diagnostics.
 
-FIS:
+Installer проверяет пакет до изменения системы, сохраняет рабочий `gateway.private.config`, заменяет только placeholder secret, создает backup бинарников, регистрирует службу под `NetworkService`, ограничивает ACL, URL ACL и firewall. Private secret не выводится.
 
-- `POST /adapters/fis/zkspd/check`
-- `POST /adapters/fis/test/dictionaries/list`
-- `POST /adapters/fis/test/dictionaries/details`
-- `POST /adapters/fis/test/institution/info`
-- `POST /adapters/fis/test/check-application`
+## Контракты ФИС
 
-Disabled until official contract verification:
+`08-download-fis-contract.cmd` делает по одной попытке скачать WSDL/XSD/DISCO только с TEST `:8383`, проверяет HTTP/XML/SHA-256 и сохраняет их в private storage. `09-import-fis-contract.cmd` проверяет manifest и формирует private-анализ. Эти действия не подтверждают официальный статус автоматически и не разрешают SOAP-вызовы.
 
-- `validate`
-- `import`
-- `import-result`
-- production
-
-## Build
-
-Run `build.cmd` on Windows with MSBuild for .NET Framework 4.8. Package with `package.ps1`.
+Если служба, порт, TEST endpoint, WSDL/DISCO или authentication не подтверждены, дальнейшая работа прекращается по stop-gate.

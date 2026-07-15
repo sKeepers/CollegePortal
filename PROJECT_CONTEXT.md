@@ -1193,3 +1193,9 @@ Linux DEV has an evidence-only FIS diagnostics foundation: Portal/Gateway TCP an
 Snapshot 14.07.2026: Portal is available; Gateway host responds to ICMP, but TCP `192.168.34.223:8099` returns `tcp_refused`; remote evidence cannot determine Windows-service state. Direct DEV to `10.0.3.1:8383` times out. Private registry contains one XSD with SHA-256 `7158ae7d523d3b08784a29ed0cdb4ace025695e30526285ebabb3d93c093f840` and matching manifest; WSDL/DISCO are absent.
 
 No SOAP operation, binding, action or authentication method is claimed. First read-only call was not attempted. GIA-002 starts only after Gateway recovery, approved WSDL/DISCO bundle verification, authentication confirmation and one separately permitted TEST read-only call.
+
+## EPIC-001 / GIA-002 Gateway installation package
+
+В отдельной feature-ветке подготовлен Windows Gateway `0.2.1-dev`. Build теперь обязательно создает `CollegePortal.Gateway.Host.exe`; package собирается только по allowlist, содержит внутренний manifest и внешний SHA-256. Installer поддерживает install/repair существующей службы, сохраняет private config, выполняет backup, запускает службу под `NetworkService`, ограничивает URL ACL/firewall адресом Linux DEV и формирует русский отчет.
+
+Gateway по-прежнему выполняет только fixed TEST TCP diagnostics. Guessed SOAP contract отсутствует, production/Import/Validate/Delete выключены. Установка на ViPNet-ПК, contract acquisition и read-only call не выполнялись без безопасной интерактивной сессии.

@@ -22,7 +22,7 @@ namespace CollegePortal.Gateway
         public string AuditLogPath = @"C:\CollegePortalGateway\logs\audit.log";
         public string NonceStorePath = @"C:\CollegePortalGateway\cache\nonces.txt";
         public string DiagnosticsPath = @"C:\CollegePortalGateway\diagnostics\latest.json";
-        public string ServiceVersion = "0.2.0-dev";
+        public string ServiceVersion = "0.2.1-dev";
         public string OfficialSpecStatus = "not_imported";
 
         public static GatewayConfig Load(string path)

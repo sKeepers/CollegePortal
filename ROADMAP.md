@@ -407,4 +407,10 @@ Next order:
 3. Regenerate service/port/binding/action/method map from the contract.
 4. Confirm authentication and read-only semantics.
 5. Execute one separately permitted TEST read-only operation without PII.
-6. Start GIA-002 only after the gate and CI are green.
+6. Завершить инфраструктурную часть GIA-002 ручной установкой Gateway; функциональный SOAP-этап остается заблокирован до закрытия gate и green CI.
+
+## EPIC-001 / GIA-002 — package ready, installation stop-gate
+
+Подготовлен Gateway `0.2.1-dev` для ручного восстановления Windows-службы на ViPNet-ПК. Сборка, package manifest, installer/repair, ACL/firewall, диагностика и contract intake проверяются автоматически.
+
+Следующий порядок: интерактивная установка оператором → local health/service evidence → Portal HMAC → TEST TCP → private WSDL/XSD/DISCO → независимое approval → authentication/read-only confirmation → одна разрешенная попытка. Без безопасной RDP/manual session установка и SOAP не выполняются.

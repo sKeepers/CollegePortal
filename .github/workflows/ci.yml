@@ -4,7 +4,7 @@ on:
   push:
     branches: [develop, main]
   pull_request:
-    branches: [develop, main]
+    branches: [develop, main, feature/gia-001-fis-gateway-exchange]
 
 permissions:
   contents: read
@@ -81,7 +81,30 @@ jobs:
 
       - name: Verify executable
         shell: pwsh
-        run: if (-not (Test-Path 'bin/CollegePortal.Gateway.exe')) { throw 'Gateway executable was not produced.' }
+        run: if (-not (Test-Path 'artifacts/Release/CollegePortal.Gateway.Host.exe')) { throw 'Gateway executable was not produced.' }
+
+      - name: Run Gateway console smoke tests
+        shell: pwsh
+        run: |
+          ./artifacts/Tests/CollegePortal.Gateway.Tests.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Gateway security tests failed.' }
+          ./tests/smoke-console.ps1
+
+      - name: Build and verify installation package
+        shell: pwsh
+        run: |
+          ./package.ps1
+          ./tests/verify-package.ps1 -PackagePath "../../releases/collegeportal-gateway-$((Get-Content VERSION -Raw).Trim()).zip"
+
+      - name: Upload verified Gateway package
+        uses: actions/upload-artifact@v4
+        with:
+          name: collegeportal-gateway-${{ github.sha }}
+          path: |
+            releases/collegeportal-gateway-*.zip
+            releases/collegeportal-gateway-*.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Verify FIS safety stop-gates
         shell: pwsh

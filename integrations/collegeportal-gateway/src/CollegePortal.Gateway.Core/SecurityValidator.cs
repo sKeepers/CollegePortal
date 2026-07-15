@@ -37,10 +37,10 @@ namespace CollegePortal.Gateway
             if (Math.Abs((DateTime.UtcNow - ts).TotalSeconds) > _config.RequestWindowSeconds) return ValidationResult.Fail("expired_timestamp", "Request timestamp is outside allowed window.");
             var bodyHash = HexSha256(body ?? new byte[0]);
             if (!ConstantTimeEquals(bodyHash, bodySha)) return ValidationResult.Fail("body_hash_mismatch", "Body SHA-256 does not match.");
-            if (!_nonceStore.TryUse(nonce, ts)) return ValidationResult.Fail("reused_nonce", "Nonce was already used.");
             var canonical = method.ToUpperInvariant() + "\n" + path + "\n" + timestamp + "\n" + nonce + "\n" + bodyHash;
             var expected = Hmac(canonical, _config.SharedSecret ?? "");
             if (!ConstantTimeEquals(expected, signature)) return ValidationResult.Fail("invalid_hmac", "HMAC signature is invalid.");
+            if (!_nonceStore.TryUse(nonce, ts)) return ValidationResult.Fail("reused_nonce", "Nonce was already used.");
             return ValidationResult.Ok();
         }
 
