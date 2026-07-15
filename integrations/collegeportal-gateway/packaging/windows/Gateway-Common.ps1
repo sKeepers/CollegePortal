@@ -98,6 +98,14 @@ function Get-GatewayFileTail([string]$Path, [int]$LineCount) {
     return $Queue.ToArray()
 }
 
+function New-GatewayRandomBytes([int]$Length) {
+    if ($Length -lt 1) { throw 'Длина random byte array должна быть больше нуля.' }
+    $Bytes = New-Object byte[] $Length
+    $Rng = [Security.Cryptography.RandomNumberGenerator]::Create()
+    try { $Rng.GetBytes($Bytes) } finally { $Rng = $null }
+    return ,$Bytes
+}
+
 function Read-GatewayConfig([string]$Path) {
     if (-not [IO.File]::Exists($Path)) { throw "Файл конфигурации не найден: $Path" }
     $Values = @{}

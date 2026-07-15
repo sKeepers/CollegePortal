@@ -126,9 +126,7 @@ try {
 
     $ConfigText = [IO.File]::ReadAllText($PrivateConfig)
     if ($ConfigText -match '(?im)^SharedSecret\s*=\s*(CHANGE_ME[^\r\n]*|)\s*$') {
-        $Bytes = New-Object byte[] 48
-        $Rng = [Security.Cryptography.RandomNumberGenerator]::Create()
-        try { $Rng.GetBytes($Bytes) } finally { if ($null -ne $Rng) { $Rng.Clear() } }
+        $Bytes = New-GatewayRandomBytes 48
         $GeneratedSecret = [Convert]::ToBase64String($Bytes)
         $ConfigText = [Text.RegularExpressions.Regex]::Replace($ConfigText, '(?im)^SharedSecret\s*=.*$', "SharedSecret=$GeneratedSecret")
         [IO.File]::WriteAllText($PrivateConfig, $ConfigText, (New-Object Text.UTF8Encoding($false)))

@@ -79,6 +79,11 @@ try {
     if ($Tail.Count -ne 2 -or $Tail[0] -ne 'three' -or $Tail[1] -ne 'four') {
         throw 'Get-GatewayFileTail вернул неверные строки.'
     }
+
+    $RandomBytes = New-GatewayRandomBytes 48
+    if (-not ($RandomBytes -is [byte[]]) -or $RandomBytes.Length -ne 48) {
+        throw 'New-GatewayRandomBytes вернул неверный тип или длину.'
+    }
 }
 finally {
     if ([IO.Directory]::Exists($Temp)) { Remove-Item -LiteralPath $Temp -Recurse -Force }
