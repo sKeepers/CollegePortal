@@ -10,6 +10,16 @@ permissions:
   contents: read
 
 jobs:
+  path-policy:
+    name: Path policy
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify repository paths
+        run: bash scripts/repository/assert-path-policy.sh
+
   backend:
     name: Backend tests
     runs-on: ubuntu-24.04
