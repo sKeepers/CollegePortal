@@ -27,7 +27,19 @@ Add-Section 'URL ACL' { & netsh.exe http show urlacl url='http://+:8099/' }
 Add-Section 'FIREWALL' { & netsh.exe advfirewall firewall show rule name='CollegePortal Gateway DEV 8099' verbose }
 Add-Section 'ROUTE TO FIS TEST' { & route.exe print 10.0.3.1 }
 Add-Section 'BINARY SHA256' { if ([IO.File]::Exists("$InstallRoot\bin\CollegePortal.Gateway.Host.exe")) { Get-CollegePortalSha256 "$InstallRoot\bin\CollegePortal.Gateway.Host.exe" } else { 'MISSING' } }
+Add-Section 'REQUIRED FILES' {
+    foreach ($Path in @(
+        "$InstallRoot\bin\CollegePortal.Gateway.Host.exe",
+        "$InstallRoot\config\gateway.private.config",
+        "$InstallRoot\VERSION",
+        "$InstallRoot\logs\startup.log"
+    )) { '{0}={1}' -f $Path, [IO.File]::Exists($Path) }
+}
 Add-Section 'PRIVATE CONFIG ACL' { & icacls.exe "$InstallRoot\config\gateway.private.config" }
+Add-Section 'STARTUP LOG (LAST 300 LINES)' {
+    $StartupLog = Join-Path $InstallRoot 'logs\startup.log'
+    if ([IO.File]::Exists($StartupLog)) { Get-Content -LiteralPath $StartupLog -Tail 300 } else { 'MISSING' }
+}
 Add-Section 'LOCAL HEALTH' { & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $ScriptRoot 'Test-GatewayHealth.ps1') -InstallRoot $InstallRoot }
 Add-Section 'SYSTEM SERVICE ERRORS' { & wevtutil.exe qe System /q:"*[System[(Level=1 or Level=2) and Provider[@Name='Service Control Manager']]]" /c:10 /rd:true /f:text }
 Add-Section 'APPLICATION ERRORS' { & wevtutil.exe qe Application /q:"*[System[(Level=1 or Level=2) and (Provider[@Name='.NET Runtime'] or Provider[@Name='Application Error'])]]" /c:10 /rd:true /f:text }

@@ -7,34 +7,43 @@ namespace CollegePortal.Gateway
 {
     internal static class Program
     {
-        public static void Main(string[] args)
+        public static int Main(string[] args)
         {
             var configPath = ConfigPath(args);
-            if (!File.Exists(configPath)) {
-                Console.Error.WriteLine("Gateway config file was not found: " + configPath);
-                Environment.ExitCode = 2;
-                return;
-            }
+            var mode = Environment.UserInteractive || HasArgument(args, "--console") ? "console" : "service";
+            StartupDiagnostics.RegisterGlobalHandlers();
+            if (!StartupDiagnostics.Initialize(configPath, mode)) return StartupDiagnostics.ExitCode("LOG_PATH_DENIED");
 
-            GatewayConfig config;
             try {
-                config = GatewayConfig.Load(configPath);
-                ValidateConfig(config);
+                return Run(args, configPath, mode);
             }
             catch (Exception exception) {
-                Console.Error.WriteLine("Gateway config is invalid: " + exception.Message);
-                Environment.ExitCode = 2;
-                return;
+                var code = StartupDiagnostics.Classify(exception);
+                StartupDiagnostics.WriteException(code, exception);
+                Console.Error.WriteLine("[" + code + "] Запуск CollegePortal Gateway остановлен. Подробности: " + StartupDiagnostics.LogPath);
+                return StartupDiagnostics.ExitCode(code);
             }
+        }
+
+        private static int Run(string[] args, string configPath, string mode)
+        {
+            if (!File.Exists(configPath)) throw new GatewayStartupException("CONFIG_NOT_FOUND", "gateway.private.config не найден: " + configPath);
+
+            var config = GatewayConfig.Load(configPath);
+            StartupDiagnostics.RegisterSensitiveValue(config.SharedSecret);
+            ValidateConfig(config);
+            StartupDiagnostics.ValidatePreflight(configPath, config);
 
             if (HasArgument(args, "--check-config")) {
                 Console.WriteLine("Gateway config is valid.");
-                return;
+                StartupDiagnostics.Write("startup", "config_checked");
+                return 0;
             }
 
-            if (Environment.UserInteractive || HasArgument(args, "--console")) {
+            if (mode == "console") {
                 using (var server = new GatewayServer(config)) {
                     server.Start();
+                    StartupDiagnostics.Write("startup", "running");
                     Console.WriteLine("CollegePortal Gateway started at " + config.BindPrefix);
                     using (var stopped = new ManualResetEvent(false)) {
                         var runForSeconds = IntegerArgument(args, "--run-for-seconds");
@@ -51,9 +60,11 @@ namespace CollegePortal.Gateway
                         if (timer != null) timer.Dispose();
                     }
                 }
-                return;
+                StartupDiagnostics.Write("startup", "stopped");
+                return 0;
             }
             ServiceBase.Run(new GatewayWindowsService(config));
+            return 0;
         }
 
         private static string ConfigPath(string[] args)

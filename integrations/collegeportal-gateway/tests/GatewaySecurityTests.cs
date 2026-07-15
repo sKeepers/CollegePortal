@@ -18,6 +18,8 @@ namespace CollegePortal.Gateway.Tests
                 InvalidHmacDoesNotConsumeNonce(root);
                 ExpiredTimestampIsRejected(root);
                 ProductionEndpointIsRejectedWithoutNetworkCall();
+                StartupDiagnosticsClassifiesKnownFailures();
+                StartupDiagnosticsRedactsRegisteredSecret();
                 Console.WriteLine("[OK] Gateway security tests passed.");
                 return 0;
             }
@@ -64,6 +66,25 @@ namespace CollegePortal.Gateway.Tests
             var config = new GatewayConfig { FisTestEndpoint = "http://10.0.3.1:8080/api/import/ImportService.svc" };
             var result = new FisSoapClient(config).ZkspdCheck();
             Assert(!result.Ok && result.Code == "test_endpoint_not_allowed", "Production FIS endpoint was not rejected.");
+        }
+
+        private static void StartupDiagnosticsClassifiesKnownFailures()
+        {
+            Assert(StartupDiagnostics.Classify(new PlatformNotSupportedException()) == "UNSUPPORTED_RUNTIME",
+                "PlatformNotSupportedException startup code is incorrect.");
+            Assert(StartupDiagnostics.Classify(new BadImageFormatException()) == "ASSEMBLY_LOAD_FAILED",
+                "BadImageFormatException startup code is incorrect.");
+            Assert(StartupDiagnostics.Classify(new GatewayStartupException("CONFIG_NOT_FOUND", "missing")) == "CONFIG_NOT_FOUND",
+                "Explicit startup code was not preserved.");
+        }
+
+        private static void StartupDiagnosticsRedactsRegisteredSecret()
+        {
+            const string sensitive = "diagnostics-secret-value-never-log";
+            StartupDiagnostics.RegisterSensitiveValue(sensitive);
+            var redacted = StartupDiagnostics.Redact("prefix " + sensitive + " suffix");
+            Assert(!redacted.Contains(sensitive) && redacted.Contains("[REDACTED]"),
+                "Startup diagnostics did not redact a registered secret.");
         }
 
         private static FixtureData Fixture(string root, string name)

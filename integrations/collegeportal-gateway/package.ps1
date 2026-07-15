@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [string]$OutputDirectory
+    [string]$OutputDirectory,
+    [string]$ExecutablePath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -10,7 +11,7 @@ if (-not $OutputDirectory) {
     $OutputDirectory = [IO.Path]::GetFullPath((Join-Path $Root '..\..\releases'))
 }
 
-$Executable = Join-Path $Root 'artifacts\Release\CollegePortal.Gateway.Host.exe'
+$Executable = if ($ExecutablePath) { [IO.Path]::GetFullPath($ExecutablePath) } else { Join-Path $Root 'artifacts\Release\CollegePortal.Gateway.Host.exe' }
 if (-not (Test-Path -LiteralPath $Executable -PathType Leaf)) {
     throw 'CollegePortal.Gateway.Host.exe отсутствует. Сначала выполните build.cmd.'
 }
@@ -29,7 +30,20 @@ Copy-Item -LiteralPath (Join-Path $Root 'README.md') -Destination $Stage
 Copy-Item -LiteralPath (Join-Path $Root 'VERSION') -Destination $Stage
 Get-ChildItem -LiteralPath (Join-Path $Root 'packaging\windows') -File |
     Where-Object { $_.Extension -in '.cmd', '.ps1' } |
-    Copy-Item -Destination $Stage
+    ForEach-Object {
+        $Destination = Join-Path $Stage $_.Name
+        if ($_.Extension -eq '.cmd') {
+            $Text = [IO.File]::ReadAllText($_.FullName, [Text.Encoding]::UTF8)
+            $Normalized = (($Text -replace "`r`n", "`n") -replace "`r", "`n") -replace "`n", "`r`n"
+            [IO.File]::WriteAllText($Destination, $Normalized, (New-Object Text.UTF8Encoding($false)))
+        } elseif ($_.Extension -eq '.ps1') {
+            $Text = [IO.File]::ReadAllText($_.FullName, [Text.Encoding]::UTF8)
+            $Normalized = (($Text -replace "`r`n", "`n") -replace "`r", "`n") -replace "`n", "`r`n"
+            [IO.File]::WriteAllText($Destination, $Normalized, (New-Object Text.UTF8Encoding($true)))
+        } else {
+            Copy-Item -LiteralPath $_.FullName -Destination $Destination
+        }
+    }
 
 $ForbiddenNames = @('gateway.private.config', '.env', 'credentials', 'secret', 'password', 'wsdl', 'xsd', 'disco', '.log')
 $Forbidden = Get-ChildItem -LiteralPath $Stage -Recurse -File | Where-Object {

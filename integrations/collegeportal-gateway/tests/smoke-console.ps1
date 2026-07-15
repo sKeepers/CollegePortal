@@ -1,18 +1,23 @@
+param([string]$Executable)
+
 $ErrorActionPreference = 'Stop'
 $Root = [IO.Path]::GetFullPath((Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) '..'))
 . (Join-Path $Root 'packaging\windows\Gateway-Common.ps1')
 
-$Executable = Join-Path $Root 'artifacts\Release\CollegePortal.Gateway.Host.exe'
+if (-not $Executable) { $Executable = Join-Path $Root 'artifacts\Release\CollegePortal.Gateway.Host.exe' }
+$Executable = [IO.Path]::GetFullPath($Executable)
 if (-not [IO.File]::Exists($Executable)) { throw 'Gateway executable is missing.' }
 $Temp = Join-Path ([IO.Path]::GetTempPath()) ('collegeportal-gateway-smoke-' + [Guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($Temp) | Out-Null
 $Secret = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('deterministic-gateway-smoke-secret-0000000001'))
 $Config = Join-Path $Temp 'gateway.private.config'
+$Version = Join-Path $Temp 'VERSION'
 $Port = Get-Random -Minimum 18100 -Maximum 18999
 $Lines = @(
     "BindPrefix=http://127.0.0.1:$Port/",
     'AllowedPortalIps=127.0.0.1',
     "SharedSecret=$Secret",
+    "InstallRoot=$Temp",
     'FisTestEndpoint=http://10.0.3.1:8383/api/import/ImportService.svc',
     'EnableDangerousOperations=false',
     'FisProductionEnabled=false',
@@ -27,6 +32,7 @@ $Lines = @(
     'ServiceVersion=smoke-test'
 )
 [IO.File]::WriteAllLines($Config, $Lines, (New-Object Text.UTF8Encoding($false)))
+[IO.File]::WriteAllText($Version, 'smoke-test', (New-Object Text.UTF8Encoding($false)))
 
 $Process = $null
 try {
@@ -58,6 +64,12 @@ try {
         $OutputText = $Process.StandardOutput.ReadToEnd()
         $ErrorText = $Process.StandardError.ReadToEnd()
         throw "Gateway console host did not become ready. stdout=$OutputText stderr=$ErrorText"
+    }
+    $StartupLog = Join-Path $Temp 'logs\startup.log'
+    if (-not [IO.File]::Exists($StartupLog)) { throw 'startup.log was not created.' }
+    $StartupText = [IO.File]::ReadAllText($StartupLog)
+    foreach ($Expected in @('dotnet_release=', 'process_architecture=', 'config_file_exists=True', "listen_port=$Port", 'startup=running')) {
+        if ($StartupText -notmatch [Regex]::Escape($Expected)) { throw "startup.log is missing: $Expected" }
     }
 
     foreach ($Path in @('/health', '/version', '/adapters')) {

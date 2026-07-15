@@ -1,4 +1,4 @@
-# CollegePortal Gateway 0.2.1-dev
+# CollegePortal Gateway 0.2.3-dev
 
 Windows-служба для защищенных интеграций CollegePortal. Текущий FIS adapter выполняет только TCP-диагностику фиксированного TEST endpoint `10.0.3.1:8383`. SOAP, Import, Validate, Delete и production `:8080` заблокированы до подтверждения официального контракта.
 
@@ -29,6 +29,16 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File package.ps1
 3. Распаковать ZIP в новый каталог.
 4. Запустить `install-all.cmd` от имени администратора.
 5. Открыть `gateway-menu.cmd` и выполнить health/diagnostics.
+
+До установки можно безопасно проверить пакет и передачу путей без изменения службы, URL ACL, firewall и файлов в `C:\CollegePortalGateway`:
+
+```cmd
+install-all.cmd --dry-run
+```
+
+Пакет следует распаковывать на локальный диск. UNC-пути отклоняются с понятным stop-gate. Каталоги с пробелами поддерживаются.
+
+При падении EXE выбрать пункт `Диагностика запуска EXE в консоли`. Подробный безопасный stack trace записывается в `C:\CollegePortalGateway\logs\startup.log`; содержимое private config в журнал не записывается.
 
 Installer проверяет пакет до изменения системы, сохраняет рабочий `gateway.private.config`, заменяет только placeholder secret, создает backup бинарников, регистрирует службу под `NetworkService`, ограничивает ACL, URL ACL и firewall. Private secret не выводится.
 

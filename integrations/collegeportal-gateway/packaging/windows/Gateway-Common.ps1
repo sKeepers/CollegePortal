@@ -1,5 +1,71 @@
 Set-StrictMode -Version 2
 
+function Normalize-GatewayLocalPath {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowNull()]
+        [AllowEmptyString()]
+        [object]$Path,
+
+        [ValidateSet('Any', 'Directory', 'File')]
+        [string]$ExpectedType = 'Any',
+
+        [switch]$MustExist,
+
+        [string]$ParameterName = 'Путь'
+    )
+
+    if ($null -eq $Path) { throw "$ParameterName не задан." }
+    $Candidate = ([string]$Path).Trim()
+    if ($Candidate.Length -eq 0) { throw "$ParameterName не может быть пустым." }
+    if ([Text.RegularExpressions.Regex]::IsMatch($Candidate, '[\x00-\x1F]')) {
+        throw "$ParameterName содержит управляющие символы."
+    }
+    if ([Management.Automation.WildcardPattern]::ContainsWildcardCharacters($Candidate)) {
+        throw "$ParameterName содержит wildcard-символы."
+    }
+    if ($Candidate -match '^[A-Za-z][A-Za-z0-9+.-]*://') {
+        throw "$ParameterName должен быть локальным путем, URI не поддерживается."
+    }
+    if ($Candidate.StartsWith('\\')) {
+        throw "$ParameterName указывает UNC-путь. Установка с сетевого ресурса не поддерживается; скопируйте пакет на локальный диск."
+    }
+    if ($Candidate.IndexOfAny([IO.Path]::GetInvalidPathChars()) -ge 0 -or $Candidate -match '[<>|\"]') {
+        throw "$ParameterName содержит недопустимые символы."
+    }
+
+    try {
+        if (-not [IO.Path]::IsPathRooted($Candidate)) {
+            $Location = Get-Location
+            if ($Location.Provider.Name -ne 'FileSystem') {
+                throw 'Текущий PowerShell provider не является файловой системой.'
+            }
+            $Candidate = [IO.Path]::Combine($Location.ProviderPath, $Candidate)
+        }
+        $FullPath = [IO.Path]::GetFullPath($Candidate)
+    } catch {
+        throw "$ParameterName имеет некорректный формат: $($_.Exception.Message)"
+    }
+
+    $Root = [IO.Path]::GetPathRoot($FullPath)
+    while ($FullPath.Length -gt $Root.Length -and ($FullPath.EndsWith('\') -or $FullPath.EndsWith('/'))) {
+        $FullPath = $FullPath.Substring(0, $FullPath.Length - 1)
+    }
+
+    if ($MustExist -and -not [IO.File]::Exists($FullPath) -and -not [IO.Directory]::Exists($FullPath)) {
+        throw "$ParameterName не найден: $FullPath"
+    }
+    if ([IO.File]::Exists($FullPath) -and $ExpectedType -eq 'Directory') {
+        throw "$ParameterName должен указывать каталог, но найден файл: $FullPath"
+    }
+    if ([IO.Directory]::Exists($FullPath) -and $ExpectedType -eq 'File') {
+        throw "$ParameterName должен указывать файл, но найден каталог: $FullPath"
+    }
+
+    return $FullPath
+}
+
 function Get-CollegePortalSha256([string]$Path) {
     $Stream = [IO.File]::OpenRead($Path)
     try {

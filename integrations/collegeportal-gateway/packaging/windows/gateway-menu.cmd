@@ -15,6 +15,7 @@ echo  6. Скачать WSDL/XSD/DISCO из ФИС TEST
 echo  7. Проверить и импортировать private-контракт
 echo  8. Открыть private config
 echo  9. Rollback бинарных файлов
+echo 10. Диагностика запуска EXE в консоли
 echo  0. Выход
 echo.
 set /p CHOICE=Выберите действие:
@@ -27,6 +28,7 @@ if "%CHOICE%"=="6" call "%~dp008-download-fis-contract.cmd"
 if "%CHOICE%"=="7" call "%~dp009-import-fis-contract.cmd"
 if "%CHOICE%"=="8" call "%~dp002-configure.cmd"
 if "%CHOICE%"=="9" call "%~dp011-rollback.cmd"
+if "%CHOICE%"=="10" call "%~dp012-console-startup-diagnostics.cmd"
 if "%CHOICE%"=="0" exit /b 0
 echo.
 pause
