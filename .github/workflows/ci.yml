@@ -83,6 +83,17 @@ jobs:
         shell: pwsh
         run: if (-not (Test-Path 'artifacts/Release/CollegePortal.Gateway.Host.exe')) { throw 'Gateway executable was not produced.' }
 
+      - name: Verify Windows PowerShell 2.0 compatibility
+        shell: pwsh
+        run: |
+          ./tests/powershell2-compatibility.ps1
+          Install-Module PSScriptAnalyzer -RequiredVersion 1.24.0 -Scope CurrentUser -Force -Repository PSGallery
+          $issues = @(Invoke-ScriptAnalyzer -Path packaging/windows -Recurse -Settings tests/PSScriptAnalyzer.PowerShell2.psd1)
+          if ($issues.Count -gt 0) {
+            $issues | Format-Table RuleName, Severity, ScriptName, Line, Message -AutoSize
+            throw "PSScriptAnalyzer found $($issues.Count) PowerShell 2.0 compatibility issue(s)."
+          }
+
       - name: Run Gateway console smoke tests
         shell: pwsh
         run: |
@@ -102,6 +113,12 @@ jobs:
           $package = "../../releases/collegeportal-gateway-$((Get-Content VERSION -Raw).Trim()).zip"
           ./tests/verify-package.ps1 -PackagePath $package
           ./tests/install-preflight.ps1 -PackagePath $package
+
+      - name: Install Gateway service on disposable runner
+        shell: pwsh
+        run: |
+          $package = "../../releases/collegeportal-gateway-$((Get-Content VERSION -Raw).Trim()).zip"
+          ./tests/install-service.ps1 -PackagePath $package -AllowSystemChanges
 
       - name: Upload verified Gateway package
         uses: actions/upload-artifact@v4

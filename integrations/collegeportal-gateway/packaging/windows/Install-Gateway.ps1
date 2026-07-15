@@ -77,6 +77,7 @@ try {
         if ((Get-CollegePortalSha256 $File) -ne $Expected) { throw "SHA-256 не совпадает: $Relative" }
     }
     Add-Report '[OK] SHA256SUMS проверен, обязательный EXE присутствует.'
+    Add-Report '[OK] SHA256_VALIDATED'
 
     if ($PreflightOnly) {
         Add-Report '[OK] Предварительная проверка завершена. Система не изменялась.'
@@ -102,7 +103,7 @@ try {
     }
 
     $Backup = Normalize-GatewayLocalPath -Path (Join-Path $BackupRoot ([DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss'))) -ExpectedType Directory -ParameterName 'BackupPath'
-    if ([IO.Directory]::Exists($BinaryPath) -and (Get-ChildItem -LiteralPath $BinaryPath -File -ErrorAction SilentlyContinue)) {
+    if ([IO.Directory]::Exists($BinaryPath) -and (Get-ChildItem -LiteralPath $BinaryPath -ErrorAction SilentlyContinue | Where-Object { -not $_.PSIsContainer })) {
         [IO.Directory]::CreateDirectory($Backup) | Out-Null
         Copy-Item -LiteralPath $BinaryPath -Destination $Backup -Recurse -Force
         Add-Report "[OK] Предыдущие бинарные файлы сохранены в backup."
@@ -112,7 +113,7 @@ try {
     $TargetVersion = Normalize-GatewayLocalPath -Path (Join-Path $InstallRoot 'VERSION') -ExpectedType File -ParameterName 'Target VERSION'
     Copy-Item -LiteralPath $SourceExe -Destination $TargetExe -Force
     Copy-Item -LiteralPath $SourceVersion -Destination $TargetVersion -Force
-    Get-ChildItem -LiteralPath $PackageRoot -File | Where-Object { $_.Extension -eq '.cmd' -or $_.Extension -eq '.ps1' } |
+    Get-ChildItem -LiteralPath $PackageRoot | Where-Object { -not $_.PSIsContainer -and ($_.Extension -eq '.cmd' -or $_.Extension -eq '.ps1') } |
         Copy-Item -Destination $ToolsPath -Force
 
     $PrivateConfig = Normalize-GatewayLocalPath -Path (Join-Path $ConfigPath 'gateway.private.config') -ExpectedType File -ParameterName 'Private ConfigPath'
@@ -127,7 +128,7 @@ try {
     if ($ConfigText -match '(?im)^SharedSecret\s*=\s*(CHANGE_ME[^\r\n]*|)\s*$') {
         $Bytes = New-Object byte[] 48
         $Rng = [Security.Cryptography.RandomNumberGenerator]::Create()
-        try { $Rng.GetBytes($Bytes) } finally { $Rng.Dispose() }
+        try { $Rng.GetBytes($Bytes) } finally { if ($null -ne $Rng) { $Rng.Clear() } }
         $GeneratedSecret = [Convert]::ToBase64String($Bytes)
         $ConfigText = [Text.RegularExpressions.Regex]::Replace($ConfigText, '(?im)^SharedSecret\s*=.*$', "SharedSecret=$GeneratedSecret")
         [IO.File]::WriteAllText($PrivateConfig, $ConfigText, (New-Object Text.UTF8Encoding($false)))
@@ -192,6 +193,7 @@ try {
     Assert-ExitCode 'Проверка health'
 
     Add-Report "[OK] Служба установлена. binPath=$BinPath"
+    Add-Report '[OK] SERVICE_INSTALLED'
     Add-Report '[OK] Установка завершена. Production endpoint не использовался.'
 }
 catch {

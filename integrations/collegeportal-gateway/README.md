@@ -1,4 +1,4 @@
-# CollegePortal Gateway 0.2.3-dev
+# CollegePortal Gateway 0.2.4-dev
 
 Windows-служба для защищенных интеграций CollegePortal. Текущий FIS adapter выполняет только TCP-диагностику фиксированного TEST endpoint `10.0.3.1:8383`. SOAP, Import, Validate, Delete и production `:8080` заблокированы до подтверждения официального контракта.
 
@@ -6,7 +6,7 @@ Windows-служба для защищенных интеграций CollegePor
 
 - Windows 7 SP1 / 10 / 11;
 - .NET Framework 4.8;
-- Windows PowerShell 3.0 или новее;
+- Windows PowerShell 2.0 или новее;
 - служба `CollegePortalGateway`;
 - каталог `C:\CollegePortalGateway`;
 - порт `8099`, разрешенный извне только для Linux DEV `192.168.34.104`; loopback используется для local health.
@@ -21,6 +21,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File package.ps1
 ```
 
 Артефакт создается в `releases\collegeportal-gateway-<version>.zip`. ZIP содержит `CollegePortal.Gateway.Host.exe`, installer scripts, `config.example`, `VERSION`, `BUILD_INFO` и внутренний `SHA256SUMS`. Рядом создается SHA-256 самого ZIP.
+
+Все PowerShell-скрипты внутри ZIP совместимы с Windows PowerShell 2.0. CI запускает детерминированный compatibility gate и PSScriptAnalyzer с профилем `desktop-2.0-windows`; проверка повторяется для распакованного ZIP.
+
+На disposable Windows CI runner пакет также проходит фактическую установку службы `CollegePortalGateway`: проверяются этапы `SHA256_VALIDATED`, `SERVICE_INSTALLED` и статус `Running`, после чего тест удаляет только созданные им ресурсы.
 
 ## Установка и repair
 

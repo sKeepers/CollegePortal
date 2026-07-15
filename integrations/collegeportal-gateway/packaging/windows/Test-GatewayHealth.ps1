@@ -2,6 +2,7 @@
 param([string]$InstallRoot = 'C:\CollegePortalGateway')
 
 $ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 2
 $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $ScriptRoot 'Gateway-Common.ps1')
 

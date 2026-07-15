@@ -68,7 +68,7 @@ try {
     foreach ($PowerShellFile in $PowerShellFiles) {
         $Bytes = [IO.File]::ReadAllBytes($PowerShellFile.FullName)
         if (-not ($Bytes.Length -ge 3 -and $Bytes[0] -eq 0xEF -and $Bytes[1] -eq 0xBB -and $Bytes[2] -eq 0xBF)) {
-            throw "PS1 должен содержать UTF-8 BOM для Windows PowerShell 5: $($PowerShellFile.Name)"
+            throw "PS1 должен содержать UTF-8 BOM для Windows PowerShell 2.0: $($PowerShellFile.Name)"
         }
 
         $Text = [Text.Encoding]::UTF8.GetString($Bytes)
@@ -79,6 +79,8 @@ try {
             throw "PS1 содержит LF-only переносы: $($PowerShellFile.Name)"
         }
     }
+
+    & (Join-Path $PSScriptRoot 'powershell2-compatibility.ps1') -ScriptsPath $Temp
 
     $InstallWrapper = [IO.File]::ReadAllText((Join-Path $Temp '01-install.cmd'), [Text.Encoding]::UTF8)
     if ($InstallWrapper -notmatch 'for %%I in \("%PACKAGE_ROOT%"\) do set "PACKAGE_ROOT=%%~fI"') {

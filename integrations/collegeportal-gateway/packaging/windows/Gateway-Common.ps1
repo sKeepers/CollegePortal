@@ -68,12 +68,34 @@ function Normalize-GatewayLocalPath {
 
 function Get-CollegePortalSha256([string]$Path) {
     $Stream = [IO.File]::OpenRead($Path)
+    $Sha = $null
     try {
         $Sha = [Security.Cryptography.SHA256]::Create()
         try { return ([BitConverter]::ToString($Sha.ComputeHash($Stream))).Replace('-', '').ToLowerInvariant() }
-        finally { $Sha.Dispose() }
+        finally { if ($null -ne $Sha) { $Sha.Clear() } }
     }
-    finally { $Stream.Dispose() }
+    finally { if ($null -ne $Stream) { $Stream.Close() } }
+}
+
+function Copy-GatewayStream([IO.Stream]$InputStream, [IO.Stream]$OutputStream) {
+    $Buffer = New-Object byte[] 81920
+    while (($Read = $InputStream.Read($Buffer, 0, $Buffer.Length)) -gt 0) {
+        $OutputStream.Write($Buffer, 0, $Read)
+    }
+}
+
+function Get-GatewayFileTail([string]$Path, [int]$LineCount) {
+    if ($LineCount -lt 1) { return @() }
+    $Queue = New-Object 'Collections.Generic.Queue[string]'
+    $Reader = [IO.File]::OpenText($Path)
+    try {
+        while (($Line = $Reader.ReadLine()) -ne $null) {
+            if ($Queue.Count -ge $LineCount) { $Queue.Dequeue() | Out-Null }
+            $Queue.Enqueue($Line)
+        }
+    }
+    finally { if ($null -ne $Reader) { $Reader.Close() } }
+    return $Queue.ToArray()
 }
 
 function Read-GatewayConfig([string]$Path) {
@@ -101,11 +123,11 @@ function Get-GatewayHmacHeaders([string]$Method, [string]$Path, [byte[]]$Body, [
     $RequestId = [Guid]::NewGuid().ToString('N')
     $Sha = [Security.Cryptography.SHA256]::Create()
     try { $BodyHash = ([BitConverter]::ToString($Sha.ComputeHash($Body))).Replace('-', '').ToLowerInvariant() }
-    finally { $Sha.Dispose() }
+    finally { if ($null -ne $Sha) { $Sha.Clear() } }
     $Canonical = $Method.ToUpperInvariant() + "`n" + $Path + "`n" + $Timestamp + "`n" + $Nonce + "`n" + $BodyHash
     $Hmac = New-Object Security.Cryptography.HMACSHA256(,[Text.Encoding]::UTF8.GetBytes($Secret))
     try { $Signature = [Convert]::ToBase64String($Hmac.ComputeHash([Text.Encoding]::UTF8.GetBytes($Canonical))) }
-    finally { $Hmac.Dispose() }
+    finally { if ($null -ne $Hmac) { $Hmac.Clear() } }
     return @{
         'X-Gateway-Timestamp' = $Timestamp
         'X-Gateway-Nonce' = $Nonce
@@ -128,7 +150,7 @@ function Invoke-GatewayHttp([string]$Uri, [string]$Method, [hashtable]$Headers, 
         $Request.ContentType = 'application/json; charset=utf-8'
         $Request.ContentLength = $Body.Length
         $RequestStream = $Request.GetRequestStream()
-        try { $RequestStream.Write($Body, 0, $Body.Length) } finally { $RequestStream.Dispose() }
+        try { $RequestStream.Write($Body, 0, $Body.Length) } finally { $RequestStream.Close() }
     }
 
     $Started = [DateTime]::UtcNow
@@ -140,7 +162,7 @@ function Invoke-GatewayHttp([string]$Uri, [string]$Method, [hashtable]$Headers, 
             $Response = [Net.HttpWebResponse]$_.Exception.Response
         }
         $Reader = New-Object IO.StreamReader($Response.GetResponseStream(), [Text.Encoding]::UTF8)
-        try { $Content = $Reader.ReadToEnd() } finally { $Reader.Dispose() }
+        try { $Content = $Reader.ReadToEnd() } finally { $Reader.Close() }
         return New-Object PSObject -Property @{
             StatusCode = [int]$Response.StatusCode
             ContentType = [string]$Response.ContentType
@@ -148,7 +170,7 @@ function Invoke-GatewayHttp([string]$Uri, [string]$Method, [hashtable]$Headers, 
             DurationMs = [int]([DateTime]::UtcNow - $Started).TotalMilliseconds
         }
     }
-    finally { if ($null -ne $Response) { $Response.Dispose() } }
+    finally { if ($null -ne $Response) { $Response.Close() } }
 }
 
 function Write-GatewayUtf8([string]$Path, [string[]]$Lines) {

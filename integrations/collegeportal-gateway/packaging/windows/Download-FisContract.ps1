@@ -2,6 +2,7 @@
 param([string]$InstallRoot = 'C:\CollegePortalGateway')
 
 $ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 2
 $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $ScriptRoot 'Gateway-Common.ps1')
 
@@ -22,7 +23,7 @@ $Files = @(
 
 function Assert-Xml([string]$Path, [string]$ExpectedRoot) {
     $Settings = New-Object Xml.XmlReaderSettings
-    $Settings.DtdProcessing = [Xml.DtdProcessing]::Prohibit
+    $Settings.ProhibitDtd = $true
     $Settings.XmlResolver = $null
     $Reader = [Xml.XmlReader]::Create($Path, $Settings)
     try {
@@ -34,7 +35,7 @@ function Assert-Xml([string]$Path, [string]$ExpectedRoot) {
         }
         throw "XML не содержит корневого элемента: $Path"
     }
-    finally { $Reader.Dispose() }
+    finally { if ($null -ne $Reader) { $Reader.Close() } }
 }
 
 if (-not [IO.Directory]::Exists($Staging)) { [IO.Directory]::CreateDirectory($Staging) | Out-Null }
@@ -55,7 +56,15 @@ try {
         try {
             if ([int]$Response.StatusCode -ne 200) { throw "HTTP $([int]$Response.StatusCode) для $Name" }
             $Output = [IO.File]::Create($Target)
-            try { $Response.GetResponseStream().CopyTo($Output) } finally { $Output.Dispose() }
+            $Input = $null
+            try {
+                $Input = $Response.GetResponseStream()
+                Copy-GatewayStream $Input $Output
+            }
+            finally {
+                if ($null -ne $Input) { $Input.Close() }
+                if ($null -ne $Output) { $Output.Close() }
+            }
             $ExpectedRoot = if ($Name -like '*.xsd') { 'schema' } elseif ($Name -like '*.disco*') { 'discovery' } else { 'definitions' }
             Assert-Xml $Target $ExpectedRoot
             $Size = (New-Object IO.FileInfo($Target)).Length
@@ -66,7 +75,7 @@ try {
                 ([string]$Response.ContentType).Replace("`t", ' '), $Size, $Hash, $Uri))
             Write-Host "[OK] $Name, $Size bytes, SHA-256=$Hash"
         }
-        finally { $Response.Dispose() }
+        finally { if ($null -ne $Response) { $Response.Close() } }
     }
 
     Write-GatewayUtf8 (Join-Path $Staging 'download-manifest.tsv') $ManifestLines.ToArray()

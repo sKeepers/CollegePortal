@@ -2,6 +2,7 @@
 param([string]$InstallRoot = 'C:\CollegePortalGateway')
 
 $ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 2
 $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $ScriptRoot 'Gateway-Common.ps1')
 
@@ -19,7 +20,7 @@ $Required = @(
 
 function Load-SecureXml([string]$Path) {
     $Settings = New-Object Xml.XmlReaderSettings
-    $Settings.DtdProcessing = [Xml.DtdProcessing]::Prohibit
+    $Settings.ProhibitDtd = $true
     $Settings.XmlResolver = $null
     $Reader = [Xml.XmlReader]::Create($Path, $Settings)
     try {
@@ -28,7 +29,7 @@ function Load-SecureXml([string]$Path) {
         $Document.Load($Reader)
         return $Document
     }
-    finally { $Reader.Dispose() }
+    finally { if ($null -ne $Reader) { $Reader.Close() } }
 }
 
 if (-not [IO.File]::Exists($Manifest)) { throw "Manifest скачивания отсутствует: $Manifest" }

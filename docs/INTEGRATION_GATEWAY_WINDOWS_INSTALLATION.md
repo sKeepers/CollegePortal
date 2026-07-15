@@ -3,7 +3,7 @@
 ## Целевое окружение
 
 - ViPNet-ПК: `192.168.34.223`, Windows 7 SP1;
-- .NET Framework 4.8 и PowerShell 3+;
+- .NET Framework 4.8 и Windows PowerShell 2.0+;
 - каталог: `C:\CollegePortalGateway`;
 - служба: `CollegePortalGateway`;
 - executable: `C:\CollegePortalGateway\bin\CollegePortal.Gateway.Host.exe`;
@@ -19,7 +19,7 @@
 ZIP и его ожидаемый SHA-256 должны передаваться раздельно. Перед распаковкой оператор сверяет:
 
 ```cmd
-certutil -hashfile collegeportal-gateway-0.2.3-dev.zip SHA256
+certutil -hashfile collegeportal-gateway-0.2.4-dev.zip SHA256
 ```
 
 ## Установка или repair

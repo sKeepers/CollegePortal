@@ -2,6 +2,7 @@
 param([string]$InstallRoot = 'C:\CollegePortalGateway')
 
 $ErrorActionPreference = 'Continue'
+Set-StrictMode -Version 2
 $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $ScriptRoot 'Gateway-Common.ps1')
 $Out = Join-Path $InstallRoot 'diagnostics\collegeportal-gateway-diagnostics.txt'
@@ -38,7 +39,7 @@ Add-Section 'REQUIRED FILES' {
 Add-Section 'PRIVATE CONFIG ACL' { & icacls.exe "$InstallRoot\config\gateway.private.config" }
 Add-Section 'STARTUP LOG (LAST 300 LINES)' {
     $StartupLog = Join-Path $InstallRoot 'logs\startup.log'
-    if ([IO.File]::Exists($StartupLog)) { Get-Content -LiteralPath $StartupLog -Tail 300 } else { 'MISSING' }
+    if ([IO.File]::Exists($StartupLog)) { Get-GatewayFileTail $StartupLog 300 } else { 'MISSING' }
 }
 Add-Section 'LOCAL HEALTH' { & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $ScriptRoot 'Test-GatewayHealth.ps1') -InstallRoot $InstallRoot }
 Add-Section 'SYSTEM SERVICE ERRORS' { & wevtutil.exe qe System /q:"*[System[(Level=1 or Level=2) and Provider[@Name='Service Control Manager']]]" /c:10 /rd:true /f:text }

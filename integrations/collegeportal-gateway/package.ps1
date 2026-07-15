@@ -60,7 +60,7 @@ try { $Commit = (& git -C $Root rev-parse --short=12 HEAD 2>$null).Trim() } catc
     "version=$Version"
     "commit=$Commit"
     "built_at_utc=$([DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))"
-    'target=.NET Framework 4.8 / Windows 7 SP1+'
+    'target=.NET Framework 4.8 / Windows 7 SP1+ / Windows PowerShell 2.0+'
 ) | Set-Content -LiteralPath (Join-Path $Stage 'BUILD_INFO') -Encoding UTF8
 
 $ManifestPath = Join-Path $Stage 'SHA256SUMS'

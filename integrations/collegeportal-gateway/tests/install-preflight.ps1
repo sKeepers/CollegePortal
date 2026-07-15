@@ -40,7 +40,7 @@ try {
     if (($Stdout + $Stderr) -match 'Illegal characters in path|is not recognized as an internal or external command') {
         throw "Обнаружена регрессия CMD/PackageRoot.`nSTDOUT:`n$Stdout`nSTDERR:`n$Stderr"
     }
-    foreach ($Marker in @('[OK] PACKAGE_ROOT_VALIDATED', '[OK] PREFLIGHT_COMPLETED')) {
+    foreach ($Marker in @('[OK] PACKAGE_ROOT_VALIDATED', '[OK] SHA256_VALIDATED', '[OK] PREFLIGHT_COMPLETED')) {
         if (-not $Stdout.Contains($Marker)) {
             throw "Dry-run не подтвердил обязательный этап $Marker.`nSTDOUT:`n$Stdout`nSTDERR:`n$Stderr"
         }

@@ -2,7 +2,8 @@
 param([string]$InstallRoot = 'C:\CollegePortalGateway')
 
 $ErrorActionPreference = 'Stop'
-$Backups = @(Get-ChildItem -LiteralPath (Join-Path $InstallRoot 'backup') -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending)
+Set-StrictMode -Version 2
+$Backups = @(Get-ChildItem -LiteralPath (Join-Path $InstallRoot 'backup') -ErrorAction SilentlyContinue | Where-Object { $_.PSIsContainer } | Sort-Object Name -Descending)
 if ($Backups.Count -eq 0) { throw 'Резервная копия бинарных файлов не найдена.' }
 $BackupBin = Join-Path $Backups[0].FullName 'bin'
 if (-not (Test-Path -LiteralPath $BackupBin -PathType Container)) { throw "Некорректная резервная копия: $BackupBin" }
