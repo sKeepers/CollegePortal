@@ -63,3 +63,18 @@ Frontend:
 - Telegram/email-уведомлениями.
 
 Сейчас делать только MVP.
+
+## Политика рабочих путей
+
+Разрешенные рабочие каталоги:
+
+- Windows: `C:\!Projects\CollegePortal`
+- Linux DEV: `/srv/college-dev`
+
+Если нужен отдельный Git worktree на Windows, создавать его только внутри:
+
+```text
+C:\!Projects\CollegePortal\.worktrees\<branch>
+```
+
+Запрещено использовать устаревшую Windows-копию проекта с нижним регистром в имени каталога, внешние каталоги worktree рядом с проектом, временные каталоги старой копии, а также создавать worktree рядом с проектом.

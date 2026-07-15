@@ -84,6 +84,7 @@ Frontend:
 
 - DEV: `/srv/college-dev`, frontend `http://192.168.34.104:5174`, API `http://192.168.34.104:8001/api`, PostgreSQL `5433`;
 - PROD: `/home/andale/college_portal`, frontend `http://192.168.34.104:5173`, API `http://192.168.34.104:8080/api`, PostgreSQL `5432`;
+- Windows development: `C:\!Projects\CollegePortal`; дополнительные worktree только внутри `C:\!Projects\CollegePortal\.worktrees\<branch>`;
 - тестовый администратор: `admin@college-portal.local` / `password`.
 
 Окружения на Ubuntu:
@@ -94,6 +95,7 @@ Frontend:
 - инструкция по запуску, остановке, build и логам описана в `docs/DEV_ENVIRONMENT.md`.
 - безопасный процесс переноса DEV -> PROD описан в `docs/DEPLOYMENT.md`; реальные изменения PROD требуют отдельного подтверждения.
 - Git workflow для DEV/PROD описан в `docs/GIT_WORKFLOW.md`; INFRA-004 инициализирует Git в `/srv/college-dev` на ветке `develop` без remote и без секретов/runtime-файлов.
+- Политика рабочих путей INFRA-PATHS-001 запрещает устаревшие Windows-копии проекта с нижним регистром в имени каталога, внешние worktree рядом с проектом и временные каталоги старой копии.
 
 ## Структура каталогов
 

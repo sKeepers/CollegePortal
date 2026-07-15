@@ -120,6 +120,16 @@ Frontend:
 - минимум 60 GB диска;
 - доступ в интернет для установки пакетов и загрузки Docker-образов.
 
+## Рабочие каталоги разработки
+
+Разрешенные рабочие каталоги проекта:
+
+- Windows: `C:\!Projects\CollegePortal`;
+- Windows worktrees: `C:\!Projects\CollegePortal\.worktrees\<branch>`;
+- Linux DEV: `/srv/college-dev`.
+
+Устаревшие Windows-копии проекта с нижним регистром в имени каталога, внешние каталоги worktree рядом с проектом и временные каталоги старой копии запрещены. CI выполняет проверку path policy через `scripts/repository/assert-path-policy.sh`.
+
 ## Быстрая установка
 
 ```bash
