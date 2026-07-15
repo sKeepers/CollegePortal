@@ -109,11 +109,38 @@ function New-GatewayRandomBytes([int]$Length) {
 function Read-GatewayConfig([string]$Path) {
     if (-not [IO.File]::Exists($Path)) { throw "Файл конфигурации не найден: $Path" }
     $Values = @{}
+    $LineNumber = 0
     foreach ($RawLine in [IO.File]::ReadAllLines($Path)) {
-        $Line = $RawLine.Trim()
-        if ($Line.Length -eq 0 -or $Line.StartsWith('#') -or -not $Line.Contains('=')) { continue }
-        $Parts = $Line.Split(@('='), 2)
-        $Values[$Parts[0].Trim()] = $Parts[1].Trim()
+        $LineNumber++
+        $Line = $RawLine
+        if ($LineNumber -eq 1 -and $Line.Length -gt 0 -and [int][char]$Line[0] -eq 0xFEFF) {
+            $Line = $Line.Substring(1)
+        }
+
+        $Trimmed = $Line.Trim()
+        if ($Trimmed.Length -eq 0 -or $Trimmed.StartsWith('#')) { continue }
+
+        $SeparatorIndex = $Line.IndexOf('=')
+        if ($SeparatorIndex -lt 0) {
+            throw ('Некорректная строка конфигурации {0}: отсутствует разделитель ''=''.' -f $LineNumber)
+        }
+
+        $Key = $Line.Substring(0, $SeparatorIndex).Trim()
+        if ($Key.Length -eq 0) {
+            throw ('Некорректная строка конфигурации {0}: пустой ключ.' -f $LineNumber)
+        }
+        if ([Text.RegularExpressions.Regex]::IsMatch($Key, '[\x00-\x1F]')) {
+            throw ('Некорректная строка конфигурации {0}: ключ содержит управляющие символы.' -f $LineNumber)
+        }
+        if ($Key -notmatch '^[A-Za-z][A-Za-z0-9_.-]*$') {
+            throw ('Некорректная строка конфигурации {0}: недопустимое имя ключа ''{1}''.' -f $LineNumber, $Key)
+        }
+        if ($Values.ContainsKey($Key)) {
+            throw ('Некорректная строка конфигурации {0}: ключ ''{1}'' задан повторно.' -f $LineNumber, $Key)
+        }
+
+        $Value = $Line.Substring($SeparatorIndex + 1)
+        $Values[$Key] = $Value
     }
     return $Values
 }

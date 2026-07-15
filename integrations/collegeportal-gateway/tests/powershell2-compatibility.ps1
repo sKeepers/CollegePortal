@@ -84,6 +84,46 @@ try {
     if (-not ($RandomBytes -is [byte[]]) -or $RandomBytes.Length -ne 48) {
         throw 'New-GatewayRandomBytes вернул неверный тип или длину.'
     }
+
+    $ConfigPath = Join-Path $Temp 'gateway.private.config'
+    $ConfigLines = @(
+        '# comment',
+        '',
+        'KEY=value',
+        'URL=http://10.0.3.1:8383/api/import/ImportService.svc?x=1',
+        'SECRET=abc=def==',
+        'EMPTY=',
+        ' KEY_WITH_SPACES =value with spaces',
+        'RUSSIAN=тестовое значение',
+        'AllowedPortalIps=192.168.34.104,127.0.0.1,::1'
+    )
+    [IO.File]::WriteAllText($ConfigPath, ([char]0xFEFF + ($ConfigLines -join "`r`n") + "`r`n"), (New-Object Text.UTF8Encoding($false)))
+    $Config = Read-GatewayConfig $ConfigPath
+    if ($Config['KEY'] -ne 'value') { throw 'Read-GatewayConfig повредил простое KEY=VALUE.' }
+    if ($Config['URL'] -ne 'http://10.0.3.1:8383/api/import/ImportService.svc?x=1') { throw 'Read-GatewayConfig повредил URL со знаками =.' }
+    if ($Config['SECRET'] -ne 'abc=def==') { throw 'Read-GatewayConfig повредил Base64/HMAC value со знаками =.' }
+    if ($Config['EMPTY'] -ne '') { throw 'Read-GatewayConfig не поддержал пустое значение.' }
+    if ($Config['KEY_WITH_SPACES'] -ne 'value with spaces') { throw 'Read-GatewayConfig неверно обработал пробелы вокруг ключа.' }
+    if ($Config['RUSSIAN'] -ne 'тестовое значение') { throw 'Read-GatewayConfig повредил русское значение.' }
+    if ($Config['AllowedPortalIps'] -ne '192.168.34.104,127.0.0.1,::1') { throw 'Read-GatewayConfig повредил список IP.' }
+
+    $InvalidConfig = Join-Path $Temp 'invalid.config'
+    [IO.File]::WriteAllText($InvalidConfig, "KEY=value`r`nBROKEN_LINE`r`n", (New-Object Text.UTF8Encoding($false)))
+    $InvalidRejected = $false
+    try { Read-GatewayConfig $InvalidConfig | Out-Null } catch { $InvalidRejected = $true }
+    if (-not $InvalidRejected) { throw 'Read-GatewayConfig должен отклонять строку без разделителя =.' }
+
+    $DuplicateConfig = Join-Path $Temp 'duplicate.config'
+    [IO.File]::WriteAllText($DuplicateConfig, "KEY=value`r`nKEY=other`r`n", (New-Object Text.UTF8Encoding($false)))
+    $DuplicateRejected = $false
+    try { Read-GatewayConfig $DuplicateConfig | Out-Null } catch { $DuplicateRejected = $true }
+    if (-not $DuplicateRejected) { throw 'Read-GatewayConfig должен отклонять дублирующий ключ.' }
+
+    $EmptyKeyConfig = Join-Path $Temp 'empty-key.config'
+    [IO.File]::WriteAllText($EmptyKeyConfig, "=value`r`n", (New-Object Text.UTF8Encoding($false)))
+    $EmptyKeyRejected = $false
+    try { Read-GatewayConfig $EmptyKeyConfig | Out-Null } catch { $EmptyKeyRejected = $true }
+    if (-not $EmptyKeyRejected) { throw 'Read-GatewayConfig должен отклонять пустой ключ.' }
 }
 finally {
     if ([IO.Directory]::Exists($Temp)) { Remove-Item -LiteralPath $Temp -Recurse -Force }

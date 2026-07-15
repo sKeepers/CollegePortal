@@ -1,4 +1,4 @@
-# CollegePortal Gateway 0.2.4-dev
+# CollegePortal Gateway 0.2.5-dev
 
 Windows-служба для защищенных интеграций CollegePortal. Текущий FIS adapter выполняет только TCP-диагностику фиксированного TEST endpoint `10.0.3.1:8383`. SOAP, Import, Validate, Delete и production `:8080` заблокированы до подтверждения официального контракта.
 

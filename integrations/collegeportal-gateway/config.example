@@ -15,4 +15,4 @@ AuditLogPath=C:\CollegePortalGateway\logs\audit.log
 NonceStorePath=C:\CollegePortalGateway\cache\nonces.txt
 DiagnosticsPath=C:\CollegePortalGateway\diagnostics\latest.json
 OfficialSpecStatus=not_imported
-ServiceVersion=0.2.4-dev
+ServiceVersion=0.2.5-dev
