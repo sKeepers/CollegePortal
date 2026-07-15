@@ -171,7 +171,9 @@ PROD:
 
 Windows local development copy:
 
-- возможный путь: `C:\!Projects\college_portal`;
+- путь: `C:\!Projects\CollegePortal`;
+- дополнительные worktree разрешены только внутри `C:\!Projects\CollegePortal\.worktrees\<branch>`;
+- устаревшая Windows-копия проекта с нижним регистром в имени каталога запрещена;
 - подтверждается и синхронизируется вручную через `scripts/repository/sync-collegeportal-windows.ps1`;
 - скрипт отказывается от pull при dirty working tree.
 

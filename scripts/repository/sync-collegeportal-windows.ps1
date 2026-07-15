@@ -1,10 +1,32 @@
-param(
+﻿param(
     [string]$RepoPath = "C:\!Projects\CollegePortal",
     [string]$RemoteUrl = "https://github.com/sKeepers/CollegePortal.git"
 )
 
 $ErrorActionPreference = "Stop"
 $expectedRemote = "github.com/sKeepers/CollegePortal"
+$legacyWindowsPath = "C:\!Projects\" + "college_portal"
+$legacyWorktrees = "college" + "_portal-worktrees"
+$legacyTmp = "college" + "_portal\tmp"
+$allowedRoot = "C:\!Projects\CollegePortal"
+$allowedWorktreeRoot = Join-Path $allowedRoot ".worktrees"
+$pathPolicyMessage = "Использование устаревшего пути запрещено. Используйте C:\!Projects\CollegePortal."
+
+function Assert-AllowedCollegePortalPath([string]$Path) {
+    $fullPath = [IO.Path]::GetFullPath($Path).TrimEnd('\')
+    if ($fullPath.Equals($legacyWindowsPath, [StringComparison]::OrdinalIgnoreCase) -or
+        $fullPath.StartsWith($legacyWindowsPath + "\", [StringComparison]::OrdinalIgnoreCase) -or
+        $fullPath.IndexOf($legacyWorktrees, [StringComparison]::OrdinalIgnoreCase) -ge 0 -or
+        $fullPath.IndexOf($legacyTmp, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
+        Write-Error $pathPolicyMessage
+    }
+    if (-not $fullPath.Equals($allowedRoot, [StringComparison]::OrdinalIgnoreCase) -and
+        -not $fullPath.StartsWith($allowedWorktreeRoot + "\", [StringComparison]::OrdinalIgnoreCase)) {
+        Write-Error "Недопустимый Windows-каталог CollegePortal: $fullPath. Используйте $allowedRoot или $allowedWorktreeRoot\<branch>."
+    }
+}
+
+Assert-AllowedCollegePortalPath $RepoPath
 
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
     Write-Error "Git is not installed or not available in PATH."

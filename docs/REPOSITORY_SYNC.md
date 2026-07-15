@@ -3,6 +3,10 @@
 ## Rules
 
 - GitHub is canonical.
+- Windows working copy must be `C:\!Projects\CollegePortal`.
+- Windows worktrees must be created only under `C:\!Projects\CollegePortal\.worktrees\<branch>`.
+- The legacy lowercase Windows project path, external worktree directories next to the project and temporary directories from the old copy are prohibited.
+- Detailed path rules are documented in `docs/PATH_POLICY.md`.
 - Sync `develop` with fast-forward only.
 - Never use `git reset --hard` in sync helpers.
 - Never delete untracked files during sync.
@@ -21,7 +25,7 @@ The script checks origin, dirty state, runs `git fetch --all --prune`, checks ou
 ## Windows Local Copy Sync
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\repository\sync-collegeportal-windows.ps1 -RepoPath C:\!Projects\college_portal
+powershell -ExecutionPolicy Bypass -File scripts\repository\sync-collegeportal-windows.ps1 -RepoPath C:\!Projects\CollegePortal
 ```
 
 The script checks Git availability, verifies remote, prints status, refuses dirty working trees, fetches/prunes, checks out `develop`, pulls with `--ff-only`, and prints the new HEAD.
@@ -40,4 +44,4 @@ UAT (`192.168.34.17`, `/opt/college-portal`) must be updated only by installer/u
 
 ## Windows Development Copy
 
-The primary Windows development copy is now `C:\!Projects\CollegePortal`. The old `C:\!Projects\college_portal` copy is considered stale/dirty and must not be used for Gateway builds. Use `scripts/repository/sync-collegeportal-windows.ps1`; it clones `develop` if missing, refuses dirty trees and uses `pull --ff-only`.
+The primary Windows development copy is `C:\!Projects\CollegePortal`. Any legacy lowercase Windows project copy is prohibited for development, Gateway builds and Codex work. Use `scripts/repository/sync-collegeportal-windows.ps1`; it clones `develop` if missing, refuses dirty trees and uses `pull --ff-only`.
