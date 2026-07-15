@@ -105,6 +105,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Gateway startup diagnostics failed.' }
           ./tests/path-normalization.ps1
           if ($LASTEXITCODE -ne 0) { throw 'Gateway path normalization tests failed.' }
+          ./tests/service-command-arguments.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Gateway service command argument tests failed.' }
 
       - name: Build and verify installation package
         shell: pwsh

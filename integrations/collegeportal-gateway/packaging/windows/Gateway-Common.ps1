@@ -1,4 +1,4 @@
-Set-StrictMode -Version 2
+﻿Set-StrictMode -Version 2
 
 function Normalize-GatewayLocalPath {
     [CmdletBinding()]
@@ -149,6 +149,34 @@ function Test-GatewayAdministrator {
     $Identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $Principal = New-Object Security.Principal.WindowsPrincipal($Identity)
     return $Principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+
+function Get-GatewayServiceCreateArguments([string]$ServiceName, [string]$BinPath) {
+    return @(
+        $ServiceName,
+        'binPath=', $BinPath,
+        'start=', 'auto',
+        'obj=', 'NT AUTHORITY\NetworkService',
+        'DisplayName=', 'CollegePortal Gateway'
+    )
+}
+
+function Get-GatewayServiceConfigArguments([string]$ServiceName, [string]$BinPath) {
+    return @(
+        $ServiceName,
+        'binPath=', $BinPath,
+        'start=', 'auto',
+        'obj=', 'NT AUTHORITY\NetworkService'
+    )
+}
+
+function Get-GatewayServiceFailureArguments([string]$ServiceName) {
+    return @(
+        $ServiceName,
+        'reset=', '86400',
+        'actions=', 'restart/5000/restart/15000/none/0'
+    )
 }
 
 function Get-GatewayHmacHeaders([string]$Method, [string]$Path, [byte[]]$Body, [string]$Secret) {

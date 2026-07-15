@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
     [string]$PackageRoot,
@@ -170,14 +170,17 @@ try {
 
     $BinPath = '"' + $TargetExe + '" --config "' + $PrivateConfig + '"'
     if ($ServiceExists) {
-        & sc.exe config $ServiceName "binPath= $BinPath" 'start= auto' 'obj= NT AUTHORITY\NetworkService' | Out-Null
+        $ConfigArgs = Get-GatewayServiceConfigArguments -ServiceName $ServiceName -BinPath $BinPath
+        & sc.exe config $ConfigArgs | Out-Null
         Assert-ExitCode 'Обновление службы'
     } else {
-        & sc.exe create $ServiceName "binPath= $BinPath" 'start= auto' 'obj= NT AUTHORITY\NetworkService' 'DisplayName= CollegePortal Gateway' | Out-Null
+        $CreateArgs = Get-GatewayServiceCreateArguments -ServiceName $ServiceName -BinPath $BinPath
+        & sc.exe create $CreateArgs | Out-Null
         Assert-ExitCode 'Регистрация службы'
     }
     & sc.exe description $ServiceName 'CollegePortal Gateway for protected integrations (TEST only)' | Out-Null
-    & sc.exe failure $ServiceName 'reset= 86400' 'actions= restart/5000/restart/15000/none/0' | Out-Null
+    $FailureArgs = Get-GatewayServiceFailureArguments -ServiceName $ServiceName
+    & sc.exe failure $FailureArgs | Out-Null
 
     & netsh.exe advfirewall firewall delete rule name='CollegePortal Gateway DEV 8099' | Out-Null
     & netsh.exe advfirewall firewall add rule name='CollegePortal Gateway DEV 8099' dir=in action=allow protocol=TCP localport=8099 remoteip=$AllowedPortalIp profile=any enable=yes | Out-Null
