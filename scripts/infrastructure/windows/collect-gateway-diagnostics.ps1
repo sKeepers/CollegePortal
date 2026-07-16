@@ -17,11 +17,18 @@ function Invoke-RemoteText {
     ""
 }
 
+
+function Redact-GatewayDiagnosticsText {
+    param([string]$Text)
+
+    $Text = [Text.RegularExpressions.Regex]::Replace($Text, 'C:\\CollegePortalGateway\\config\\gateway\.private\.config', '[PRIVATE_CONFIG_PATH]', 'IgnoreCase')
+    $Text = [Text.RegularExpressions.Regex]::Replace($Text, 'gateway\.private\.config', '[PRIVATE_CONFIG_FILE]', 'IgnoreCase')
+    return $Text
+}
 function Assert-SafeOutput {
     param([string]$Text)
 
     $blocked = @(
-        "gateway.private.config",
         "HMAC",
         "FIS_PASSWORD",
         "FIS_USERNAME",
@@ -62,6 +69,7 @@ foreach ($entry in $commands) {
     $label = $entry[0]
     $command = $entry[1]
     $text = (Invoke-RemoteText $label $command) -join [Environment]::NewLine
+    $text = Redact-GatewayDiagnosticsText $text
     Assert-SafeOutput $text
     $sections.Add($text)
 }

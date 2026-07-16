@@ -6,6 +6,7 @@ param(
     [string]$ExpectedSha256,
 
     [string]$HostAlias = "college-vipnet",
+    [string]$PortalSshHost = "andale@192.168.34.104",
     [string]$RemoteDirectory = "C:\Windows\Temp\CollegePortalGatewayDeploy",
     [switch]$Copy,
     [switch]$Install
@@ -51,8 +52,16 @@ function Invoke-RemoteCapture {
 function Invoke-RemoteHealth {
     param([string]$Uri)
 
-    $escaped = $Uri.Replace("'", "''")
-    Invoke-Remote "powershell -NoProfile -ExecutionPolicy Bypass -Command \"`$wc=New-Object Net.WebClient; `$wc.DownloadString('$escaped')\""
+    $script = '$wc=New-Object Net.WebClient; $wc.DownloadString(''' + $Uri.Replace("'", "''") + ''')'
+    $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($script))
+    Invoke-Remote "powershell.exe -NoProfile -NonInteractive -InputFormat None -ExecutionPolicy Bypass -EncodedCommand $encoded"
+}
+
+function Invoke-PortalHealth {
+    param([string]$Uri)
+
+    & ssh -o BatchMode=yes -o ConnectTimeout=8 $PortalSshHost "curl -sS -i --max-time 5 $Uri | head -n 20"
+    if ($LASTEXITCODE -ne 0) { throw "Portal remote health check failed with exit code $LASTEXITCODE" }
 }
 
 if ($ExpectedSha256 -match "10\.0\.3\.1:8080") {
@@ -134,14 +143,8 @@ try {
     Invoke-RemoteHealth "http://127.0.0.1:8099/version"
     Invoke-RemoteHealth "http://127.0.0.1:8099/adapters"
 
-    Write-Host "Checking remote Gateway health from this workstation."
-    $wc = New-Object Net.WebClient
-    try {
-        $wc.DownloadString('http://192.168.34.223:8099/health')
-    }
-    finally {
-        $wc = $null
-    }
+    Write-Host "Checking remote Gateway health from Portal host."
+    Invoke-PortalHealth "http://192.168.34.223:8099/health"
 
     Write-Host "Gateway TEST deployment completed."
 }
