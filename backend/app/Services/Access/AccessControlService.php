@@ -25,7 +25,9 @@ use Illuminate\Validation\ValidationException;
 class AccessControlService
 {
     private const TOKEN_PREFIX = 'CP2:';
-    private const TOKEN_VERSION = 1;
+    private const TOKEN_VERSION = 2;
+    private const SIGNED_TOKEN_VERSION = 1;
+    private const OPAQUE_TOKEN_BYTES = 24;
     private const TOKEN_TTL_SECONDS = 30;
     private const CLOCK_SKEW_SECONDS = 5;
 
@@ -42,15 +44,8 @@ class AccessControlService
 
         $issuedAt = now();
         $expiresAt = $issuedAt->copy()->addSeconds(self::TOKEN_TTL_SECONDS);
-        $nonce = Str::random(32);
-        $tokenPayload = [
-            'v' => self::TOKEN_VERSION,
-            'sub' => $person->id,
-            'n' => $nonce,
-            'iat' => $issuedAt->timestamp,
-            'exp' => $expiresAt->timestamp,
-        ];
-        $token = $this->encodeToken($tokenPayload);
+        $nonce = $this->base64UrlEncode(random_bytes(self::OPAQUE_TOKEN_BYTES));
+        $token = self::TOKEN_PREFIX.$nonce;
 
         $record = AccessPassToken::create([
             'person_id' => $person->id,
@@ -192,8 +187,43 @@ class AccessControlService
     /** @return array<string,mixed> */
     private function resolveDynamicToken(string $token): array
     {
-        $invalid = ['type' => 'dynamic', 'valid' => false, 'reason_code' => 'invalid_token', 'reason' => 'QR-токен недействителен.', 'person' => null, 'identity' => null, 'pass_token' => null, 'entity_type' => null, 'entity_id' => null];
+        $invalid = $this->invalidDynamicToken();
         $body = substr($token, strlen(self::TOKEN_PREFIX));
+
+        if ($body === '') {
+            return $invalid;
+        }
+
+        if (str_contains($body, '.')) {
+            return $this->resolveSignedDynamicToken($token, $body, $invalid);
+        }
+
+        return $this->resolveOpaqueDynamicToken($token, $body, $invalid);
+    }
+
+    /** @param array<string, mixed> $invalid */
+    private function resolveOpaqueDynamicToken(string $token, string $body, array $invalid): array
+    {
+        if (! preg_match('/^[A-Za-z0-9_-]{32}$/', $body)) {
+            return $invalid;
+        }
+
+        $record = AccessPassToken::query()->where('token_hash', $this->hashToken($token))->first();
+        if (! $record || ! hash_equals((string) $record->nonce, $body)) {
+            return $invalid;
+        }
+
+        $person = Person::with(['primaryStudent.group', 'primaryTeacher.employee.primaryDepartment'])->find((int) $record->person_id);
+        if (! $person) {
+            return $invalid;
+        }
+
+        return $this->dynamicTokenResult($record, $person, $invalid);
+    }
+
+    /** @param array<string, mixed> $invalid */
+    private function resolveSignedDynamicToken(string $token, string $body, array $invalid): array
+    {
         $parts = explode('.', $body, 2);
         if (count($parts) !== 2) {
             return $invalid;
@@ -206,7 +236,7 @@ class AccessControlService
         }
 
         $payload = json_decode($this->base64UrlDecode($payloadEncoded), true);
-        if (! is_array($payload) || ($payload['v'] ?? null) !== self::TOKEN_VERSION || ! isset($payload['sub'], $payload['n'], $payload['iat'], $payload['exp'])) {
+        if (! is_array($payload) || ($payload['v'] ?? null) !== self::SIGNED_TOKEN_VERSION || ! isset($payload['sub'], $payload['n'], $payload['iat'], $payload['exp'])) {
             return $invalid;
         }
 
@@ -222,7 +252,17 @@ class AccessControlService
             return array_merge($invalid, ['person' => $person, 'pass_token' => $record, 'reason_code' => 'clock_skew', 'reason' => 'Время QR-токена выходит за допустимое окно.']);
         }
 
-        if ((int) $payload['exp'] + self::CLOCK_SKEW_SECONDS < $now || $record->expires_at->copy()->addSeconds(self::CLOCK_SKEW_SECONDS)->isPast()) {
+        if ((int) $payload['exp'] + self::CLOCK_SKEW_SECONDS < $now) {
+            return array_merge($invalid, ['person' => $person, 'pass_token' => $record, 'reason_code' => 'expired_token', 'reason' => 'Срок действия QR истек.']);
+        }
+
+        return $this->dynamicTokenResult($record, $person, $invalid);
+    }
+
+    /** @param array<string, mixed> $invalid */
+    private function dynamicTokenResult(AccessPassToken $record, Person $person, array $invalid): array
+    {
+        if ($record->expires_at->copy()->addSeconds(self::CLOCK_SKEW_SECONDS)->isPast()) {
             return array_merge($invalid, ['person' => $person, 'pass_token' => $record, 'reason_code' => 'expired_token', 'reason' => 'Срок действия QR истек.']);
         }
 
@@ -237,6 +277,11 @@ class AccessControlService
         return ['type' => 'dynamic', 'valid' => true, 'reason_code' => null, 'reason' => null, 'person' => $person, 'identity' => null, 'pass_token' => $record, 'entity_type' => $this->entityType($person), 'entity_id' => $this->entityId($person)];
     }
 
+    /** @return array<string, mixed> */
+    private function invalidDynamicToken(): array
+    {
+        return ['type' => 'dynamic', 'valid' => false, 'reason_code' => 'invalid_token', 'reason' => 'QR-токен недействителен.', 'person' => null, 'identity' => null, 'pass_token' => null, 'entity_type' => null, 'entity_id' => null];
+    }
     /** @return array<string,mixed> */
     private function resolveLegacyToken(string $token): array
     {

@@ -35,7 +35,7 @@ Do not use PROD. Do not use real personal data unless a separate approval exists
 - [ ] Scanner is detected by OS as HID keyboard.
 - [ ] Scanner sends Enter suffix after QR text.
 - [ ] Scanner does not add prefix text.
-- [ ] Scanner reads long CP2 token without truncation.
+- [ ] Scanner reads short opaque CP2 token without truncation.
 - [ ] Russian keyboard layout does not corrupt ASCII token characters.
 - [ ] Caps Lock and Num Lock do not change scanned token.
 - [ ] If Enter suffix is absent, document scanner model and required configuration barcode. Do not weaken parser globally.

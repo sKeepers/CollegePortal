@@ -2,19 +2,30 @@
 
 ## Формат
 
+Основной формат ACCESS-002.3:
+
 ```text
-CP2:<base64url-json-payload>.<base64url-hmac-sha256>
+CP2:<opaque-base64url-token>
 ```
 
-Payload содержит только технические поля:
+Текущий token содержит 32 ASCII-символа после префикса `CP2:`. Полная длина QR payload — 36 символов.
 
-- `v` — версия token protocol;
-- `sub` — `people.id`;
-- `n` — nonce;
-- `iat` — issued_at Unix timestamp;
-- `exp` — expires_at Unix timestamp.
+QR payload не содержит ФИО, группу, телефон, email, документы, адрес, СНИЛС, паспортные данные, `people.id`, timestamps или JSON payload.
 
-Payload не содержит ФИО, группу, телефон, email, документы, адрес, СНИЛС или паспортные данные.
+## Server-side state
+
+Backend хранит состояние короткоживущего token в `access_pass_tokens`:
+
+- `person_id`;
+- SHA-256 `token_hash`;
+- `nonce`;
+- `version`;
+- `issued_at`;
+- `expires_at`;
+- `used_at`;
+- `revoked_at`.
+
+Raw token не сохраняется в БД, audit payload или logs.
 
 ## TTL
 
@@ -24,8 +35,22 @@ Payload не содержит ФИО, группу, телефон, email, до�
 
 ## Replay protection
 
-Backend сохраняет SHA-256 token hash, nonce, issued_at/expires_at и used_at. После успешного прохода `used_at` заполняется. Повторный scan того же token отклоняется как `replayed_token`.
+После успешного прохода `used_at` заполняется. Повторный scan того же token отклоняется как `replayed_token`.
+
+## QR rendering
+
+QR генерируется через поддерживаемую библиотеку `endroid/qr-code`:
+
+- Error Correction Level: M;
+- размер отображения: не менее 360x360 px;
+- quiet zone: не менее 40 px, что соответствует минимум 4 модулям для текущей плотности CP2;
+- SVG: `shape-rendering="crispEdges"`;
+- PNG: черный на белом фоне, без логотипов, прозрачности и градиентов.
+
+## Signed CP2 compatibility
+
+Старый формат `CP2:<base64url-json-payload>.<base64url-hmac-sha256>` остается только compatibility branch для ранее выпущенных DEV token в период перехода. Новые token выпускаются только в opaque формате.
 
 ## Legacy fallback
 
-`CP1:<token>` и plain token поддерживаются только для старых `digital_identities.token`. Новый основной режим — `CP2`.
+`CP1:<token>` и plain token поддерживаются только для старых `digital_identities.token`. Новый основной режим — короткоживущий `CP2`.

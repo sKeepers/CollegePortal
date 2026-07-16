@@ -91,7 +91,7 @@ onBeforeUnmount(() => {
 .access-pass-owner__icon { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 8px; background: #e0f2fe; color: #0369a1; }
 .access-pass-qr-shell { background: #fff; border: 1px solid #e5e7eb; display: grid; place-items: center; padding: 18px; min-height: 320px; }
 .access-pass-qr { width: min(360px, 80vw); aspect-ratio: 1; display: grid; place-items: center; }
-.access-pass-qr :deep(svg) { width: 100%; height: 100%; display: block; }
+.access-pass-qr :deep(svg) { width: 100%; height: 100%; display: block; background: #ffffff; shape-rendering: crispEdges; }
 .access-pass-qr--empty { border: 1px dashed #cbd5e1; color: #94a3b8; font-weight: 700; }
 .access-pass-countdown { margin-top: 16px; }
 .access-pass-countdown__top { display: flex; justify-content: space-between; margin-bottom: 8px; color: #475569; }

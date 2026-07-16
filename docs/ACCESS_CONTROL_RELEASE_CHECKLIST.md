@@ -10,7 +10,7 @@ This checklist defines merge readiness for the Access Control foundation in PR #
 - [x] GitHub Actions frontend build passes on PR #23.
 - [x] GitHub Actions Path policy passes on PR #23.
 - [x] GitHub Actions Secret scan passes on PR #23.
-- [ ] Migration smoke has been run on DEV.
+- [ ] Migration smoke has been run on DEV.`r`n- [ ] CP2 QR decode regression has been run with a synthetic token and independent decoder.
 - [ ] Playwright desktop smoke has been run for `/access/pass` and `/access/checkpoint`.
 - [ ] Playwright mobile viewport smoke has been run for `/access/pass`, `/m/student/pass`, `/access/mobile-scanner`.
 
@@ -53,3 +53,7 @@ Attach to Issue #24 or PR #23:
 - No real turnstile integration.
 - No biometric access.
 - No real personal data import.
+
+## ACCESS-002.3 stop-gate notes
+
+PR #23 stays draft until the updated opaque CP2 QR is decoded on Xiaomi 11T Pro and by the HID scanner. The old long signed payload remains a compatibility branch only; new mobile passes must show the short opaque CP2 token.

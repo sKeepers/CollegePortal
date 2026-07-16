@@ -27,15 +27,15 @@ ACCESS-001 вводит foundation модуля «Проходная» без п
 ## Поток
 
 1. Пользователь открывает `/access/pass`.
-2. Backend выпускает короткоживущий signed token.
+2. Backend выпускает короткоживущий opaque token `CP2:<random>`.
 3. QR содержит только token, без ФИО, группы, телефона или документов.
 4. Оператор сканирует QR на `/access/checkpoint`, `/access/gate` или `/access/mobile-scanner`.
-5. Backend проверяет подпись, TTL, hash, nonce, replay и статус.
+5. Backend проверяет hash, nonce, TTL, replay и статус; старый signed CP2 принимается только как compatibility branch.
 6. Результат записывается в `access_events` и отображается оператору.
 
 ## Совместимость
 
-Старые статические `digital_identities.token` остаются fallback-режимом для уже выпущенных пропусков. Основной режим ACCESS-001 — динамический QR `CP2:<payload>.<signature>`.
+Старые статические `digital_identities.token` остаются fallback-режимом для уже выпущенных пропусков. Основной режим ACCESS-002.3 — динамический QR `CP2:<opaque-base64url-token>`.
 
 ## Attendance seam
 
