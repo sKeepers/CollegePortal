@@ -25,10 +25,9 @@ if ($ConfigSource -match '0\.2\.5-dev' -or $ConfigSource -match 'Get\(values,\s*
 if (-not $Executable) { $Executable = Join-Path $Root 'artifacts\Release\CollegePortal.Gateway.Host.exe' }
 $Executable = [IO.Path]::GetFullPath($Executable)
 if (-not [IO.File]::Exists($Executable)) { throw 'Gateway executable is missing.' }
-$Assembly = [Reflection.Assembly]::LoadFile($Executable)
-$Attribute = [Attribute]::GetCustomAttribute($Assembly, [Reflection.AssemblyInformationalVersionAttribute])
-if ($null -eq $Attribute -or $Attribute.InformationalVersion -ne $Version) {
-    throw "Assembly informational version is '$($Attribute.InformationalVersion)', expected '$Version'."
+$FileVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo($Executable)
+if ($FileVersion.ProductVersion -ne $Version) {
+    throw "Executable product version is '$($FileVersion.ProductVersion)', expected '$Version'."
 }
 
 $Temp = Join-Path ([IO.Path]::GetTempPath()) ('collegeportal-gateway-version-source-' + [Guid]::NewGuid().ToString('N'))
