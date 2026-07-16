@@ -87,6 +87,10 @@ class AccessControlService
         $accessPoint = $this->resolveAccessPoint($payload);
         $device = $this->resolveDevice($payload, $accessPoint);
         $tokenResult = $this->resolveToken($rawToken);
+        if ($duplicate = $this->recentLegacyDuplicate($tokenResult)) {
+            $duplicate->duplicate_ignored = true;
+            return $duplicate;
+        }
         $direction = $this->resolveDirection($tokenResult, $payload['direction'] ?? null);
 
         return DB::transaction(function () use ($operator, $payload, $request, $requestId, $accessPoint, $device, $tokenResult, $direction): AccessEvent {
@@ -326,6 +330,25 @@ class AccessControlService
         }
 
         return [true, null, null];
+    }
+
+    private function recentLegacyDuplicate(array $tokenResult): ?AccessEvent
+    {
+        if (($tokenResult['type'] ?? null) !== 'legacy' || ! $tokenResult['valid'] || ! $tokenResult['identity'] instanceof DigitalIdentity) {
+            return null;
+        }
+
+        $window = (int) SettingService::value('identity', 'duplicate_scan_window_seconds', 2);
+        if ($window <= 0) {
+            return null;
+        }
+
+        return AccessEvent::query()
+            ->where('digital_identity_id', $tokenResult['identity']->id)
+            ->where('result', AccessEvent::RESULT_ALLOWED)
+            ->where('event_time', '>=', now()->subSeconds($window))
+            ->orderByDesc('event_time')
+            ->first()?->load(['person.primaryStudent.group', 'person.primaryTeacher.employee.primaryDepartment', 'accessPoint', 'device', 'digitalIdentity']);
     }
 
     private function resolveDirection(array $tokenResult, ?string $requested): string
