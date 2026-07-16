@@ -108,11 +108,23 @@ class FisDiagnosticsService
     private function soapState(array $analysis, array $registry): array
     {
         if (($registry['counts']['wsdl'] ?? 0) === 0) {
-            return $this->state('blocked', 'Official WSDL is absent; SOAP version, binding, port, actions and operations are unconfirmed.');
+            return $this->state('blocked', 'Официальный WSDL отсутствует; SOAP version, binding, port, actions и operations не подтверждены.');
+        }
+
+        $completeness = $analysis['completeness'] ?? [];
+        if (! ($completeness['complete'] ?? false)) {
+            return $this->state('metadata_incomplete', 'WSDL загружен, но полный SOAP transport contract не опубликован или не подтвержден.', [
+                'versions' => $analysis['soap_versions'] ?? [],
+                'bindings' => count($analysis['bindings'] ?? []),
+                'services' => count($analysis['services'] ?? []),
+                'ports' => collect($analysis['services'] ?? [])->sum(fn (array $service): int => count($service['ports'] ?? [])),
+                'operations' => count($analysis['operations'] ?? []),
+                'blockers' => $completeness['blockers'] ?? [],
+            ]);
         }
 
         if (! ($registry['bundle']['verified'] ?? false)) {
-            return $this->state('parsed_unverified', 'Contract artifacts were parsed, but bundle integrity and approval are incomplete.', [
+            return $this->state('parsed_unverified', 'Contract artifacts parsed successfully, but bundle integrity and approval are incomplete.', [
                 'versions' => $analysis['soap_versions'] ?? [],
                 'bindings' => count($analysis['bindings'] ?? []),
                 'operations' => count($analysis['operations'] ?? []),
@@ -125,7 +137,6 @@ class FisDiagnosticsService
             'operations' => count($analysis['operations'] ?? []),
         ]);
     }
-
     private function authState(bool $gatewayProtected, bool $authenticationConfirmed, array $analysis): array
     {
         if (! $gatewayProtected) {

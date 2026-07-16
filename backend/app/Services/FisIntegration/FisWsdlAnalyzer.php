@@ -18,12 +18,30 @@ class FisWsdlAnalyzer
             'status' => 'missing',
             'wsdl' => $this->fileInfo($wsdlPath),
             'xsd' => $this->analyzeXsd($xsdPath),
-            'disco' => $this->fileInfo($discoPath),
+            'disco' => $this->analyzeDisco($discoPath),
             'target_namespace' => null,
             'soap_versions' => [],
             'bindings' => [],
             'services' => [],
             'operations' => [],
+            'metadata_graph' => [
+                'wsdl_imports' => [],
+                'xsd_imports' => [],
+                'xsd_includes' => [],
+                'disco_contract_refs' => [],
+                'disco_soap_refs' => [],
+            ],
+            'completeness' => [
+                'has_operations' => false,
+                'has_binding' => false,
+                'has_service' => false,
+                'has_port' => false,
+                'has_soap_binding' => false,
+                'has_soap_action' => false,
+                'has_endpoint' => false,
+                'complete' => false,
+                'blockers' => [],
+            ],
             'authentication' => 'unknown_until_official_contract_loaded',
             'errors' => [],
         ];
@@ -43,8 +61,35 @@ class FisWsdlAnalyzer
         $xpath->registerNamespace('wsdl', self::WSDL);
         $xpath->registerNamespace('soap', self::SOAP11);
         $xpath->registerNamespace('soap12', self::SOAP12);
+        $xpath->registerNamespace('xs', 'http://www.w3.org/2001/XMLSchema');
         $definitions = $xpath->query('/wsdl:definitions')->item(0);
         $result['target_namespace'] = $definitions instanceof DOMElement ? $definitions->getAttribute('targetNamespace') : null;
+
+        foreach ($xpath->query('//wsdl:import') as $import) {
+            if ($import instanceof DOMElement) {
+                $result['metadata_graph']['wsdl_imports'][] = [
+                    'namespace' => $import->getAttribute('namespace') ?: null,
+                    'location' => $import->getAttribute('location') ?: null,
+                ];
+            }
+        }
+
+        foreach ($xpath->query('//xs:import') as $import) {
+            if ($import instanceof DOMElement) {
+                $result['metadata_graph']['xsd_imports'][] = [
+                    'namespace' => $import->getAttribute('namespace') ?: null,
+                    'schema_location' => $import->getAttribute('schemaLocation') ?: null,
+                ];
+            }
+        }
+
+        foreach ($xpath->query('//xs:include') as $include) {
+            if ($include instanceof DOMElement) {
+                $result['metadata_graph']['xsd_includes'][] = [
+                    'schema_location' => $include->getAttribute('schemaLocation') ?: null,
+                ];
+            }
+        }
 
         $bindingActions = [];
         foreach ($xpath->query('//wsdl:binding') as $binding) {
@@ -130,6 +175,9 @@ class FisWsdlAnalyzer
         if (! $result['operations']) {
             $result['errors'][] = 'WSDL contains no portType operations.';
         }
+        $result['metadata_graph']['disco_contract_refs'] = $result['disco']['contract_refs'] ?? [];
+        $result['metadata_graph']['disco_soap_refs'] = $result['disco']['soap_refs'] ?? [];
+        $result['completeness'] = $this->completeness($result);
 
         return $result;
     }
@@ -177,6 +225,116 @@ class FisWsdlAnalyzer
             'imports' => $imports,
             'authentication_elements' => array_values(array_unique($authenticationElements)),
         ];
+    }
+
+    private function analyzeDisco(?string $path): array
+    {
+        $info = $this->fileInfo($path);
+        if (! $path || ! is_file($path)) {
+            return $info + ['contract_refs' => [], 'soap_refs' => [], 'errors' => []];
+        }
+
+        $errors = [];
+        $document = $this->loadXml($path, $errors);
+        if (! $document) {
+            return $info + ['status' => 'invalid', 'contract_refs' => [], 'soap_refs' => [], 'errors' => $errors];
+        }
+
+        $xpath = new DOMXPath($document);
+        $contractRefs = [];
+        foreach ($xpath->query('//*[local-name()="contractRef"]') as $contractRef) {
+            if ($contractRef instanceof DOMElement) {
+                $contractRefs[] = [
+                    'ref' => $contractRef->getAttribute('ref') ?: null,
+                    'doc_ref' => $contractRef->getAttribute('docRef') ?: null,
+                ];
+            }
+        }
+
+        $soapRefs = [];
+        foreach ($xpath->query('//*[local-name()="soap"]') as $soapRef) {
+            if ($soapRef instanceof DOMElement) {
+                $soapRefs[] = [
+                    'address' => $soapRef->getAttribute('address') ?: null,
+                    'binding' => $soapRef->getAttribute('binding') ?: null,
+                ];
+            }
+        }
+
+        return $info + [
+            'status' => 'loaded',
+            'contract_refs' => $contractRefs,
+            'soap_refs' => $soapRefs,
+            'errors' => [],
+        ];
+    }
+
+    private function completeness(array $result): array
+    {
+        $services = $result['services'] ?? [];
+        $operations = $result['operations'] ?? [];
+        $bindings = $result['bindings'] ?? [];
+        $ports = [];
+        foreach ($services as $service) {
+            foreach ($service['ports'] ?? [] as $port) {
+                $ports[] = $port;
+            }
+        }
+        $bindingActions = [];
+        foreach ($operations as $operation) {
+            foreach ($operation['bindings'] ?? [] as $binding) {
+                $bindingActions[] = $binding;
+            }
+        }
+
+        $state = [
+            'has_operations' => $operations !== [],
+            'has_binding' => $bindings !== [],
+            'has_service' => $services !== [],
+            'has_port' => $ports !== [],
+            'has_soap_binding' => $this->containsFilled($bindings, 'soap_version'),
+            'has_soap_action' => $this->containsFilled($bindingActions, 'soap_action'),
+            'has_endpoint' => $this->containsFilled($ports, 'location'),
+            'complete' => false,
+            'blockers' => [],
+        ];
+
+        if (! $state['has_operations']) {
+            $state['blockers'][] = 'soap_operations_missing';
+        }
+        if (! $state['has_binding']) {
+            $state['blockers'][] = 'soap_binding_missing';
+        }
+        if (! $state['has_service']) {
+            $state['blockers'][] = 'soap_service_missing';
+        }
+        if (! $state['has_port']) {
+            $state['blockers'][] = 'soap_port_missing';
+        }
+        if (! $state['has_soap_binding']) {
+            $state['blockers'][] = 'soap_version_missing';
+        }
+        if (! $state['has_soap_action']) {
+            $state['blockers'][] = 'soap_actions_missing';
+        }
+        if (! $state['has_endpoint']) {
+            $state['blockers'][] = 'soap_endpoint_missing';
+        }
+
+        $state['complete'] = $state['blockers'] === [];
+
+        return $state;
+    }
+
+    private function containsFilled(array $items, string $key): bool
+    {
+        foreach ($items as $item) {
+            if (isset($item[$key]) && $item[$key] !== '') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function fileInfo(?string $path): array

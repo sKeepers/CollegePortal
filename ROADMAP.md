@@ -418,3 +418,7 @@ GIA-002 infrastructure is complete. Next stage is GIA-003: official WSDL/DISCO i
 GIA-003 confirmed that TEST metadata is reachable through the ViPNet Gateway path and that Gateway `0.2.10-dev` is operational. The downloaded WSDL/XSD/DISCO bundle confirms `ImportService`, `IImportService`, namespace `http://tempuri.org/` and 17 operations.
 
 Stop-gate remains: the TEST WSDL does not publish `wsdl:binding`, `wsdl:port`, `soap:binding`, `soap:operation` or `soapAction`; authentication is also unconfirmed. No SOAP call was executed. Next step is to obtain the full official binding/action/authentication contract before GIA-004.
+
+## EPIC-001 / GIA-003.1 — FIS metadata completeness
+
+GIA-003.1 verified that the incomplete SOAP contract is caused by the TEST service metadata itself: GET metadata is available, but WSDL binding/port/SOAPAction are not published. Portal diagnostics now distinguish incomplete metadata from missing WSDL. Next blocker: request the complete official WSDL or written binding/action/authentication parameters from FIS support.

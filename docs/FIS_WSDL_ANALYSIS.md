@@ -94,3 +94,50 @@ http://10.0.3.1:8383/api/import/ImportService.svc?wsdl
 6. `read_only_call_requires_guessed_envelope`.
 
 Разрешенный следующий шаг: получить у ФЦТ/оператора ФИС полный WSDL или официальную инструкцию, где явно указаны binding, SOAP version, SOAPAction/Content-Type и authentication для `ImportService` TEST. До этого Gateway не должен выполнять SOAP-вызовы даже для `GetTestDictionariesList`.
+
+## GIA-003.1 Checkpoint 16.07.2026
+
+Повторная проверка TEST metadata выполнена через ViPNet-ПК только HTTP GET/HEAD к разрешенным URL `10.0.3.1:8383/api/import/ImportService.svc`. SOAP POST не выполнялся.
+
+### HTTP evidence
+
+| URL suffix | HEAD | GET | Content-Type GET | Size GET | SHA-256 body |
+|---|---:|---:|---|---:|---|
+| `?singleWsdl` | 404 | 200 | `text/xml; charset=UTF-8` | 23658 | `7760c8b0f019bcd042db83894ba5470ce712ed1f3b68a96e3d9e35854a4fa618` |
+| `?wsdl` | 404 | 200 | `text/xml; charset=UTF-8` | 12476 | `22a71a42071861ace610e7a4858514c0bc9a859b539c89f8dc9d7ac654e748c3` |
+| `?WSDL` | 404 | 200 | `text/xml; charset=UTF-8` | 12476 | `22a71a42071861ace610e7a4858514c0bc9a859b539c89f8dc9d7ac654e748c3` |
+| `?disco` | 404 | 200 | `text/xml; charset=UTF-8` | 283 | `857e1132f12b93753b0a1d84e5608a9a785b7d507a7936c257dc55c79b0838e8` |
+| `?xsd=xsd0` | 404 | 200 | `text/xml; charset=UTF-8` | 9361 | `1231785f89cd0522a23b435dc5449c89c5956c99860064286e56fc3e7c69f02b` |
+| `?xsd=xsd1` | 404 | 200 | `text/xml; charset=UTF-8` | 2273 | `cff6937e7a1ed4a816ee6cb8525d75c041ff3244d8ca6100f031d20f689a521a` |
+
+HEAD возвращает 404 для всех metadata URL, но GET возвращает корректный XML. Поэтому проверку metadata нужно считать GET-based; HEAD не является надежным индикатором доступности сервиса.
+
+### Dependency graph
+
+```text
+DISCO ?disco
+  -> contractRef: ?wsdl
+
+WSDL ?wsdl / ?WSDL
+  -> xsd import: ?xsd=xsd0, namespace http://tempuri.org/
+  -> xsd import: ?xsd=xsd1, namespace http://schemas.microsoft.com/2003/10/Serialization/
+
+singleWsdl ?singleWsdl
+  -> inline types for http://tempuri.org/
+  -> inline serialization schema
+```
+
+Отдельного imported WSDL с binding/service/port не обнаружено. DISCO не содержит `soap` address и не указывает на другой metadata endpoint.
+
+### Completeness
+
+| Документ | definitions | types | messages | portTypes | operations | bindings | ports | soapAddresses | soapActions |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `?singleWsdl` | 1 | 1 | 34 | 1 | 17 | 0 | 0 | 0 | 0 |
+| `?wsdl` / `?WSDL` | 1 | 1 | 34 | 1 | 17 | 0 | 0 | 0 | 0 |
+
+`wsdl:service` element присутствует, но не содержит `wsdl:port`. Полный SOAP transport contract отсутствует.
+
+### Conclusion
+
+Причина stop-gate не в путанице WSDL/XSD/DISCO и не в HTML/proxy response: XML корректный, hashes стабильны, DISCO и WSDL согласованы. TEST endpoint публикует неполный WSDL без binding/action metadata. Требуется официальный полный WSDL или письменное подтверждение ФЦТ по SOAP version, binding/action, endpoint и authentication.

@@ -28,3 +28,9 @@ TEST metadata с `10.0.3.1:8383` доступна и успешно скачан
 ## Следующий unlock
 
 Получить официальный полный WSDL или письменную спецификацию ФЦТ/ФИС, подтверждающую SOAP version, binding/action, Content-Type и authentication. После этого можно вернуться к `GetTestDictionariesList` как первому кандидату read-only TEST-вызова.
+
+## GIA-003.1 update
+
+Повторная TEST metadata-проверка не сняла stop-gate. `GetTestDictionariesList` присутствует в `portType`, но SOAPAction и SOAP version отсутствуют в опубликованном WSDL. Controlled read-only call не выполнялся.
+
+Подготовлен запрос в техподдержку: `docs/FIS_SUPPORT_REQUEST.md`.

@@ -49,3 +49,17 @@ Gateway adapter может реализовывать новый SOAP method т�
 8. TEST-only endpoint.
 
 На 16.07.2026 эти условия не выполнены.
+
+## GIA-003.1 metadata result
+
+`?wsdl`, `?WSDL` и `?singleWsdl` проверены повторно. Полный transport contract не найден:
+
+- binding count: `0`;
+- port count: `0`;
+- SOAP version count: `0`;
+- SOAPAction count: `0`;
+- endpoint address count: `0`.
+
+DISCO указывает только на `?wsdl`; WSDL imports указывают только на `?xsd=xsd0` и `?xsd=xsd1`. Отдельный WSDL с binding не опубликован через найденный dependency graph.
+
+До получения официального binding/action/authentication contract выбранный кандидат `GetTestDictionariesList` остается только кандидатом. SOAP POST запрещен.

@@ -104,3 +104,13 @@ Gateway package содержит `04-health.cmd` и `07-collect-diagnostics.cmd`
 - Blocking parser result: binding count `0`, SOAPAction count `0`, service port count `0`.
 
 `/fis/diagnostics` должен продолжать показывать stop-gate до появления verified bundle с binding/action/authentication и отдельного one-time permit на read-only вызов.
+
+## GIA-003.1 diagnostics update
+
+`/fis/diagnostics` должен различать три состояния:
+
+- `wsdl_missing`: WSDL отсутствует;
+- `metadata_incomplete`: WSDL загружен, операции есть, но binding/port/SOAPAction/SOAP version отсутствуют;
+- `contract_verified`: bundle содержит полный binding/action/authentication evidence и одобрен вручную.
+
+Для текущего TEST metadata ожидаемое состояние: `metadata_incomplete` с blockers `soap_binding_missing`, `soap_port_missing`, `soap_version_missing`, `soap_actions_missing`, `soap_endpoint_missing`.

@@ -1204,3 +1204,7 @@ GIA-002.10 устраняет последний инфраструктурны�
 GIA-003 started from `feature/gia-002-gateway-installation` in canonical worktree `C:\!Projects\CollegePortal\.worktrees\gia-003-fis-readonly`. Local .NET Framework 4.8 build environment on `SKKI-VR-01` is now valid: VS Build Tools MSBuild compiles a minimal net48 probe, Gateway build succeeds and Gateway security tests pass.
 
 ViPNet-ПК `ZamMW` is reachable by SSH key. Gateway `0.2.10-dev` responds on `/health`, `/version`, `/adapters`; FIS adapter is TEST-only and dangerous operations are disabled. TEST WSDL/XSD/DISCO metadata is downloadable from `10.0.3.1:8383`, but the published WSDL contains no binding/port/SOAPAction. GIA-003 therefore stops before SOAP implementation and before any read-only call. Next blocker: obtain official binding/action/authentication clarification for `ImportService`.
+
+## EPIC-001 / GIA-003.1 FIS metadata completeness check
+
+GIA-003.1 confirmed the reason for the SOAP stop-gate: TEST metadata endpoints on `10.0.3.1:8383` return valid XML by GET, but WSDL documents publish only operations/messages/types. `?wsdl`, `?WSDL` and `?singleWsdl` contain no binding, no port, no SOAP version, no SOAPAction and no endpoint address. DISCO points only to `?wsdl`; WSDL imports point only to `xsd0/xsd1`. No SOAP POST or read-only call was executed. A support request template was added in `docs/FIS_SUPPORT_REQUEST.md`.

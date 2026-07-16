@@ -864,3 +864,15 @@ CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a 
 - [ ] Получить полный SOAP binding/port/SOAPAction contract: текущий TEST WSDL его не публикует.
 - [ ] Подтвердить authentication model по официальной спецификации.
 - [ ] Выполнить первый read-only TEST call только после подтверждения binding/action/authentication.
+
+## EPIC-001 / GIA-003.1
+
+- [x] Повторно скачать TEST metadata только GET/HEAD с `10.0.3.1:8383`.
+- [x] Зафиксировать HTTP status, final URL, Content-Type, size и SHA-256 без вывода XML.
+- [x] Построить DISCO/WSDL/XSD dependency graph.
+- [x] Подтвердить, что `?singleWsdl` не содержит binding/service port/SOAPAction.
+- [x] Подтвердить, что `?wsdl` imports ведут только на `xsd0/xsd1`, не на отдельный WSDL binding.
+- [x] Обновить parser/diagnostics для `metadata_incomplete` stop-gate.
+- [x] Подготовить письмо в техподдержку ФИС.
+- [ ] Получить полный WSDL или официальные binding/action/authentication параметры.
+- [ ] Выполнить первый read-only TEST call только после снятия binding/action/authentication stop-gate.
