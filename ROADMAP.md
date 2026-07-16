@@ -402,15 +402,14 @@ Observed 14.07.2026: Portal works; Gateway host is reachable by ICMP but TCP `80
 
 Next order:
 
-1. Collect local Windows service/bind/firewall evidence through a confirmed safe channel and restore Gateway `8099`.
-2. Obtain official TEST WSDL/DISCO, transfer only the approved private bundle and verify manifest SHA/import closure.
-3. Regenerate service/port/binding/action/method map from the contract.
-4. Confirm authentication and read-only semantics.
-5. Execute one separately permitted TEST read-only operation without PII.
-6. Завершить инфраструктурную часть GIA-002 ручной установкой Gateway; функциональный SOAP-этап остается заблокирован до закрытия gate и green CI.
+1. Obtain official TEST WSDL/DISCO, transfer only the approved private bundle and verify manifest SHA/import closure.
+2. Regenerate service/port/binding/action/method map from the contract.
+3. Confirm authentication and read-only semantics.
+4. Execute one separately permitted TEST read-only operation without PII.
+5. Keep Import/Validate/Delete and production `:8080` blocked until a separate approved task.
 
-## EPIC-001 / GIA-002 — package ready, installation stop-gate
+## EPIC-001 / GIA-002 — Gateway installation closure
 
-Подготовлен Gateway `0.2.1-dev` для ручного восстановления Windows-службы на ViPNet-ПК. Сборка, package manifest, installer/repair, ACL/firewall, диагностика и contract intake проверяются автоматически.
+Gateway installation on the ViPNet workstation is operational: service, bind, firewall/allowlist, local health, Portal health and TEST TCP diagnostics are covered by Windows CI and SSH deployment evidence. GIA-002.10 standardizes version metadata on `integrations/collegeportal-gateway/VERSION`; the current package must expose the `VERSION` value through ZIP name, `BUILD_INFO`, executable metadata and HTTP `/version`.
 
-Следующий порядок: интерактивная установка оператором → local health/service evidence → Portal HMAC → TEST TCP → private WSDL/XSD/DISCO → независимое approval → authentication/read-only confirmation → одна разрешенная попытка. Без безопасной RDP/manual session установка и SOAP не выполняются.
+Next stage is GIA-003: official WSDL/DISCO intake, authentication confirmation and one controlled read-only TEST call without PII. No guessed SOAP contract is allowed.

@@ -22,7 +22,7 @@ namespace CollegePortal.Gateway
         public string AuditLogPath = @"C:\CollegePortalGateway\logs\audit.log";
         public string NonceStorePath = @"C:\CollegePortalGateway\cache\nonces.txt";
         public string DiagnosticsPath = @"C:\CollegePortalGateway\diagnostics\latest.json";
-        public string ServiceVersion = "0.2.5-dev";
+        public string ServiceVersion = GatewayBuildVersion.Value;
         public string OfficialSpecStatus = "not_imported";
 
         public static GatewayConfig Load(string path)
@@ -51,7 +51,7 @@ namespace CollegePortal.Gateway
             cfg.AuditLogPath = Get(values, "AuditLogPath", cfg.AuditLogPath);
             cfg.NonceStorePath = Get(values, "NonceStorePath", cfg.NonceStorePath);
             cfg.DiagnosticsPath = Get(values, "DiagnosticsPath", cfg.DiagnosticsPath);
-            cfg.ServiceVersion = Get(values, "ServiceVersion", cfg.ServiceVersion);
+            // ServiceVersion is intentionally not configurable; it is generated from VERSION at build time.
             cfg.OfficialSpecStatus = Get(values, "OfficialSpecStatus", cfg.OfficialSpecStatus);
             return cfg;
         }

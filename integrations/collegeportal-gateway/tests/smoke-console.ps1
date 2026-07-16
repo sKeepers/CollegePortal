@@ -29,10 +29,10 @@ $Lines = @(
     "AuditLogPath=$Temp\audit.log",
     "NonceStorePath=$Temp\nonces.txt",
     "DiagnosticsPath=$Temp\diagnostics.json",
-    'ServiceVersion=smoke-test'
+    'ServiceVersion=stale-config-version' # ignored: version comes from build-time VERSION
 )
 [IO.File]::WriteAllLines($Config, $Lines, (New-Object Text.UTF8Encoding($false)))
-[IO.File]::WriteAllText($Version, 'smoke-test', (New-Object Text.UTF8Encoding($false)))
+[IO.File]::WriteAllText($Version, 'stale-runtime-version-file', (New-Object Text.UTF8Encoding($false)))
 
 $Process = $null
 try {
@@ -75,6 +75,15 @@ try {
     foreach ($Path in @('/health', '/version', '/adapters')) {
         $Result = Invoke-GatewayHttp ("http://127.0.0.1:$Port" + $Path) 'GET' @{} (New-Object byte[] 0) 2
         if ($Result.StatusCode -ne 200) { throw "$Path returned HTTP $($Result.StatusCode)." }
+        if ($Path -eq '/version') {
+            $ExpectedVersion = ([IO.File]::ReadAllText((Join-Path $Root 'VERSION'))).Trim()
+            if ($Result.Content -notmatch [Regex]::Escape('"version":"' + $ExpectedVersion + '"')) {
+                throw "/version did not report package version $ExpectedVersion. Content=$($Result.Content)"
+            }
+            if ($Result.Content -match 'stale-config-version' -or $Result.Content -match 'stale-runtime-version-file') {
+                throw '/version used stale runtime config or installed VERSION file.'
+            }
+        }
     }
 
     $ProtectedPath = '/diagnostics/latest'

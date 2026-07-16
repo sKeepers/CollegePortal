@@ -16,6 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\src\CollegePortal.Gateway.Core\GatewayConfig.cs" Link="GatewayConfig.cs" />
+    <Compile Include="..\src\CollegePortal.Gateway.Core\GatewayBuildVersion.g.cs" Link="GatewayBuildVersion.g.cs" />
     <Compile Include="..\src\CollegePortal.Gateway.Core\NonceStore.cs" Link="NonceStore.cs" />
     <Compile Include="..\src\CollegePortal.Gateway.Core\RateLimiter.cs" Link="RateLimiter.cs" />
     <Compile Include="..\src\CollegePortal.Gateway.Core\SecurityValidator.cs" Link="SecurityValidator.cs" />

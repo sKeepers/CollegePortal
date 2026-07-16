@@ -90,6 +90,19 @@ try {
         throw '01-install.cmd не поддерживает безопасный --dry-run.'
     }
 
+    $Version = ([IO.File]::ReadAllText((Join-Path $Temp 'VERSION'))).Trim()
+    if ([IO.Path]::GetFileName($PackagePath) -ne "collegeportal-gateway-$Version.zip") {
+        throw "Package filename does not match VERSION: $PackagePath vs $Version"
+    }
+    $BuildInfo = [IO.File]::ReadAllText((Join-Path $Temp 'BUILD_INFO'))
+    if ($BuildInfo -notmatch [Regex]::Escape("version=$Version")) {
+        throw 'BUILD_INFO version does not match VERSION.'
+    }
+    $FileVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $Temp 'bin\CollegePortal.Gateway.Host.exe'))
+    if ($FileVersion.ProductVersion -ne $Version) {
+        throw "Executable product version is '$($FileVersion.ProductVersion)', expected '$Version'."
+    }
+
     $Manifest = Join-Path $Temp 'SHA256SUMS'
     foreach ($Line in Get-Content -LiteralPath $Manifest) {
         if ($Line -notmatch '^([0-9a-f]{64})  (.+)$') { throw "Некорректная строка SHA256SUMS: $Line" }

@@ -1196,6 +1196,6 @@ No SOAP operation, binding, action or authentication method is claimed. First re
 
 ## EPIC-001 / GIA-002 Gateway installation package
 
-В отдельной feature-ветке подготовлен Windows Gateway `0.2.1-dev`. Build теперь обязательно создает `CollegePortal.Gateway.Host.exe`; package собирается только по allowlist, содержит внутренний manifest и внешний SHA-256. Installer поддерживает install/repair существующей службы, сохраняет private config, выполняет backup, запускает службу под `NetworkService`, ограничивает URL ACL/firewall адресом Linux DEV и формирует русский отчет.
+Windows Gateway восстановлен на ViPNet-ПК через feature-ветку `feature/gia-002-gateway-installation`: служба `CollegePortalGateway` запускается под `NetworkService`, порт `8099` слушает, local/Portal health работают, а TEST endpoint `10.0.3.1:8383` доступен только как TCP diagnostic. Production `:8080`, Import, Validate и Delete остаются заблокированы.
 
-Gateway по-прежнему выполняет только fixed TEST TCP diagnostics. Guessed SOAP contract отсутствует, production/Import/Validate/Delete выключены. Установка на ViPNet-ПК, contract acquisition и read-only call не выполнялись без безопасной интерактивной сессии.
+GIA-002.10 устраняет последний инфраструктурный blocker версии: canonical source теперь `integrations/collegeportal-gateway/VERSION`, build генерирует `GatewayBuildVersion.g.cs` и assembly informational version, `/version` больше не зависит от `gateway.private.config`. Текущий пакет должен вернуть значение из `VERSION` в ZIP name, `BUILD_INFO`, executable metadata и HTTP `/version`. Официальный WSDL/DISCO, authentication и первый read-only SOAP-вызов остаются следующим этапом GIA-003.

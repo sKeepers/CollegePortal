@@ -844,8 +844,9 @@ CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a 
 - [x] Добавить русскоязычный install/repair flow, backup, ACL, URL ACL и firewall только для DEV IP.
 - [x] Добавить local health, redacted diagnostics и private contract download/import scripts.
 - [x] Добавить Gateway security tests и Windows console smoke.
-- [ ] Интерактивно установить package на ViPNet-ПК `192.168.34.223`.
-- [ ] Подтвердить service/binPath/port/firewall и Portal → Gateway HMAC.
+- [x] Интерактивно установить package на ViPNet-ПК `192.168.34.223`.
+- [x] Подтвердить service/binPath/port/firewall и Portal → Gateway health.
+- [x] Унифицировать Gateway version metadata через `VERSION` и build-time generated source.
 - [ ] Скачать и независимо одобрить официальный WSDL/XSD/DISCO.
 - [ ] Подтвердить authentication и read-only semantics.
 - [ ] Выполнить одну отдельно разрешенную read-only TEST попытку без ПДн.

@@ -17,6 +17,8 @@ if not defined MSBUILD_EXE if exist "%WINDIR%\Microsoft.NET\Framework\v4.0.30319
 if not defined MSBUILD_EXE goto msbuild_missing
 
 echo [INFO] MSBuild: %MSBUILD_EXE%
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\Generate-GatewayVersionSource.ps1" -Root "%ROOT%."
+if errorlevel 1 exit /b %errorlevel%
 set "REFERENCE_ARG="
 if defined NET48_REFERENCE_ROOT set "REFERENCE_ARG=/p:TargetFrameworkRootPath=%NET48_REFERENCE_ROOT%"
 "%MSBUILD_EXE%" "%PROJECT%" /t:Rebuild /m /nologo /verbosity:minimal /p:Configuration=Release /p:Platform=AnyCPU /p:OutputPath=%OUTPUT% %REFERENCE_ARG%

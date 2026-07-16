@@ -15,6 +15,10 @@ $Executable = if ($ExecutablePath) { [IO.Path]::GetFullPath($ExecutablePath) } e
 if (-not (Test-Path -LiteralPath $Executable -PathType Leaf)) {
     throw 'CollegePortal.Gateway.Host.exe отсутствует. Сначала выполните build.cmd.'
 }
+$ExecutableVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo($Executable).ProductVersion
+if ($ExecutableVersion -ne $Version) {
+    throw "Executable product version is '$ExecutableVersion', expected '$Version'. Run build.cmd after changing VERSION."
+}
 
 $Stage = Join-Path $OutputDirectory "collegeportal-gateway-$Version"
 $Zip = "$Stage.zip"

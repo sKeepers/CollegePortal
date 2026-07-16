@@ -62,6 +62,7 @@ backend/storage/app/private/imports/
 releases/
 integrations/collegeportal-gateway/artifacts/
 integrations/collegeportal-gateway/build-output/
+integrations/collegeportal-gateway/src/CollegePortal.Gateway.Core/GatewayBuildVersion.g.cs
 integrations/collegeportal-gateway/bin/*
 !integrations/collegeportal-gateway/bin/README.txt
 integrations/collegeportal-gateway/src/**/bin/

@@ -99,6 +99,8 @@ jobs:
         run: |
           ./artifacts/Tests/CollegePortal.Gateway.Tests.exe
           if ($LASTEXITCODE -ne 0) { throw 'Gateway security tests failed.' }
+          ./tests/version-source.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Gateway version source tests failed.' }
           ./tests/smoke-console.ps1
           if ($LASTEXITCODE -ne 0) { throw 'Gateway console smoke failed.' }
           ./tests/startup-diagnostics.ps1
