@@ -82,3 +82,11 @@ Confirmed from this XSD only:
 This confirms payload-level credentials but does not confirm HTTP/SOAP transport authentication. WSDL/DISCO remain absent, so SOAP version, service/port/binding, operations, actions, headers, request/response wrappers and faults are still unconfirmed.
 
 `FisWsdlAnalyzer` now derives these fields from local official XML with network access disabled. The generated result is stored in `docs/FIS_WSDL_ANALYSIS.md`. Current result is an explicit stop-gate; no SOAP method was called.
+
+## GIA-003 Checkpoint 16.07.2026
+
+Через ViPNet-ПК `ZamMW` получены TEST WSDL/XSD/DISCO с `10.0.3.1:8383`. Файлы сохранены только в private storage/diagnostics, в Git добавлена только redacted summary. SHA-256 зафиксированы в `docs/FIS_WSDL_ANALYSIS.md`.
+
+Parser подтвердил `ImportService`, `IImportService`, namespace `http://tempuri.org/` и 17 операций, включая `GetTestDictionariesList`. Однако WSDL не содержит `wsdl:binding`, `wsdl:port`, `soap:binding`, `soap:operation` и `soapAction`.
+
+Authentication transport также не подтвержден. Поэтому `SoapFisTransport` и Gateway не должны выполнять даже read-only SOAP call до получения полного официального binding/action/authentication contract.

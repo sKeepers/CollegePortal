@@ -91,3 +91,16 @@ scripts/fis/check-zkspd-access.sh
 ## Windows evidence GIA-002
 
 Gateway package содержит `04-health.cmd` и `07-collect-diagnostics.cmd`. Локальный отчет включает service config/state, port owner, URL ACL, firewall allowlist, route к TEST, binary SHA и private config ACL, но не содержит config values или contract bodies. Portal продолжает показывать Windows service как `unknown`, пока `/health` не подтвержден фактическим HTTP-ответом.
+
+## GIA-003 diagnostics snapshot 16.07.2026
+
+Фактическое состояние:
+
+- Gateway `/health`: ok, `0.2.10-dev`.
+- Gateway `/version`: ok, `0.2.10-dev`.
+- Gateway `/adapters`: FIS enabled, TEST, production disabled, dangerous operations disabled.
+- TEST metadata `10.0.3.1:8383`: WSDL/XSD/DISCO downloaded through ViPNet-PC.
+- Contract parser: 17 operations in `portType`.
+- Blocking parser result: binding count `0`, SOAPAction count `0`, service port count `0`.
+
+`/fis/diagnostics` должен продолжать показывать stop-gate до появления verified bundle с binding/action/authentication и отдельного one-time permit на read-only вызов.

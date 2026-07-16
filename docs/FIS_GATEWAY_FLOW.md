@@ -60,3 +60,9 @@ Production `10.0.3.1:8080` не проверяется и hard-disabled.
 Подготовлен воспроизводимый Gateway package `0.2.1-dev`: Release EXE, внутренний manifest SHA-256, русский install/repair flow, local HMAC health, безопасная диагностика и private contract intake. Пакет не содержит secrets, private config, WSDL/XSD/DISCO, logs или diagnostics.
 
 Установка на `192.168.34.223` не выполнялась автоматически: подтвержденной интерактивной RDP-сессии нет. Поэтому наблюдаемый network snapshot выше не изменен, а WSDL/DISCO и первый read-only SOAP call остаются заблокированы.
+
+## GIA-003 evidence 16.07.2026
+
+Gateway на ViPNet-ПК восстановлен и отвечает локально: `/health`, `/version`, `/adapters` возвращают `0.2.10-dev`; FIS adapter включен только для TEST, production disabled, dangerous operations disabled.
+
+TEST metadata с `10.0.3.1:8383` успешно скачана через ViPNet-ПК. Это подтверждает маршрут Gateway/ViPNet до TEST для metadata. Первый SOAP read-only вызов не выполнялся, потому что опубликованный WSDL не содержит binding/port/SOAPAction, а authentication model не подтверждена.

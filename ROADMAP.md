@@ -413,3 +413,8 @@ Next order:
 Gateway installation on the ViPNet workstation is operational: service, bind, firewall/allowlist, local health, Portal health and TEST TCP diagnostics are covered by Windows CI and SSH deployment evidence. GIA-002.10 standardizes version metadata on `integrations/collegeportal-gateway/VERSION`; package `0.2.10-dev` is deployed on the ViPNet workstation; SHA-256 `d2126aac6515861fdc844dc56afdd9f8f86db00b7fb605adf8ae504c765a1e2d`, backup `C:\CollegePortalGateway\backup\20260716-082631`, service is running, port `8099` listens and `/version` reports `0.2.10-dev`.
 
 GIA-002 infrastructure is complete. Next stage is GIA-003: official WSDL/DISCO intake, authentication confirmation and one controlled read-only TEST call without PII. No guessed SOAP contract is allowed.
+## EPIC-001 / GIA-003 — FIS SOAP contract stop-gate
+
+GIA-003 confirmed that TEST metadata is reachable through the ViPNet Gateway path and that Gateway `0.2.10-dev` is operational. The downloaded WSDL/XSD/DISCO bundle confirms `ImportService`, `IImportService`, namespace `http://tempuri.org/` and 17 operations.
+
+Stop-gate remains: the TEST WSDL does not publish `wsdl:binding`, `wsdl:port`, `soap:binding`, `soap:operation` or `soapAction`; authentication is also unconfirmed. No SOAP call was executed. Next step is to obtain the full official binding/action/authentication contract before GIA-004.

@@ -851,3 +851,16 @@ CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a 
 - [ ] Скачать и независимо одобрить официальный WSDL/XSD/DISCO.
 - [ ] Подтвердить authentication и read-only semantics.
 - [ ] Выполнить одну отдельно разрешенную read-only TEST попытку без ПДн.
+
+## EPIC-001 / GIA-003
+
+- [x] Создать canonical worktree `C:\!Projects\CollegePortal\.worktrees\gia-003-fis-readonly` от `feature/gia-002-gateway-installation`.
+- [x] Подтвердить локальную net48 build-среду на `SKKI-VR-01`.
+- [x] Выполнить Gateway build и Gateway security tests локально.
+- [x] Подтвердить SSH-доступ к ViPNet-ПК и работоспособность Gateway `/health`, `/version`, `/adapters`.
+- [x] Скачать TEST WSDL/XSD/DISCO только с `10.0.3.1:8383` во временный private diagnostics каталог.
+- [x] Зафиксировать SHA-256 и parser summary без добавления private XML в Git.
+- [x] Подтвердить операции `ImportService/IImportService` из WSDL.
+- [ ] Получить полный SOAP binding/port/SOAPAction contract: текущий TEST WSDL его не публикует.
+- [ ] Подтвердить authentication model по официальной спецификации.
+- [ ] Выполнить первый read-only TEST call только после подтверждения binding/action/authentication.
