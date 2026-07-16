@@ -41,3 +41,5 @@ UAT (`192.168.34.17`, `/opt/college-portal`) must be updated only by installer/u
 ## Windows Development Copy
 
 The primary Windows development copy is now `C:\!Projects\CollegePortal`. The old `C:\!Projects\college_portal` copy is considered stale/dirty and must not be used for Gateway builds. Use `scripts/repository/sync-collegeportal-windows.ps1`; it clones `develop` if missing, refuses dirty trees and uses `pull --ff-only`.
+
+The task worktree `C:\!Projects\college_portal\tmp\gia-002-win` is a legacy location retained only to finish and publish `feature/gia-002-gateway-installation` without losing its existing uncommitted changes. New worktrees must use `C:\!Projects\CollegePortal-worktrees\<task-id>`. The legacy worktree must not be deleted automatically; retire it manually only after the branch is pushed and its clean state is verified.

@@ -87,3 +87,7 @@ scripts/fis/check-zkspd-access.sh
 ## Production
 
 Диагностика всегда возвращает `production_enabled=false`. Порт `:8080` не используется.
+
+## Windows evidence GIA-002
+
+Gateway package содержит `04-health.cmd` и `07-collect-diagnostics.cmd`. Локальный отчет включает service config/state, port owner, URL ACL, firewall allowlist, route к TEST, binary SHA и private config ACL, но не содержит config values или contract bodies. Portal продолжает показывать Windows service как `unknown`, пока `/health` не подтвержден фактическим HTTP-ответом.

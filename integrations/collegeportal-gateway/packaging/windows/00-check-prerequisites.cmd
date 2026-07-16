@@ -1,6 +1,7 @@
-@echo off
+﻿@echo off
+chcp 65001 >nul
 setlocal
-net session >nul 2>&1 || (echo ERROR: run as Administrator & exit /b 1)
-ver
-reg query "HKLM\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full" /v Release >nul 2>&1 || (echo ERROR: .NET Framework 4.8 is required & exit /b 1)
-echo OK: prerequisites look compatible with Windows service installation.
+set "PACKAGE_ROOT=%~dp0"
+if not exist "%PACKAGE_ROOT%config.example" set "PACKAGE_ROOT=%~dp0..\..\"
+powershell.exe -NoProfile -NonInteractive -InputFormat None -ExecutionPolicy Bypass -File "%~dp0Install-Gateway.ps1" -PackageRoot "%PACKAGE_ROOT%" -PreflightOnly
+exit /b %errorlevel%

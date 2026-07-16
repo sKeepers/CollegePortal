@@ -402,9 +402,14 @@ Observed 14.07.2026: Portal works; Gateway host is reachable by ICMP but TCP `80
 
 Next order:
 
-1. Collect local Windows service/bind/firewall evidence through a confirmed safe channel and restore Gateway `8099`.
-2. Obtain official TEST WSDL/DISCO, transfer only the approved private bundle and verify manifest SHA/import closure.
-3. Regenerate service/port/binding/action/method map from the contract.
-4. Confirm authentication and read-only semantics.
-5. Execute one separately permitted TEST read-only operation without PII.
-6. Start GIA-002 only after the gate and CI are green.
+1. Obtain official TEST WSDL/DISCO, transfer only the approved private bundle and verify manifest SHA/import closure.
+2. Regenerate service/port/binding/action/method map from the contract.
+3. Confirm authentication and read-only semantics.
+4. Execute one separately permitted TEST read-only operation without PII.
+5. Keep Import/Validate/Delete and production `:8080` blocked until a separate approved task.
+
+## EPIC-001 / GIA-002 — Gateway installation closure
+
+Gateway installation on the ViPNet workstation is operational: service, bind, firewall/allowlist, local health, Portal health and TEST TCP diagnostics are covered by Windows CI and SSH deployment evidence. GIA-002.10 standardizes version metadata on `integrations/collegeportal-gateway/VERSION`; package `0.2.10-dev` is deployed on the ViPNet workstation; SHA-256 `d2126aac6515861fdc844dc56afdd9f8f86db00b7fb605adf8ae504c765a1e2d`, backup `C:\CollegePortalGateway\backup\20260716-082631`, service is running, port `8099` listens and `/version` reports `0.2.10-dev`.
+
+GIA-002 infrastructure is complete. Next stage is GIA-003: official WSDL/DISCO intake, authentication confirmation and one controlled read-only TEST call without PII. No guessed SOAP contract is allowed.

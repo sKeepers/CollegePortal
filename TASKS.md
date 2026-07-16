@@ -835,3 +835,19 @@ CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a 
 - [ ] Подтвердить FIS transport authentication по официальной спецификации.
 - [ ] Выполнить первый read-only TEST запрос и зафиксировать обезличенный результат.
 - [ ] Не включать Import до отдельной задачи.
+
+## EPIC-001 / GIA-002
+
+- [x] Создать отдельный worktree/feature branch от GIA-001.
+- [x] Исправить deterministic Windows build и обязательный `CollegePortal.Gateway.Host.exe`.
+- [x] Добавить проверяемый ZIP с внутренним `SHA256SUMS` и внешним SHA-256.
+- [x] Добавить русскоязычный install/repair flow, backup, ACL, URL ACL и firewall только для DEV IP.
+- [x] Добавить local health, redacted diagnostics и private contract download/import scripts.
+- [x] Добавить Gateway security tests и Windows console smoke.
+- [x] Интерактивно установить package на ViPNet-ПК `192.168.34.223`.
+- [x] Подтвердить service/binPath/port/firewall и Portal → Gateway health.
+- [x] Унифицировать Gateway version metadata через `VERSION` и build-time generated source.
+- [x] Развернуть Gateway package `0.2.10-dev` на ViPNet-ПК и подтвердить `/version=0.2.10-dev`.
+- [ ] Скачать и независимо одобрить официальный WSDL/XSD/DISCO.
+- [ ] Подтвердить authentication и read-only semantics.
+- [ ] Выполнить одну отдельно разрешенную read-only TEST попытку без ПДн.

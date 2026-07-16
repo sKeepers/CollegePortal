@@ -1193,3 +1193,9 @@ Linux DEV has an evidence-only FIS diagnostics foundation: Portal/Gateway TCP an
 Snapshot 14.07.2026: Portal is available; Gateway host responds to ICMP, but TCP `192.168.34.223:8099` returns `tcp_refused`; remote evidence cannot determine Windows-service state. Direct DEV to `10.0.3.1:8383` times out. Private registry contains one XSD with SHA-256 `7158ae7d523d3b08784a29ed0cdb4ace025695e30526285ebabb3d93c093f840` and matching manifest; WSDL/DISCO are absent.
 
 No SOAP operation, binding, action or authentication method is claimed. First read-only call was not attempted. GIA-002 starts only after Gateway recovery, approved WSDL/DISCO bundle verification, authentication confirmation and one separately permitted TEST read-only call.
+
+## EPIC-001 / GIA-002 Gateway installation package
+
+Windows Gateway восстановлен на ViPNet-ПК через feature-ветку `feature/gia-002-gateway-installation`: служба `CollegePortalGateway` запускается под `NetworkService`, порт `8099` слушает, local/Portal health работают, а TEST endpoint `10.0.3.1:8383` доступен только как TCP diagnostic. Production `:8080`, Import, Validate и Delete остаются заблокированы.
+
+GIA-002.10 устраняет последний инфраструктурный blocker версии: canonical source теперь `integrations/collegeportal-gateway/VERSION`, build генерирует `GatewayBuildVersion.g.cs` и assembly informational version, `/version` больше не зависит от `gateway.private.config`. Пакет `0.2.10-dev` развернут на ViPNet-ПК; SHA-256 `d2126aac6515861fdc844dc56afdd9f8f86db00b7fb605adf8ae504c765a1e2d`, backup `C:\CollegePortalGateway\backup\20260716-082631`, `/health`, `/version` и `/adapters` возвращают `0.2.10-dev`. Официальный WSDL/DISCO, authentication и первый read-only SOAP-вызов остаются следующим этапом GIA-003.

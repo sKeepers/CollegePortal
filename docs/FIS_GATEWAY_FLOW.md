@@ -54,3 +54,9 @@ Production `10.0.3.1:8080` не проверяется и hard-disabled.
 - `read_only_operation_unconfirmed`.
 
 Следующий безопасный шаг: на ViPNet-PC вручную собрать evidence `sc query`, local `127.0.0.1:8099/health`, bind/firewall/event log без изменения configuration, затем получить WSDL/DISCO официальным способом. Одна контролируемая read-only попытка разрешается только после закрытия всех gates.
+
+## GIA-002 package preparation
+
+Подготовлен воспроизводимый Gateway package `0.2.1-dev`: Release EXE, внутренний manifest SHA-256, русский install/repair flow, local HMAC health, безопасная диагностика и private contract intake. Пакет не содержит secrets, private config, WSDL/XSD/DISCO, logs или diagnostics.
+
+Установка на `192.168.34.223` не выполнялась автоматически: подтвержденной интерактивной RDP-сессии нет. Поэтому наблюдаемый network snapshot выше не изменен, а WSDL/DISCO и первый read-only SOAP call остаются заблокированы.

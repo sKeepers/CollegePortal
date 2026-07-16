@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace CollegePortal.Gateway
 {
@@ -7,6 +8,7 @@ namespace CollegePortal.Gateway
     {
         private readonly string _path;
         private readonly object _lock = new object();
+        private const long MaxBytes = 10 * 1024 * 1024;
 
         public AuditLogger(string path)
         {
@@ -28,8 +30,17 @@ namespace CollegePortal.Gateway
 
             lock (_lock)
             {
+                RotateIfNeeded();
                 File.AppendAllText(_path, line + Environment.NewLine);
             }
+        }
+
+        private void RotateIfNeeded()
+        {
+            if (!File.Exists(_path) || new FileInfo(_path).Length < MaxBytes) return;
+            var previous = _path + ".1";
+            if (File.Exists(previous)) File.Delete(previous);
+            File.Move(_path, previous);
         }
 
         private static string Safe(string value)
@@ -39,6 +50,7 @@ namespace CollegePortal.Gateway
                 return "";
             }
 
+            value = Regex.Replace(value, "(?i)(password|pass|secret|token|authorization)\\s*[:=]\\s*[^,; ]+", "$1=[redacted]");
             value = value
                 .Replace("\\", "\\\\")
                 .Replace("\"", "'")

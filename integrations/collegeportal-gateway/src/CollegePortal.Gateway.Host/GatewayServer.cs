@@ -49,7 +49,15 @@ namespace CollegePortal.Gateway
             var started = DateTime.UtcNow;
             var sw = Stopwatch.StartNew();
             var path = ctx.Request.Url.AbsolutePath;
-            var body = ReadBody(ctx.Request);
+            byte[] body;
+            try { body = ReadBody(ctx.Request, _config.MaxBodyBytes); }
+            catch (RequestTooLargeException) {
+                Write(ctx, 413, Error("request_too_large", "Request body is too large."));
+                _audit.Write(requestId: "rejected-before-request-id", operation: path, started: started,
+                    durationMs: (int)sw.ElapsedMilliseconds, status: "denied", code: "request_too_large",
+                    message: "Request body exceeded the configured limit.");
+                return;
+            }
             var requestId = ctx.Request.Headers["X-Gateway-Request-Id"] ?? ctx.Request.Headers["X-FIS-Request-Id"] ?? Guid.NewGuid().ToString("N");
             var requireSignature = !(ctx.Request.HttpMethod == "GET" && (path == "/health" || path == "/version" || path == "/capabilities" || path == "/adapters"));
             var validation = _security.Validate(ctx.Request.HttpMethod, path, ctx.Request.RemoteEndPoint.Address.ToString(), Headers(ctx.Request), body, requireSignature);
@@ -98,9 +106,22 @@ namespace CollegePortal.Gateway
             return File.ReadAllText(_config.DiagnosticsPath, Encoding.UTF8);
         }
         private string VersionJson() { return "{\"ok\":true,\"name\":\"CollegePortal Gateway\",\"version\":\"" + Json(_config.ServiceVersion) + "\",\"service_name\":\"CollegePortalGateway\",\"install_root\":\"C:\\\\CollegePortalGateway\",\"production_enabled\":false}"; }
-        private string AdaptersJson() { return "{\"ok\":true,\"adapters\":[{\"name\":\"fis\",\"version\":\"" + Json(_adapters["fis"].Version) + "\",\"enabled\":true}]}"; }
+        private string AdaptersJson() { return "{\"ok\":true,\"adapters\":[{\"name\":\"fis\",\"version\":\"" + Json(_adapters["fis"].Version) + "\",\"enabled\":true,\"environment\":\"test\",\"production_enabled\":false,\"dangerous_operations_enabled\":false}]}"; }
         private string CapabilitiesJson() { return "{\"ok\":true,\"gateway\":[\"health\",\"version\",\"capabilities\",\"adapters\",\"diagnostics\"],\"adapters\":{\"fis\":" + _adapters["fis"].GetCapabilitiesJson() + "}}"; }
-        private static byte[] ReadBody(HttpListenerRequest request) { using (var ms = new MemoryStream()) { request.InputStream.CopyTo(ms); return ms.ToArray(); } }
+        private static byte[] ReadBody(HttpListenerRequest request, int maxBodyBytes)
+        {
+            if (!request.HasEntityBody) return new byte[0];
+            if (request.ContentLength64 > maxBodyBytes) throw new RequestTooLargeException();
+            using (var ms = new MemoryStream()) {
+                var buffer = new byte[8192];
+                int read;
+                while ((read = request.InputStream.Read(buffer, 0, buffer.Length)) > 0) {
+                    if (ms.Length + read > maxBodyBytes) throw new RequestTooLargeException();
+                    ms.Write(buffer, 0, read);
+                }
+                return ms.ToArray();
+            }
+        }
         private static Dictionary<string, string> Headers(HttpListenerRequest request) { var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); foreach (string key in request.Headers.Keys) dict[key] = request.Headers[key]; return dict; }
         private static void Write(HttpListenerContext ctx, int status, string json) { var bytes = Encoding.UTF8.GetBytes(json); ctx.Response.StatusCode = status; ctx.Response.ContentType = "application/json; charset=utf-8"; ctx.Response.ContentLength64 = bytes.Length; ctx.Response.OutputStream.Write(bytes, 0, bytes.Length); ctx.Response.OutputStream.Close(); }
         private static string Payload(GatewayPayload payload, string version) { return "{\"ok\":" + (payload.Ok ? "true" : "false") + ",\"error_code\":\"" + Json(payload.Code) + "\",\"message\":\"" + Json(payload.Message) + "\",\"latency_ms\":" + payload.LatencyMs + ",\"gateway_version\":\"" + Json(version) + "\"}"; }
@@ -109,5 +130,7 @@ namespace CollegePortal.Gateway
         private static string LastSegment(string path) { var index = path.LastIndexOf('/'); return index >= 0 ? path.Substring(index + 1) : path; }
         private static void AddDeprecated(HttpListenerContext ctx) { ctx.Response.Headers["X-CollegePortal-Deprecated"] = "Use /adapters/fis/... endpoints."; }
         public void Dispose() { _running = false; if (_listener.IsListening) _listener.Stop(); _listener.Close(); }
+
+        private sealed class RequestTooLargeException : Exception { }
     }
 }
