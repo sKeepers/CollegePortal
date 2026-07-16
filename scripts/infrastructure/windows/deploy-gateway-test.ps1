@@ -37,6 +37,24 @@ function Invoke-Remote {
     }
 }
 
+function Invoke-RemoteCapture {
+    param([string]$Command)
+
+    $output = & ssh -o BatchMode=yes $HostAlias $Command
+    $exit = $LASTEXITCODE
+    if ($exit -ne 0) {
+        throw "Remote command failed with exit code ${exit}: $Command`n$output"
+    }
+    return $output
+}
+
+function Invoke-RemoteHealth {
+    param([string]$Uri)
+
+    $escaped = $Uri.Replace("'", "''")
+    Invoke-Remote "powershell -NoProfile -ExecutionPolicy Bypass -Command \"`$wc=New-Object Net.WebClient; `$wc.DownloadString('$escaped')\""
+}
+
 if ($ExpectedSha256 -match "10\.0\.3\.1:8080") {
     throw "Production FIS endpoint :8080 is forbidden."
 }
@@ -45,17 +63,25 @@ if (-not (Test-Path -LiteralPath $PackagePath)) {
     throw "Package not found: $PackagePath"
 }
 
+$PackagePath = [IO.Path]::GetFullPath($PackagePath)
 $actualSha = Get-Sha256 $PackagePath
 if ($actualSha -ne $ExpectedSha256.ToLowerInvariant()) {
     throw "Package SHA-256 mismatch. Expected $ExpectedSha256, got $actualSha"
 }
 
+$packageFile = [IO.Path]::GetFileName($PackagePath)
+$packageName = [IO.Path]::GetFileNameWithoutExtension($PackagePath)
+$remoteRoot = $RemoteDirectory.TrimEnd("\")
+$remotePackageRoot = $remoteRoot + "\" + $packageName
+$remoteZip = $remoteRoot + "\" + $packageFile
+
 Write-Host "Package SHA-256 verified: $actualSha"
 Write-Host "Host alias: $HostAlias"
 Write-Host "Remote directory: $RemoteDirectory"
+Write-Host "Remote package root: $remotePackageRoot"
 
 if (-not $Copy -and -not $Install) {
-    Write-Host "Dry-run only. Use -Copy to transfer package. Use -Install only after separate operator confirmation."
+    Write-Host "Dry-run only. Use -Copy to transfer package. Use -Install to transfer and run install-all.cmd after green CI."
     exit 0
 }
 
@@ -63,21 +89,67 @@ if ($Install -and -not $Copy) {
     throw "-Install requires -Copy so the verified package is transferred in the same run."
 }
 
-$remoteZip = ($RemoteDirectory.TrimEnd("\") + "\" + [IO.Path]::GetFileName($PackagePath))
-Invoke-Remote "if not exist `"$RemoteDirectory`" mkdir `"$RemoteDirectory`""
-& scp -q -o BatchMode=yes $PackagePath "$HostAlias`:$($remoteZip -replace '\\','/')"
-if ($LASTEXITCODE -ne 0) {
-    throw "SCP upload failed with exit code $LASTEXITCODE"
+$localStage = Join-Path ([IO.Path]::GetTempPath()) ("collegeportal-gateway-deploy-" + [guid]::NewGuid().ToString("N"))
+try {
+    New-Item -ItemType Directory -Force -Path $localStage | Out-Null
+    Expand-Archive -LiteralPath $PackagePath -DestinationPath $localStage -Force
+
+    Invoke-Remote "if not exist `"$remoteRoot`" mkdir `"$remoteRoot`""
+    Invoke-Remote "if exist `"$remotePackageRoot`" rmdir /s /q `"$remotePackageRoot`""
+    Invoke-Remote "mkdir `"$remotePackageRoot`""
+
+    & scp -q -o BatchMode=yes $PackagePath "$HostAlias`:$($remoteZip -replace '\\','/')"
+    if ($LASTEXITCODE -ne 0) { throw "SCP package upload failed with exit code $LASTEXITCODE" }
+
+    $remoteHashOutput = Invoke-RemoteCapture "certutil -hashfile `"$remoteZip`" SHA256"
+    $remoteHashText = ($remoteHashOutput -join " ").ToLowerInvariant() -replace '[^0-9a-f]', ''
+    if ($remoteHashText -notmatch [regex]::Escape($actualSha)) {
+        throw "Remote package SHA-256 verification failed."
+    }
+    Write-Host "Remote package SHA-256 verified."
+
+    $items = @(Get-ChildItem -LiteralPath $localStage -Force)
+    foreach ($item in $items) {
+        & scp -q -r -o BatchMode=yes $item.FullName "$HostAlias`:$($remotePackageRoot -replace '\\','/')/"
+        if ($LASTEXITCODE -ne 0) { throw "SCP package content upload failed with exit code $LASTEXITCODE" }
+    }
+    Write-Host "Package content copied to ViPNet-PC."
+
+    if (-not $Install) {
+        Write-Host "Copy completed. Installation was not started."
+        exit 0
+    }
+
+    Write-Host "Starting remote TEST installation. Production FIS :8080 and Import/Validate/Delete are not used."
+    Invoke-Remote "cd /d `"$remotePackageRoot`" && cmd /d /v:on /c call install-all.cmd"
+
+    Write-Host "Checking service status."
+    Invoke-Remote "sc query CollegePortalGateway"
+    Invoke-Remote "sc qc CollegePortalGateway"
+    Invoke-Remote "sc qfailure CollegePortalGateway"
+    Invoke-Remote "netstat -ano | findstr :8099"
+
+    Write-Host "Checking local Gateway health from ViPNet-PC."
+    Invoke-RemoteHealth "http://127.0.0.1:8099/health"
+    Invoke-RemoteHealth "http://127.0.0.1:8099/version"
+    Invoke-RemoteHealth "http://127.0.0.1:8099/adapters"
+
+    Write-Host "Checking remote Gateway health from this workstation."
+    $wc = New-Object Net.WebClient
+    try {
+        $wc.DownloadString('http://192.168.34.223:8099/health')
+    }
+    finally {
+        $wc = $null
+    }
+
+    Write-Host "Gateway TEST deployment completed."
 }
-
-Write-Host "Package copied to ViPNet-PC."
-Invoke-Remote "certutil -hashfile `"$remoteZip`" SHA256"
-
-if (-not $Install) {
-    Write-Host "Copy completed. Installation was not started."
-    exit 0
+catch {
+    Write-Host "[STOP-GATE] Remote deployment failed: $($_.Exception.Message)"
+    Write-Host "Collect diagnostics with collect-gateway-diagnostics.ps1 before retrying."
+    throw
 }
-
-Write-Host "STOP-GATE: this script does not perform automatic installation yet."
-Write-Host "Run install-all.cmd manually or extend this script only after service-installation smoke stays green."
-exit 2
+finally {
+    if ([IO.Directory]::Exists($localStage)) { Remove-Item -LiteralPath $localStage -Recurse -Force -ErrorAction SilentlyContinue }
+}

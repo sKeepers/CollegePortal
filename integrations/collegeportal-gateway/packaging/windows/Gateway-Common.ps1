@@ -152,6 +152,29 @@ function Test-GatewayAdministrator {
 }
 
 
+
+function Get-GatewaySidAce([string]$Sid, [string]$Rights) {
+    if ($Sid -notmatch '^S-1-5-(18|20|32-544)$') { throw "Unsupported well-known SID for Gateway ACL: $Sid" }
+    if ($Rights -notmatch '^\([A-Z]+\)(\([A-Z]+\))*$') { throw "Invalid icacls rights expression: $Rights" }
+    return ('*{0}:{1}' -f $Sid, $Rights)
+}
+
+function Get-GatewaySystemAce([string]$Rights) {
+    return Get-GatewaySidAce 'S-1-5-18' $Rights
+}
+
+function Get-GatewayAdministratorsAce([string]$Rights) {
+    return Get-GatewaySidAce 'S-1-5-32-544' $Rights
+}
+
+function Get-GatewayNetworkServiceAce([string]$Rights) {
+    return Get-GatewaySidAce 'S-1-5-20' $Rights
+}
+
+function Get-GatewayUrlAclSddl() {
+    # DACL grants generic execute to Network Service (NS) for HTTP.sys URL reservation.
+    return 'D:(A;;GX;;;NS)'
+}
 function Get-GatewayServiceCreateArguments([string]$ServiceName, [string]$BinPath) {
     return @(
         $ServiceName,

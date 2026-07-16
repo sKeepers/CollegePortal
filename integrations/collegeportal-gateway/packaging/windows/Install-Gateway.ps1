@@ -155,17 +155,17 @@ try {
     & $TargetExe --check-config --config $PrivateConfig
     Assert-ExitCode 'Проверка private config'
 
-    & icacls.exe $PrivateConfig /inheritance:r /grant:r 'SYSTEM:(F)' 'BUILTIN\Administrators:(F)' '*S-1-5-20:(R)' | Out-Null
+    & icacls.exe $PrivateConfig /inheritance:r /grant:r (Get-GatewaySystemAce '(F)') (Get-GatewayAdministratorsAce '(F)') (Get-GatewayNetworkServiceAce '(R)') | Out-Null
     Assert-ExitCode 'Настройка ACL private config'
     foreach ($Writable in @($LogsPath, $CachePath, $DiagnosticsPath, $SpecsPath)) {
-        & icacls.exe $Writable /grant:r 'SYSTEM:(OI)(CI)(F)' 'BUILTIN\Administrators:(OI)(CI)(F)' '*S-1-5-20:(OI)(CI)(M)' | Out-Null
+        & icacls.exe $Writable /grant:r (Get-GatewaySystemAce '(OI)(CI)(F)') (Get-GatewayAdministratorsAce '(OI)(CI)(F)') (Get-GatewayNetworkServiceAce '(OI)(CI)(M)') | Out-Null
         Assert-ExitCode "Настройка ACL $([IO.Path]::GetFileName($Writable))"
     }
-    & icacls.exe $BinaryPath /grant:r 'SYSTEM:(OI)(CI)(F)' 'BUILTIN\Administrators:(OI)(CI)(F)' '*S-1-5-20:(OI)(CI)(RX)' | Out-Null
+    & icacls.exe $BinaryPath /grant:r (Get-GatewaySystemAce '(OI)(CI)(F)') (Get-GatewayAdministratorsAce '(OI)(CI)(F)') (Get-GatewayNetworkServiceAce '(OI)(CI)(RX)') | Out-Null
     Assert-ExitCode 'Настройка ACL bin'
 
     & netsh.exe http delete urlacl url='http://+:8099/' | Out-Null
-    & netsh.exe http add urlacl url='http://+:8099/' user='NT AUTHORITY\NETWORK SERVICE' | Out-Null
+    & netsh.exe http add urlacl url='http://+:8099/' ('sddl=' + (Get-GatewayUrlAclSddl)) | Out-Null
     Assert-ExitCode 'Настройка HTTP URL ACL'
 
     $BinPath = '"' + $TargetExe + '" --config "' + $PrivateConfig + '"'
