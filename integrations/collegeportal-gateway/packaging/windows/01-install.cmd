@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 setlocal EnableExtensions DisableDelayedExpansion
 set "PACKAGE_ROOT=%~dp0."
@@ -18,5 +18,5 @@ if not "%~1"=="" (
   exit /b 2
 )
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Install-Gateway.ps1" -PackageRoot "%PACKAGE_ROOT_ARGUMENT%" %INSTALL_MODE%
+powershell.exe -NoProfile -NonInteractive -InputFormat None -ExecutionPolicy Bypass -File "%~dp0Install-Gateway.ps1" -PackageRoot "%PACKAGE_ROOT_ARGUMENT%" %INSTALL_MODE%
 exit /b %errorlevel%

@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param([string]$InstallRoot = 'C:\CollegePortalGateway')
 
 $ErrorActionPreference = 'Continue'
@@ -41,7 +41,7 @@ Add-Section 'STARTUP LOG (LAST 300 LINES)' {
     $StartupLog = Join-Path $InstallRoot 'logs\startup.log'
     if ([IO.File]::Exists($StartupLog)) { Get-GatewayFileTail $StartupLog 300 } else { 'MISSING' }
 }
-Add-Section 'LOCAL HEALTH' { & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $ScriptRoot 'Test-GatewayHealth.ps1') -InstallRoot $InstallRoot }
+Add-Section 'LOCAL HEALTH' { & powershell.exe -NoProfile -NonInteractive -InputFormat None -ExecutionPolicy Bypass -File (Join-Path $ScriptRoot 'Test-GatewayHealth.ps1') -InstallRoot $InstallRoot }
 Add-Section 'SYSTEM SERVICE ERRORS' { & wevtutil.exe qe System /q:"*[System[(Level=1 or Level=2) and Provider[@Name='Service Control Manager']]]" /c:10 /rd:true /f:text }
 Add-Section 'APPLICATION ERRORS' { & wevtutil.exe qe Application /q:"*[System[(Level=1 or Level=2) and (Provider[@Name='.NET Runtime'] or Provider[@Name='Application Error'])]]" /c:10 /rd:true /f:text }
 

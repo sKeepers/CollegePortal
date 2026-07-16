@@ -190,7 +190,7 @@ try {
     Start-Service -Name $ServiceName
     (Get-Service -Name $ServiceName).WaitForStatus([System.ServiceProcess.ServiceControllerStatus]::Running, [TimeSpan]::FromSeconds(20))
     Start-Sleep -Seconds 3
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $ToolsPath 'Test-GatewayHealth.ps1') -InstallRoot $InstallRoot
+    & powershell.exe -NoProfile -NonInteractive -InputFormat None -ExecutionPolicy Bypass -File (Join-Path $ToolsPath 'Test-GatewayHealth.ps1') -InstallRoot $InstallRoot
     Assert-ExitCode 'Проверка health'
 
     Add-Report "[OK] Служба установлена. binPath=$BinPath"

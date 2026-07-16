@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$ScriptsPath = (Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) '..\packaging\windows')
 )
@@ -41,6 +41,19 @@ foreach ($File in $Files) {
     try { [scriptblock]::Create($Text) | Out-Null } catch { $Failures.Add("$($File.Name): parser: $($_.Exception.Message)") }
 }
 
+
+$CmdFiles = @(Get-ChildItem -LiteralPath $ScriptsPath -Filter '*.cmd' | Where-Object { -not $_.PSIsContainer } | Sort-Object Name)
+foreach ($File in @($Files + $CmdFiles)) {
+    $Text = [IO.File]::ReadAllText($File.FullName)
+    $PowerShellMatches = [Text.RegularExpressions.Regex]::Matches($Text, '(?im)^.*powershell\.exe.*$')
+    foreach ($Match in $PowerShellMatches) {
+        $LineText = $Match.Value
+        if ($LineText -notmatch '(?i)-NonInteractive\b' -or $LineText -notmatch '(?i)-InputFormat\s+None\b') {
+            $Line = 1 + ([Text.RegularExpressions.Regex]::Matches($Text.Substring(0, $Match.Index), "`n")).Count
+            $Failures.Add(('{0}:{1}: powershell.exe must use -NonInteractive -InputFormat None for Windows 7 OpenSSH.' -f $File.Name, $Line))
+        }
+    }
+}
 if ($Failures.Count -gt 0) {
     $Failures | ForEach-Object { Write-Host "[FAIL] $_" }
     throw "Найдены несовместимости Windows PowerShell 2.0: $($Failures.Count)."
