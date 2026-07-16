@@ -847,6 +847,7 @@ CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a 
 - [x] Интерактивно установить package на ViPNet-ПК `192.168.34.223`.
 - [x] Подтвердить service/binPath/port/firewall и Portal → Gateway health.
 - [x] Унифицировать Gateway version metadata через `VERSION` и build-time generated source.
+- [x] Развернуть Gateway package `0.2.10-dev` на ViPNet-ПК и подтвердить `/version=0.2.10-dev`.
 - [ ] Скачать и независимо одобрить официальный WSDL/XSD/DISCO.
 - [ ] Подтвердить authentication и read-only semantics.
 - [ ] Выполнить одну отдельно разрешенную read-only TEST попытку без ПДн.
