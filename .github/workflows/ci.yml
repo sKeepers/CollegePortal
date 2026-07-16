@@ -4,7 +4,7 @@ on:
   push:
     branches: [develop, main]
   pull_request:
-    branches: [develop, main, feature/gia-001-fis-gateway-exchange]
+    branches: [develop, main, feature/gia-001-fis-gateway-exchange, feature/gia-002-gateway-installation]
 
 permissions:
   contents: read
