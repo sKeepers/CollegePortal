@@ -1,0 +1,97 @@
+# ACCESS-002: Mobile Access Smoke Checklist
+
+## Scope
+
+This checklist validates dynamic QR display and mobile camera scanning for Access Control. It must be executed in DEV or another safe non-production environment.
+
+Camera access requires a secure context. Do not bypass this with unsafe HTTP flags.
+
+## Safe DEV URLs
+
+- Primary HTTPS: `https://192.168.34.104:5443`
+- Optional hostname: `https://college-dev.local:5443`
+- HTTP diagnostics only: `http://192.168.34.104:5174`
+
+If the browser reports `window.isSecureContext === false`, stop and fix DEV HTTPS/CA first.
+
+## Devices
+
+| Device | Browser | Result |
+| --- | --- | --- |
+| Android phone | Chrome | Pending manual test |
+| Android phone | Edge, optional | Pending manual test |
+| iPhone | Safari, optional | Pending manual test |
+
+## Preconditions
+
+- [ ] Local CA from `docs/DEV_HTTPS.md` is installed on the phone.
+- [ ] Browser opens HTTPS endpoint without certificate warning.
+- [ ] `window.isSecureContext` is `true`.
+- [ ] `navigator.mediaDevices.getUserMedia` exists.
+- [ ] Test student/operator accounts use synthetic data.
+- [ ] Operator has `access.scan`.
+- [ ] Student can open own pass.
+
+## Mobile QR Pass: `/access/pass`
+
+- [ ] QR is visible.
+- [ ] QR has white background and sufficient quiet zone.
+- [ ] Countdown changes every second.
+- [ ] Auto-refresh happens before expiry.
+- [ ] Manual refresh changes token.
+- [ ] New token differs from previous token.
+- [ ] Old screenshot is denied after TTL.
+- [ ] Used token is denied on replay.
+- [ ] Layout has no horizontal overflow on 360-430 px width.
+- [ ] Name/photo are synthetic and readable.
+- [ ] Decoded CP2 payload contains no PII.
+
+## Student Mobile Pass: `/m/student/pass`
+
+- [ ] Dynamic QR is preferred.
+- [ ] Legacy fallback appears only if dynamic endpoint fails.
+- [ ] Countdown is visible.
+- [ ] Expired screenshot is denied.
+- [ ] Page remains readable in portrait mode.
+
+## Mobile Camera Scanner: `/access/mobile-scanner`
+
+- [ ] Camera permission prompt appears.
+- [ ] Permission denied state is clear and in Russian.
+- [ ] Rear camera is selected by default when available.
+- [ ] Scanner frame is visible.
+- [ ] Continuous scanning works.
+- [ ] Successful scan pauses scanner.
+- [ ] `Сканировать снова` resumes scanner.
+- [ ] Duplicate protection prevents repeated immediate scan.
+- [ ] Allowed result is large and high contrast.
+- [ ] Denied result shows Russian reason.
+- [ ] Vibration works if supported.
+- [ ] Sound works if enabled by browser gesture policy.
+- [ ] Network error state is visible and recoverable.
+- [ ] Manual token input is hidden unless user has override permission.
+
+## Checkpoint Page On Mobile: `/access/checkpoint`
+
+- [ ] Page is usable in mobile browser.
+- [ ] HID/manual input area does not overflow.
+- [ ] Allowed/denied result is readable.
+- [ ] Focus behavior does not trigger unwanted keyboard loops.
+
+## Security Verification
+
+- [ ] Frames are processed locally in browser.
+- [ ] No camera frame is uploaded to server.
+- [ ] Only scanned QR text is sent to `/api/access/scan`.
+- [ ] No raw token appears in UI logs, application logs, DB or audit.
+- [ ] RBAC blocks teacher/student from scanner routes.
+
+## Stop-Gates
+
+Stop and keep PR draft if:
+
+- Camera requires unsafe HTTP.
+- Certificate cannot be trusted on test phone.
+- Scanner accepts expired/replayed CP2.
+- Manual input is available to users without override permission.
+- Real PII is required for test.

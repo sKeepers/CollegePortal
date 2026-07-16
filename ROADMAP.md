@@ -397,3 +397,9 @@ CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a 
 ## ACCESS-001
 
 ACCESS-001 starts Release 0.10 Access Control foundation: dynamic QR with 30-second TTL, scanner/operator RBAC, checkpoint events, access devices/points and privacy-safe QR protocol. ACCESS-002 should harden device allowlist, operational dashboards and deeper attendance integration.
+
+## ACCESS-002
+
+ACCESS-002 tracks hardware/mobile validation for the Release 0.10 Access Control foundation. It does not add production rollout. Merge readiness for PR #23 requires completed manual smoke on Android Chrome, HID 2D scanner, allowed/denied matrix, entry/exit, audit/privacy checks and legacy CP1/plain compatibility review.
+
+Legacy compatibility is accepted only as temporary Release 0.10 bridge; follow-up work should add explicit feature flag, reporting and deprecation enforcement.

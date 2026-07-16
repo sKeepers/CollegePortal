@@ -823,3 +823,17 @@ CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a 
 - [x] Add `/access/pass` and `/access/checkpoint` frontend routes.
 - [x] Document QR protocol, security, privacy, architecture and operator workflow.
 - [ ] ACCESS-002: strict device allowlist, turnstile integration adapter and deeper attendance automation.
+
+## ACCESS-002: Hardware and mobile checkpoint validation
+
+- [x] Create Issue #24 and add it to CollegePortal Roadmap.
+- [x] Add mobile QR and camera scanner smoke checklist.
+- [x] Add HID 2D scanner hardware smoke checklist.
+- [x] Add access control release readiness checklist.
+- [x] Add legacy CP1/plain token deprecation plan.
+- [ ] Execute mobile smoke on Android Chrome using DEV HTTPS.
+- [ ] Execute HID scanner smoke with real wireless 2D scanner.
+- [ ] Record scanner model and browser/device results in Issue #24.
+- [ ] Complete allowed/denied matrix and entry/exit sequence.
+- [ ] Confirm no raw token in DB/logs/audit after manual smoke.
+- [ ] Move PR #23 out of draft only after manual smoke and migration check.
