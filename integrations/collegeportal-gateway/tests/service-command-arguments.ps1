@@ -27,7 +27,7 @@ function Assert-NoPackedScOption([string[]]$Arguments, [string]$CaseName) {
 }
 
 $ServiceName = 'CollegePortalGateway'
-$BinPath = '"C:\CollegePortalGateway\bin\CollegePortal.Gateway.Host.exe" --config "C:\CollegePortalGateway\config\gateway.private.config"'
+$BinPath = Get-GatewayServiceBinPath -TargetExe 'C:\CollegePortalGateway\bin\CollegePortal.Gateway.Host.exe' -PrivateConfig 'C:\CollegePortalGateway\config\gateway.private.config'
 
 $CreateExpected = @(
     $ServiceName,
@@ -60,3 +60,11 @@ Assert-NoPackedScOption $ConfigActual 'config'
 Assert-NoPackedScOption $FailureActual 'failure'
 
 Write-Host '[OK] Аргументы sc.exe для create/config/failure передаются как отдельные argv-элементы.'
+Assert-Equal 'C:\CollegePortalGateway\bin\CollegePortal.Gateway.Host.exe --config C:\CollegePortalGateway\config\gateway.private.config' $BinPath 'windows7 binPath'
+if ($BinPath -match '"') { throw 'Windows 7 sc.exe regression: service binPath must not contain quotes for fixed no-space install root.' }
+
+$WhitespaceRejected = $false
+try {
+    Get-GatewayServiceBinPath -TargetExe 'C:\College Portal Gateway\bin\CollegePortal.Gateway.Host.exe' -PrivateConfig 'C:\CollegePortalGateway\config\gateway.private.config' | Out-Null
+} catch { $WhitespaceRejected = $true }
+if (-not $WhitespaceRejected) { throw 'Whitespace service paths must be rejected until a Windows 7 sc.exe-safe quoting strategy is implemented.' }

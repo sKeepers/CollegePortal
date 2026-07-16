@@ -175,6 +175,15 @@ function Get-GatewayUrlAclSddl() {
     # DACL grants generic execute to Network Service (NS) for HTTP.sys URL reservation.
     return 'D:(A;;GX;;;NS)'
 }
+
+function Get-GatewayServiceBinPath([string]$TargetExe, [string]$PrivateConfig) {
+    foreach ($Path in @($TargetExe, $PrivateConfig)) {
+        if ($Path -match '\s') {
+            throw "Gateway service path contains whitespace and is not supported by Windows 7 sc.exe PowerShell invocation: $Path"
+        }
+    }
+    return ('{0} --config {1}' -f $TargetExe, $PrivateConfig)
+}
 function Get-GatewayServiceCreateArguments([string]$ServiceName, [string]$BinPath) {
     return @(
         $ServiceName,

@@ -53,3 +53,5 @@ if ($Text -notmatch 'Get-GatewayUrlAclSddl') {
 }
 
 Write-Host '[OK] Gateway ACL uses well-known SID tokens and avoids localized account names in installer ACL operations.'
+$ServiceBinPath = Get-GatewayServiceBinPath -TargetExe 'C:\CollegePortalGateway\bin\CollegePortal.Gateway.Host.exe' -PrivateConfig 'C:\CollegePortalGateway\config\gateway.private.config'
+if ($ServiceBinPath -match '"') { throw 'Service binPath for Windows 7 must avoid embedded quotes with fixed no-space install root.' }

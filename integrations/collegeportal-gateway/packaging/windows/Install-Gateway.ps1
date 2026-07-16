@@ -168,7 +168,7 @@ try {
     & netsh.exe http add urlacl url='http://+:8099/' ('sddl=' + (Get-GatewayUrlAclSddl)) | Out-Null
     Assert-ExitCode 'Настройка HTTP URL ACL'
 
-    $BinPath = '"' + $TargetExe + '" --config "' + $PrivateConfig + '"'
+    $BinPath = Get-GatewayServiceBinPath -TargetExe $TargetExe -PrivateConfig $PrivateConfig
     if ($ServiceExists) {
         $ConfigArgs = Get-GatewayServiceConfigArguments -ServiceName $ServiceName -BinPath $BinPath
         & sc.exe config $ConfigArgs | Out-Null
