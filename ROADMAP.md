@@ -393,3 +393,7 @@ REPO-SYNC-001 completed: repository sync documentation and safe Linux/Windows he
 ## INTEGRATION-HUB-001
 
 CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a modular Windows service architecture for protected integrations. FIS remains the only implemented adapter; future FRDO/Moodle/LDAP/MAX/Telegram/Email adapters are planned. Windows repo path is `C:\!Projects\CollegePortal`; ViPNet installation remains a separate task.
+
+## ACCESS-001
+
+ACCESS-001 starts Release 0.10 Access Control foundation: dynamic QR with 30-second TTL, scanner/operator RBAC, checkpoint events, access devices/points and privacy-safe QR protocol. ACCESS-002 should harden device allowlist, operational dashboards and deeper attendance integration.

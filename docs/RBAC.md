@@ -234,3 +234,16 @@ Teacher workspace uses existing `journal.*` permissions with stricter UI behavio
 ## FIS Outbound Permissions
 
 Added permissions: `fis.outbound.view`, `fis.outbound.create`, `fis.outbound.generate`, `fis.outbound.validate`, `fis.outbound.send_test`, `fis.outbound.send_production`, `fis.outbound.status`, `fis.outbound.download`, `fis.settings.manage`. Production send is feature-flagged and not active in FIS-API-001.
+
+## ACCESS-001 permissions
+
+Access Control uses these permissions:
+
+- `access.view` — view access events and basic checkpoint data;
+- `access.scan` — scan QR on checkpoint devices;
+- `access.override` — manually override an event with a required reason;
+- `access.manage` — manage access points, devices and rules;
+- `access.audit` — view technical access audit;
+- `access.reports` — access reports and analytics.
+
+Legacy aliases `gate.scan` and `gate.reports` remain for compatibility, but new routes should use `access.*`.

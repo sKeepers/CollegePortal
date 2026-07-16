@@ -9,14 +9,14 @@ export function normalizeQrToken(value) {
   if (token.startsWith('CP1:')) token = token.slice(4).trim()
   return token
 }
-function fullName(person) { return [person?.last_name, person?.first_name, person?.middle_name].filter(Boolean).join(' ') }
+function fullName(person) { return person?.display_name || [person?.last_name, person?.first_name, person?.middle_name].filter(Boolean).join(' ') }
 export function ownerName(event) { return fullName(event?.owner) || 'Неизвестный пропуск' }
 export function entityTypeLabel(type) {
   if (type === 'student') return 'Студент'
   if (type === 'teacher') return 'Преподаватель'
   return 'Неизвестно'
 }
-export function directionLabel(direction) { return direction === 'out' ? 'Выход' : 'Вход' }
+export function directionLabel(direction) { return direction === 'exit' || direction === 'out' ? 'Выход' : 'Вход' }
 export function resultLabel(result) { return result === 'allowed' ? 'Разрешено' : 'Отказано' }
 export function resultTone(result) { return result === 'allowed' ? 'success' : 'danger' }
 export function formatEventTime(value) {
@@ -83,6 +83,9 @@ export const useAccessGateStore = defineStore('accessGate', () => {
         token: normalizedToken,
         access_point: metadata.access_point || 'Главный вход',
         device_name: metadata.device_name || 'HID QR Scanner',
+        device_type: metadata.device_type || 'hid_scanner',
+        device_identifier: metadata.device_identifier || undefined,
+        direction: metadata.direction || undefined,
       })
       lastEvent.value = response?.data || null
       if (lastEvent.value?.duplicate_ignored) {

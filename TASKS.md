@@ -813,3 +813,13 @@
 ## INTEGRATION-HUB-001
 
 CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a modular Windows service architecture for protected integrations. FIS remains the only implemented adapter; future FRDO/Moodle/LDAP/MAX/Telegram/Email adapters are planned. Windows repo path is `C:\!Projects\CollegePortal`; ViPNet installation remains a separate task.
+
+## ACCESS-001: Dynamic QR checkpoint foundation
+
+- [x] Create `feature/access-control-foundation` worktree from `develop`.
+- [x] Add access control tables for points, devices, pass tokens, sessions, rules, shifts, denials and audit events.
+- [x] Add dynamic QR token issue/refresh API with 30-second TTL and replay protection.
+- [x] Add scanner API foundation for HID/mobile/manual device metadata.
+- [x] Add `/access/pass` and `/access/checkpoint` frontend routes.
+- [x] Document QR protocol, security, privacy, architecture and operator workflow.
+- [ ] ACCESS-002: strict device allowlist, turnstile integration adapter and deeper attendance automation.

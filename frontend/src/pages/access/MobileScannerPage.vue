@@ -7,9 +7,11 @@ import PageHeader from '../../components/ui/PageHeader.vue'
 import AppCard from '../../components/ui/AppCard.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
+import { usePermissions } from '../../composables/usePermissions'
 import { directionLabel, entityTypeLabel, formatEventTime, normalizeQrToken, ownerName, resultLabel, resultTone, useAccessGateStore } from '../../stores/accessGate'
 
 const store = useAccessGateStore()
+const { hasPermission } = usePermissions()
 const videoRef = ref(null)
 const canvasRef = ref(null)
 const stream = ref(null)
@@ -35,6 +37,7 @@ const resultClass = computed(() => store.lastEvent?.result === 'allowed' ? 'mobi
 const resultIcon = computed(() => store.lastEvent?.result === 'allowed' ? CheckCircle2 : XCircle)
 const scannerEngine = computed(() => detector ? 'BarcodeDetector' : 'jsQR fallback')
 const canTorch = computed(() => torchSupported.value && stream.value)
+const canManualOverride = computed(() => hasPermission('access.override'))
 
 function vibrateAllowed() { navigator.vibrate?.(90) }
 function vibrateDenied() { navigator.vibrate?.([80, 70, 80]) }
@@ -153,7 +156,7 @@ async function handleScan(value) {
   lastScanAt.value = now
   paused.value = true
   try {
-    const event = await store.scan(normalized, { access_point: 'Мобильный сканер', device_name: 'Mobile Camera Scanner' })
+    const event = await store.scan(normalized, { access_point: 'Мобильный сканер', device_name: 'Mobile Camera Scanner', device_type: 'mobile_camera' })
     const allowed = event?.result === 'allowed'
     allowed ? vibrateAllowed() : vibrateDenied()
     beep(allowed)
@@ -213,7 +216,7 @@ onBeforeUnmount(stopCamera)
           <h2>{{ ownerName(store.lastEvent) }}</h2>
           <p>{{ entityTypeLabel(store.lastEvent.entity_type) }}</p>
           <div class="mobile-scanner-result__badges">
-            <AppStatusBadge :label="directionLabel(store.lastEvent.direction)" :tone="store.lastEvent.direction === 'in' ? 'success' : 'warning'" />
+            <AppStatusBadge :label="directionLabel(store.lastEvent.direction)" :tone="(store.lastEvent.direction === 'entry' || store.lastEvent.direction === 'in') ? 'success' : 'warning'" />
             <AppStatusBadge :label="resultLabel(store.lastEvent.result)" :tone="resultTone(store.lastEvent.result)" />
           </div>
           <dl>
@@ -225,7 +228,7 @@ onBeforeUnmount(stopCamera)
         <div v-else class="mobile-scanner-result__empty"><ScanLine :size="48" /><strong>Ожидание QR</strong><span>После распознавания здесь появится результат прохода.</span></div>
       </AppCard>
 
-      <AppCard title="Ручной ввод" subtitle="Fallback, если камера недоступна или QR поврежден">
+      <AppCard v-if="canManualOverride" title="Ручной ввод" subtitle="Fallback с отдельным правом access.override">
         <q-form class="mobile-scanner-manual" @submit.prevent="submitManual">
           <q-input v-model="manualToken" outlined label="Token или CP1:<token>" autocomplete="off"><template #prepend><Keyboard :size="20" /></template></q-input>
           <q-btn color="primary" type="submit" :loading="store.scanning" :disable="!manualToken.trim()">Проверить</q-btn>

@@ -1187,3 +1187,9 @@ REPO-SYNC-001 merged PR #8 into develop, synchronized Linux DEV and documented r
 ## INTEGRATION-HUB-001
 
 CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a modular Windows service architecture for protected integrations. FIS remains the only implemented adapter; future FRDO/Moodle/LDAP/MAX/Telegram/Email adapters are planned. Windows repo path is `C:\!Projects\CollegePortal`; ViPNet installation remains a separate task.
+
+## ACCESS-001: Dynamic QR checkpoint foundation
+
+Добавлен foundation модуля «Проходная»: динамический QR `CP2` с TTL 30 секунд, hash-only registry, replay protection, точки доступа, устройства, события, сессии вход/выход, denials и технический audit. Старые статические DigitalIdentity QR остаются fallback-режимом, но основной сценарий — короткоживущий signed token без персональных данных.
+
+Frontend получил `/access/pass` для личного динамического QR и `/access/checkpoint` как новый маршрут проходной. `/access/gate` и `/access/mobile-scanner` сохранены для совместимости.

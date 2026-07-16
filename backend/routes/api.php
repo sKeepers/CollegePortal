@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AccessDeviceController;
 use App\Http\Controllers\Api\AccessGateController;
+use App\Http\Controllers\Api\AccessPointController;
+use App\Http\Controllers\Api\AccessTokenController;
 use App\Http\Controllers\Api\AccessReportController;
 use App\Http\Controllers\Api\AdminRoleController;
 use App\Http\Controllers\Api\AdminPermissionController;
@@ -67,6 +70,15 @@ Route::middleware('api.token')->group(function (): void {
     Route::delete('dashboard/layouts/{dashboardLayout}', [DashboardLayoutController::class, 'destroy']);
     Route::post('dashboard/layouts/{dashboardLayout}/activate', [DashboardLayoutController::class, 'activate']);
     Route::post('uat/feedback', [UatController::class, 'storeFeedback']);
+    Route::post('access/token/issue', [AccessTokenController::class, 'issue']);
+    Route::post('access/token/refresh', [AccessTokenController::class, 'refresh']);
+    Route::get('access/points', [AccessPointController::class, 'index'])->middleware('permission:access.view');
+    Route::get('access/devices', [AccessDeviceController::class, 'index'])->middleware('permission:access.manage');
+    Route::post('access/devices/heartbeat', [AccessDeviceController::class, 'heartbeat'])->middleware('permission:access.scan');
+    Route::post('access/scan', [AccessGateController::class, 'scan'])->middleware(['permission:access.scan', 'throttle:120,1']);
+    Route::get('access/events', [AccessGateController::class, 'events'])->middleware('permission:access.view');
+    Route::get('access/events/{accessEvent}', [AccessGateController::class, 'show'])->middleware('permission:access.view');
+    Route::post('access/events/{accessEvent}/override', [AccessGateController::class, 'override'])->middleware('permission:access.override');
 
     Route::middleware('permission:uat.manage')->group(function (): void {
         Route::get('admin/uat/config', [UatController::class, 'config']);
@@ -188,8 +200,6 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('classrooms/export', [ClassroomController::class, 'export']);
         Route::post('classrooms/import', [ClassroomController::class, 'import']);
         Route::apiResource('classrooms', ClassroomController::class);
-        Route::get('access/events', [AccessGateController::class, 'events']);
-        Route::post('access/scan', [AccessGateController::class, 'scan']);
         Route::get('access/reports/summary', [AccessReportController::class, 'summary']);
         Route::get('access/reports/events', [AccessReportController::class, 'events']);
         Route::get('digital-identities', [DigitalIdentityController::class, 'index']);
