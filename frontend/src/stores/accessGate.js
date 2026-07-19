@@ -4,19 +4,31 @@ import { api } from '../services/api'
 import { useSettingsStore } from './settings'
 
 function extractRows(payload) { return Array.isArray(payload?.data) ? payload.data : [] }
+function normalizeRussianKeyboardLayout(token) {
+  if (token.startsWith('CP2:')) return token
+  const map = {
+    й: 'q', ц: 'w', у: 'e', к: 'r', е: 't', н: 'y', г: 'u', ш: 'i', щ: 'o', з: 'p', х: '[', ъ: ']',
+    ф: 'a', ы: 's', в: 'd', а: 'f', п: 'g', р: 'h', о: 'j', л: 'k', д: 'l', ж: ';', э: "'",
+    я: 'z', ч: 'x', с: 'c', м: 'v', и: 'b', т: 'n', ь: 'm', б: ',', ю: '.', ё: '`',
+    Й: 'Q', Ц: 'W', У: 'E', К: 'R', Е: 'T', Н: 'Y', Г: 'U', Ш: 'I', Щ: 'O', З: 'P', Х: '{', Ъ: '}',
+    Ф: 'A', Ы: 'S', В: 'D', А: 'F', П: 'G', Р: 'H', О: 'J', Л: 'K', Д: 'L', Ж: ':', Э: '"',
+    Я: 'Z', Ч: 'X', С: 'C', М: 'V', И: 'B', Т: 'N', Ь: 'M', Б: '<', Ю: '>', Ё: '~',
+  }
+  const candidate = Array.from(token).map((char) => map[char] || char).join('')
+  return /^CP2:(?:[A-Za-z0-9_-]{32}|[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)$/.test(candidate) ? candidate : token
+}
 export function normalizeQrToken(value) {
   let token = String(value || '').trim()
   if (token.startsWith('CP1:')) token = token.slice(4).trim()
-  return token
+  return normalizeRussianKeyboardLayout(token)
 }
 function fullName(person) { return person?.display_name || [person?.last_name, person?.first_name, person?.middle_name].filter(Boolean).join(' ') }
 export function ownerName(event) { return fullName(event?.owner) || 'Неизвестный пропуск' }
-export function entityTypeLabel(type) {
+export function entityTypeLabel(type, event = null) {
   if (type === 'student') return 'Студент'
   if (type === 'teacher') return 'Преподаватель'
-  return 'Неизвестно'
-}
-export function directionLabel(direction) { return direction === 'exit' || direction === 'out' ? 'Выход' : 'Вход' }
+  return event?.owner?.entity_label || 'Неизвестно'
+}export function directionLabel(direction) { return direction === 'exit' || direction === 'out' ? 'Выход' : 'Вход' }
 export function resultLabel(result) { return result === 'allowed' ? 'Разрешено' : 'Отказано' }
 export function resultTone(result) { return result === 'allowed' ? 'success' : 'danger' }
 export function formatEventTime(value) {

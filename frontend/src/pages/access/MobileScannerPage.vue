@@ -27,15 +27,14 @@ const manualToken = ref('')
 const lastScannedValue = ref('')
 const lastScanAt = ref(0)
 const scanCooldownMs = 2200
-const detector = typeof window !== 'undefined' && 'BarcodeDetector' in window
-  ? new window.BarcodeDetector({ formats: ['qr_code'] })
-  : null
+const detector = ref(null)
+const secureContext = computed(() => typeof window !== 'undefined' && Boolean(window.isSecureContext))
 let animationFrame = null
 let audioContext = null
 
 const resultClass = computed(() => store.lastEvent?.result === 'allowed' ? 'mobile-scanner-result--allowed' : 'mobile-scanner-result--denied')
 const resultIcon = computed(() => store.lastEvent?.result === 'allowed' ? CheckCircle2 : XCircle)
-const scannerEngine = computed(() => detector ? 'BarcodeDetector' : 'jsQR fallback')
+const scannerEngine = computed(() => detector.value ? 'BarcodeDetector' : 'jsQR fallback')
 const canTorch = computed(() => torchSupported.value && stream.value)
 const canManualOverride = computed(() => hasPermission('access.override'))
 
@@ -43,7 +42,9 @@ function vibrateAllowed() { navigator.vibrate?.(90) }
 function vibrateDenied() { navigator.vibrate?.([80, 70, 80]) }
 function beep(allowed = true) {
   try {
-    audioContext ||= new AudioContext()
+    const AudioCtor = window.AudioContext || window.webkitAudioContext
+    if (!AudioCtor) return
+    audioContext ||= new AudioCtor()
     const oscillator = audioContext.createOscillator()
     const gain = audioContext.createGain()
     oscillator.frequency.value = allowed ? 880 : 220
@@ -55,6 +56,15 @@ function beep(allowed = true) {
     oscillator.stop(audioContext.currentTime + 0.12)
   } catch {
     // Звук может быть заблокирован браузером до пользовательского действия.
+  }
+}
+
+function initDetector() {
+  if (detector.value || typeof window === 'undefined' || !('BarcodeDetector' in window)) return
+  try {
+    detector.value = new window.BarcodeDetector({ formats: ['qr_code'] })
+  } catch {
+    detector.value = null
   }
 }
 
@@ -70,6 +80,10 @@ async function startCamera(deviceId = selectedDeviceId.value) {
   stopCamera()
 
   try {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error('Браузер не предоставляет доступ к камере. Проверьте HTTPS и разрешения.')
+    }
+    initDetector()
     const constraints = {
       video: deviceId
         ? { deviceId: { exact: deviceId } }
@@ -128,8 +142,8 @@ async function scanLoop() {
   const video = videoRef.value
   if (video.readyState >= 2 && video.videoWidth && video.videoHeight) {
     let value = ''
-    if (detector) {
-      const codes = await detector.detect(video).catch(() => [])
+    if (detector.value) {
+      const codes = await detector.value.detect(video).catch(() => [])
       value = codes[0]?.rawValue || ''
     } else {
       const canvas = canvasRef.value
@@ -202,7 +216,7 @@ onBeforeUnmount(stopCamera)
 
         <div class="mobile-scanner-meta">
           <AppStatusBadge :label="scannerEngine" tone="info" />
-          <AppStatusBadge :label="window.isSecureContext ? 'Secure context' : 'Нужен HTTPS'" :tone="window.isSecureContext ? 'success' : 'warning'" />
+          <AppStatusBadge :label="secureContext ? 'Secure context' : 'Нужен HTTPS'" :tone="secureContext ? 'success' : 'warning'" />
           <AppStatusBadge :label="paused ? 'Пауза после скана' : 'Готов к сканированию'" :tone="paused ? 'warning' : 'success'" />
         </div>
       </section>
@@ -214,7 +228,7 @@ onBeforeUnmount(stopCamera)
             <div><strong>{{ resultLabel(store.lastEvent.result) }}</strong><span>{{ store.lastEvent.reason || 'Проход зарегистрирован.' }}</span></div>
           </div>
           <h2>{{ ownerName(store.lastEvent) }}</h2>
-          <p>{{ entityTypeLabel(store.lastEvent.entity_type) }}</p>
+          <p>{{ entityTypeLabel(store.lastEvent.entity_type, store.lastEvent) }}</p>
           <div class="mobile-scanner-result__badges">
             <AppStatusBadge :label="directionLabel(store.lastEvent.direction)" :tone="(store.lastEvent.direction === 'entry' || store.lastEvent.direction === 'in') ? 'success' : 'warning'" />
             <AppStatusBadge :label="resultLabel(store.lastEvent.result)" :tone="resultTone(store.lastEvent.result)" />

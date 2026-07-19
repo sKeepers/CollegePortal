@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AccessAuditEvent;
 use App\Models\AccessEvent;
 use App\Models\AccessPassToken;
 use App\Models\AuditLog;
@@ -69,7 +70,31 @@ class AccessControlFoundationApiTest extends TestCase
             ->postJson('/api/access/scan', ['token' => $token, 'access_point' => 'Главный вход'])
             ->assertOk()
             ->assertJsonPath('data.result', AccessEvent::RESULT_DENIED)
-            ->assertJsonPath('data.reason_code', 'replayed_token');
+            ->assertJsonPath('data.reason_code', 'replayed_token')
+            ->assertJsonPath('data.entity_type', 'student')
+            ->assertJsonPath('data.owner.display_name', 'Иванов Дмитрий')
+            ->assertJsonPath('data.owner.entity_label', 'Студент');
+    }
+
+    public function test_dynamic_token_accepts_russian_keyboard_hid_input_without_logging_raw_token(): void
+    {
+        $operator = $this->createOperator(['access.scan', 'access.view']);
+        $person = $this->createStudentPerson();
+        $token = $this->withApiAuth($this->createOperator(['access.manage']))
+            ->postJson('/api/access/token/issue', ['person_id' => $person->id])
+            ->json('data.token');
+        $russianLayoutToken = $this->toRussianKeyboardLayout($token);
+
+        $this->withApiAuth($operator)
+            ->postJson('/api/access/scan', ['token' => $russianLayoutToken, 'access_point' => 'Главный вход'])
+            ->assertOk()
+            ->assertJsonPath('data.result', AccessEvent::RESULT_ALLOWED)
+            ->assertJsonPath('data.entity_type', 'student')
+            ->assertJsonPath('data.owner.display_name', 'Иванов Дмитрий');
+
+        $audit = AccessAuditEvent::query()->where('action', 'scan_allowed')->latest('id')->firstOrFail();
+        $this->assertTrue($audit->metadata['layout_normalized'] ?? false);
+        $this->assertDatabaseMissing('audit_logs', ['new_values' => $russianLayoutToken]);
     }
 
     public function test_dynamic_token_expires_after_ttl(): void
@@ -173,6 +198,18 @@ class AccessControlFoundationApiTest extends TestCase
         $this->withApiAuth($teacher)
             ->postJson('/api/access/scan', ['token' => $fresh])
             ->assertForbidden();
+    }
+
+    private function toRussianKeyboardLayout(string $token): string
+    {
+        return strtr($token, [
+            'q' => 'й', 'w' => 'ц', 'e' => 'у', 'r' => 'к', 't' => 'е', 'y' => 'н', 'u' => 'г', 'i' => 'ш', 'o' => 'щ', 'p' => 'з', '[' => 'х', ']' => 'ъ',
+            'a' => 'ф', 's' => 'ы', 'd' => 'в', 'f' => 'а', 'g' => 'п', 'h' => 'р', 'j' => 'о', 'k' => 'л', 'l' => 'д', ';' => 'ж', "'" => 'э',
+            'z' => 'я', 'x' => 'ч', 'c' => 'с', 'v' => 'м', 'b' => 'и', 'n' => 'т', 'm' => 'ь', ',' => 'б', '.' => 'ю', '`' => 'ё',
+            'Q' => 'Й', 'W' => 'Ц', 'E' => 'У', 'R' => 'К', 'T' => 'Е', 'Y' => 'Н', 'U' => 'Г', 'I' => 'Ш', 'O' => 'Щ', 'P' => 'З', '{' => 'Х', '}' => 'Ъ',
+            'A' => 'Ф', 'S' => 'Ы', 'D' => 'В', 'F' => 'А', 'G' => 'П', 'H' => 'Р', 'J' => 'О', 'K' => 'Л', 'L' => 'Д', ':' => 'Ж', '"' => 'Э',
+            'Z' => 'Я', 'X' => 'Ч', 'C' => 'С', 'V' => 'М', 'B' => 'И', 'N' => 'Т', 'M' => 'Ь', '<' => 'Б', '>' => 'Ю', '~' => 'Ё',
+        ]);
     }
 
     private function createStudentPerson(): Person

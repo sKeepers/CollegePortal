@@ -158,7 +158,7 @@ onMounted(async () => {
               <div class="access-gate-person__photo"><img v-if="store.lastEvent.owner?.photo_url" :src="store.lastEvent.owner.photo_url" alt="Фото" /><UserRound v-else :size="58" /></div>
               <div class="access-gate-person__info">
                 <h2>{{ ownerName(store.lastEvent) }}</h2>
-                <p>{{ entityTypeLabel(store.lastEvent.entity_type) }}</p>
+                <p>{{ entityTypeLabel(store.lastEvent.entity_type, store.lastEvent) }}</p>
                 <div class="access-gate-person__badges">
                   <AppStatusBadge :label="directionLabel(store.lastEvent.direction)" :tone="(store.lastEvent.direction === 'entry' || store.lastEvent.direction === 'in') ? 'success' : 'warning'" />
                   <AppStatusBadge :label="resultLabel(store.lastEvent.result)" :tone="resultTone(store.lastEvent.result)" />
@@ -191,7 +191,7 @@ onMounted(async () => {
               <div class="access-gate-event__time">{{ formatEventTime(event.event_time) }}</div>
               <div class="access-gate-event__body">
                 <strong>{{ ownerName(event) }}</strong>
-                <span>{{ entityTypeLabel(event.entity_type) }} · {{ directionLabel(event.direction) }}</span>
+                <span>{{ entityTypeLabel(event.entity_type, event) }} · {{ directionLabel(event.direction) }}</span>
               </div>
               <AppStatusBadge :label="resultLabel(event.result)" :tone="resultTone(event.result)" />
             </article>

@@ -77,7 +77,8 @@ class AccessControlService
 
     public function scan(User $operator, array $payload, ?Request $request = null): AccessEvent
     {
-        $rawToken = $this->qrSvgService->normalizeScannedToken((string) $payload['token']);
+        $tokenDetails = $this->qrSvgService->normalizeScannedTokenDetails((string) $payload['token']);
+        $rawToken = $tokenDetails['token'];
         $requestId = $payload['request_id'] ?? $this->requestId($request);
         $accessPoint = $this->resolveAccessPoint($payload);
         $device = $this->resolveDevice($payload, $accessPoint);
@@ -88,7 +89,7 @@ class AccessControlService
         }
         $direction = $this->resolveDirection($tokenResult, $payload['direction'] ?? null);
 
-        return DB::transaction(function () use ($operator, $payload, $request, $requestId, $accessPoint, $device, $tokenResult, $direction): AccessEvent {
+        return DB::transaction(function () use ($operator, $payload, $request, $requestId, $accessPoint, $device, $tokenResult, $direction, $tokenDetails): AccessEvent {
             [$allowed, $reasonCode, $reason] = $this->decision($tokenResult, $direction);
             $person = $tokenResult['person'];
             $identity = $tokenResult['identity'];
@@ -127,7 +128,7 @@ class AccessControlService
                     'person_id' => $person?->id,
                     'reason_code' => $reasonCode,
                     'reason' => $reason,
-                    'context' => ['token_type' => $tokenResult['type'], 'direction' => $direction],
+                    'context' => ['token_type' => $tokenResult['type'], 'direction' => $direction, 'layout_normalized' => $tokenDetails['layout_normalized']],
                 ]);
             }
 
@@ -137,7 +138,7 @@ class AccessControlService
                 'access_event_id' => $event->id,
                 'action' => $allowed ? 'scan_allowed' : 'scan_denied',
                 'request_id' => $requestId,
-                'metadata' => ['reason_code' => $reasonCode, 'direction' => $direction, 'token_type' => $tokenResult['type']],
+                'metadata' => ['reason_code' => $reasonCode, 'direction' => $direction, 'token_type' => $tokenResult['type'], 'layout_normalized' => $tokenDetails['layout_normalized']],
             ]);
 
             AuditLogService::log('access', $allowed ? 'scan_allowed' : 'scan_denied', $event, null, [
@@ -249,11 +250,11 @@ class AccessControlService
         }
 
         if ((int) $payload['iat'] > $now + self::CLOCK_SKEW_SECONDS) {
-            return array_merge($invalid, ['person' => $person, 'pass_token' => $record, 'reason_code' => 'clock_skew', 'reason' => 'Время QR-токена выходит за допустимое окно.']);
+            return $this->knownDynamicTokenDenial($invalid, $record, $person, 'clock_skew', 'Время QR-токена выходит за допустимое окно.');
         }
 
         if ((int) $payload['exp'] + self::CLOCK_SKEW_SECONDS < $now) {
-            return array_merge($invalid, ['person' => $person, 'pass_token' => $record, 'reason_code' => 'expired_token', 'reason' => 'Срок действия QR истек.']);
+            return $this->knownDynamicTokenDenial($invalid, $record, $person, 'expired_token', 'Срок действия QR истек.');
         }
 
         return $this->dynamicTokenResult($record, $person, $invalid);
@@ -263,15 +264,15 @@ class AccessControlService
     private function dynamicTokenResult(AccessPassToken $record, Person $person, array $invalid): array
     {
         if ($record->expires_at->copy()->addSeconds(self::CLOCK_SKEW_SECONDS)->isPast()) {
-            return array_merge($invalid, ['person' => $person, 'pass_token' => $record, 'reason_code' => 'expired_token', 'reason' => 'Срок действия QR истек.']);
+            return $this->knownDynamicTokenDenial($invalid, $record, $person, 'expired_token', 'Срок действия QR истек.');
         }
 
         if ($record->revoked_at !== null) {
-            return array_merge($invalid, ['person' => $person, 'pass_token' => $record, 'reason_code' => 'revoked_token', 'reason' => 'QR-токен отозван.']);
+            return $this->knownDynamicTokenDenial($invalid, $record, $person, 'revoked_token', 'QR-токен отозван.');
         }
 
         if ($record->used_at !== null) {
-            return array_merge($invalid, ['person' => $person, 'pass_token' => $record, 'reason_code' => 'replayed_token', 'reason' => 'QR уже был использован. Обновите пропуск.']);
+            return $this->knownDynamicTokenDenial($invalid, $record, $person, 'replayed_token', 'QR уже был использован. Обновите пропуск.');
         }
 
         return ['type' => 'dynamic', 'valid' => true, 'reason_code' => null, 'reason' => null, 'person' => $person, 'identity' => null, 'pass_token' => $record, 'entity_type' => $this->entityType($person), 'entity_id' => $this->entityId($person)];
@@ -282,6 +283,19 @@ class AccessControlService
     {
         return ['type' => 'dynamic', 'valid' => false, 'reason_code' => 'invalid_token', 'reason' => 'QR-токен недействителен.', 'person' => null, 'identity' => null, 'pass_token' => null, 'entity_type' => null, 'entity_id' => null];
     }
+
+    private function knownDynamicTokenDenial(array $invalid, AccessPassToken $record, Person $person, string $reasonCode, string $reason): array
+    {
+        return array_merge($invalid, [
+            'person' => $person,
+            'pass_token' => $record,
+            'reason_code' => $reasonCode,
+            'reason' => $reason,
+            'entity_type' => $this->entityType($person),
+            'entity_id' => $this->entityId($person),
+        ]);
+    }
+
     /** @return array<string,mixed> */
     private function resolveLegacyToken(string $token): array
     {

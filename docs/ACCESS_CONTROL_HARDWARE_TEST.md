@@ -103,3 +103,11 @@ Stop and do not merge if any of these happen:
 - Raw token appears in DB, logs or audit.
 - RBAC can be bypassed.
 - Real personal data is required for the test.
+## ACCESS-002.4 HID smoke regression
+
+Real HID smoke confirmed that a fresh short CP2 token is readable by the 2D scanner and replay protection denies a reused token. The regression found two operator-facing issues that must stay covered:
+
+- replayed CP2 must still show the known owner and entity label, for example `Студент`, instead of `Неизвестно`;
+- if the workstation keyboard layout is Russian, HID input may arrive as Cyrillic characters. The parser may normalize this only when the translated value matches a strict CP2 token format. Arbitrary manual text must not be rewritten.
+
+During diagnostics, do not paste raw CP2 values into issues, PR comments, screenshots, logs or documentation. Use timestamps, result codes and synthetic owner names only.

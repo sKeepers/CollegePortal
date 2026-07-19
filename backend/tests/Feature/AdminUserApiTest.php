@@ -67,6 +67,34 @@ class AdminUserApiTest extends TestCase
             ->assertNoContent();
     }
 
+    public function test_admin_can_save_dev_local_email_accounts(): void
+    {
+        $role = Role::create(['name' => 'Сотрудник проходной', 'code' => 'security']);
+
+        $this->withApiAuth()
+            ->postJson('/api/admin/users', [
+                'name' => 'Тестовый оператор проходной',
+                'email' => 'access.operator.test@local',
+                'password' => 'demo12345',
+                'role_id' => $role->id,
+                'is_active' => true,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.email', 'access.operator.test@local');
+
+        $user = User::where('email', 'access.operator.test@local')->firstOrFail();
+
+        $this->withApiAuth()
+            ->putJson("/api/admin/users/{$user->id}", [
+                'name' => 'Тестовый оператор проходной',
+                'email' => 'access.operator.test@local',
+                'role_id' => $role->id,
+                'is_active' => true,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.email', 'access.operator.test@local');
+    }
+
     public function test_user_validation_errors_are_localized(): void
     {
         $role = Role::create(['name' => 'Преподаватель', 'code' => 'teacher']);

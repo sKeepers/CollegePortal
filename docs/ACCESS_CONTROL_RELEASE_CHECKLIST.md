@@ -10,7 +10,8 @@ This checklist defines merge readiness for the Access Control foundation in PR #
 - [x] GitHub Actions frontend build passes on PR #23.
 - [x] GitHub Actions Path policy passes on PR #23.
 - [x] GitHub Actions Secret scan passes on PR #23.
-- [ ] Migration smoke has been run on DEV.`r`n- [ ] CP2 QR decode regression has been run with a synthetic token and independent decoder.
+- [ ] Migration smoke has been run on DEV.
+- [ ] CP2 QR decode regression has been run with a synthetic token and independent decoder.
 - [ ] Playwright desktop smoke has been run for `/access/pass` and `/access/checkpoint`.
 - [ ] Playwright mobile viewport smoke has been run for `/access/pass`, `/m/student/pass`, `/access/mobile-scanner`.
 
@@ -57,3 +58,9 @@ Attach to Issue #24 or PR #23:
 ## ACCESS-002.3 stop-gate notes
 
 PR #23 stays draft until the updated opaque CP2 QR is decoded on Xiaomi 11T Pro and by the HID scanner. The old long signed payload remains a compatibility branch only; new mobile passes must show the short opaque CP2 token.
+## ACCESS-002.4 readiness additions
+
+- [ ] Replayed CP2 denied event displays known owner and entity label when the token belongs to a known person.
+- [ ] Russian keyboard HID normalization accepts only strict CP2 tokens and records `layout_normalized` in sanitized access audit metadata.
+- [ ] `/access/mobile-scanner` renders without a blank page when `BarcodeDetector` is unavailable and falls back to local `jsQR`.
+- [ ] `/admin/users` can save DEV-only `*@local` test accounts without native browser email validation blocking the form.
