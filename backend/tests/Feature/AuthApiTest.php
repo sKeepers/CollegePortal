@@ -62,8 +62,7 @@ class AuthApiTest extends TestCase
         $this->app->detectEnvironment(fn () => 'local');
         config(['dev_login.enabled' => true]);
 
-        $this->withHeader('Host', 'blocked.test')
-            ->getJson('/api/dev-login/options')
+        $this->getJson('http://blocked.test/api/dev-login/options')
             ->assertNotFound();
     }
 
