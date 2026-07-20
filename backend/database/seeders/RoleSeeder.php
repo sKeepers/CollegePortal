@@ -19,6 +19,7 @@ class RoleSeeder extends Seeder
             ['code' => 'teacher', 'name' => 'Преподаватель', 'description' => 'Работа со своим расписанием, журналом и нагрузкой.'],
             ['code' => 'student', 'name' => 'Студент', 'description' => 'Просмотр личного кабинета, QR, расписания и оценок.'],
             ['code' => 'security', 'name' => 'Сотрудник проходной', 'description' => 'Сканирование QR и отчеты проходной.'],
+            ['code' => 'access_admin', 'name' => 'Администратор проходной', 'description' => 'Администрирование проходной и отчетов доступа.'],
             ['code' => 'hr', 'name' => 'Отдел кадров', 'description' => 'Ведение сотрудников, подразделений, должностей и кадровых статусов.'],
             ['code' => 'academic_office', 'name' => 'Учебная часть (legacy)', 'description' => 'Legacy-роль для совместимости.'],
             ['code' => 'curator', 'name' => 'Куратор группы', 'description' => 'Сопровождение закрепленной учебной группы.'],
@@ -45,6 +46,7 @@ class RoleSeeder extends Seeder
         $this->syncPermissions('teacher', $this->ids($this->teacherPermissions()));
         $this->syncPermissions('student', $this->ids($this->studentPermissions()));
         $this->syncPermissions('security', $this->ids($this->securityPermissions()));
+        $this->syncPermissions('access_admin', $this->ids($this->accessAdminPermissions()));
         $this->syncPermissions('hr', $this->ids($this->hrPermissions()));
         $this->syncPermissions('curator', $this->ids(array_values(array_unique(array_merge($this->teacherPermissions(), ['students.view', 'groups.view', 'attendance.reports'])))));
     }
@@ -171,6 +173,7 @@ class RoleSeeder extends Seeder
             ['module' => 'HR', 'code' => 'hr.replacements.view', 'name' => 'Кадры: замены просмотр', 'description' => 'Просмотр кандидатов и затронутых занятий.'],
             ['module' => 'HR', 'code' => 'hr.replacements.manage', 'name' => 'Кадры: замены управление', 'description' => 'Назначение замен преподавателей.'],
             ['module' => 'System', 'code' => 'users.manage', 'name' => 'Пользователи: управление', 'description' => 'Управление пользователями.'],
+            ['module' => 'System', 'code' => 'users.credentials.print', 'name' => 'Пользователи: учетные карточки', 'description' => 'Создание временных паролей и печать карточек входа.'],
             ['module' => 'System', 'code' => 'roles.manage', 'name' => 'Роли: управление', 'description' => 'Управление ролями.'],
             ['module' => 'System', 'code' => 'permissions.manage', 'name' => 'Разрешения: управление', 'description' => 'Управление матрицей разрешений.'],
             ['module' => 'System', 'code' => 'settings.manage', 'name' => 'Настройки: управление', 'description' => 'Управление настройками колледжа.'],
@@ -239,6 +242,11 @@ class RoleSeeder extends Seeder
     private function securityPermissions(): array
     {
         return ['dashboard.view', 'gate.scan', 'gate.reports', 'digitalpasses.manage', 'attendance.view', 'attendance.reports', 'view_reports'];
+    }
+
+    private function accessAdminPermissions(): array
+    {
+        return array_values(array_unique(array_merge($this->securityPermissions(), ['audit.view'])));
     }
 
     private function ids(array $codes)

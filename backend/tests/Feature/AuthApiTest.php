@@ -48,6 +48,42 @@ class AuthApiTest extends TestCase
             ->assertUnprocessable();
     }
 
+    public function test_dev_login_helper_is_hidden_until_dev_flag_and_allowed_host(): void
+    {
+        config([
+            'dev_login.enabled' => false,
+            'dev_login.allowed_hosts' => ['localhost'],
+        ]);
+
+        $this->withServerVariables(['HTTP_HOST' => 'localhost'])
+            ->getJson('/api/dev-login/options')
+            ->assertNotFound();
+
+        $this->app->detectEnvironment(fn () => 'local');
+        config(['dev_login.enabled' => true]);
+
+        $this->withServerVariables(['HTTP_HOST' => 'blocked.test'])
+            ->getJson('/api/dev-login/options')
+            ->assertNotFound();
+    }
+
+    public function test_dev_login_helper_logs_in_by_backend_role_without_credentials(): void
+    {
+        $this->app->detectEnvironment(fn () => 'local');
+        config([
+            'dev_login.enabled' => true,
+            'dev_login.allowed_hosts' => ['localhost'],
+            'dev_login.roles' => ['admin' => 'Администратор'],
+        ]);
+        Role::create(['name' => 'Администратор', 'code' => 'admin']);
+
+        $this->withServerVariables(['HTTP_HOST' => 'localhost'])
+            ->postJson('/api/dev-login/login', ['role' => 'admin'])
+            ->assertOk()
+            ->assertJsonPath('token_type', 'Bearer')
+            ->assertJsonPath('user.role.code', 'admin')
+            ->assertJsonMissingPath('password');
+    }
     public function test_protected_api_requires_token(): void
     {
         $this->getJson('/api/groups')

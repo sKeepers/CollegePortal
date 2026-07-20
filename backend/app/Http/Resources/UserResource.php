@@ -36,6 +36,7 @@ class UserResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'is_active' => $this->is_active,
+            'must_change_password' => (bool) $this->must_change_password,
             'status' => $this->is_active ? 'active' : 'blocked',
             'role' => new RoleResource($this->whenLoaded('role')),
             'roles' => RoleResource::collection($this->whenLoaded('roles')),

@@ -9,6 +9,7 @@ use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
 use App\Services\AuditLogService;
+use App\Services\QrSvgService;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -50,7 +51,7 @@ class AdminUserController extends Controller
 
         $user = User::create([
             ...$data,
-            'password' => Hash::make($data['password'] ?? 'demo12345'),
+            'password' => Hash::make($data['password']),
             'is_active' => $data['is_active'] ?? true,
         ]);
         $this->syncPrimaryRole($user);
@@ -118,6 +119,56 @@ class AdminUserController extends Controller
     }
 
 
+    public function createTemporaryPassword(Request $request, User $user, QrSvgService $qrSvgService): JsonResponse
+    {
+        if ($denied = $this->denyUnlessCredentialAdmin($request)) {
+            return $denied;
+        }
+
+        if ($request->user()?->id === $user->id) {
+            return response()->json(['message' => 'Нельзя создать временный пароль для текущей сессии.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $temporaryPassword = $this->generateTemporaryPassword();
+        $old = [
+            'must_change_password' => (bool) $user->must_change_password,
+            'api_token_hash_present' => filled($user->api_token_hash),
+        ];
+
+        $user->forceFill([
+            'password' => Hash::make($temporaryPassword),
+            'api_token_hash' => null,
+            'must_change_password' => true,
+        ])->save();
+
+        AuditLogService::log('users', 'temporary_password_created', $user, $old, [
+            'must_change_password' => true,
+            'sessions_revoked' => true,
+        ], $request);
+
+        return response()->json([
+            'data' => [
+                'user' => new UserResource($user->refresh()->load(['role.permissions', 'roles.permissions'])),
+                'temporary_password' => $temporaryPassword,
+                'card' => $this->credentialCardPayload($request, $user, $qrSvgService, $temporaryPassword),
+            ],
+        ]);
+    }
+
+    public function credentialCard(Request $request, User $user, QrSvgService $qrSvgService): JsonResponse
+    {
+        if ($denied = $this->denyUnlessCredentialAdmin($request)) {
+            return $denied;
+        }
+
+        AuditLogService::log('users', 'credential_card_printed', $user, null, [
+            'temporary_password_included' => false,
+        ], $request);
+
+        return response()->json([
+            'data' => $this->credentialCardPayload($request, $user, $qrSvgService),
+        ]);
+    }
     public function assignRoles(Request $request, User $user): UserResource
     {
         $data = $request->validate([
@@ -185,6 +236,48 @@ class AdminUserController extends Controller
     }
 
 
+    private function denyUnlessCredentialAdmin(Request $request): ?JsonResponse
+    {
+        if (! $request->user()?->hasRole('admin')) {
+            return response()->json(['message' => 'Forbidden.'], Response::HTTP_FORBIDDEN);
+        }
+
+        return null;
+    }
+
+    private function credentialCardPayload(Request $request, User $user, QrSvgService $qrSvgService, ?string $temporaryPassword = null): array
+    {
+        $portalUrl = rtrim($request->getSchemeAndHttpHost(), '/');
+        $loginUrl = $portalUrl.'/login';
+        $roles = $user->relationLoaded('roles') ? $user->roles : $user->roles()->get();
+        $roleLabel = $roles->pluck('name')->filter()->join(', ') ?: $user->role?->name;
+
+        return array_filter([
+            'organization' => config('app.name', 'CollegePortal'),
+            'full_name' => $user->name,
+            'role' => $roleLabel ?: 'Роль не указана',
+            'login' => $user->email,
+            'temporary_password' => $temporaryPassword,
+            'portal_url' => $portalUrl,
+            'login_url' => $loginUrl,
+            'login_qr_svg' => $qrSvgService->renderSvg($loginUrl),
+            'issued_at' => now()->toISOString(),
+            'issued_by' => $request->user()?->name,
+            'instruction' => 'При первом входе смените временный пароль.',
+        ], fn ($value) => $value !== null && $value !== '');
+    }
+
+    private function generateTemporaryPassword(): string
+    {
+        $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+        $password = '';
+
+        for ($i = 0; $i < 14; $i++) {
+            $password .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+        }
+
+        return $password;
+    }
     private function syncPrimaryRole(User $user): void
     {
         if (! $user->role_id) {

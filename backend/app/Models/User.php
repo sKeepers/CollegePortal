@@ -27,6 +27,7 @@ class User extends Authenticatable
         'email',
         'password',
         'is_active',
+        'must_change_password',
         'api_token_hash',
         'last_login_at',
         'person_type',
@@ -55,6 +56,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'must_change_password' => 'boolean',
             'last_login_at' => 'datetime',
             'person_id' => 'integer',
         ];

@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\CurriculumController;
 use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\DigitalIdentityController;
 use App\Http\Controllers\Api\DemoDataController;
+use App\Http\Controllers\Api\DevLoginHelperController;
 use App\Http\Controllers\Api\DashboardAnalyticsController;
 use App\Http\Controllers\Api\DashboardLayoutController;
 use App\Http\Controllers\Api\EmployeeController;
@@ -52,6 +53,8 @@ use App\Http\Controllers\Api\UatController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('auth/login', [AuthController::class, 'login']);
+Route::get('dev-login/options', [DevLoginHelperController::class, 'options'])->middleware('throttle:20,1');
+Route::post('dev-login/login', [DevLoginHelperController::class, 'login'])->middleware('throttle:20,1');
 Route::get('settings/public', [AdminSettingController::class, 'publicSettings']);
 Route::get('public/specialties', [SpecialtyController::class, 'index']);
 Route::get('public/education-programs', [EducationProgramController::class, 'index']);
@@ -146,6 +149,11 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('attendance/history', [AttendanceAnalysisController::class, 'history']);
         Route::get('attendance/person/{type}/{id}/summary', [AttendanceAnalysisController::class, 'personSummary']);
         Route::get('attendance/person/{type}/{id}/days', [AttendanceAnalysisController::class, 'personDays']);
+    });
+
+    Route::middleware(['permission:users.credentials.print', 'throttle:5,1'])->group(function (): void {
+        Route::post('admin/users/{user}/temporary-password', [AdminUserController::class, 'createTemporaryPassword']);
+        Route::post('admin/users/{user}/credential-card', [AdminUserController::class, 'credentialCard']);
     });
 
     Route::middleware('permission:manage_users')->group(function (): void {

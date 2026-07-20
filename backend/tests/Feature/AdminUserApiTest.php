@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditLog;
 use App\Models\Permission;
 use App\Models\Person;
 use App\Models\Role;
@@ -182,6 +183,71 @@ class AdminUserApiTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_admin_can_create_one_time_temporary_password_and_card_without_audit_secret(): void
+    {
+        $role = Role::create(['name' => 'Преподаватель', 'code' => 'teacher']);
+        $target = User::factory()->create([
+            'role_id' => $role->id,
+            'email' => 'teacher.credentials@example.test',
+            'password' => Hash::make('old-password'),
+            'api_token_hash' => Hash::make('old-token'),
+            'must_change_password' => false,
+            'is_active' => true,
+        ]);
+
+        $response = $this->withApiAuth()
+            ->postJson("/api/admin/users/{$target->id}/temporary-password")
+            ->assertOk()
+            ->assertJsonPath('data.user.must_change_password', true)
+            ->assertJsonStructure(['data' => ['temporary_password', 'card' => ['login_qr_svg']]]);
+
+        $temporaryPassword = $response->json('data.temporary_password');
+        $target->refresh();
+
+        $this->assertNotEmpty($temporaryPassword);
+        $this->assertTrue(Hash::check($temporaryPassword, $target->password));
+        $this->assertTrue($target->must_change_password);
+        $this->assertNull($target->api_token_hash);
+        $this->assertSame($temporaryPassword, $response->json('data.card.temporary_password'));
+        $this->assertStringContainsString('<svg', $response->json('data.card.login_qr_svg'));
+
+        $audit = AuditLog::query()->where('action', 'temporary_password_created')->firstOrFail();
+        $serializedAudit = json_encode([$audit->old_values, $audit->new_values], JSON_UNESCAPED_UNICODE);
+        $this->assertStringNotContainsString($temporaryPassword, $serializedAudit);
+        $this->assertStringNotContainsString('old-password', $serializedAudit);
+    }
+
+    public function test_credential_card_without_reset_never_contains_temporary_password(): void
+    {
+        $role = Role::create(['name' => 'Студент', 'code' => 'student']);
+        $target = User::factory()->create([
+            'role_id' => $role->id,
+            'email' => 'student.card@example.test',
+            'is_active' => true,
+        ]);
+
+        $this->withApiAuth()
+            ->postJson("/api/admin/users/{$target->id}/credential-card")
+            ->assertOk()
+            ->assertJsonMissingPath('data.temporary_password')
+            ->assertJsonPath('data.login', 'student.card@example.test')
+            ->assertJsonPath('data.login_url', 'http://localhost/login');
+    }
+
+    public function test_only_admin_can_create_temporary_passwords(): void
+    {
+        $role = Role::create(['name' => 'Учебная часть', 'code' => 'study']);
+        $permission = Permission::create(['name' => 'Печать карточек', 'code' => 'users.credentials.print']);
+        $role->permissions()->sync([$permission->id]);
+        $target = User::factory()->create(['is_active' => true]);
+        $studyUser = $this->createApiUser(roleCode: 'study');
+        $studyUser->forceFill(['role_id' => $role->id])->save();
+        $studyUser->roles()->sync([$role->id => ['is_primary' => true]]);
+
+        $this->withApiAuth($studyUser)
+            ->postJson("/api/admin/users/{$target->id}/temporary-password")
+            ->assertForbidden();
+    }
     public function test_uat_user_seeder_creates_demo_users_outside_production(): void
     {
         Role::create(['name' => 'Администратор', 'code' => 'admin']);
