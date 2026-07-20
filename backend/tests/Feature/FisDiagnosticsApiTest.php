@@ -16,7 +16,7 @@ class FisDiagnosticsApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_diagnostics_reports_strict_stop_gate_without_official_wsdl_or_disco(): void
+    public function test_diagnostics_reports_xml_http_stop_gate_without_official_xsd(): void
     {
         $this->withApiAuth($this->userWithPermission('fis.outbound.view'));
         config([
@@ -37,11 +37,14 @@ class FisDiagnosticsApiTest extends TestCase
             ->assertJsonPath('data.stop_gate', true)
             ->assertJsonPath('data.capability_state', 'observed')
             ->assertJsonPath('data.contract.status', 'missing')
-            ->assertJsonPath('data.checks.soap.status', 'blocked')
+            ->assertJsonPath('data.protocol', 'xml_over_http')
+            ->assertJsonPath('data.checks.protocol.status', 'confirmed')
+            ->assertJsonPath('data.checks.soap.status', 'not_applicable')
+            ->assertJsonPath('data.checks.xsd.status', 'blocked')
             ->assertJsonPath('data.checks.read_only.status', 'blocked')
             ->assertJsonPath('data.production_enabled', false)
-            ->assertJsonFragment(['official_wsdl_missing'])
-            ->assertJsonFragment(['official_disco_missing']);
+            ->assertJsonFragment(['official_xsd_missing'])
+            ->assertJsonFragment(['read_only_xml_operation_unconfirmed']);
     }
 
     public function test_gateway_probe_reports_public_endpoints_and_protected_adapter_without_guessing_soap(): void
@@ -131,7 +134,7 @@ class FisDiagnosticsApiTest extends TestCase
 
         $log = FisCommunicationLog::query()->firstOrFail();
         $this->assertNull($log->soap_fault_message);
-        $this->assertSame(hash('sha256', $fault), $log->metadata['soap_fault_hash']);
+        $this->assertSame(hash('sha256', $fault), $log->metadata['xml_fault_hash']);
         $this->assertStringNotContainsString('student@example.test', $log->toJson());
         $this->assertStringNotContainsString('secret-value', $log->toJson());
     }

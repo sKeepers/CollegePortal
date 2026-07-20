@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
     [string]$ScriptsPath = (Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) '..\packaging\windows')
 )
@@ -103,7 +103,7 @@ try {
         '# comment',
         '',
         'KEY=value',
-        'URL=http://10.0.3.1:8383/api/import/ImportService.svc?x=1',
+        'URL=http://10.0.3.1:8383/api/import/importservice.svc?x=1',
         'SECRET=abc=def==',
         'EMPTY=',
         ' KEY_WITH_SPACES =value with spaces',
@@ -113,7 +113,7 @@ try {
     [IO.File]::WriteAllText($ConfigPath, ([char]0xFEFF + ($ConfigLines -join "`r`n") + "`r`n"), (New-Object Text.UTF8Encoding($false)))
     $Config = Read-GatewayConfig $ConfigPath
     if ($Config['KEY'] -ne 'value') { throw 'Read-GatewayConfig повредил простое KEY=VALUE.' }
-    if ($Config['URL'] -ne 'http://10.0.3.1:8383/api/import/ImportService.svc?x=1') { throw 'Read-GatewayConfig повредил URL со знаками =.' }
+    if ($Config['URL'] -ne 'http://10.0.3.1:8383/api/import/importservice.svc?x=1') { throw 'Read-GatewayConfig повредил URL со знаками =.' }
     if ($Config['SECRET'] -ne 'abc=def==') { throw 'Read-GatewayConfig повредил Base64/HMAC value со знаками =.' }
     if ($Config['EMPTY'] -ne '') { throw 'Read-GatewayConfig не поддержал пустое значение.' }
     if ($Config['KEY_WITH_SPACES'] -ne 'value with spaces') { throw 'Read-GatewayConfig неверно обработал пробелы вокруг ключа.' }

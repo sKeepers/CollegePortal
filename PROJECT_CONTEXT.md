@@ -1192,10 +1192,23 @@ Linux DEV has an evidence-only FIS diagnostics foundation: Portal/Gateway TCP an
 
 Snapshot 14.07.2026: Portal is available; Gateway host responds to ICMP, but TCP `192.168.34.223:8099` returns `tcp_refused`; remote evidence cannot determine Windows-service state. Direct DEV to `10.0.3.1:8383` times out. Private registry contains one XSD with SHA-256 `7158ae7d523d3b08784a29ed0cdb4ace025695e30526285ebabb3d93c093f840` and matching manifest; WSDL/DISCO are absent.
 
-No SOAP operation, binding, action or authentication method is claimed. First read-only call was not attempted. GIA-002 starts only after Gateway recovery, approved WSDL/DISCO bundle verification, authentication confirmation and one separately permitted TEST read-only call.
+No SOAP operation, binding or action is claimed. GIA-003.3 confirmed XML-over-HTTP as the official protocol. First read-only call was not attempted; it now depends on approved private XSD/spec, authentication confirmation and one separately permitted TEST XML-over-HTTP read-only call.
 
 ## EPIC-001 / GIA-002 Gateway installation package
 
 Windows Gateway восстановлен на ViPNet-ПК через feature-ветку `feature/gia-002-gateway-installation`: служба `CollegePortalGateway` запускается под `NetworkService`, порт `8099` слушает, local/Portal health работают, а TEST endpoint `10.0.3.1:8383` доступен только как TCP diagnostic. Production `:8080`, Import, Validate и Delete остаются заблокированы.
 
-GIA-002.10 устраняет последний инфраструктурный blocker версии: canonical source теперь `integrations/collegeportal-gateway/VERSION`, build генерирует `GatewayBuildVersion.g.cs` и assembly informational version, `/version` больше не зависит от `gateway.private.config`. Пакет `0.2.10-dev` развернут на ViPNet-ПК; SHA-256 `d2126aac6515861fdc844dc56afdd9f8f86db00b7fb605adf8ae504c765a1e2d`, backup `C:\CollegePortalGateway\backup\20260716-082631`, `/health`, `/version` и `/adapters` возвращают `0.2.10-dev`. Официальный WSDL/DISCO, authentication и первый read-only SOAP-вызов остаются следующим этапом GIA-003.
+GIA-002.10 устраняет последний инфраструктурный blocker версии: canonical source теперь `integrations/collegeportal-gateway/VERSION`, build генерирует `GatewayBuildVersion.g.cs` и assembly informational version, `/version` больше не зависит от `gateway.private.config`. Пакет `0.2.10-dev` развернут на ViPNet-ПК; SHA-256 `d2126aac6515861fdc844dc56afdd9f8f86db00b7fb605adf8ae504c765a1e2d`, backup `C:\CollegePortalGateway\backup\20260716-082631`, `/health`, `/version` и `/adapters` возвращают `0.2.10-dev`. Официальный SOAP/WSDL путь закрыт: поддержка ФИС подтвердила XML-over-HTTP. Следующий этап GIA-003/GIA-004 — загрузить private XSD/spec, подтвердить authentication и выполнить один read-only TEST XML-over-HTTP вызов без Import.
+## EPIC-001 / GIA-003 FIS read-only contract check
+
+GIA-003 started from `feature/gia-002-gateway-installation` in canonical worktree `C:\!Projects\CollegePortal\.worktrees\gia-003-fis-readonly`. Local .NET Framework 4.8 build environment on `SKKI-VR-01` is now valid: VS Build Tools MSBuild compiles a minimal net48 probe, Gateway build succeeds and Gateway security tests pass.
+
+ViPNet-ПК `ZamMW` is reachable by SSH key. Gateway `0.2.10-dev` responds on `/health`, `/version`, `/adapters`; FIS adapter is TEST-only and dangerous operations are disabled. TEST WSDL/XSD/DISCO metadata is downloadable from `10.0.3.1:8383`, but the published WSDL contains no binding/port/SOAPAction. GIA-003 therefore stops before SOAP implementation and before any read-only call. Next blocker: obtain official binding/action/authentication clarification for `ImportService`.
+
+## EPIC-001 / GIA-003.1 FIS metadata completeness check
+
+GIA-003.1 confirmed the reason for the SOAP stop-gate: TEST metadata endpoints on `10.0.3.1:8383` return valid XML by GET, but WSDL documents publish only operations/messages/types. `?wsdl`, `?WSDL` and `?singleWsdl` contain no binding, no port, no SOAP version, no SOAPAction and no endpoint address. DISCO points only to `?wsdl`; WSDL imports point only to `xsd0/xsd1`. No SOAP POST or read-only call was executed. A support request template was added in `docs/FIS_SUPPORT_REQUEST.md`.
+
+## GIA-003.3 FIS protocol correction
+
+FIS GIA and Admissions outbound integration now treats the official protocol as XML-over-HTTP, not SOAP. Runtime transport must use HTTP POST with XML body, TEST endpoint `http://10.0.3.1:8383/api/import/importservice.svc`, official XSD validation, no SOAP envelope and no SOAPAction. Production `:8080`, Import, Validate and Delete remain blocked for GIA-003. The first live read-only call is still stop-gated until official XSD/auth/request evidence is loaded in private storage.

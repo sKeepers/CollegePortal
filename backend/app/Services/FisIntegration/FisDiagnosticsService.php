@@ -21,18 +21,28 @@ class FisDiagnosticsService
         $gatewayProtected = $this->gatewayProtectedConfigurationReady();
         $authenticationConfirmed = (bool) config('fis_api.authentication_confirmed', false);
         $confirmedReadOnlyOperations = array_values(array_filter((array) config('fis_api.confirmed_read_only_operations', [])));
+        $configuredReadOnlyOperation = (string) config('fis_api.read_only_operation', 'GetTestDictionariesList');
         $productionDrift = (bool) config('fis_api.allow_production_send', false)
-            || config('fis_api.mode') === 'production';
+            || config('fis_api.mode') === 'production'
+            || (bool) config('fis_api.enable_mutating_operations', false);
         $checks = $infrastructure['checks'];
 
+        $checks['protocol'] = $this->state('confirmed', 'Официальная модель ФИС подтверждена как XML-over-HTTP: HTTP POST с XML body, без SOAP envelope, WSDL, binding и SOAPAction.', [
+            'protocol' => 'xml_over_http',
+            'http_method' => config('fis_api.http_method', 'POST'),
+            'content_type' => config('fis_api.content_type'),
+            'test_endpoint' => config('fis_api.test_endpoint'),
+            'soap' => 'not_used',
+        ]);
         $checks['production_guard'] = $productionDrift
-            ? $this->state('failed', 'Production configuration drift detected. Diagnostics and SOAP calls remain blocked.')
-            : $this->state('ok', 'Production mode and production send are disabled.');
-        $checks['soap'] = $this->soapState($analysis, $registry);
+            ? $this->state('failed', 'Production configuration drift detected. TEST diagnostics and XML-over-HTTP calls remain blocked.')
+            : $this->state('ok', 'Production mode, production send and mutating operations are disabled.');
+        $checks['xsd'] = $this->xsdState($registry);
+        $checks['soap'] = $this->state('not_applicable', 'WSDL/DISCO/SOAPAction не требуются: официальный ответ ФИС подтвердил XML-over-HTTP без SOAP-контракта.');
         $checks['auth'] = $this->authState($gatewayProtected, $authenticationConfirmed, $analysis);
-        $checks['dictionary'] = $confirmedReadOnlyOperations
-            ? $this->state('contract_confirmed', 'Read-only operation identifiers are configured from the approved contract.', ['operations' => $confirmedReadOnlyOperations])
-            : $this->state('blocked', 'No read-only SOAP operation is confirmed by the official contract.');
+        $checks['dictionary'] = in_array($configuredReadOnlyOperation, $confirmedReadOnlyOperations, true)
+            ? $this->state('contract_confirmed', 'Read-only XML operation is configured from the approved XSD/specification.', ['operation' => $configuredReadOnlyOperation])
+            : $this->state('blocked', 'Read-only XML operation is not confirmed by the official XSD/specification.', ['requested_operation' => $configuredReadOnlyOperation]);
 
         if ($probeGateway && $gatewayProtected && ($checks['gateway_port']['status'] ?? null) === 'ok') {
             $checks['gateway_adapter'] = $this->probe(fn () => $this->gateway->adapterHealth());
@@ -44,13 +54,13 @@ class FisDiagnosticsService
 
         $readOnlyReady = $contractVerified
             && $authenticationConfirmed
-            && $confirmedReadOnlyOperations !== []
+            && in_array($configuredReadOnlyOperation, $confirmedReadOnlyOperations, true)
             && $gatewayProtected
             && ($checks['gateway_health']['status'] ?? null) === 'ok'
             && ($checks['gateway_adapter']['status'] ?? null) === 'ok';
         $checks['read_only'] = $readOnlyReady
-            ? $this->state('ready_for_permit', 'Prerequisites are satisfied; a separate one-time permit is still required before a controlled call.')
-            : $this->state('blocked', 'The first read-only SOAP call is blocked until contract, authentication, Gateway and route evidence are confirmed.');
+            ? $this->state('ready_for_permit', 'Prerequisites are satisfied; a separate one-time permit is still required before one controlled TEST read-only XML-over-HTTP call.')
+            : $this->state('blocked', 'The first read-only TEST XML-over-HTTP call is blocked until XSD, authentication, Gateway and route evidence are confirmed.');
 
         $blockers = array_values(array_unique(array_merge(
             $infrastructure['blockers'] ?? [],
@@ -60,13 +70,14 @@ class FisDiagnosticsService
             ($checks['gateway_health']['status'] ?? null) === 'ok' ? [] : ['gateway_health_unconfirmed'],
             ($checks['gateway_adapter']['status'] ?? null) === 'ok' ? [] : ['gateway_fis_adapter_unconfirmed'],
             $authenticationConfirmed ? [] : ['fis_authentication_unknown'],
-            $confirmedReadOnlyOperations ? [] : ['read_only_operation_unconfirmed'],
+            in_array($configuredReadOnlyOperation, $confirmedReadOnlyOperations, true) ? [] : ['read_only_xml_operation_unconfirmed'],
             $readOnlyReady ? ['one_time_probe_permit_not_implemented'] : [],
         )));
 
         return [
             'checked_at' => now()->toISOString(),
             'environment' => 'test',
+            'protocol' => 'xml_over_http',
             'production_enabled' => $productionDrift,
             'capability_state' => $readOnlyReady ? 'awaiting_permit' : 'observed',
             'stop_gate' => true,
@@ -105,24 +116,21 @@ class FisDiagnosticsService
         }
     }
 
-    private function soapState(array $analysis, array $registry): array
+    private function xsdState(array $registry): array
     {
-        if (($registry['counts']['wsdl'] ?? 0) === 0) {
-            return $this->state('blocked', 'Official WSDL is absent; SOAP version, binding, port, actions and operations are unconfirmed.');
+        if (($registry['counts']['xsd'] ?? 0) === 0) {
+            return $this->state('blocked', 'Официальная XSD ФИС не загружена; XML root, namespaces, request/response и payload authentication не подтверждены.');
         }
 
         if (! ($registry['bundle']['verified'] ?? false)) {
-            return $this->state('parsed_unverified', 'Contract artifacts were parsed, but bundle integrity and approval are incomplete.', [
-                'versions' => $analysis['soap_versions'] ?? [],
-                'bindings' => count($analysis['bindings'] ?? []),
-                'operations' => count($analysis['operations'] ?? []),
+            return $this->state('parsed_unverified', 'XSD найдена, но manifest/approval incomplete; live TEST call blocked.', [
+                'xsd_count' => $registry['counts']['xsd'] ?? 0,
+                'blockers' => $registry['bundle']['blockers'] ?? [],
             ]);
         }
 
-        return $this->state('contract_verified', 'SOAP metadata is backed by the approved immutable contract bundle.', [
-            'versions' => $analysis['soap_versions'] ?? [],
-            'bindings' => count($analysis['bindings'] ?? []),
-            'operations' => count($analysis['operations'] ?? []),
+        return $this->state('contract_verified', 'Approved XSD bundle is loaded for XML-over-HTTP validation.', [
+            'xsd_count' => $registry['counts']['xsd'] ?? 0,
         ]);
     }
 
@@ -133,8 +141,8 @@ class FisDiagnosticsService
         }
 
         if (! $authenticationConfirmed) {
-            return $this->state('blocked', 'Gateway HMAC is configured, but FIS authentication is not confirmed by the official contract.', [
-                'fis_authentication' => $analysis['authentication'] ?? 'unknown',
+            return $this->state('blocked', 'Gateway HMAC is configured, but FIS XML payload/transport authentication is not confirmed by the official XSD/specification.', [
+                'fis_authentication' => $analysis['xsd']['authentication_elements'] ?? [],
             ]);
         }
 

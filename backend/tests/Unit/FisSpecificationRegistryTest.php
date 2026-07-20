@@ -23,7 +23,7 @@ class FisSpecificationRegistryTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_inventory_reports_real_xsd_hash_type_and_missing_wsdl_disco_blockers(): void
+    public function test_inventory_reports_real_xsd_hash_type_and_does_not_require_wsdl_or_disco_for_xml_http(): void
     {
         $xsd = <<<'XML'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -53,8 +53,9 @@ XML;
         $this->assertSame(hash('sha256', $xsd), $inventory['files'][0]['sha256']);
         $this->assertTrue($inventory['files'][0]['active']);
         $this->assertTrue($inventory['files'][0]['manifest_match']);
-        $this->assertContains('official_wsdl_missing', $inventory['bundle']['blockers']);
-        $this->assertContains('official_disco_missing', $inventory['bundle']['blockers']);
+        $this->assertNotContains('official_wsdl_missing', $inventory['bundle']['blockers']);
+        $this->assertNotContains('official_disco_missing', $inventory['bundle']['blockers']);
+        $this->assertContains('contract_not_approved', $inventory['bundle']['blockers']);
         $this->assertFalse($inventory['bundle']['verified']);
     }
 }

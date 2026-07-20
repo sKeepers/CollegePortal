@@ -20,7 +20,9 @@
     <Compile Include="..\src\CollegePortal.Gateway.Core\NonceStore.cs" Link="NonceStore.cs" />
     <Compile Include="..\src\CollegePortal.Gateway.Core\RateLimiter.cs" Link="RateLimiter.cs" />
     <Compile Include="..\src\CollegePortal.Gateway.Core\SecurityValidator.cs" Link="SecurityValidator.cs" />
-    <Compile Include="..\src\CollegePortal.Gateway.Adapters.Fis\FisSoapClient.cs" Link="FisSoapClient.cs" />
+    <Compile Include="..\src\CollegePortal.Gateway.Contracts\IIntegrationAdapter.cs" Link="IIntegrationAdapter.cs" />
+    <Compile Include="..\src\CollegePortal.Gateway.Adapters.Fis\FisXmlHttpClient.cs" Link="FisXmlHttpClient.cs" />
+    <Compile Include="..\src\CollegePortal.Gateway.Adapters.Fis\FisIntegrationAdapter.cs" Link="FisIntegrationAdapter.cs" />
     <Compile Include="..\src\CollegePortal.Gateway.Host\StartupDiagnostics.cs" Link="StartupDiagnostics.cs" />
     <Compile Include="GatewaySecurityTests.cs" />
   </ItemGroup>

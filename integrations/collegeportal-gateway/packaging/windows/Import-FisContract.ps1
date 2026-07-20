@@ -103,4 +103,4 @@ if ([IO.Directory]::Exists($Active)) {
 
 Write-Host "[OK] Private snapshot импортирован: $Active"
 Write-Host "SOAP 1.1 bindings: $Soap11Bindings; SOAP 1.2 bindings: $Soap12Bindings; operations: $($Operations.Count)"
-Write-Host '[STOP-GATE] Authentication и официальный статус не подтверждены. SOAP-вызовы запрещены.'
+Write-Host '[STOP-GATE] Authentication и официальный статус не подтверждены. live XML-over-HTTP вызовы запрещены.'

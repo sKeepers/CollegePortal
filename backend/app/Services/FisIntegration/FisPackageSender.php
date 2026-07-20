@@ -42,7 +42,11 @@ class FisPackageSender
 
     private function transport(): FisTransportInterface
     {
-        return config('fis_api.transport') === 'gateway' ? new GatewayFisTransport() : new SoapFisTransport();
+        return match (config('fis_api.transport')) {
+            'gateway' => new GatewayFisTransport(),
+            'soap' => new XmlHttpFisTransport(), // Deprecated alias retained for backward-compatible configuration.
+            default => new XmlHttpFisTransport(),
+        };
     }
 
     private function event(FisOutboundPackage $package, string $type, array $metadata = []): void

@@ -851,3 +851,36 @@ CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a 
 - [ ] Скачать и независимо одобрить официальный WSDL/XSD/DISCO.
 - [ ] Подтвердить authentication и read-only semantics.
 - [ ] Выполнить одну отдельно разрешенную read-only TEST попытку без ПДн.
+
+## EPIC-001 / GIA-003
+
+- [x] Создать canonical worktree `C:\!Projects\CollegePortal\.worktrees\gia-003-fis-readonly` от `feature/gia-002-gateway-installation`.
+- [x] Подтвердить локальную net48 build-среду на `SKKI-VR-01`.
+- [x] Выполнить Gateway build и Gateway security tests локально.
+- [x] Подтвердить SSH-доступ к ViPNet-ПК и работоспособность Gateway `/health`, `/version`, `/adapters`.
+- [x] Скачать TEST WSDL/XSD/DISCO только с `10.0.3.1:8383` во временный private diagnostics каталог.
+- [x] Зафиксировать SHA-256 и parser summary без добавления private XML в Git.
+- [x] Подтвердить операции `ImportService/IImportService` из WSDL.
+- [ ] Получить полный SOAP binding/port/SOAPAction contract: текущий TEST WSDL его не публикует.
+- [ ] Подтвердить authentication model по официальной спецификации.
+- [ ] Выполнить первый read-only TEST call только после подтверждения binding/action/authentication.
+
+## EPIC-001 / GIA-003.1
+
+- [x] Повторно скачать TEST metadata только GET/HEAD с `10.0.3.1:8383`.
+- [x] Зафиксировать HTTP status, final URL, Content-Type, size и SHA-256 без вывода XML.
+- [x] Построить DISCO/WSDL/XSD dependency graph.
+- [x] Подтвердить, что `?singleWsdl` не содержит binding/service port/SOAPAction.
+- [x] Подтвердить, что `?wsdl` imports ведут только на `xsd0/xsd1`, не на отдельный WSDL binding.
+- [x] Обновить parser/diagnostics для `metadata_incomplete` stop-gate.
+- [x] Подготовить письмо в техподдержку ФИС.
+- [ ] Получить полный WSDL или официальные binding/action/authentication параметры.
+- [ ] Выполнить первый read-only TEST call только после снятия binding/action/authentication stop-gate.
+
+## Актуально: GIA-003.3
+
+- [x] Зафиксировать, что ФИС ГИА и Приема использует XML-over-HTTP, а не SOAP/WSDL.
+- [x] Запретить SOAP envelope/SOAPAction в transport-level тестах.
+- [x] Оставить TEST-only endpoint `10.0.3.1:8383`; PROD `:8080` запрещен.
+- [ ] Загрузить официальный XSD/spec bundle в private storage и подтвердить SHA-256 manifest.
+- [ ] Подтвердить exact XML request/auth для `GetTestDictionariesList` перед live TEST call.

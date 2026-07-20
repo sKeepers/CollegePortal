@@ -3,26 +3,26 @@ namespace CollegePortal.Gateway
     public class FisIntegrationAdapter : IIntegrationAdapter
     {
         private readonly GatewayConfig _config;
-        private readonly FisSoapClient _soap;
+        private readonly FisXmlHttpClient _xmlHttp;
 
         public FisIntegrationAdapter(GatewayConfig config)
         {
             _config = config;
-            _soap = new FisSoapClient(config);
+            _xmlHttp = new FisXmlHttpClient(config);
         }
 
         public string Name { get { return "fis"; } }
         public string Version { get { return _config.ServiceVersion; } }
-        public GatewayPayload HealthCheck() { return _soap.ZkspdCheck(); }
+        public GatewayPayload HealthCheck() { return _xmlHttp.ZkspdCheck(); }
 
         public string GetCapabilitiesJson()
         {
             return "[{\"code\":\"zkspd_tcp_check\",\"enabled\":true},"
                 + "{\"code\":\"test_service_check\",\"enabled\":true,\"mode\":\"tcp_only\"},"
-                + "{\"code\":\"dictionaries_list\",\"enabled\":false,\"reason\":\"official_wsdl_missing\"},"
-                + "{\"code\":\"dictionaries_details\",\"enabled\":false,\"reason\":\"official_wsdl_missing\"},"
-                + "{\"code\":\"institution_info\",\"enabled\":false,\"reason\":\"official_wsdl_missing\"},"
-                + "{\"code\":\"check_application\",\"enabled\":false,\"reason\":\"official_wsdl_missing\"},"
+                + "{\"code\":\"dictionaries_list\",\"enabled\":false,\"reason\":\"official_xsd_request_not_confirmed\",\"protocol\":\"xml_over_http\"},"
+                + "{\"code\":\"dictionaries_details\",\"enabled\":false,\"reason\":\"official_xsd_request_not_confirmed\",\"protocol\":\"xml_over_http\"},"
+                + "{\"code\":\"institution_info\",\"enabled\":false,\"reason\":\"official_xsd_request_not_confirmed\",\"protocol\":\"xml_over_http\"},"
+                + "{\"code\":\"check_application\",\"enabled\":false,\"reason\":\"official_xsd_request_not_confirmed\",\"protocol\":\"xml_over_http\"},"
                 + "{\"code\":\"validate\",\"enabled\":false,\"reason\":\"official_application_xsd_missing\"},"
                 + "{\"code\":\"import\",\"enabled\":false,\"reason\":\"disabled_until_official_contract_verified\"},"
                 + "{\"code\":\"import_result\",\"enabled\":false,\"reason\":\"disabled_until_official_contract_verified\"},"
@@ -31,9 +31,9 @@ namespace CollegePortal.Gateway
 
         public GatewayPayload ExecuteReadOnly(string operation, string bodyJson)
         {
-            if (operation == "zkspd_check" || operation == "test_service_check") return _soap.ZkspdCheck();
+            if (operation == "zkspd_check" || operation == "test_service_check") return _xmlHttp.ZkspdCheck();
             return GatewayPayload.Fail("operation_disabled", 0,
-                "FIS read-only SOAP operations are disabled until the official WSDL is parsed and verified.");
+                "FIS read-only XML-over-HTTP operations are disabled until the official XSD request, authentication and response contract are verified.");
         }
 
         public GatewayPayload ExecuteCommand(string operation, string bodyJson)
