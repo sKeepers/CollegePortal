@@ -17,9 +17,12 @@ use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class DemoDataSeeder extends Seeder
 {
+    private ?string $demoPasswordHash = null;
+
     public function run(): void
     {
         $adminRole = Role::where('code', 'admin')->firstOrFail();
@@ -31,7 +34,7 @@ class DemoDataSeeder extends Seeder
             [
                 'role_id' => $adminRole->id,
                 'name' => 'Администратор системы',
-                'password' => Hash::make('password'),
+                'password' => $this->demoPasswordHash(),
                 'is_active' => true,
             ]
         );
@@ -41,7 +44,7 @@ class DemoDataSeeder extends Seeder
             [
                 'role_id' => $teacherRole->id,
                 'name' => 'Смирнова Елена Викторовна',
-                'password' => Hash::make('password'),
+                'password' => $this->demoPasswordHash(),
                 'is_active' => true,
             ]
         );
@@ -99,7 +102,7 @@ class DemoDataSeeder extends Seeder
             [
                 'role_id' => $studentRole->id,
                 'name' => 'Иванов Дмитрий Сергеевич',
-                'password' => Hash::make('password'),
+                'password' => $this->demoPasswordHash(),
                 'is_active' => true,
             ]
         );
@@ -375,5 +378,12 @@ class DemoDataSeeder extends Seeder
                 ],
             );
         }
+    }
+
+    private function demoPasswordHash(): string
+    {
+        $password = env('DEMO_DATA_PASSWORD');
+
+        return $this->demoPasswordHash ??= Hash::make(is_string($password) && $password !== '' ? $password : Str::random(64));
     }
 }

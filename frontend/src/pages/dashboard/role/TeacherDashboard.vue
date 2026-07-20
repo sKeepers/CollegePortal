@@ -13,7 +13,7 @@ import QuickActionsWidget from '../widgets/QuickActionsWidget.vue'
 import RecentActivityWidget from '../widgets/RecentActivityWidget.vue'
 import NotificationsWidget from '../widgets/NotificationsWidget.vue'
 import PersonalDashboardLayout from '../../../components/dashboard/PersonalDashboardLayout.vue'
-import { currentDateRu, extractRows, extractTotal, groupName, teacherName, todayIso } from './dashboardData'
+import { currentDateRu, extractRows, groupName, isPermissionDenied, teacherName, todayIso } from './dashboardData'
 
 const auth = useAuthStore()
 const settingsStore = useSettingsStore()
@@ -91,7 +91,9 @@ async function loadDashboard() {
   error.value = ''
 
   try {
-    const teachersPayload = await api.list('teachers', { active_only: 1 }).catch(() => ({ data: [] }))
+    const teachersPayload = auth.can('teachers.view')
+      ? await api.list('teachers', { active_only: 1 }).catch((err) => isPermissionDenied(err) ? { data: [] } : Promise.reject(err))
+      : { data: [] }
     teacher.value = findTeacher(extractRows(teachersPayload))
     const id = teacherId.value
     const today = todayIso()
@@ -118,7 +120,7 @@ async function loadDashboard() {
     })
     teacherGroups.value = Array.from(groups.values())
 
-    if ([lessonsResult, loadsResult, examsResult].some((result) => result.status === 'rejected')) {
+    if ([lessonsResult, loadsResult, examsResult].some((result) => result.status === 'rejected' && !isPermissionDenied(result.reason))) {
       error.value = 'Часть показателей преподавателя не удалось загрузить'
     }
   } finally {
