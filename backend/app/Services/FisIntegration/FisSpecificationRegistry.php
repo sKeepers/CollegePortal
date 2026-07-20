@@ -194,46 +194,20 @@ class FisSpecificationRegistry
 
     private function bundleState(array $files): array
     {
-        $wsdl = collect($files)->where('type', 'wsdl');
         $xsd = collect($files)->where('type', 'xsd');
-        $disco = collect($files)->where('type', 'disco');
         $blockers = [];
 
-        if ($wsdl->isEmpty()) {
-            $blockers[] = 'official_wsdl_missing';
-        }
         if ($xsd->isEmpty()) {
             $blockers[] = 'official_xsd_missing';
         }
-        if ($disco->isEmpty()) {
-            $blockers[] = 'official_disco_missing';
-        }
-        if ($wsdl->isNotEmpty() && ! $wsdl->contains('active', true)) {
-            $blockers[] = 'active_wsdl_missing';
-        }
         if ($xsd->isNotEmpty() && ! $xsd->contains('active', true)) {
             $blockers[] = 'active_xsd_missing';
-        }
-        if ($disco->isNotEmpty() && ! $disco->contains('active', true)) {
-            $blockers[] = 'active_disco_missing';
         }
         if (collect($files)->contains(fn (array $file): bool => ! $file['manifest_listed'] || ! $file['manifest_match'])) {
             $blockers[] = 'manifest_integrity_incomplete';
         }
         if (collect($files)->contains(fn (array $file): bool => ! $file['readable'])) {
             $blockers[] = 'contract_file_unreadable';
-        }
-        if ($wsdl->contains(fn (array $file): bool => ($file['summary']['bindings'] ?? 0) === 0)) {
-            $blockers[] = 'soap_binding_missing';
-        }
-        if ($wsdl->contains(fn (array $file): bool => ($file['summary']['ports'] ?? 0) === 0)) {
-            $blockers[] = 'soap_port_missing';
-        }
-        if ($wsdl->contains(fn (array $file): bool => ($file['summary']['operations'] ?? 0) === 0)) {
-            $blockers[] = 'soap_operations_missing';
-        }
-        if ($wsdl->contains(fn (array $file): bool => ($file['summary']['soap_actions'] ?? 0) === 0)) {
-            $blockers[] = 'soap_actions_missing';
         }
 
         $complete = $blockers === [];
@@ -248,7 +222,6 @@ class FisSpecificationRegistry
             'blockers' => array_values(array_unique($blockers)),
         ];
     }
-
     private function manifestEntry(array $manifest, string $manifestPath, string $path): ?array
     {
         if (! is_file($manifestPath)) {

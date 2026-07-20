@@ -28,7 +28,7 @@ try {
         'AllowedPortalIps=127.0.0.1',
         "SharedSecret=$Secret",
         "InstallRoot=$Temp",
-        'FisTestEndpoint=http://10.0.3.1:8383/api/import/ImportService.svc',
+        'FisTestEndpoint=http://10.0.3.1:8383/api/import/importservice.svc',
         'EnableDangerousOperations=invalid',
         'FisProductionEnabled=false'
     )

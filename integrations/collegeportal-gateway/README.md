@@ -48,6 +48,6 @@ Installer проверяет пакет до изменения системы, 
 
 ## Контракты ФИС
 
-`08-download-fis-contract.cmd` делает по одной попытке скачать WSDL/XSD/DISCO только с TEST `:8383`, проверяет HTTP/XML/SHA-256 и сохраняет их в private storage. `09-import-fis-contract.cmd` проверяет manifest и формирует private-анализ. Эти действия не подтверждают официальный статус автоматически и не разрешают SOAP-вызовы.
+`08-download-fis-contract.cmd` делает по одной попытке скачать доступные metadata/XSD только с TEST `:8383`, проверяет HTTP/XML/SHA-256 и сохраняет их в private storage. `09-import-fis-contract.cmd` проверяет manifest и формирует private-анализ. Эти действия не подтверждают официальный статус автоматически и не разрешают live XML-over-HTTP вызовы.
 
-Если служба, порт, TEST endpoint, WSDL/DISCO или authentication не подтверждены, дальнейшая работа прекращается по stop-gate.
+Если служба, порт, TEST endpoint, official XSD/spec или authentication не подтверждены, дальнейшая работа прекращается по stop-gate.

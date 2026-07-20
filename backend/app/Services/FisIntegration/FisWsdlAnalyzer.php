@@ -16,6 +16,9 @@ class FisWsdlAnalyzer
     {
         $result = [
             'status' => 'missing',
+            'protocol' => 'xml_over_http',
+            'http_method' => 'POST',
+            'soap_contract' => 'not_applicable_official_support_confirmed_xml_over_http',
             'wsdl' => $this->fileInfo($wsdlPath),
             'xsd' => $this->analyzeXsd($xsdPath),
             'disco' => $this->analyzeDisco($discoPath),
@@ -47,7 +50,7 @@ class FisWsdlAnalyzer
         ];
 
         if (! $wsdlPath || ! is_file($wsdlPath)) {
-            $result['errors'][] = 'Official FIS WSDL is not loaded.';
+            $result['status'] = ($result['xsd']['status'] ?? 'missing') === 'loaded' ? 'xsd_loaded' : 'missing';
             return $result;
         }
 

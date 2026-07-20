@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
     [string]$PackageRoot,
@@ -148,7 +148,7 @@ try {
     if ($UnexpectedIps.Count -gt 0 -or $MissingIps.Count -gt 0) {
         throw "AllowedPortalIps должен содержать только $AllowedPortalIp и loopback 127.0.0.1/::1."
     }
-    if (-not $Config.ContainsKey('FisTestEndpoint') -or $Config['FisTestEndpoint'] -ne 'http://10.0.3.1:8383/api/import/ImportService.svc') { throw 'Разрешен только подтвержденный адрес ФИС TEST :8383.' }
+    if (-not $Config.ContainsKey('FisTestEndpoint') -or $Config['FisTestEndpoint'] -ne 'http://10.0.3.1:8383/api/import/importservice.svc') { throw 'Разрешен только подтвержденный адрес ФИС TEST :8383.' }
     if ($Config['FisProductionEnabled'] -ne 'false') { throw 'FisProductionEnabled должен быть false.' }
     if ($Config['EnableDangerousOperations'] -ne 'false') { throw 'EnableDangerousOperations должен быть false.' }
 

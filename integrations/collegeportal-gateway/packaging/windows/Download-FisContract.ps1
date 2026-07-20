@@ -6,7 +6,7 @@ Set-StrictMode -Version 2
 $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $ScriptRoot 'Gateway-Common.ps1')
 
-$BaseUri = 'http://10.0.3.1:8383/api/import/ImportService.svc'
+$BaseUri = 'http://10.0.3.1:8383/api/import/importservice.svc'
 $FisRoot = Join-Path $InstallRoot 'specs\fis'
 $Stamp = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
 $Staging = Join-Path $FisRoot ('.download-' + $Stamp)
@@ -85,7 +85,7 @@ try {
     }
     [IO.Directory]::Move($Staging, $Discovered)
     Write-Host "[OK] Контракт TEST сохранен: $Discovered"
-    Write-Host '[STOP-GATE] Файлы еще не одобрены и не разрешают SOAP-вызовы.'
+    Write-Host '[STOP-GATE] Файлы еще не одобрены и не разрешают live XML-over-HTTP вызовы.'
 }
 catch {
     Write-Host ('[ОШИБКА] ' + $_.Exception.Message)

@@ -3,14 +3,14 @@ using System.Net.Sockets;
 
 namespace CollegePortal.Gateway
 {
-    public class FisSoapClient
+    public class FisXmlHttpClient
     {
         private const string AllowedTestHost = "10.0.3.1";
         private const int AllowedTestPort = 8383;
         private const string AllowedTestPath = "/api/import/importservice.svc";
         private readonly GatewayConfig _config;
 
-        public FisSoapClient(GatewayConfig config)
+        public FisXmlHttpClient(GatewayConfig config)
         {
             _config = config;
         }
@@ -25,7 +25,7 @@ namespace CollegePortal.Gateway
                 || endpoint.Port != AllowedTestPort
                 || !string.Equals(endpoint.AbsolutePath, AllowedTestPath, StringComparison.OrdinalIgnoreCase))
             {
-                return GatewayPayload.Fail("test_endpoint_not_allowed", 0, "Configured endpoint is outside the fixed FIS TEST allowlist.");
+                return GatewayPayload.Fail("test_endpoint_not_allowed", 0, "Configured endpoint is outside the fixed FIS TEST XML-over-HTTP allowlist.");
             }
 
             using (var client = new TcpClient())

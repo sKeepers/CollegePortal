@@ -6,6 +6,8 @@ use App\Models\FisOutboundPackage;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\FisIntegration\Exceptions\FisIntegrationException;
+use App\Services\FisIntegration\XmlHttpFisTransport;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -147,6 +149,98 @@ class FisOutboundApiTest extends TestCase
                 && $request->hasHeader('X-FIS-Signature')
                 && $request->hasHeader('X-FIS-Body-SHA256');
         });
+    }
+    public function test_xml_http_transport_posts_plain_xml_without_soap_headers(): void
+    {
+        config([
+            'fis_api.test_endpoint' => 'http://10.0.3.1:8383/api/import/importservice.svc',
+            'fis_api.content_type' => 'application/xml; charset=UTF-8',
+        ]);
+        Http::fake([
+            'http://10.0.3.1:8383/api/import/importservice.svc' => Http::response('<Response><PackageID>PKG-1</PackageID><Status>ok</Status></Response>', 200, ['Content-Type' => 'application/xml']),
+        ]);
+
+        $result = (new XmlHttpFisTransport())->postXml('GetTestDictionariesList', '<?xml version="1.0" encoding="UTF-8"?><GetTestDictionariesList/>', 'request-xml-1');
+
+        $this->assertTrue($result->ok);
+        $this->assertSame('PKG-1', $result->packageId);
+        $this->assertSame('fis_xml_http', $result->metadata['transport']);
+        Http::assertSent(function ($request): bool {
+            return $request->method() === 'POST'
+                && $request->url() === 'http://10.0.3.1:8383/api/import/importservice.svc'
+                && ! $request->hasHeader('SOAPAction')
+                && str_contains(implode(',', $request->header('Content-Type')), 'application/xml')
+                && ! str_contains($request->body(), 'Envelope')
+                && $request->hasHeader('X-CollegePortal-Request-Id');
+        });
+        $this->assertDatabaseHas('fis_communication_logs', [
+            'request_id' => 'request-xml-1',
+            'transport' => 'fis_xml_http',
+            'method' => 'POST XML GetTestDictionariesList',
+            'status' => 'ok',
+            'http_code' => 200,
+        ]);
+    }
+
+
+    public function test_xml_http_transport_maps_error_xml_without_storing_fault_text(): void
+    {
+        config(['fis_api.test_endpoint' => 'http://10.0.3.1:8383/api/import/importservice.svc']);
+        Http::fake([
+            'http://10.0.3.1:8383/api/import/importservice.svc' => Http::response('<Response><ErrorCode>E_TEST</ErrorCode><ErrorMessage>SENSITIVE_SAMPLE_VALUE</ErrorMessage></Response>', 200, ['Content-Type' => 'application/xml']),
+        ]);
+
+        $result = (new XmlHttpFisTransport())->postXml('GetTestDictionariesList', '<GetTestDictionariesList/>', 'request-xml-error');
+
+        $this->assertFalse($result->ok);
+        $this->assertSame('E_TEST', $result->errorCode);
+        $this->assertDatabaseHas('fis_communication_logs', [
+            'request_id' => 'request-xml-error',
+            'transport' => 'fis_xml_http',
+            'status' => 'failed',
+            'http_code' => 200,
+            'error_code' => 'E_TEST',
+        ]);
+        $serializedLogs = json_encode(\App\Models\FisCommunicationLog::query()->get()->toArray());
+        $this->assertStringNotContainsString('SENSITIVE_SAMPLE_VALUE', $serializedLogs);
+    }
+
+
+    public function test_xml_http_transport_blocks_production_endpoint_without_network_call(): void
+    {
+        config(['fis_api.test_endpoint' => 'http://10.0.3.1:8080/api/import/importservice.svc']);
+        Http::fake();
+
+        $this->expectException(FisIntegrationException::class);
+        $this->expectExceptionMessage('outside the fixed allowlist');
+
+        try {
+            (new XmlHttpFisTransport())->postXml('GetTestDictionariesList', '<GetTestDictionariesList/>', 'request-prod-blocked');
+        } finally {
+            Http::assertNothingSent();
+        }
+    }
+
+    public function test_xml_http_transport_rejects_soap_envelope_and_xxe_doctype(): void
+    {
+        config(['fis_api.test_endpoint' => 'http://10.0.3.1:8383/api/import/importservice.svc']);
+        Http::fake();
+
+        try {
+            (new XmlHttpFisTransport())->postXml('GetTestDictionariesList', '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"/>', 'request-soap-blocked');
+            $this->fail('SOAP envelope was accepted.');
+        } catch (FisIntegrationException $exception) {
+            $this->assertStringContainsString('SOAP Envelope is forbidden', $exception->getMessage());
+        }
+
+        try {
+            (new XmlHttpFisTransport())->postXml('GetTestDictionariesList', '<!DOCTYPE x [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><GetTestDictionariesList>&xxe;</GetTestDictionariesList>', 'request-xxe-blocked');
+            $this->fail('DOCTYPE was accepted.');
+        } catch (FisIntegrationException $exception) {
+            $this->assertStringContainsString('DOCTYPE is forbidden', $exception->getMessage());
+        }
+
+        Http::assertNothingSent();
     }
 
     public function test_production_is_blocked_and_permissions_are_required(): void

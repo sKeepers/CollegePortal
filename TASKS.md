@@ -876,3 +876,11 @@ CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a 
 - [x] Подготовить письмо в техподдержку ФИС.
 - [ ] Получить полный WSDL или официальные binding/action/authentication параметры.
 - [ ] Выполнить первый read-only TEST call только после снятия binding/action/authentication stop-gate.
+
+## Актуально: GIA-003.3
+
+- [x] Зафиксировать, что ФИС ГИА и Приема использует XML-over-HTTP, а не SOAP/WSDL.
+- [x] Запретить SOAP envelope/SOAPAction в transport-level тестах.
+- [x] Оставить TEST-only endpoint `10.0.3.1:8383`; PROD `:8080` запрещен.
+- [ ] Загрузить официальный XSD/spec bundle в private storage и подтвердить SHA-256 manifest.
+- [ ] Подтвердить exact XML request/auth для `GetTestDictionariesList` перед live TEST call.

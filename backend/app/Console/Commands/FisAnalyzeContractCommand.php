@@ -8,11 +8,11 @@ use Illuminate\Console\Command;
 class FisAnalyzeContractCommand extends Command
 {
     protected $signature = 'fis:analyze-contract
-        {--wsdl= : Explicit local WSDL path}
+        {--wsdl= : Optional local WSDL path for historical metadata only}
         {--xsd= : Explicit local XSD path}
-        {--disco= : Explicit local DISCO path}
+        {--disco= : Optional local DISCO path for historical metadata only}
         {--write-doc= : Write Markdown analysis to this path}';
-    protected $description = 'Parse the locally loaded official FIS WSDL/XSD/DISCO without network calls.';
+    protected $description = 'Parse locally loaded official FIS XML-over-HTTP XSD metadata without network calls.';
 
     public function handle(FisSpecificationRegistry $registry): int
     {
@@ -34,7 +34,7 @@ class FisAnalyzeContractCommand extends Command
             $this->info('Analysis written to '.$absolutePath);
         }
 
-        return ($analysis['status'] ?? 'missing') === 'loaded' ? self::SUCCESS : self::FAILURE;
+        return in_array(($analysis['status'] ?? 'missing'), ['loaded', 'xsd_loaded'], true) ? self::SUCCESS : self::FAILURE;
     }
 
     private function absolutePath(string $path): string
@@ -47,9 +47,9 @@ class FisAnalyzeContractCommand extends Command
     private function markdown(array $analysis): string
     {
         $lines = [
-            '# Анализ WSDL ФИС ГИА и Приема',
+            '# Анализ XML-over-HTTP контракта ФИС ГИА и Приема',
             '',
-            '> Сформировано автоматически командой `php artisan fis:analyze-contract` с явно указанными локальными путями к доступным официальным артефактам.',
+            '> Сформировано автоматически командой `php artisan fis:analyze-contract` с локальными официальными артефактами. Официальная модель передачи: HTTP POST с XML body, без SOAP envelope/SOAPAction.',
             '',
             'Дата анализа: '.now()->format('d.m.Y H:i:s T'),
             '',
@@ -57,10 +57,10 @@ class FisAnalyzeContractCommand extends Command
             '',
         ];
 
-        if (($analysis['status'] ?? null) !== 'loaded') {
-            $lines[] = 'Официальный WSDL не загружен. SOAP version, binding, actions, методы, request/response и faults не подтверждены. Import и read-only SOAP-вызовы запрещены.';
+        if (($analysis['xsd']['status'] ?? null) !== 'loaded') {
+            $lines[] = 'Официальная XSD не загружена. XML root, namespaces, request/response, payload authentication и read-only метод не подтверждены. Live TEST вызов запрещен.';
         } else {
-            $lines[] = 'WSDL загружен и разобран локально с запретом сетевых XML-ресурсов (`LIBXML_NONET`).';
+            $lines[] = 'XSD загружена и разобрана локально с запретом сетевых XML-ресурсов (`LIBXML_NONET`). WSDL/DISCO не являются обязательными для официальной XML-over-HTTP модели.';
         }
 
         $lines = array_merge($lines, [
@@ -69,43 +69,27 @@ class FisAnalyzeContractCommand extends Command
             '',
             '| Артефакт | Статус | SHA-256 |',
             '|---|---|---|',
-            '| WSDL | '.($analysis['wsdl']['status'] ?? 'missing').' | '.($analysis['wsdl']['sha256'] ?? '—').' |',
             '| XSD | '.($analysis['xsd']['status'] ?? 'missing').' | '.($analysis['xsd']['sha256'] ?? '—').' |',
+            '| WSDL | '.($analysis['wsdl']['status'] ?? 'missing').' | '.($analysis['wsdl']['sha256'] ?? '—').' |',
             '| DISCO | '.($analysis['disco']['status'] ?? 'missing').' | '.($analysis['disco']['sha256'] ?? '—').' |',
             '',
             '## Контракт',
             '',
-            '- Target namespace: `'.($analysis['target_namespace'] ?? 'не определен').'`',
-            '- SOAP versions: `'.(implode(', ', $analysis['soap_versions'] ?? []) ?: 'не определены').'`',
-            '- Authentication: `'.($analysis['authentication'] ?? 'unknown').'`',
-            '- Bindings: '.count($analysis['bindings'] ?? []),
-            '- Services: '.count($analysis['services'] ?? []),
-            '- Operations: '.count($analysis['operations'] ?? []),
+            '- Protocol: `xml_over_http`',
+            '- HTTP method: `POST`',
+            '- SOAP: `not used`',
+            '- XSD target namespace: `'.($analysis['xsd']['target_namespace'] ?? 'не определен').'`',
+            '- XSD root elements: `'.(implode('`, `', $analysis['xsd']['root_elements'] ?? []) ?: 'не определены').'`',
+            '- Payload AuthData elements: `'.(implode('`, `', $analysis['xsd']['authentication_elements'] ?? []) ?: 'не определены').'`',
             '',
-            '## Методы',
+            '## Read-only метод',
             '',
-            '| Method | Request | Response | SOAP Action | Faults |',
-            '|---|---|---|---|---|',
+            'До подтверждения официальной XSD/инструкции метод `GetTestDictionariesList` считается кандидатом, а не разрешением на live-вызов.',
+            '',
+            '## Legacy SOAP metadata',
+            '',
+            'Если WSDL/DISCO загружены как исторические артефакты, они разбираются только для инвентаризации. SOAP binding, service/port и SOAPAction не используются runtime-транспортом CollegePortal.',
         ]);
-
-        foreach ($analysis['operations'] ?? [] as $operation) {
-            $actions = collect($operation['bindings'] ?? [])->pluck('soap_action')->filter()->implode(', ');
-            $faults = collect($operation['faults'] ?? [])->pluck('name')->filter()->implode(', ');
-            $lines[] = '| '.$operation['name'].' | '.($operation['input_message'] ?: '—').' | '.($operation['output_message'] ?: '—').' | '.($actions ?: '—').' | '.($faults ?: '—').' |';
-        }
-
-        if (! ($analysis['operations'] ?? [])) {
-            $lines[] = '| — | — | — | — | Ожидается официальный WSDL |';
-        }
-
-        $lines[] = '';
-        $lines[] = '## Подтвержденная XSD';
-        $lines[] = '';
-        $lines[] = '- Target namespace: `'.($analysis['xsd']['target_namespace'] ?? 'отсутствует').'`';
-        $lines[] = '- Root elements: `'.(implode('`, `', $analysis['xsd']['root_elements'] ?? []) ?: 'не определены').'`';
-        $lines[] = '- Payload AuthData elements: `'.(implode('`, `', $analysis['xsd']['authentication_elements'] ?? []) ?: 'не определены').'`';
-        $lines[] = '';
-        $lines[] = 'XSD подтверждает payload-level `AuthData`, но не определяет HTTP/SOAP transport authentication. SOAP envelope, action, binding и transport берутся только из официального WSDL/DISCO.';
 
         return implode(PHP_EOL, $lines).PHP_EOL;
     }

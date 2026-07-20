@@ -14,6 +14,8 @@ class FisCommunicationLogger
         'operation',
         'endpoint_class',
         'soap_fault_hash',
+        'xml_fault_hash',
+        'protocol',
     ];
 
     public function record(array $entry): void
@@ -29,7 +31,7 @@ class FisCommunicationLogger
                 'occurred_at' => $entry['occurred_at'] ?? now(),
                 'request_id' => $entry['request_id'] ?? null,
                 'direction' => 'outbound',
-                'transport' => 'collegeportal_gateway',
+                'transport' => (string) (['transport'] ?? 'collegeportal_gateway'),
                 'method' => (string) ($entry['method'] ?? 'unknown'),
                 'duration_ms' => $entry['duration_ms'] ?? null,
                 'status' => (string) ($entry['status'] ?? 'failed'),

@@ -10,7 +10,7 @@ namespace CollegePortal.Gateway
         public string BindPrefix = "http://+:8099/";
         public string[] AllowedPortalIps = new string[0];
         public string SharedSecret = "";
-        public string FisTestEndpoint = "http://10.0.3.1:8383/api/import/ImportService.svc";
+        public string FisTestEndpoint = "http://10.0.3.1:8383/api/import/importservice.svc";
         public bool EnableDangerousOperations = false;
         public bool FisProductionEnabled = false;
         public int MaxBodyBytes = 1048576;

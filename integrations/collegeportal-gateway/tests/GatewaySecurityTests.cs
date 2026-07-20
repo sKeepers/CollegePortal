@@ -18,6 +18,7 @@ namespace CollegePortal.Gateway.Tests
                 InvalidHmacDoesNotConsumeNonce(root);
                 ExpiredTimestampIsRejected(root);
                 ProductionEndpointIsRejectedWithoutNetworkCall();
+                FisCapabilitiesUseXmlHttpStopGate();
                 StartupDiagnosticsClassifiesKnownFailures();
                 StartupDiagnosticsRedactsRegisteredSecret();
                 Console.WriteLine("[OK] Gateway security tests passed.");
@@ -63,11 +64,18 @@ namespace CollegePortal.Gateway.Tests
 
         private static void ProductionEndpointIsRejectedWithoutNetworkCall()
         {
-            var config = new GatewayConfig { FisTestEndpoint = "http://10.0.3.1:8080/api/import/ImportService.svc" };
-            var result = new FisSoapClient(config).ZkspdCheck();
+            var config = new GatewayConfig { FisTestEndpoint = "http://10.0.3.1:8080/api/import/importservice.svc" };
+            var result = new FisXmlHttpClient(config).ZkspdCheck();
             Assert(!result.Ok && result.Code == "test_endpoint_not_allowed", "Production FIS endpoint was not rejected.");
         }
 
+        private static void FisCapabilitiesUseXmlHttpStopGate()
+        {
+            var json = new FisIntegrationAdapter(new GatewayConfig()).GetCapabilitiesJson();
+            Assert(json.Contains("xml_over_http"), "FIS capabilities do not expose XML-over-HTTP protocol.");
+            Assert(!json.Contains("official_wsdl_missing"), "FIS capabilities still wait for a WSDL that the official protocol does not use.");
+            Assert(!json.Contains("SOAP"), "FIS capabilities still expose SOAP wording.");
+        }
         private static void StartupDiagnosticsClassifiesKnownFailures()
         {
             Assert(StartupDiagnostics.Classify(new PlatformNotSupportedException()) == "UNSUPPORTED_RUNTIME",
