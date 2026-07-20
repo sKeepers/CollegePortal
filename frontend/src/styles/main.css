@@ -6421,3 +6421,12 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+.cp-demo-banner {
+  background: #fff7ed;
+  color: #9a3412;
+  border-bottom: 1px solid #fed7aa;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0;
+}

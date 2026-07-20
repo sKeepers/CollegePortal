@@ -13,6 +13,7 @@ use App\Models\DigitalIdentity;
 use App\Models\Grade;
 use App\Models\ScheduleLesson;
 use App\Services\QrSvgService;
+use App\Services\SettingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -107,6 +108,13 @@ class MobileStudentController extends Controller
 
     private function mockNotifications(): array
     {
+        if (SettingService::value('demo', 'mode_enabled', false)) {
+            $notifications = SettingService::value('demo', 'notifications', []);
+            if (is_array($notifications) && $notifications !== []) {
+                return $notifications;
+            }
+        }
+
         return [
             ['id' => 1, 'title' => 'Напоминание', 'text' => 'Проверьте расписание занятий на сегодня.', 'tone' => 'info'],
             ['id' => 2, 'title' => 'Учебная часть', 'text' => 'Уведомления будут подключены на следующем этапе.', 'tone' => 'neutral'],

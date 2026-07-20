@@ -2,15 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Curriculum;
-use App\Models\CurriculumItem;
-use App\Models\EducationProgram;
-use App\Models\Specialty;
 use App\Models\Group;
 use App\Models\Role;
 use App\Models\Student;
-use App\Models\Subject;
-use App\Models\Teacher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
@@ -135,51 +129,56 @@ class UatImprovementsApiTest extends TestCase
         Role::query()->firstOrCreate(['code' => 'teacher'], ['name' => 'Teacher']);
         Role::query()->firstOrCreate(['code' => 'student'], ['name' => 'Student']);
 
-        $this->postJson('/api/admin/demo-data/create')
+        $response = $this->postJson('/api/admin/demo-data/create')
             ->assertOk()
-            ->assertJsonPath('message', 'Демо-данные созданы или обновлены.');
+            ->assertJsonPath('message', 'Демонстрационная база создана или обновлена.');
 
-        $this->assertDatabaseHas('students', ['email' => 'student@college-portal.local']);
-        $this->assertDatabaseHas('teachers', ['email' => 'teacher@college-portal.local']);
+        $this->assertSame(600, $response->json('data.students'));
+        $this->assertSame(70, $response->json('data.teachers'));
+        $this->assertSame(30, $response->json('data.groups'));
+        $this->assertTrue($response->json('data.demo_mode'));
 
-        $this->postJson('/api/admin/demo-data/clear')
+        $this->assertDatabaseHas('students', [
+            'email' => 'student0001@demo.college-portal.local',
+            'snils' => null,
+        ]);
+        $this->assertDatabaseHas('teachers', [
+            'email' => 'teacher001@demo.college-portal.local',
+            'snils' => null,
+        ]);
+
+        $clearResponse = $this->postJson('/api/admin/demo-data/clear')
             ->assertOk()
-            ->assertJsonPath('message', 'Демо-данные очищены. Администратор не удаляется.');
+            ->assertJsonPath('message', 'Демонстрационные данные очищены.');
 
-        $this->assertDatabaseMissing('students', ['email' => 'student@college-portal.local']);
-        $this->assertDatabaseMissing('teachers', ['email' => 'teacher@college-portal.local']);
+        $this->assertSame(0, $clearResponse->json('data.summary.students'));
+        $this->assertSame(0, $clearResponse->json('data.summary.teachers'));
+        $this->assertSame(0, $clearResponse->json('data.summary.groups'));
+        $this->assertFalse($clearResponse->json('data.summary.demo_mode'));
+        $this->assertDatabaseMissing('students', ['email' => 'student0001@demo.college-portal.local']);
+        $this->assertDatabaseMissing('teachers', ['email' => 'teacher001@demo.college-portal.local']);
     }
 
 
 
-    public function test_demo_data_clear_skips_referenced_demo_subjects(): void
+    public function test_demo_data_reset_removes_generated_demo_curriculum_records(): void
     {
         Role::query()->firstOrCreate(['code' => 'teacher'], ['name' => 'Teacher']);
         Role::query()->firstOrCreate(['code' => 'student'], ['name' => 'Student']);
 
         $this->postJson('/api/admin/demo-data/create')->assertOk();
 
-        $subject = Subject::query()->where('code', 'MUS-101')->firstOrFail();
-        $program = EducationProgram::query()->firstOrFail();
-        $curriculum = Curriculum::create([
-            'education_program_id' => $program->id,
-            'name' => 'Тестовый учебный план',
-            'year_start' => 2026,
-            'status' => 'draft',
-        ]);
-        CurriculumItem::create([
-            'curriculum_id' => $curriculum->id,
-            'subject_id' => $subject->id,
-            'course' => 1,
-            'semester' => 1,
-            'hours_total' => 72,
-        ]);
+        $this->assertDatabaseHas('subjects', ['code' => 'DEMO-SUBJ-01']);
+        $this->assertDatabaseHas('curricula', ['code' => 'DEMO-CUR-01']);
+        $this->assertDatabaseHas('curriculum_subjects', ['semester' => 1]);
 
         $this->postJson('/api/admin/demo-data/clear')
             ->assertOk()
-            ->assertJsonPath('data.skipped.subjects', 1);
+            ->assertJsonPath('data.summary.subjects', 0)
+            ->assertJsonPath('data.summary.curricula', 0);
 
-        $this->assertDatabaseHas('subjects', ['id' => $subject->id]);
+        $this->assertDatabaseMissing('subjects', ['code' => 'DEMO-SUBJ-01']);
+        $this->assertDatabaseMissing('curricula', ['code' => 'DEMO-CUR-01']);
     }
 
     public function test_demo_data_clear_is_forbidden_in_production(): void

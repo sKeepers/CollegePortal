@@ -148,6 +148,8 @@ const visibleNavGroups = computed(() =>
 const pageTitle = computed(() => route.meta.title || 'CollegePortal')
 const collegeShortName = computed(() => settingsStore.publicValue('general', 'college_short_name', 'Колледж искусств'))
 const collegeFullName = computed(() => settingsStore.publicValue('general', 'college_full_name', 'Рабочее место колледжа'))
+const demoModeEnabled = computed(() => settingsStore.publicValue('demo', 'mode_enabled', false) === true)
+const demoBannerText = computed(() => settingsStore.publicValue('demo', 'banner_text', 'Демонстрационный режим'))
 const logoPath = computed(() => settingsStore.publicValue('branding', 'logo_path', '/brand/logo-skki-bw.jpg'))
 const layoutStyle = computed(() => ({
   '--cp-sidebar-width': `${workspace.sidebarWidth}px`,
@@ -228,6 +230,10 @@ watch(
         </q-btn-dropdown>
       </q-toolbar>
     </q-header>
+
+    <q-banner v-if="demoModeEnabled" dense class="cp-demo-banner">
+      {{ demoBannerText }}
+    </q-banner>
 
     <q-drawer
       v-model="drawerOpen"

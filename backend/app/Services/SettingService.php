@@ -51,6 +51,12 @@ class SettingService
                 'frdo_mode' => ['value' => 'preparation', 'type' => 'string', 'is_public' => false, 'label' => 'Режим ФРДО', 'description' => 'Пока используется подготовка данных без реальной отправки.'],
                 'fis_mode' => ['value' => 'preparation', 'type' => 'string', 'is_public' => false, 'label' => 'Режим ФИС', 'description' => 'Пока используется подготовка данных без реальной отправки.'],
             ],
+            'demo' => [
+                'mode_enabled' => ['value' => false, 'type' => 'boolean', 'is_public' => true, 'label' => 'Демонстрационный режим', 'description' => 'Показывает баннер и включает синтетические уведомления DEV-стенда.'],
+                'banner_text' => ['value' => 'Демонстрационный режим', 'type' => 'string', 'is_public' => true, 'label' => 'Текст баннера', 'description' => 'Отображается в верхней части интерфейса.'],
+                'portal_url' => ['value' => 'https://192.168.34.104:5443', 'type' => 'url', 'is_public' => true, 'label' => 'Адрес DEV-портала', 'description' => 'Используется в демонстрационных инструкциях.'],
+                'notifications' => ['value' => [], 'type' => 'json', 'is_public' => true, 'label' => 'Демо-уведомления', 'description' => 'Синтетические уведомления мобильного кабинета.'],
+            ],
             'branding' => [
                 'logo_path' => ['value' => '/brand/logo-skki-bw.jpg', 'type' => 'path', 'is_public' => true, 'label' => 'Путь к логотипу', 'description' => 'Публичный путь к логотипу интерфейса.'],
                 'favicon_path' => ['value' => '/favicon.ico', 'type' => 'path', 'is_public' => true, 'label' => 'Путь к favicon', 'description' => 'Публичный путь к favicon.'],
@@ -203,6 +209,7 @@ class SettingService
         return match ($type) {
             'integer' => $value === null || $value === '' ? null : (int) $value,
             'boolean' => filter_var($value, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) ?? false,
+            'json' => is_array($value) ? $value : (json_decode((string) $value, true) ?: []),
             default => $value === null ? '' : (string) $value,
         };
     }

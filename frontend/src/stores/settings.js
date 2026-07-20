@@ -11,9 +11,10 @@ const groupLabels = {
   identity: 'Идентификация',
   integrations: 'Интеграции',
   branding: 'Брендинг',
+  demo: 'Демо',
 }
 
-const groupOrder = ['general', 'academic', 'attendance', 'admissions', 'graduation', 'identity', 'integrations', 'branding']
+const groupOrder = ['general', 'academic', 'attendance', 'admissions', 'graduation', 'identity', 'integrations', 'branding', 'demo']
 
 async function putSettings(payload) {
   const response = await fetch(`${api.baseUrl}/admin/settings`, {

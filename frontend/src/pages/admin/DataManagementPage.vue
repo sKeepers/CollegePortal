@@ -25,6 +25,12 @@ const summaryLabels = {
   teachers: 'Преподаватели',
   subjects: 'Дисциплины',
   classrooms: 'Аудитории',
+  departments: 'Отделения',
+  specialties: 'Специальности',
+  curricula: 'Учебные планы',
+  schedule_lessons: 'Занятия расписания',
+  journal_lessons: 'Журнал занятий',
+  access_events: 'События проходной',
   applicant_applications: 'Заявления',
 }
 
@@ -59,7 +65,7 @@ onMounted(store.load)
           </div>
           <q-banner v-if="store.isProduction" rounded class="data-management-warning">Очистка демо-данных недоступна в production.</q-banner>
           <q-banner v-if="store.lastMessage" rounded class="data-management-info">{{ store.lastMessage }}</q-banner>
-          <q-banner v-if="store.lastClearResult?.skipped" rounded class="data-management-warning">Часть записей оставлена, потому что уже используется в учебных планах, нагрузке или экзаменах. Пропущено: студентов {{ store.lastClearResult.skipped.students || 0 }}, групп {{ store.lastClearResult.skipped.groups || 0 }}, преподавателей {{ store.lastClearResult.skipped.teachers || 0 }}, дисциплин {{ store.lastClearResult.skipped.subjects || 0 }}.</q-banner>
+          <q-banner v-if="store.lastClearResult?.deleted" rounded class="data-management-info">Удален синтетический DEMO-набор. Рабочие и продуктивные данные не затрагиваются.</q-banner>
         </AppCard>
       </section>
 
@@ -76,6 +82,6 @@ onMounted(store.load)
       </aside>
     </div>
 
-    <AppConfirmDialog v-model="clearDialog" title="Очистить демо-данные?" message="Будут удалены только известные тестовые записи DemoDataSeeder. Связанные записи будут пропущены, чтобы не повредить учебные планы, нагрузку и экзамены. В production операция запрещена." confirm-label="Очистить" tone="negative" @confirm="clearDemoData" />
+    <AppConfirmDialog v-model="clearDialog" title="Очистить демо-данные?" message="Будут удалены только синтетические записи с DEMO-префиксами и доменом demo.college-portal.local. В production операция запрещена." confirm-label="Очистить" tone="negative" @confirm="clearDemoData" />
   </AppPage>
 </template>
