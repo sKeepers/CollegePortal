@@ -231,7 +231,7 @@ class AdminUserApiTest extends TestCase
             ->assertOk()
             ->assertJsonMissingPath('data.temporary_password')
             ->assertJsonPath('data.login', 'student.card@example.test')
-            ->assertJsonPath('data.login_url', 'http://localhost/login');
+            ->assertJsonPath('data.login_url', url('/login'));
     }
 
     public function test_only_admin_can_create_temporary_passwords(): void
