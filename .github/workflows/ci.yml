@@ -140,15 +140,18 @@ jobs:
         shell: pwsh
         run: |
           $adapter = Get-Content 'src/CollegePortal.Gateway.Adapters.Fis/FisIntegrationAdapter.cs' -Raw
-          $client = Get-Content 'src/CollegePortal.Gateway.Adapters.Fis/FisSoapClient.cs' -Raw
-          if ($adapter -notmatch 'official_wsdl_missing') {
-            throw 'FIS read-only operations must remain disabled without the official WSDL.'
+          $client = Get-Content 'src/CollegePortal.Gateway.Adapters.Fis/FisXmlHttpClient.cs' -Raw
+          if ($adapter -notmatch 'official_xsd_request_not_confirmed' -or $adapter -notmatch 'xml_over_http') {
+            throw 'FIS read-only XML-over-HTTP operations must remain disabled until XSD request/auth are confirmed.'
+          }
+          if ($adapter -match 'official_wsdl_missing') {
+            throw 'FIS Gateway still uses the deprecated WSDL stop-gate.'
           }
           if ($adapter -notmatch 'production_disabled') {
             throw 'FIS production stop-gate is missing.'
           }
-          if ($client -match 'tempuri\.org' -or $client -match 'HttpWebRequest' -or $client -match 'GetResponse\(') {
-            throw 'Gateway contains a guessed SOAP contract or an HTTP request before contract approval.'
+          if ($client -match 'tempuri\.org' -or $client -match 'SOAPAction' -or $client -match 'GetResponse\(') {
+            throw 'Gateway contains a guessed SOAP contract or a SOAP transport artifact.'
           }
           if ($client -notmatch 'AllowedTestHost = "10\.0\.3\.1"' -or $client -notmatch 'AllowedTestPort = 8383') {
             throw 'Gateway FIS TEST endpoint allowlist is missing.'
