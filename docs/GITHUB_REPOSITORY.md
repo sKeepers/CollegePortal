@@ -10,6 +10,9 @@ Task: GITHUB-001.
 - Primary branches: `main`, `develop`
 - Development branch: `develop`
 
+## Canonical Workflow Scope
+
+This is the canonical document for GitHub repository workflow: branches, Issues, Draft PRs, CI checks, review and merge expectations. Release artifact creation is documented separately in `docs/RELEASE_PROCESS.md`; environment inventory is documented in `docs/ENVIRONMENTS.md`.
 ## Safety Rules
 
 Do not push or attach:

@@ -53,13 +53,13 @@ HTTPS uses a local self-signed certificate with `CN=192.168.34.17`. This is acce
 Admin email:
 
 ```text
-admin@college-portal.local
+<LOGIN>
 ```
 
 Admin password is not stored in Git or this document. On the UAT server it is stored only in:
 
 ```text
-/home/andale/college-portal-release/admin_credentials.txt
+<PRIVATE_ADMIN_CREDENTIALS_FILE>
 ```
 
 The file must remain `0600`. Rotate the admin password before any wider pilot.
@@ -91,7 +91,7 @@ The file must remain `0600`. Rotate the admin password before any wider pilot.
 ## Defects Found And Fixed
 
 1. Docker package name mismatch on Ubuntu 24.04: `docker-compose-plugin` was unavailable, while `docker-compose-v2` was available. `install.sh` now supports package fallbacks.
-2. Generated PostgreSQL password was written only to `POSTGRES_PASSWORD`; backend `DB_PASSWORD` remained `change-me`. `install.sh` now updates both.
+2. Generated PostgreSQL password was written only to `POSTGRES_PASSWORD`; backend `DB_PASSWORD` retained the placeholder value `<SECRET>` before the installer fix. `install.sh` now updates both.
 3. Release backend missed PHP Redis extension. `backend/Dockerfile.release` now installs and enables `redis`.
 4. Nginx routed `/health` and `/api` to frontend, causing 404. Release nginx config now routes these paths to PHP-FPM.
 5. Release archive contained stale `frontend/public/version.json`. Release builder now writes version metadata into the archive.

@@ -8,11 +8,11 @@
 
 Рабочий проект считается PROD.
 
-- PROD path: `/home/andale/college_portal`
+- PROD path: see canonical environment inventory in `docs/ENVIRONMENTS.md`.
 - DEV path: `/srv/college-dev`
 - Плановый будущий PROD path: `/srv/college-prod`
 
-PROD пока не перенесен в `/srv/college-prod`, потому что текущий рабочий стенд уже запущен из `/home/andale/college_portal`. Перенос PROD нужно делать отдельным этапом с проверкой downtime, backup и rollback-планом.
+PROD details are intentionally not duplicated here. Use `docs/ENVIRONMENTS.md` as the canonical inventory; any PROD migration requires a separate task with downtime, backup and rollback review.
 
 ## Порты
 
@@ -46,7 +46,7 @@ DEV не использует PROD-базу. В `/srv/college-dev/.env` указ
 ```env
 POSTGRES_DB=college_portal_dev
 POSTGRES_USER=college_dev_user
-POSTGRES_PASSWORD=college_dev_password
+POSTGRES_PASSWORD=<SECRET>
 POSTGRES_PORT=5433
 
 HTTP_PORT=8001

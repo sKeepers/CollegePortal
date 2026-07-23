@@ -91,22 +91,16 @@ Frontend:
 - Ubuntu Server 24.04;
 - Hyper-V VM для текущего стенда.
 
-Текущие окружения:
+Текущие окружения описаны в каноническом документе `docs/ENVIRONMENTS.md`.
 
-- DEV: `/srv/college-dev`, frontend `http://192.168.34.104:5174`, API `http://192.168.34.104:8001/api`, PostgreSQL `5433`;
-- PROD: `/home/andale/college_portal`, frontend `http://192.168.34.104:5173`, API `http://192.168.34.104:8080/api`, PostgreSQL `5432`;
+Кратко:
+
+- Linux DEV: `/srv/college-dev`;
 - Windows development: `C:\!Projects\CollegePortal`; дополнительные worktree только внутри `C:\!Projects\CollegePortal\.worktrees\<branch>`;
-- тестовый администратор: `admin@college-portal.local` / `password`.
+- UAT и PROD не изменяются без отдельной задачи и явного подтверждения;
+- устаревшие Windows-копии проекта с нижним регистром в имени каталога запрещены политикой `docs/PATH_POLICY.md`.
 
-Окружения на Ubuntu:
-
-- PROD: `/home/andale/college_portal`, порты `5173` / `8080` / `5432`;
-- DEV: `/srv/college-dev`, порты `5174` / `8001` / `5433`;
-- DEV использует отдельные контейнеры `college_dev_*` и отдельную базу `college_portal_dev`;
-- инструкция по запуску, остановке, build и логам описана в `docs/DEV_ENVIRONMENT.md`.
-- безопасный процесс переноса DEV -> PROD описан в `docs/DEPLOYMENT.md`; реальные изменения PROD требуют отдельного подтверждения.
-- Git workflow для DEV/PROD описан в `docs/GIT_WORKFLOW.md`; INFRA-004 инициализирует Git в `/srv/college-dev` на ветке `develop` без remote и без секретов/runtime-файлов.
-- Политика рабочих путей INFRA-PATHS-001 запрещает устаревшие Windows-копии проекта с нижним регистром в имени каталога, внешние worktree рядом с проектом и временные каталоги старой копии.
+Пароли, временные credentials и содержимое `.env` не фиксируются в документации. Для тестовых входов используйте DEV-only helper или placeholders вида `<LOGIN>` и `<TEMPORARY_PASSWORD>`.
 
 ## Структура каталогов
 
@@ -126,10 +120,10 @@ Frontend:
 - `docs/DESIGN_SYSTEM.md` — единая дизайн-система CollegePortal: логотип, цвета, типографика, компоненты и адаптивность.
 - `docs/WORKSPACE_GUIDELINES.md` — правила единой правой Workspace-панели: hero, KPI, быстрые действия и дополнительные сведения.
 - ролевые Dashboard Phase 1 описаны в `docs/ROLE_DASHBOARDS.md`: admin/director получают административную сводку, teacher — преподавательскую, остальные роли — общий Dashboard.
-- `docs/PRODUCT_VISION.md` — продуктовая цель, пользователи, границы MVP и критерии успеха CollegePortal.
-- `docs/PHILOSOPHY.md` — принципы развития системы, рабочего интерфейса, данных и безопасности.
+- `VISION.md` — продуктовая миссия, пользователи, процессы и целевое состояние CollegePortal 1.0.
+- `GOVERNANCE.md`, `docs/ARCHITECTURE_DECISIONS.md` и `docs/PATH_POLICY.md` — проектные принципы, архитектурные решения, рабочие ограничения и политика путей.
 - `docs/ARCHITECTURE_DECISIONS.md` — зафиксированные архитектурные решения, включая выбор frontend UI-платформы.
-- `docs/ACCESS_CONTROL_CONCEPT.md` — концепция Person, Digital Identity, QR-пропусков и будущего модуля присутствия.
+- `docs/IDENTITY_DOMAIN.md`, `docs/DIGITAL_PASSES.md` и `docs/ACCESS_GATE.md` — концепция Person, Digital Identity, QR-пропусков, проходной и событий доступа.
 - `docs/IDENTITY_DOMAIN.md` — архитектура Identity Domain: Person, Digital Identity, роли, учетные данные, QR/Mobile Pass, Access Control, Authentication и Authorization.
 - `docs/DIGITAL_PASSES.md` — MVP цифровых QR-пропусков: таблица `digital_identities`, API, SVG QR и правила безопасности token.
 - `docs/FRDO.md` — MVP подготовки данных ФРДО без реальной отправки: проверки полноты, выгрузка и будущая интеграция.
@@ -224,13 +218,13 @@ CollegePortal Platform рассматривается как набор связ
 - выпуск и отзыв цифровых пропусков через существующую авторизацию.
 
 
-Архитектурная концепция будущего модуля описана в `docs/ACCESS_CONTROL_CONCEPT.md`.
+Актуальные источники по Identity и Access Control:
 
-ARCH-001: Identity Domain Architecture зафиксировал отдельный домен `Identity`. Он станет основой для `Person`, `Digital Identity`, QR-пропусков, мобильного кабинета, авторизации, проходной, будущих RFID/NFC и Face ID. Документ находится в `docs/IDENTITY_DOMAIN.md`.
+- `docs/IDENTITY_DOMAIN.md` — доменная модель Person, Digital Identity, QR/Mobile Pass, Access Control, Authentication и Authorization;
+- `docs/DIGITAL_PASSES.md` — реализованный MVP цифровых QR-пропусков и правила безопасности token;
+- `docs/ACCESS_GATE.md` — проходная, HID/mobile scanner, access events и ограничения текущего этапа.
 
-Ключевая идея: в будущем ввести центральную сущность `Person`, которая объединит физическое лицо и его роли: `Student`, `Teacher`, `Employee`, `Applicant`, `Guest`, `Alumni`. Поверх `Person` планируется `Digital Identity`: QR-код, мобильный QR, печатный QR, фото, срок действия и статус.
-
-Эта концепция нужна для будущего модуля “Присутствие и доступ”: проходная, вход/выход, USB QR-сканер как HID-клавиатура, отчеты по студентам, преподавателям, сотрудникам и гостям. На текущем этапе это только архитектурная проработка: backend, frontend, БД и API не изменены.
+Статус: Person foundation и Digital Identity реализованы частично; QR-related foundation реализован частично; Access Control находится в активной feature-ветке и требует аппаратного smoke-test HID/mobile scanner и отдельного production deployment. Документы не должны трактовать этот контур как одновременно полностью будущий и полностью завершенный.
 
 ### Backend-подход
 
@@ -723,20 +717,17 @@ Responsive Workspace Foundation описан в `docs/RESPONSIVE_WORKSPACE.md`:
 
 ## Текущие задачи
 
-Актуальный список поддерживается в `TASKS.md`.
+Актуальный список поддерживается в `TASKS.md`, а краткий управленческий срез — в `docs/PROJECT_STATUS.md`.
 
-Ближайшие задачи после ADM-001 и ADM-001.1:
+Фактическое состояние после DOCS-001:
 
-1. GUI-015: Учебные планы.
-2. QR-001: Проходная / QR-пропуска Phase 1.
-3. MOB-001: Mobile Student Cabinet Phase 1.
-4. GRAD-001: Выпускники и дипломы.
-5. FRDO-001: Подготовка данных ФРДО.
-6. FIS-001: ФИС ГИА / ФИС Приема.
-7. GUI-016: Нагрузка преподавателей.
-8. GUI-017: Экзамены / ГИА.
+- GUI foundation, Students, Groups и RBAC foundation реализованы;
+- access-control и QR-related foundation реализованы частично и требуют физического smoke-test и отдельного production deployment;
+- DEMO-001 и DEMO-001.1 выполнены;
+- DEMO-002 завершено на уровне кода, а Issue/PR были заблокированы отсутствием GitHub write-доступа в той среде;
+- DOCS-001 выполнено и включено в `develop` перед началом DOCS-002.
 
-Текущий приоритет: развивать CollegePortal как связанную платформу, где учебные планы питают расписание, журнал, нагрузку преподавателей, выпуск, ФРДО и интеграции с государственными системами.
+Следующий крупный функциональный этап должен быть утвержден отдельно. Документация не должна представлять старый список GUI-015/QR-002/MOB-001 как единственный текущий фокус.
 
 ## Roadmap
 
@@ -750,24 +741,20 @@ Responsive Workspace Foundation описан в `docs/RESPONSIVE_WORKSPACE.md`:
 - карточка заявления справа показывает сведения, документы, историю и действия;
 - через существующий API доступны CRUD, импорт/экспорт CSV, отметки документов и зачисление.
 
-### Ближайший порядок
+### Актуальный порядок
 
-1. GUI-015: Учебные планы.
-2. QR-001: Проходная / QR-пропуска Phase 1.
-3. MOB-001: Mobile Student Cabinet Phase 1.
-4. GRAD-001: Выпускники и дипломы.
-5. FRDO-001: Подготовка данных ФРДО.
-6. FIS-001: ФИС ГИА / ФИС Приема.
-7. GUI-016: Нагрузка преподавателей.
-8. GUI-017: Экзамены / ГИА.
+`ROADMAP.md` является каноническим документом для плана развития. В этом файле хранится только краткая сводка:
 
-### Ключевые будущие контуры
+- реализовано: GUI foundation, Students, Groups, RBAC foundation, DEMO-001, DEMO-001.1, DOCS-001;
+- частично реализовано: access-control и QR-related foundation, DEMO-002 code path;
+- требует проверки: аппаратный smoke HID/mobile scanner и production deployment для Access Control;
+- запланировано: следующий крупный функциональный этап после отдельного утверждения.
 
-- QR-001: печатный QR, мобильный QR, сканирование на проходной, журнал входа/выхода, отчеты по студентам, преподавателям, сотрудникам и гостям; основа — Identity Domain.
-- MOB-001: расписание, оценки, посещаемость, уведомления, мобильный QR-пропуск.
-- GRAD-001: выпускники, шаблоны дипломов, печать дипломов, приложения к диплому, история выдачи.
-- FRDO-001: подготовка данных, проверка полноты, выгрузка, журнал отправки, ошибки и статусы.
-- FIS-001: приемные кампании, данные абитуриентов, экспорт/импорт, журнал обмена, ошибки и статусы.
+### Ключевые контуры со статусами
+
+- QR/Digital Identity: реализованы базовые QR-пропуска без персональных данных в payload; динамический access-control контур требует отдельного smoke и deployment.
+- Mobile: мобильные страницы и mobile scanner описаны в профильных документах; production readiness зависит от HTTPS, устройств и UAT.
+- Graduation/FRDO/FIS: функциональные и интеграционные контуры развиваются отдельными задачами и фиксируются в `TASKS.md`, `CHANGELOG.md` и профильных документах.
 
 ## Инструкции по запуску
 

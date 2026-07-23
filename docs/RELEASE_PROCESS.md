@@ -1,5 +1,7 @@
 # Release Process
 
+This is the canonical document for release artifact creation, checksum generation and release packaging boundaries. GitHub branch/PR workflow is documented in docs/GITHUB_REPOSITORY.md; environment inventory is documented in docs/ENVIRONMENTS.md.
+
 Release artifacts are built from a clean Git state in `/srv/college-dev`.
 
 ```bash

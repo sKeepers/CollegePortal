@@ -14,6 +14,16 @@
 
 This index is the central entrypoint for CollegePortal documentation. It links management documents, architecture notes, domain guides, security reviews, operational runbooks and task-specific reports.
 
+## Canonical Sources
+
+- Current project status: [Project Status](PROJECT_STATUS.md)
+- Documentation index: [Documentation Index](README.md)
+- Environment inventory: [Environments](ENVIRONMENTS.md)
+- Path policy: [Path Policy](PATH_POLICY.md)
+- GitHub workflow: [GitHub Repository](GITHUB_REPOSITORY.md)
+- Release artifact process: [Release Process](RELEASE_PROCESS.md)
+- Product vision: [Vision](../VISION.md)
+- Governance principles: [Governance](../GOVERNANCE.md)
 ## Management Documents
 
 - [Project Status](PROJECT_STATUS.md)

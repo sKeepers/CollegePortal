@@ -18,13 +18,13 @@ This document is a navigation and status snapshot. GitHub Issues, Pull Requests 
 
 ## Active Branch
 
-- Branch: `feature/docs-001-project-status`
+- Branch: `feature/docs-002-documentation-alignment`
 - Base: `origin/develop`
 - Scope: documentation only.
 
 ## Current Task
 
-- `DOCS-001`: create a unified project documentation center.
+- `DOCS-002`: align documentation, resolve confirmed contradictions, update stale references and keep changes Markdown-only.
 - Allowed changes: Markdown documentation only.
 - Explicitly excluded: backend, frontend, database, migrations, API, infrastructure scripts and runtime configuration.
 
@@ -36,27 +36,28 @@ Recent completed work reflected by current project notes and user-provided statu
 - `DEMO-001.1`: completed. DEV-only login helper and temporary credential card workflow were completed before this documentation task.
 - `DEMO-002`: code completed and pushed. GitHub Issue and Draft PR creation were blocked by missing GitHub write access in the Codex environment.
 - `INFRA-PATHS`: completed. Canonical paths are `C:\!Projects\CollegePortal` on Windows and `/srv/college-dev` on Linux DEV.
+- `DOCS-001`: completed and merged into `develop`; the documentation center now exists.
 
 ## Roadmap Progress
 
 The roadmap shows that the project has moved beyond the original MVP sequence into RC/UAT, installation lifecycle, access control, FIS/GIA integration, demo readiness and documentation governance.
 
-Known roadmap maintenance need: older sections still name early tasks such as GUI-015, QR-002 and MOB-001 as near-term focus while later documentation records many downstream modules as completed or superseded.
+DOCS-002 is replacing the stale GUI-015 / QR-002 / MOB-001 near-term focus with explicit status categories: implemented, partially implemented, planned, requires physical smoke-test and requires production deployment.
 
 ## Next Planned Task
 
-Recommended next planned task after `DOCS-001`:
+Recommended next planned task after `DOCS-002`:
 
-- finish GitHub Issue/Draft PR publication when GitHub write access is restored, or create them manually from the prepared texts;
-- continue the next active implementation stream from the already-open feature work, without merging `DOCS-001` automatically.
+- finish DOCS-002 review via Issue/Draft PR after CI;
+- continue the next active implementation stream from the already-open feature work, without merging `DOCS-002` automatically.
 
 ## Open Issues
 
 Live GitHub Issues are the source of truth when accessible. From the local documentation perspective, the open process issues are:
 
-- GitHub write access from the current Codex environment is unreliable and may block automatic Issue/PR creation.
+- GitHub write access can be environment-dependent; if unavailable, prepared Issue/PR text must be used without PAT/GH_TOKEN or repeated device-code loops.
 - Documentation status is scattered across root documents, `docs/*`, release notes and task logs.
-- Several project documents reference missing or renamed documentation files.
+- Missing document references from DOCS-001 are being resolved by replacing them with existing canonical documents rather than creating empty placeholders.
 
 ## Known Risks
 
@@ -97,3 +98,4 @@ Documentation governance backlog:
 | Date | Change |
 | --- | --- |
 | 2026-07-24 | Created the unified project status document for `DOCS-001`. |
+| 2026-07-24 | Aligned documentation contradictions for `DOCS-002`. |

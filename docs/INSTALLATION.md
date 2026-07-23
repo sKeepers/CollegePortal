@@ -6,7 +6,7 @@ This document describes a clean installation from a release archive such as `col
 
 - Install only on a separate VM or clean Ubuntu Server.
 - Do not install over `/srv/college-dev`.
-- Do not install over `/home/andale/college_portal` without a separate PROD migration approval.
+- Do not install over any existing PROD path from `docs/ENVIRONMENTS.md` without a separate PROD migration approval.
 - Do not commit generated `.env`, certificates, backups or database dumps.
 
 ## Steps

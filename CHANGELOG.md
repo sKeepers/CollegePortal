@@ -11,6 +11,12 @@
 - [Project Context](PROJECT_CONTEXT.md)
 - [Documentation Report](REPORT.md)
 
+## Unreleased
+
+### Documentation
+
+- Added `DOCS-001` documentation center to `develop`.
+- Aligned project documentation status for `DOCS-002`: missing document references, roadmap focus, Access/QR status, credential placeholders, environment inventory and GitHub/release workflow sources.
 ## 0.8.0-rc2 - Private Release Candidate
 
 ### Added

@@ -1,4 +1,6 @@
-# Deployment DEV to PROD
+# Deployment
+
+Canonical environment inventory is maintained in docs/ENVIRONMENTS.md. This document describes deployment actions and must not be used as the sole source for current DEV/UAT/PROD state. DEV to PROD
 
 Дата: 2026-06-30
 
@@ -11,9 +13,9 @@ PROD не меняется без отдельного подтверждени�
 | Окружение | Путь | Frontend | Backend/API | PostgreSQL |
 | --- | --- | ---: | ---: | ---: |
 | DEV | `/srv/college-dev` | `5174` | `8001` | `5433` |
-| PROD | `/home/andale/college_portal` | `5173` | `8080` | `5432` |
+| PROD | see `docs/ENVIRONMENTS.md` | see `docs/ENVIRONMENTS.md` | see `docs/ENVIRONMENTS.md` | see `docs/ENVIRONMENTS.md` |
 
-Плановый путь `/srv/college-prod` пока не используется. Текущий PROD работает из `/home/andale/college_portal`; перенос PROD в `/srv/college-prod` должен быть отдельной инфраструктурной задачей.
+Текущий PROD path и deployment state не дублируются здесь. Используйте `docs/ENVIRONMENTS.md`; перенос PROD должен быть отдельной инфраструктурной задачей.
 
 ## Принципы деплоя
 
@@ -132,7 +134,7 @@ curl -i http://127.0.0.1:8080/api/students
 curl -s \
   -H 'Accept: application/json' \
   -H 'Content-Type: application/json' \
-  -d '{"email":"admin@college-portal.local","password":"password"}' \
+  -d '{"email":"<LOGIN>","password":"<TEMPORARY_PASSWORD>"}' \
   http://127.0.0.1:8080/api/auth/login
 ```
 

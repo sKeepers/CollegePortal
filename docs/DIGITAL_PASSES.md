@@ -100,7 +100,7 @@ QR-001 пока использует `entity_type` и `entity_id`, чтобы н
 
 ## Следующие шаги
 
-- QR-002: рабочее место проходной и проверка token;
+- Access Control / QR-related foundation: рабочее место проходной, проверка token и scanner flows частично реализованы; физический smoke-test и production deployment остаются отдельными этапами;
 - Access Event: журнал входа/выхода;
 - отчеты по студентам, преподавателям, сотрудникам и гостям;
 - Mobile Pass в кабинете студента;
