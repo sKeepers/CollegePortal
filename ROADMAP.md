@@ -1,5 +1,16 @@
 # Roadmap разработки CollegePortal
 
+## Project Documentation Map
+
+- [Documentation Index](docs/README.md)
+- [Project Status](docs/PROJECT_STATUS.md)
+- [Background Agents](docs/AGENTS.md)
+- [Roadmap](ROADMAP.md)
+- [Tasks](TASKS.md)
+- [Changelog](CHANGELOG.md)
+- [Project Context](PROJECT_CONTEXT.md)
+- [Documentation Report](REPORT.md)
+
 Roadmap фиксирует порядок развития проекта после переноса приемной комиссии в новый Quasar GUI. Backend, БД и API меняются только в задачах, где это отдельно указано.
 
 ## Выполнено
