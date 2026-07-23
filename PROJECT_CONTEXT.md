@@ -1,5 +1,16 @@
 # CollegePortal: контекст проекта для разработчика
 
+## Project Documentation Map
+
+- [Documentation Index](docs/README.md)
+- [Project Status](docs/PROJECT_STATUS.md)
+- [Background Agents](docs/AGENTS.md)
+- [Roadmap](ROADMAP.md)
+- [Tasks](TASKS.md)
+- [Changelog](CHANGELOG.md)
+- [Project Context](PROJECT_CONTEXT.md)
+- [Documentation Report](REPORT.md)
+
 Документ предназначен для быстрой передачи контекста новому разработчику. Он описывает назначение системы, стек, структуру, архитектуру, базу данных, реализованные модули, текущие задачи, roadmap и запуск.
 
 ## Назначение проекта

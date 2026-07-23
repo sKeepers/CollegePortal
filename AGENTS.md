@@ -1,5 +1,16 @@
 # Инструкции для Codex
 
+## Project Documentation Map
+
+- [Documentation Index](docs/README.md)
+- [Project Status](docs/PROJECT_STATUS.md)
+- [Background Agents](docs/AGENTS.md)
+- [Roadmap](ROADMAP.md)
+- [Tasks](TASKS.md)
+- [Changelog](CHANGELOG.md)
+- [Project Context](PROJECT_CONTEXT.md)
+- [Documentation Report](REPORT.md)
+
 Ты работаешь над проектом CollegePortal — веб-порталом для колледжа искусств.
 
 ## Главная цель
@@ -78,3 +89,7 @@ C:\!Projects\CollegePortal\.worktrees\<branch>
 ```
 
 Запрещено использовать устаревшую Windows-копию проекта с нижним регистром в имени каталога, внешние каталоги worktree рядом с проектом, временные каталоги старой копии, а также создавать worktree рядом с проектом.
+
+## Background Agent Convention
+
+The named background agents Hubble, Mencius, Boole, Erdos, Bohr and Pasteur are documented in [docs/AGENTS.md](docs/AGENTS.md). These names identify Codex background-agent instances in the CollegePortal workflow. Their documented roles are a project convention, not built-in Codex system specializations, and any actual run is governed by the prompt assigned to that agent.

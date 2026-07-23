@@ -1,5 +1,16 @@
 # Changelog
 
+## Project Documentation Map
+
+- [Documentation Index](docs/README.md)
+- [Project Status](docs/PROJECT_STATUS.md)
+- [Background Agents](docs/AGENTS.md)
+- [Roadmap](ROADMAP.md)
+- [Tasks](TASKS.md)
+- [Changelog](CHANGELOG.md)
+- [Project Context](PROJECT_CONTEXT.md)
+- [Documentation Report](REPORT.md)
+
 ## 0.8.0-rc2 - Private Release Candidate
 
 ### Added
