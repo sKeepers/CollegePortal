@@ -12,19 +12,19 @@
 
 ## Current Milestone
 
-Private DEV/UAT preparation after Release Candidate 0.8.x. Current project work is focused on demo readiness, access-control smoke hardening, FIS/GIA integration preparation, and project documentation governance.
+Private DEV/UAT preparation after Release Candidate 0.8.x. Current project work is focused on architecture governance and the Admissions subsystem foundation.
 
 This document is a navigation and status snapshot. GitHub Issues, Pull Requests and CI remain the authoritative live workflow when GitHub write access is available.
 
 ## Active Branch
 
-- Branch: `feature/docs-001-project-status`
+- Branch: `feature/adm-001-admissions-architecture`
 - Base: `origin/develop`
 - Scope: documentation only.
 
 ## Current Task
 
-- `DOCS-001`: create a unified project documentation center.
+- `ADM-001`: спроектировать архитектурный foundation подсистемы «Приемная комиссия» без реализации backend/frontend/API/БД.
 - Allowed changes: Markdown documentation only.
 - Explicitly excluded: backend, frontend, database, migrations, API, infrastructure scripts and runtime configuration.
 
@@ -45,10 +45,10 @@ Known roadmap maintenance need: older sections still name early tasks such as GU
 
 ## Next Planned Task
 
-Recommended next planned task after `DOCS-001`:
+Recommended next planned task after `ADM-001`:
 
-- finish GitHub Issue/Draft PR publication when GitHub write access is restored, or create them manually from the prepared texts;
-- continue the next active implementation stream from the already-open feature work, without merging `DOCS-001` automatically.
+- create ADM-002 implementation task for admissions CRUD after review of the architecture PR;
+- keep ADM-001 as documentation-only until the Draft PR is reviewed; do not merge automatically.
 
 ## Open Issues
 
@@ -84,6 +84,16 @@ Background agents are documented in [Background Agents](AGENTS.md). Hubble, Menc
 
 ## Backlog
 
+ADM-001 backlog:
+
+1. Этап 1 — CRUD абитуриентов.
+2. Этап 2 — Документы.
+3. Этап 3 — Конкурс.
+4. Этап 4 — Приказы.
+5. Этап 5 — Экспорт в ФИС.
+6. Этап 6 — Личный кабинет абитуриента.
+
+
 Documentation governance backlog:
 
 - reconcile missing document references listed in [Documentation Report](../REPORT.md);
@@ -97,3 +107,4 @@ Documentation governance backlog:
 | Date | Change |
 | --- | --- |
 | 2026-07-24 | Created the unified project status document for `DOCS-001`. |
+| 2026-07-24 | Added ADM-001 Admissions architecture foundation. |

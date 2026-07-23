@@ -50,6 +50,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 ## Product Domains
 
 - [Data Import](DATA_IMPORT.md)
+- [Приемная комиссия](ПРИЕМНАЯ_КОМИССИЯ.md)
 - [Admissions FIS Import](FIS_ADMISSIONS_IMPORT.md)
 - [Person Model](PERSON_MODEL.md)
 - [Identity Domain](IDENTITY_DOMAIN.md)
@@ -67,6 +68,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [ACCESS_GATE.md](ACCESS_GATE.md)
 - [adr/ADR-FIS-GATEWAY.md](adr/ADR-FIS-GATEWAY.md)
 - [adr/ADR-INTEGRATION-GATEWAY.md](adr/ADR-INTEGRATION-GATEWAY.md)
+- [adr/ADR-002_ПРИЕМНАЯ_КОМИССИЯ.md](adr/ADR-002_ПРИЕМНАЯ_КОМИССИЯ.md)
 - [AGENTS.md](AGENTS.md)
 - [APPLICANT_DOCUMENTS.md](APPLICANT_DOCUMENTS.md)
 - [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md)
