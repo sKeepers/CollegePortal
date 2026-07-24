@@ -77,7 +77,9 @@ Route::middleware('api.token')->group(function (): void {
         Route::post('admin/uat/runs/{run}/results/{result}', [UatController::class, 'updateResult']);
         Route::get('admin/uat/results/{result}/screenshot', [UatController::class, 'downloadResultScreenshot']);
         Route::get('admin/uat/feedback', [UatController::class, 'feedback']);
+        Route::get('admin/uat/feedback/{feedback}', [UatController::class, 'showFeedback']);
         Route::put('admin/uat/feedback/{feedback}', [UatController::class, 'updateFeedback']);
+        Route::post('admin/uat/feedback/{feedback}/comments', [UatController::class, 'storeFeedbackComment']);
         Route::get('admin/uat/feedback/{feedback}/screenshot', [UatController::class, 'downloadFeedbackScreenshot']);
         Route::get('admin/uat/export/results.csv', [UatController::class, 'exportRuns']);
         Route::get('admin/uat/export/feedback.csv', [UatController::class, 'exportIssues']);

@@ -12,21 +12,21 @@
 
 ## Current Milestone
 
-Private DEV/UAT preparation after Release Candidate 0.8.x. Current project work is focused on demo readiness, access-control smoke hardening, FIS/GIA integration preparation, and project documentation governance.
+Private DEV/UAT preparation after Release Candidate 0.8.x. Current project work is focused on demo readiness, access-control smoke hardening, FIS/GIA integration preparation, project documentation governance and UAT Center development.
 
 This document is a navigation and status snapshot. GitHub Issues, Pull Requests and CI remain the authoritative live workflow when GitHub write access is available.
 
 ## Active Branch
 
-- Branch: `feature/docs-001-project-status`
-- Base: `origin/develop`
-- Scope: documentation only.
+- Branch: `feature/uat-001-center`
+- Base: local `origin/develop`
+- Scope: развитие существующего UAT Center без изменений Admissions.
 
 ## Current Task
 
-- `DOCS-001`: create a unified project documentation center.
-- Allowed changes: Markdown documentation only.
-- Explicitly excluded: backend, frontend, database, migrations, API, infrastructure scripts and runtime configuration.
+- `UAT-001`: развитие центра обработки обращений.
+- Allowed changes: UAT Center backend/frontend, миграции для UAT feedback, тесты и статусная документация.
+- Explicitly excluded: Admissions, приемная комиссия, RBAC Admissions, UAT/PROD.
 
 ## Completed Tasks
 
@@ -35,6 +35,8 @@ Recent completed work reflected by current project notes and user-provided statu
 - `DEMO-001`: completed. Login page no longer auto-populates credentials; dashboard/mobile/security checks were handled in the previous demo-readiness task.
 - `DEMO-001.1`: completed. DEV-only login helper and temporary credential card workflow were completed before this documentation task.
 - `DEMO-002`: code completed and pushed. GitHub Issue and Draft PR creation were blocked by missing GitHub write access in the Codex environment.
+- `BACK-003`: foundation заявлений приемной комиссии реализован в отдельной feature-ветке.
+- `DOCS-001`: единый центр документации создан и подготовлен к дальнейшему сопровождению.
 - `INFRA-PATHS`: completed. Canonical paths are `C:\!Projects\CollegePortal` on Windows and `/srv/college-dev` on Linux DEV.
 
 ## Roadmap Progress
@@ -45,16 +47,17 @@ Known roadmap maintenance need: older sections still name early tasks such as GU
 
 ## Next Planned Task
 
-Recommended next planned task after `DOCS-001`:
+Recommended next planned task after `UAT-001`:
 
-- finish GitHub Issue/Draft PR publication when GitHub write access is restored, or create them manually from the prepared texts;
-- continue the next active implementation stream from the already-open feature work, without merging `DOCS-001` automatically.
+- провести ручной UAT smoke карточки обращения на `/admin/uat`;
+- выделить `UAT-002` для уведомлений, SLA и автоматической интеграции с GitHub при восстановлении устойчивого GitHub-доступа.
 
 ## Open Issues
 
 Live GitHub Issues are the source of truth when accessible. From the local documentation perspective, the open process issues are:
 
 - GitHub write access from the current Codex environment is unreliable and may block automatic Issue/PR creation.
+- `git fetch origin` может блокироваться сетевой доступностью GitHub из текущей среды; если это повторится, нужно подтвердить CI/PR через GitHub UI.
 - Documentation status is scattered across root documents, `docs/*`, release notes and task logs.
 - Several project documents reference missing or renamed documentation files.
 
@@ -96,4 +99,5 @@ Documentation governance backlog:
 
 | Date | Change |
 | --- | --- |
+| 2026-07-25 | Started `UAT-001`: расширение UAT Center карточкой обращения, историей статусов, комментариями, фильтрами и GitHub Issue fields. |
 | 2026-07-24 | Created the unified project status document for `DOCS-001`. |

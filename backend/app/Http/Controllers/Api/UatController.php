@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UatFeedbackResource;
 use App\Http\Resources\UatTestRunResource;
+use App\Models\UatFeedbackComment;
 use App\Models\UatFeedback;
 use App\Models\UatTestResult;
 use App\Models\UatTestRun;
@@ -128,9 +129,40 @@ class UatController extends Controller
             ->when($request->string('status')->toString(), fn (Builder $q, string $status) => $q->where('status', $status))
             ->when($request->string('role_code')->toString(), fn (Builder $q, string $role) => $q->where('role_code', $role))
             ->when($request->string('category')->toString(), fn (Builder $q, string $category) => $q->where('category', $category))
+            ->when($request->string('severity')->toString(), fn (Builder $q, string $severity) => $q->where('severity', $severity))
+            ->when($request->integer('author_id'), fn (Builder $q, int $authorId) => $q->where('user_id', $authorId))
+            ->when($request->string('page')->toString(), fn (Builder $q, string $page) => $q->where('page_url', 'like', "%{$page}%"))
+            ->when($request->string('version')->toString(), fn (Builder $q, string $version) => $q->where('app_version', $version))
+            ->when($request->date('date_from'), fn (Builder $q, mixed $date) => $q->whereDate('created_at', '>=', $date))
+            ->when($request->date('date_to'), fn (Builder $q, mixed $date) => $q->whereDate('created_at', '<=', $date))
+            ->when($request->string('q')->toString(), function (Builder $q, string $search): void {
+                $q->where(function (Builder $nested) use ($search): void {
+                    $nested->where('title', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhere('expected_result', 'like', "%{$search}%")
+                        ->orWhere('actual_result', 'like', "%{$search}%")
+                        ->orWhere('page_url', 'like', "%{$search}%")
+                        ->orWhere('app_version', 'like', "%{$search}%")
+                        ->orWhere('build_hash', 'like', "%{$search}%");
+                });
+            })
             ->latest();
 
         return UatFeedbackResource::collection($query->paginate($request->integer('per_page') ?: 50));
+    }
+
+    public function showFeedback(UatFeedback $feedback): UatFeedbackResource
+    {
+        return new UatFeedbackResource($feedback->load([
+            'user.role',
+            'user.roles',
+            'assignee.role',
+            'assignee.roles',
+            'statusHistory.user.role',
+            'statusHistory.user.roles',
+            'comments.user.role',
+            'comments.user.roles',
+        ]));
     }
 
     public function storeFeedback(Request $request): UatFeedbackResource
@@ -147,6 +179,7 @@ class UatController extends Controller
             'app_version' => ['nullable', 'string', 'max:100'],
             'build_hash' => ['nullable', 'string', 'max:100'],
             'environment' => ['nullable', 'string', 'max:100'],
+            'browser' => ['nullable', 'string', 'max:255'],
             'screenshot' => ['nullable', 'file', 'max:10240', 'mimes:jpg,jpeg,png,webp'],
         ]);
 
@@ -158,11 +191,18 @@ class UatController extends Controller
         $feedback = UatFeedback::create([
             ...$data,
             'user_id' => $request->user()?->id,
+            'user_agent' => $request->userAgent(),
             'status' => 'new',
+        ]);
+        $feedback->statusHistory()->create([
+            'user_id' => $request->user()?->id,
+            'old_status' => null,
+            'new_status' => 'new',
+            'comment' => null,
         ]);
         AuditLogService::log('uat', 'feedback_created', $feedback, null, $feedback->toArray(), $request);
 
-        return new UatFeedbackResource($feedback->load(['user.role', 'user.roles', 'assignee.role', 'assignee.roles']));
+        return new UatFeedbackResource($feedback->load(['user.role', 'user.roles', 'assignee.role', 'assignee.roles', 'statusHistory.user', 'comments.user']));
     }
 
     public function updateFeedback(Request $request, UatFeedback $feedback): UatFeedbackResource
@@ -171,12 +211,43 @@ class UatController extends Controller
             'status' => ['nullable', Rule::in(UatFeedback::STATUSES)],
             'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
             'resolution' => ['nullable', 'string', 'max:5000'],
+            'status_comment' => ['nullable', 'string', 'max:2000'],
+            'github_issue_number' => ['nullable', 'integer', 'min:1'],
+            'github_issue_url' => ['nullable', 'url', 'max:255'],
+            'github_issue_status' => ['nullable', 'string', 'max:50'],
         ]);
         $old = $feedback->toArray();
+        $oldStatus = $feedback->status;
+        $statusComment = $data['status_comment'] ?? null;
+        unset($data['status_comment']);
         $feedback->update($data);
+        if (array_key_exists('status', $data) && $data['status'] !== $oldStatus) {
+            $feedback->statusHistory()->create([
+                'user_id' => $request->user()?->id,
+                'old_status' => $oldStatus,
+                'new_status' => $data['status'],
+                'comment' => $statusComment,
+            ]);
+        }
         AuditLogService::log('uat', 'feedback_updated', $feedback, $old, $feedback->toArray(), $request);
 
-        return new UatFeedbackResource($feedback->load(['user.role', 'user.roles', 'assignee.role', 'assignee.roles']));
+        return new UatFeedbackResource($feedback->load(['user.role', 'user.roles', 'assignee.role', 'assignee.roles', 'statusHistory.user', 'comments.user']));
+    }
+
+    public function storeFeedbackComment(Request $request, UatFeedback $feedback): UatFeedbackResource
+    {
+        $data = $request->validate([
+            'type' => ['required', Rule::in(UatFeedbackComment::TYPES)],
+            'comment' => ['required', 'string', 'max:5000'],
+        ]);
+
+        $comment = $feedback->comments()->create([
+            ...$data,
+            'user_id' => $request->user()?->id,
+        ]);
+        AuditLogService::log('uat', 'feedback_comment_created', $comment, null, $comment->toArray(), $request);
+
+        return new UatFeedbackResource($feedback->load(['user.role', 'user.roles', 'assignee.role', 'assignee.roles', 'statusHistory.user', 'comments.user']));
     }
 
     public function downloadResultScreenshot(Request $request, UatTestResult $result): StreamedResponse

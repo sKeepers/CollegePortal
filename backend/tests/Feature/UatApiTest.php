@@ -95,11 +95,103 @@ class UatApiTest extends TestCase
         $this->withApiAuth($admin)->get('/api/admin/uat/export/feedback.csv?failed_only=1')->assertOk();
     }
 
+    public function test_manager_can_view_feedback_card_update_status_history_comments_and_github_issue(): void
+    {
+        Storage::fake('local');
+        $manager = $this->userWithPermissions('study', ['uat.manage']);
+        $author = $this->userWithPermissions('teacher', []);
+
+        $feedbackId = $this->withApiAuth($author)->post('/api/uat/feedback', [
+            'role_code' => 'teacher',
+            'category' => 'access',
+            'severity' => 'critical',
+            'title' => 'Нет доступа к журналу',
+            'description' => 'Открывается 403',
+            'expected_result' => 'Журнал доступен',
+            'actual_result' => '403',
+            'page_url' => '/journal',
+            'app_version' => '0.8.0-rc2',
+            'build_hash' => 'build-uat',
+            'environment' => 'development',
+            'browser' => 'Firefox ESR',
+            'screenshot' => UploadedFile::fake()->image('feedback-card.png'),
+        ])->assertCreated()
+            ->assertJsonPath('data.browser', 'Firefox ESR')
+            ->json('data.id');
+
+        $this->withApiAuth($manager)->getJson('/api/admin/uat/feedback?status=new&category=access&severity=critical&page=journal&version=0.8.0-rc2&q=403')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $feedbackId);
+
+        $this->withApiAuth($manager)->putJson("/api/admin/uat/feedback/{$feedbackId}", [
+            'status' => 'in_progress',
+            'status_comment' => 'Взято в работу учебной частью',
+            'github_issue_number' => 42,
+            'github_issue_url' => 'https://github.com/sKeepers/CollegePortal/issues/42',
+            'github_issue_status' => 'open',
+        ])->assertOk()
+            ->assertJsonPath('data.status', 'in_progress')
+            ->assertJsonPath('data.github_issue_number', 42);
+
+        $this->withApiAuth($manager)->postJson("/api/admin/uat/feedback/{$feedbackId}/comments", [
+            'type' => 'developer',
+            'comment' => 'Проверить permission journal.view.',
+        ])->assertOk()
+            ->assertJsonPath('data.comments.0.type', 'developer');
+
+        $this->withApiAuth($manager)->getJson("/api/admin/uat/feedback/{$feedbackId}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $feedbackId)
+            ->assertJsonPath('data.status_history.0.old_status', 'new')
+            ->assertJsonPath('data.status_history.0.new_status', 'in_progress')
+            ->assertJsonPath('data.status_history.0.comment', 'Взято в работу учебной частью')
+            ->assertJsonPath('data.comments.0.comment', 'Проверить permission journal.view.')
+            ->assertJsonPath('data.has_screenshot', true);
+
+        $this->withApiAuth($manager)->get("/api/admin/uat/feedback/{$feedbackId}/screenshot")->assertOk();
+        $this->assertDatabaseHas('audit_logs', ['module' => 'uat', 'action' => 'feedback_comment_created']);
+    }
+
+    public function test_feedback_registry_filters_by_author_and_period(): void
+    {
+        $manager = $this->userWithPermissions('director', ['uat.manage']);
+        $teacher = $this->userWithPermissions('teacher', []);
+        $student = $this->userWithPermissions('student', []);
+
+        $teacherFeedbackId = $this->withApiAuth($teacher)->postJson('/api/uat/feedback', [
+            'role_code' => 'teacher',
+            'category' => 'ux',
+            'severity' => 'ux',
+            'title' => 'Кнопка слишком далеко',
+            'description' => 'Нужно меньше кликов',
+            'page_url' => '/schedule',
+            'app_version' => '0.8.0-rc2',
+        ])->assertCreated()->json('data.id');
+
+        $this->withApiAuth($student)->postJson('/api/uat/feedback', [
+            'role_code' => 'student',
+            'category' => 'error',
+            'severity' => 'medium',
+            'title' => 'Не видно QR',
+            'description' => 'Пустой блок',
+            'page_url' => '/m/student/pass',
+            'app_version' => '0.8.0-rc2',
+        ])->assertCreated();
+
+        $today = now()->toDateString();
+        $this->withApiAuth($manager)->getJson("/api/admin/uat/feedback?author_id={$teacher->id}&date_from={$today}&date_to={$today}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $teacherFeedbackId);
+    }
+
     public function test_teacher_student_and_security_cannot_access_uat_registry(): void
     {
         foreach (['teacher', 'student', 'security'] as $role) {
             $user = $this->userWithPermissions($role, []);
             $this->withApiAuth($user)->getJson('/api/admin/uat/config')->assertForbidden();
+            $this->withApiAuth($user)->getJson('/api/admin/uat/feedback')->assertForbidden();
         }
     }
 

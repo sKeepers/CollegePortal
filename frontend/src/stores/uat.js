@@ -9,11 +9,11 @@ export const roleLabels = {
 }
 
 export const statusLabels = {
-  not_started: 'Не начато', in_progress: 'В работе', completed: 'Завершено', passed: 'Пройдено', failed: 'Ошибка', blocked: 'Блокировано', skipped: 'Пропущено', new: 'Новое', confirmed: 'Подтверждено', fixed: 'Исправлено', rejected: 'Отклонено', retest: 'Повторная проверка', closed: 'Закрыто',
+  not_started: 'Не начато', in_progress: 'В работе', completed: 'Завершено', passed: 'Пройдено', failed: 'Ошибка', blocked: 'Блокировано', skipped: 'Пропущено', new: 'Новое', confirmed: 'Подтверждено', needs_info: 'Ожидает информации', fixed: 'Исправлено', rejected: 'Отклонено', retest: 'Проверяется', closed: 'Закрыто',
 }
 
 export function statusTone(status) {
-  return { passed: 'success', completed: 'success', failed: 'danger', blocked: 'warning', skipped: 'neutral', in_progress: 'info', new: 'warning', confirmed: 'info', fixed: 'success', rejected: 'neutral', retest: 'warning', closed: 'success' }[status] || 'neutral'
+  return { passed: 'success', completed: 'success', failed: 'danger', blocked: 'warning', skipped: 'neutral', in_progress: 'info', new: 'warning', confirmed: 'info', needs_info: 'warning', fixed: 'success', rejected: 'neutral', retest: 'warning', closed: 'success' }[status] || 'neutral'
 }
 
 export const useUatStore = defineStore('uat', () => {
@@ -30,14 +30,14 @@ export const useUatStore = defineStore('uat', () => {
   const accountOptions = computed(() => (config.value.accounts || []).filter((item) => item.exists).map((item) => ({ label: `${item.email} · ${roleLabels[item.role] || item.role}`, value: item.user_id })))
   const roleOptions = computed(() => (config.value.roles || []).map((role) => ({ label: roleLabels[role] || role, value: role })))
 
-  async function load() {
+  async function load(filters = {}) {
     loading.value = true
     error.value = ''
     try {
       const [configPayload, runsPayload, feedbackPayload] = await Promise.all([
         api.get('admin/uat/config'),
         api.list('admin/uat/runs', { per_page: 100 }),
-        api.list('admin/uat/feedback', { per_page: 100 }),
+        api.list('admin/uat/feedback', { per_page: 100, ...filters }),
       ])
       config.value = configPayload
       runs.value = rows(runsPayload)
@@ -73,7 +73,20 @@ export const useUatStore = defineStore('uat', () => {
   async function updateFeedback(id, data) {
     const payload = await api.put(`admin/uat/feedback/${id}`, data)
     feedback.value = feedback.value.map((item) => Number(item.id) === Number(payload.data.id) ? payload.data : item)
+    return payload.data
   }
 
-  return { config, runs, feedback, selectedRunId, selectedRun, selectedScenarios, scenariosByCode, accountOptions, roleOptions, loading, error, load, createRun, updateResult, completeRun, updateFeedback }
+  async function loadFeedback(id) {
+    const payload = await api.get(`admin/uat/feedback/${id}`)
+    feedback.value = feedback.value.map((item) => Number(item.id) === Number(payload.data.id) ? payload.data : item)
+    return payload.data
+  }
+
+  async function addFeedbackComment(id, data) {
+    const payload = await api.post(`admin/uat/feedback/${id}/comments`, data)
+    feedback.value = feedback.value.map((item) => Number(item.id) === Number(payload.data.id) ? payload.data : item)
+    return payload.data
+  }
+
+  return { config, runs, feedback, selectedRunId, selectedRun, selectedScenarios, scenariosByCode, accountOptions, roleOptions, loading, error, load, createRun, updateResult, completeRun, updateFeedback, loadFeedback, addFeedbackComment }
 })

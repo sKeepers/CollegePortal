@@ -11,7 +11,7 @@ const saving = ref(false)
 const error = ref('')
 const screenshot = ref(null)
 const form = reactive({
-  title: '', category: 'error', severity: 'medium', description: '', expected_result: '', actual_result: '', page_url: '', app_version: '', build_hash: '', environment: '', role_code: '',
+  title: '', category: 'error', severity: 'medium', description: '', expected_result: '', actual_result: '', page_url: '', app_version: '', build_hash: '', environment: '', browser: '', role_code: '',
 })
 const categoryOptions = [
   { label: 'Ошибка', value: 'error' }, { label: 'Неудобство', value: 'ux' }, { label: 'Предложение', value: 'suggestion' }, { label: 'Данные', value: 'data' }, { label: 'Права доступа', value: 'access' },
@@ -28,6 +28,7 @@ watch(() => props.modelValue, async (open) => {
   form.app_version = version.version
   form.build_hash = version.build
   form.environment = env.key
+  form.browser = navigator.userAgent
   form.role_code = auth.user?.role?.code || auth.roleCodes?.[0] || ''
 }, { immediate: true })
 
