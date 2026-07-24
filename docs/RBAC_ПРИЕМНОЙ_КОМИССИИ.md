@@ -117,10 +117,10 @@
 
 | Permission | Назначение | Роли по умолчанию |
 | --- | --- | --- |
-| `admissions.applicants.view` | просмотр абитуриентов | admin, admissions_secretary, admissions_operator, director, study_office |
-| `admissions.applicants.create` | создание профиля абитуриента | admin, admissions_secretary, admissions_operator |
-| `admissions.applicants.update` | изменение профиля абитуриента | admin, admissions_secretary, admissions_operator |
-| `admissions.applicants.archive` | архивирование профиля | admin, admissions_secretary |
+| `admissions.applicant.view` | просмотр foundation-профилей абитуриентов | admin, admission, director, study, academic_office |
+| `admissions.applicant.manage` | создание и связывание foundation-профилей через сервисный слой | admin, admission |
+
+Разрешения `admissions.applicants.create`, `admissions.applicants.update` и `admissions.applicants.archive` остаются проектными именами для будущего полноценного CRUD. В BACK-002 они не реализуются, потому что API абитуриентов открыт только на чтение.
 
 ## Заявления
 

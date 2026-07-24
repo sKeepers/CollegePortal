@@ -89,6 +89,8 @@ class PersonService
         $person->loadMissing([
             'students.group',
             'teachers.subjects',
+            'applicants.status',
+            'applicants.source',
             'applicantApplications.educationProgram',
             'graduates.student',
             'graduates.group',
@@ -99,6 +101,7 @@ class PersonService
         return [
             'students' => $person->students,
             'teachers' => $person->teachers,
+            'applicants' => $person->applicants,
             'applicant_applications' => $person->applicantApplications,
             'graduates' => $person->graduates,
             'users' => $person->users,

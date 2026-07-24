@@ -83,7 +83,9 @@ Roadmap фиксирует порядок развития проекта пос
 - Документы: `docs/СТРАТЕГИЯ_РЕАЛИЗАЦИИ_ПРИЕМНОЙ_КОМИССИИ.md`, `docs/adr/ADR-005_СТРАТЕГИЯ_РЕАЛИЗАЦИИ.md`.
 - Зафиксированы слои Domain, Application, Infrastructure, Repository, Services, Audit, RBAC, private files, migration/testing strategy.
 - Подготовлен план первых задач BACK/FRONT/TEST.
-- Следующий рекомендуемый этап: BACK-001 — Reference Data, статусы и permissions.
+- [x] BACK-001: Reference Data, статусы, permissions и read-only API справочников приемной комиссии.
+- [x] BACK-002: foundation Person/Applicant, безопасная связь с существующей Person и read-only API абитуриентов.
+- Следующий рекомендуемый этап: BACK-003 — Application foundation.
 ### Приемная комиссия
 
 - [x] ADM-001: Приемная комиссия — выполнено;

@@ -167,7 +167,7 @@
 - [x] Описать Audit, RBAC, private files, миграции и тестирование.
 - [x] Подготовить план BACK-001..BACK-010, FRONT-001..FRONT-006, TEST-001..TEST-002.
 - [x] BACK-001: Reference Data, статусы, permissions и read-only API справочников приемной комиссии.
-- [ ] BACK-002: Applicant и Person linking.
+- [x] BACK-002: Applicant foundation и безопасная связь с Person.
 - [ ] BACK-003: Application foundation.
 - [ ] FRONT-001: Read-only Admissions workspace.
 - [ ] TEST-001: Backend regression suite.

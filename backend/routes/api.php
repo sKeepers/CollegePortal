@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\AdminPermissionController;
 use App\Http\Controllers\Api\AdminSettingController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AdminUserController;
+use App\Http\Controllers\Api\Admissions\ApplicantController as AdmissionsApplicantController;
 use App\Http\Controllers\Api\Admissions\AdmissionReferenceController;
 use App\Http\Controllers\Api\ApplicantApplicationController;
 use App\Http\Controllers\Api\ApplicantDocumentController;
@@ -152,6 +153,11 @@ Route::middleware('api.token')->group(function (): void {
     Route::middleware('permission:admissions.reference.view')->group(function (): void {
         Route::get('admissions/reference', [AdmissionReferenceController::class, 'index']);
         Route::get('admissions/reference/{catalog}', [AdmissionReferenceController::class, 'show']);
+    });
+
+    Route::middleware('permission:admissions.applicant.view')->group(function (): void {
+        Route::get('admissions/applicants', [AdmissionsApplicantController::class, 'index']);
+        Route::get('admissions/applicants/{id}', [AdmissionsApplicantController::class, 'show'])->whereNumber('id');
     });
 
     Route::middleware('permission:manage_users')->group(function (): void {

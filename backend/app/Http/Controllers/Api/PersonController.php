@@ -19,7 +19,7 @@ class PersonController extends Controller
         $profile = $request->string('profile')->toString();
 
         $people = Person::query()
-            ->withCount(['students', 'teachers', 'applicantApplications', 'graduates', 'users', 'digitalIdentities'])
+            ->withCount(['students', 'teachers', 'applicants', 'applicantApplications', 'graduates', 'users', 'digitalIdentities'])
             ->when($search, function ($query) use ($operator, $search): void {
                 $query->where(function ($query) use ($operator, $search): void {
                     $query->where('last_name', $operator, "%{$search}%")
@@ -33,7 +33,7 @@ class PersonController extends Controller
                 match ($profile) {
                     'student' => $query->has('students'),
                     'teacher' => $query->has('teachers'),
-                    'applicant' => $query->has('applicantApplications'),
+                    'applicant' => $query->where(fn ($profileQuery) => $profileQuery->has('applicants')->orHas('applicantApplications')),
                     'graduate' => $query->has('graduates'),
                     'user' => $query->has('users'),
                     default => null,
@@ -51,13 +51,15 @@ class PersonController extends Controller
         return new PersonResource($person->load([
             'students.group',
             'teachers.subjects',
+            'applicants.status',
+            'applicants.source',
             'applicantApplications.educationProgram',
             'graduates.student',
             'graduates.group',
             'graduates.diploma',
             'users.roles',
             'digitalIdentities',
-        ])->loadCount(['students', 'teachers', 'applicantApplications', 'graduates', 'users', 'digitalIdentities']));
+        ])->loadCount(['students', 'teachers', 'applicants', 'applicantApplications', 'graduates', 'users', 'digitalIdentities']));
     }
 
     public function profiles(Person $person, PersonService $personService): array

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\Admissions\ApplicantResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -12,6 +13,7 @@ class PersonResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'uuid' => $this->uuid,
             'last_name' => $this->last_name,
             'first_name' => $this->first_name,
             'middle_name' => $this->middle_name,
@@ -29,6 +31,7 @@ class PersonResource extends JsonResource
             'profiles_count' => [
                 'students' => $this->whenCounted('students'),
                 'teachers' => $this->whenCounted('teachers'),
+                'applicants' => $this->whenCounted('applicants'),
                 'applicant_applications' => $this->whenCounted('applicantApplications'),
                 'graduates' => $this->whenCounted('graduates'),
                 'users' => $this->whenCounted('users'),
@@ -36,6 +39,7 @@ class PersonResource extends JsonResource
             ],
             'students' => StudentResource::collection($this->whenLoaded('students')),
             'teachers' => TeacherResource::collection($this->whenLoaded('teachers')),
+            'applicants' => ApplicantResource::collection($this->whenLoaded('applicants')),
             'applicant_applications' => ApplicantApplicationResource::collection($this->whenLoaded('applicantApplications')),
             'graduates' => GraduateResource::collection($this->whenLoaded('graduates')),
             'users' => UserResource::collection($this->whenLoaded('users')),
