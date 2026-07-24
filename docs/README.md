@@ -51,6 +51,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 
 - [Data Import](DATA_IMPORT.md)
 - [Приемная комиссия](ПРИЕМНАЯ_КОМИССИЯ.md)
+- [Модель данных приемной комиссии](МОДЕЛЬ_ДАННЫХ_ПРИЕМНОЙ_КОМИССИИ.md)
 - [Admissions FIS Import](FIS_ADMISSIONS_IMPORT.md)
 - [Person Model](PERSON_MODEL.md)
 - [Identity Domain](IDENTITY_DOMAIN.md)
@@ -69,6 +70,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [adr/ADR-FIS-GATEWAY.md](adr/ADR-FIS-GATEWAY.md)
 - [adr/ADR-INTEGRATION-GATEWAY.md](adr/ADR-INTEGRATION-GATEWAY.md)
 - [adr/ADR-002_ПРИЕМНАЯ_КОМИССИЯ.md](adr/ADR-002_ПРИЕМНАЯ_КОМИССИЯ.md)
+- [adr/ADR-003_МОДЕЛЬ_ДАННЫХ_ПРИЕМНОЙ_КОМИССИИ.md](adr/ADR-003_МОДЕЛЬ_ДАННЫХ_ПРИЕМНОЙ_КОМИССИИ.md)
 - [AGENTS.md](AGENTS.md)
 - [APPLICANT_DOCUMENTS.md](APPLICANT_DOCUMENTS.md)
 - [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md)
@@ -135,6 +137,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md)
 - [LAYOUT_GUIDELINES.md](LAYOUT_GUIDELINES.md)
 - [MILESTONE_002_REVIEW.md](MILESTONE_002_REVIEW.md)
+- [МОДЕЛЬ_ДАННЫХ_ПРИЕМНОЙ_КОМИССИИ.md](МОДЕЛЬ_ДАННЫХ_ПРИЕМНОЙ_КОМИССИИ.md)
 - [MOBILE_ACCESS_SCANNER.md](MOBILE_ACCESS_SCANNER.md)
 - [PATH_POLICY.md](PATH_POLICY.md)
 - [PERFORMANCE_REVIEW.md](PERFORMANCE_REVIEW.md)

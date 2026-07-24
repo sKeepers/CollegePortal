@@ -62,6 +62,13 @@ Roadmap фиксирует порядок развития проекта пос
   4. Приказы;
   5. Экспорт в ФИС;
   6. Личный кабинет абитуриента.
+
+### ADM-002: модель данных подсистемы «Приемная комиссия»
+
+- [x] Спроектировать модель данных без миграций, backend, frontend, API и бизнес-логики.
+- Документы: `docs/МОДЕЛЬ_ДАННЫХ_ПРИЕМНОЙ_КОМИССИИ.md`, `docs/adr/ADR-003_МОДЕЛЬ_ДАННЫХ_ПРИЕМНОЙ_КОМИССИИ.md`.
+- Зафиксированы сущности: Person, Applicant, Application, Choices, Documents, Achievements, Exams, Competitions, Orders, Enrollments, Statuses и Reference Data.
+- Следующий рекомендуемый этап: ADM-003 — миграционная стратегия и первый implementation slice с dry-run/backfill.
 ### Приемная комиссия
 
 - [x] ADM-001: Приемная комиссия — выполнено;

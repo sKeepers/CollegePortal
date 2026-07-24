@@ -18,13 +18,13 @@ This document is a navigation and status snapshot. GitHub Issues, Pull Requests 
 
 ## Active Branch
 
-- Branch: `feature/adm-001-admissions-architecture`
-- Base: `origin/develop`
+- Branch: `feature/adm-002-admissions-data-model`
+- Base: stacked on `feature/adm-001-admissions-architecture` until ADM-001 is merged.
 - Scope: documentation only.
 
 ## Current Task
 
-- `ADM-001`: спроектировать архитектурный foundation подсистемы «Приемная комиссия» без реализации backend/frontend/API/БД.
+- `ADM-002`: спроектировать модель данных подсистемы «Приемная комиссия» без реализации backend/frontend/API/БД.
 - Allowed changes: Markdown documentation only.
 - Explicitly excluded: backend, frontend, database, migrations, API, infrastructure scripts and runtime configuration.
 
@@ -36,6 +36,7 @@ Recent completed work reflected by current project notes and user-provided statu
 - `DEMO-001.1`: completed. DEV-only login helper and temporary credential card workflow were completed before this documentation task.
 - `DEMO-002`: code completed and pushed. GitHub Issue and Draft PR creation were blocked by missing GitHub write access in the Codex environment.
 - `INFRA-PATHS`: completed. Canonical paths are `C:\!Projects\CollegePortal` on Windows and `/srv/college-dev` on Linux DEV.
+- `ADM-001`: completed as architecture documentation for the Admissions subsystem.
 
 ## Roadmap Progress
 
@@ -45,10 +46,10 @@ Known roadmap maintenance need: older sections still name early tasks such as GU
 
 ## Next Planned Task
 
-Recommended next planned task after `ADM-001`:
+Recommended next planned task after `ADM-002`:
 
-- create ADM-002 implementation task for admissions CRUD after review of the architecture PR;
-- keep ADM-001 as documentation-only until the Draft PR is reviewed; do not merge automatically.
+- create ADM-003 migration strategy and first backend implementation slice for Admissions after review of ADM-001 and ADM-002;
+- keep ADM-002 as documentation-only until the Draft PR is reviewed; do not merge automatically.
 
 ## Open Issues
 
@@ -73,6 +74,8 @@ Key decision records and decision-oriented documents:
 - [Architecture Decisions](ARCHITECTURE_DECISIONS.md)
 - [ADR: FIS Gateway](adr/ADR-FIS-GATEWAY.md)
 - [ADR: Integration Gateway](adr/ADR-INTEGRATION-GATEWAY.md)
+- [ADR-002: Приемная комиссия](adr/ADR-002_ПРИЕМНАЯ_КОМИССИЯ.md)
+- [ADR-003: Модель данных приемной комиссии](adr/ADR-003_МОДЕЛЬ_ДАННЫХ_ПРИЕМНОЙ_КОМИССИИ.md)
 - [Integration Gateway Protocol](INTEGRATION_GATEWAY_PROTOCOL.md)
 - [Path Policy](PATH_POLICY.md)
 
@@ -84,15 +87,15 @@ Background agents are documented in [Background Agents](AGENTS.md). Hubble, Menc
 
 ## Backlog
 
-ADM-001 backlog:
+ADM-001/ADM-002 admissions backlog:
 
-1. Этап 1 — CRUD абитуриентов.
-2. Этап 2 — Документы.
-3. Этап 3 — Конкурс.
-4. Этап 4 — Приказы.
-5. Этап 5 — Экспорт в ФИС.
-6. Этап 6 — Личный кабинет абитуриента.
-
+1. ADM-003 — миграционная стратегия и первый backend slice без разрушения текущего `/admissions`.
+2. Этап 1 — CRUD абитуриентов.
+3. Этап 2 — Документы.
+4. Этап 3 — Конкурс.
+5. Этап 4 — Приказы.
+6. Этап 5 — Экспорт в ФИС.
+7. Этап 6 — Личный кабинет абитуриента.
 
 Documentation governance backlog:
 
@@ -108,3 +111,4 @@ Documentation governance backlog:
 | --- | --- |
 | 2026-07-24 | Created the unified project status document for `DOCS-001`. |
 | 2026-07-24 | Added ADM-001 Admissions architecture foundation. |
+| 2026-07-24 | Added ADM-002 Admissions data model foundation. |
