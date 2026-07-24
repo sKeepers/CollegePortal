@@ -121,6 +121,8 @@ class RoleSeeder extends Seeder
             ['module' => 'Admissions', 'code' => 'admissions.documents.reject', 'name' => 'Документы абитуриентов: отклонение', 'description' => 'Отклонение документа с причиной.'],
             ['module' => 'Admissions', 'code' => 'admissions.documents.delete', 'name' => 'Документы абитуриентов: удаление', 'description' => 'Удаление записей и файлов документов.'],
             ['module' => 'Admissions', 'code' => 'admissions.documents.download', 'name' => 'Документы абитуриентов: скачивание', 'description' => 'Скачивание файлов документов через защищенный endpoint.'],
+            ['module' => 'Admissions', 'code' => 'admissions.reference.view', 'name' => 'Приемная комиссия: справочники просмотр', 'description' => 'Просмотр системных справочников приемной комиссии.'],
+            ['module' => 'Admissions', 'code' => 'admissions.reference.manage', 'name' => 'Приемная комиссия: справочники управление', 'description' => 'Будущее управление справочниками приемной комиссии через защищенный admin flow.'],
             ['module' => 'Curricula', 'code' => 'curricula.view', 'name' => 'Учебные планы: просмотр', 'description' => 'Просмотр учебных планов.'],
             ['module' => 'Curricula', 'code' => 'curricula.edit', 'name' => 'Учебные планы: ведение', 'description' => 'Создание, изменение и импорт учебных планов.'],
             ['module' => 'Curricula', 'code' => 'curricula.subjects.view', 'name' => 'Учебные планы: дисциплины просмотр', 'description' => 'Просмотр нормализованных дисциплин учебного плана.'],
@@ -195,7 +197,7 @@ class RoleSeeder extends Seeder
         return [
             'dashboard.view', 'people.view', 'students.view', 'groups.view', 'teachers.view', 'subjects.view', 'classrooms.view',
             'schedule.view', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.view_all', 'journal.export', 'attendance.view', 'attendance.reports',
-            'admissions.view', 'admissions.documents.view', 'admissions.documents.download', 'admissions.bulk_export', 'curricula.view', 'curricula.subjects.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'graduation.view',
+            'admissions.view', 'admissions.documents.view', 'admissions.documents.download', 'admissions.bulk_export', 'admissions.reference.view', 'curricula.view', 'curricula.subjects.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'graduation.view',
             'frdo.view', 'fis.view', 'fis.outbound.view', 'fis.outbound.status', 'gate.reports', 'audit.view', 'reference.manage', 'uat.manage', 'hr.employees.view', 'hr.calendar.view', 'hr.replacements.view', 'hr.reports.view', 'view_reports',
         ];
     }
@@ -209,7 +211,7 @@ class RoleSeeder extends Seeder
             'subjects.view', 'subjects.create', 'subjects.update', 'subjects.delete',
             'classrooms.view', 'classrooms.create', 'classrooms.update', 'classrooms.delete',
             'schedule.view', 'schedule.create', 'schedule.update', 'schedule.delete', 'schedule.validate', 'schedule.manage_templates', 'schedule.manage_replacements', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.reopen', 'journal.view_all', 'journal.export',
-            'attendance.view', 'attendance.reports', 'admissions.documents.view', 'curricula.view', 'curricula.edit', 'curricula.subjects.view', 'curricula.subjects.create', 'curricula.subjects.update', 'curricula.subjects.delete',
+            'attendance.view', 'attendance.reports', 'admissions.documents.view', 'admissions.reference.view', 'curricula.view', 'curricula.edit', 'curricula.subjects.view', 'curricula.subjects.create', 'curricula.subjects.update', 'curricula.subjects.delete',
             'teachingload.view', 'teachingload.edit', 'teaching_load.generate', 'teaching_load.assign', 'teaching_load.bulk_assign', 'teaching_load.view_coverage', 'exams.view', 'exams.edit',
             'graduation.view', 'graduation.edit', 'people.update', 'people.link', 'frdo.view', 'fis.view', 'fis.outbound.view', 'fis.outbound.create', 'fis.outbound.generate', 'fis.outbound.validate', 'fis.outbound.send_test', 'fis.outbound.status', 'reference.manage', 'import.manage',
             'manage_dictionaries', 'manage_schedule', 'manage_journal', 'uat.manage', 'hr.employees.view', 'hr.calendar.view', 'hr.statuses.manage', 'hr.replacements.view', 'hr.replacements.manage', 'hr.reports.view', 'view_reports',
@@ -223,7 +225,7 @@ class RoleSeeder extends Seeder
 
     private function admissionPermissions(): array
     {
-        return ['dashboard.view', 'people.view', 'admissions.view', 'admissions.edit', 'admissions.documents.view', 'admissions.documents.receive', 'admissions.documents.upload', 'admissions.documents.verify', 'admissions.documents.reject', 'admissions.documents.download', 'admissions.bulk_status', 'admissions.bulk_documents', 'admissions.bulk_recommend', 'admissions.bulk_assign', 'admissions.bulk_export', 'admissions.bulk_enroll', 'students.view', 'groups.view', 'fis.outbound.view', 'fis.outbound.create', 'fis.outbound.generate', 'fis.outbound.validate', 'fis.outbound.send_test', 'fis.outbound.status', 'reference.manage', 'import.manage', 'view_reports'];
+        return ['dashboard.view', 'people.view', 'admissions.view', 'admissions.edit', 'admissions.documents.view', 'admissions.documents.receive', 'admissions.documents.upload', 'admissions.documents.verify', 'admissions.documents.reject', 'admissions.documents.download', 'admissions.bulk_status', 'admissions.bulk_documents', 'admissions.bulk_recommend', 'admissions.bulk_assign', 'admissions.bulk_export', 'admissions.bulk_enroll', 'admissions.reference.view', 'students.view', 'groups.view', 'fis.outbound.view', 'fis.outbound.create', 'fis.outbound.generate', 'fis.outbound.validate', 'fis.outbound.send_test', 'fis.outbound.status', 'reference.manage', 'import.manage', 'view_reports'];
     }
 
     private function teacherPermissions(): array

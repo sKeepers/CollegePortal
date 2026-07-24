@@ -18,15 +18,15 @@ This document is a navigation and status snapshot. GitHub Issues, Pull Requests 
 
 ## Active Branch
 
-- Branch: `feature/adm-004-admissions-implementation-strategy`
-- Base: stacked on `feature/adm-003-admissions-api-processes` until ADM-001/ADM-002/ADM-003 are merged.
-- Scope: documentation only.
+- Branch: `feature/back-001-admissions-reference`
+- Base: stacked on `feature/adm-004-admissions-implementation-strategy` until ADM-001..ADM-004 are merged.
+- Scope: backend read-only reference layer for Admissions.
 
 ## Current Task
 
-- `ADM-004`: подготовить техническую стратегию реализации backend и frontend подсистемы «Приемная комиссия» без написания кода.
-- Allowed changes: Markdown documentation only.
-- Explicitly excluded: backend, frontend, database, migrations, API, infrastructure scripts and runtime configuration.
+- `BACK-001`: реализовать инфраструктуру справочников приемной комиссии без изменения существующего `/admissions`.
+- Allowed changes: migrations, Laravel models, repository/service, read-only API controllers/resources, seeders, permissions, tests and minimal documentation updates.
+- Explicitly excluded: Applicant, Person linking, Application, Choices, Documents, Upload, Competition, Orders, Enrollment, ФИС and frontend UI.
 
 ## Completed Tasks
 
@@ -39,6 +39,7 @@ Recent completed work reflected by current project notes and user-provided statu
 - `ADM-001`: completed as architecture documentation for the Admissions subsystem.
 - `ADM-002`: completed as data model documentation for the Admissions subsystem.
 - `ADM-003`: completed as API, RBAC and workflow documentation for the Admissions subsystem.
+- `ADM-004`: completed as implementation strategy documentation for the Admissions subsystem.
 
 ## Roadmap Progress
 
@@ -48,10 +49,10 @@ Known roadmap maintenance need: older sections still name early tasks such as GU
 
 ## Next Planned Task
 
-Recommended next planned task after `ADM-004`:
+Recommended next planned task after `BACK-001`:
 
-- start BACK-001: Reference Data, statuses and permissions for Admissions after review of ADM-001 through ADM-004;
-- keep ADM-004 as documentation-only until the Draft PR is reviewed; do not merge automatically.
+- start `BACK-002`: Applicant foundation and safe Person linking;
+- keep BACK-001 read-only and do not add Admissions CRUD until the reference layer PR is reviewed.
 
 ## Open Issues
 
@@ -94,12 +95,13 @@ Background agents are documented in [Background Agents](AGENTS.md). Hubble, Menc
 ADM-001/ADM-002/ADM-003/ADM-004 admissions backlog:
 
 1. BACK-001 — Reference Data, статусы и permissions приемной комиссии.
-2. Этап 1 — CRUD абитуриентов.
-3. Этап 2 — Документы.
-4. Этап 3 — Конкурс.
-5. Этап 4 — Приказы.
-6. Этап 5 — Экспорт в ФИС.
-7. Этап 6 — Личный кабинет абитуриента.
+2. BACK-002 — Applicant foundation и безопасная связь с Person.
+3. Этап 1 — CRUD абитуриентов.
+4. Этап 2 — Документы.
+5. Этап 3 — Конкурс.
+6. Этап 4 — Приказы.
+7. Этап 5 — Экспорт в ФИС.
+8. Этап 6 — Личный кабинет абитуриента.
 
 Documentation governance backlog:
 
@@ -118,3 +120,4 @@ Documentation governance backlog:
 | 2026-07-24 | Added ADM-002 Admissions data model foundation. |
 | 2026-07-24 | Added ADM-003 Admissions API and process foundation. |
 | 2026-07-24 | Added ADM-004 Admissions implementation strategy. |
+| 2026-07-24 | Added BACK-001 Admissions read-only reference foundation. |

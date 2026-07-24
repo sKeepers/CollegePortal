@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\AdminPermissionController;
 use App\Http\Controllers\Api\AdminSettingController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AdminUserController;
+use App\Http\Controllers\Api\Admissions\AdmissionReferenceController;
 use App\Http\Controllers\Api\ApplicantApplicationController;
 use App\Http\Controllers\Api\ApplicantDocumentController;
 use App\Http\Controllers\Api\AdmissionBulkController;
@@ -146,6 +147,11 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('attendance/history', [AttendanceAnalysisController::class, 'history']);
         Route::get('attendance/person/{type}/{id}/summary', [AttendanceAnalysisController::class, 'personSummary']);
         Route::get('attendance/person/{type}/{id}/days', [AttendanceAnalysisController::class, 'personDays']);
+    });
+
+    Route::middleware('permission:admissions.reference.view')->group(function (): void {
+        Route::get('admissions/reference', [AdmissionReferenceController::class, 'index']);
+        Route::get('admissions/reference/{catalog}', [AdmissionReferenceController::class, 'show']);
     });
 
     Route::middleware('permission:manage_users')->group(function (): void {
