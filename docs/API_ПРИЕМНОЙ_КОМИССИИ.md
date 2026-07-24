@@ -277,6 +277,20 @@ API делится на bounded areas:
 | `/api/admissions/reference` | `GET` | справочники UI | `dictionaries`, `active_only` | нет | statuses, document types, forms, quotas, sources | `401`, `403`, `422` | `admissions.reference.view` |
 | `/api/admissions/reference/{dictionary}/{id}` | `PUT` | обновить справочник | path ids | `name`, `active`, `sort_order`, `external_code`, `metadata` | reference item | `401`, `403`, `404`, `409`, `422` | `admissions.reference.manage` |
 
+## Реализация BACK-003
+
+BACK-003 реализует только foundation-часть API заявлений. Полный проектный контракт выше остается целевым, но на текущем этапе доступны только:
+
+| URL | Метод | Статус реализации | Permission |
+| --- | --- | --- | --- |
+| `/api/admissions/applications` | `GET` | список foundation-заявлений с фильтрами `applicant_id`, `status`, `admission_year`, `q`, `per_page` | `admissions.application.view` |
+| `/api/admissions/applications/{applicationId}` | `GET` | карточка foundation-заявления без лишних персональных данных Person | `admissions.application.view` |
+| `/api/admissions/applications` | `POST` | создание черновика `draft` | `admissions.application.create` |
+| `/api/admissions/applications/{applicationId}` | `PATCH` | изменение разрешенных полей только в `draft` | `admissions.application.update` |
+| `/api/admissions/applications/{applicationId}/register` | `POST` | идемпотентная регистрация черновика в `registered` | `admissions.application.register` |
+
+`DELETE`, документы, choices, достижения, экзамены, конкурс, приказы, зачисление и ФИС в BACK-003 не реализуются.
+
 # Диаграммы Mermaid
 
 ## Жизненный цикл заявления

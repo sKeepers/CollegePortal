@@ -17,6 +17,7 @@ class AdmissionReferenceCatalogs
         return [
             self::catalog('admission_application_statuses', 'Статусы заявлений приемной комиссии', 'Жизненный цикл заявления абитуриента.', [
                 ['draft', 'Черновик', ['tone' => 'neutral', 'terminal' => false]],
+                ['registered', 'Зарегистрировано', ['tone' => 'info', 'terminal' => false]],
                 ['new', 'Новое', ['tone' => 'info', 'terminal' => false]],
                 ['documents_pending', 'Документы ожидаются', ['tone' => 'warning', 'terminal' => false]],
                 ['documents_received', 'Получение документов подтверждено', ['tone' => 'info', 'terminal' => false]],

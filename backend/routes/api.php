@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\AdminPermissionController;
 use App\Http\Controllers\Api\AdminSettingController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AdminUserController;
+use App\Http\Controllers\Api\Admissions\AdmissionApplicationController as AdmissionsAdmissionApplicationController;
 use App\Http\Controllers\Api\Admissions\ApplicantController as AdmissionsApplicantController;
 use App\Http\Controllers\Api\Admissions\AdmissionReferenceController;
 use App\Http\Controllers\Api\ApplicantApplicationController;
@@ -159,6 +160,20 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('admissions/applicants', [AdmissionsApplicantController::class, 'index']);
         Route::get('admissions/applicants/{id}', [AdmissionsApplicantController::class, 'show'])->whereNumber('id');
     });
+
+    Route::get('admissions/applications', [AdmissionsAdmissionApplicationController::class, 'index'])
+        ->middleware('permission:admissions.application.view');
+    Route::get('admissions/applications/{application}', [AdmissionsAdmissionApplicationController::class, 'show'])
+        ->whereNumber('application')
+        ->middleware('permission:admissions.application.view');
+    Route::post('admissions/applications', [AdmissionsAdmissionApplicationController::class, 'store'])
+        ->middleware('permission:admissions.application.create');
+    Route::patch('admissions/applications/{application}', [AdmissionsAdmissionApplicationController::class, 'update'])
+        ->whereNumber('application')
+        ->middleware('permission:admissions.application.update');
+    Route::post('admissions/applications/{application}/register', [AdmissionsAdmissionApplicationController::class, 'register'])
+        ->whereNumber('application')
+        ->middleware('permission:admissions.application.register');
 
     Route::middleware('permission:manage_users')->group(function (): void {
         Route::get('admin/audit', [AuditLogController::class, 'index']);

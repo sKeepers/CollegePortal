@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Foundation-профиль абитуриента, связанный с общей Person.
@@ -51,6 +52,11 @@ class Applicant extends Model
     public function responsibleUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'responsible_user_id');
+    }
+
+    public function admissionApplications(): HasMany
+    {
+        return $this->hasMany(AdmissionApplication::class);
     }
 
     public function scopeActive(Builder $query): Builder

@@ -18,15 +18,15 @@ This document is a navigation and status snapshot. GitHub Issues, Pull Requests 
 
 ## Active Branch
 
-- Branch: `feature/back-002-person-applicant`
-- Base: stacked on `feature/adm-004-admissions-implementation-strategy` until ADM-001..ADM-004 are merged.
-- Scope: backend foundation Person/Applicant for Admissions.
+- Branch: `feature/back-003-application-foundation`
+- Base: stacked on `feature/back-002-person-applicant`, потому что commit BACK-002 `9655d1bb975e504af121f909d0aa36c046653643` еще не входит в `origin/develop`.
+- Scope: backend foundation заявления приемной комиссии.
 
 ## Current Task
 
-- `BACK-002`: реализовать foundation `Person`/`Applicant` и безопасную связь абитуриента с существующей Person.
-- Разрешенные изменения: миграции, Laravel models, repositories, application services, read-only API controllers/resources, permissions, Audit, tests and minimal documentation updates.
-- Явно исключено: Application, Choices, Documents, Upload, Competition, Orders, Enrollment, Student, ФИС and frontend UI.
+- `BACK-003`: реализовать foundation `AdmissionApplication` для заявлений приемной комиссии.
+- Разрешенные изменения: расширяющая миграция legacy-таблицы `applicant_applications`, namespaced Laravel model, repositories, application service, FormRequest, API resources, API controllers, permissions, Audit, tests and minimal documentation updates.
+- Явно исключено: Documents, Upload, Choices, Competition, Orders, Enrollment, Student, ФИС and frontend UI.
 
 ## Completed Tasks
 
@@ -41,6 +41,7 @@ Recent completed work reflected by current project notes and user-provided statu
 - `ADM-003`: completed as API, RBAC and workflow documentation for the Admissions subsystem.
 - `ADM-004`: completed as implementation strategy documentation for the Admissions subsystem.
 - `BACK-001`: completed as read-only Reference Data foundation for Admissions.
+- `BACK-002`: completed as Person/Applicant foundation with safe Person linking and read-only applicants API.
 
 ## Roadmap Progress
 
@@ -50,10 +51,10 @@ Known roadmap maintenance need: older sections still name early tasks such as GU
 
 ## Next Planned Task
 
-Recommended next planned task after `BACK-002`:
+Recommended next planned task after `BACK-003`:
 
-- start `BACK-003`: Application foundation;
-- keep BACK-002 read-only and do not add document upload, competitions, orders, enrollment or frontend UI until the Applicant foundation is reviewed.
+- start `BACK-004`: минимальный CRUD/операционный слой заявлений или подготовка choices, в зависимости от review;
+- keep BACK-003 limited to foundation routes and do not add documents, competitions, orders, enrollment or FIS until the application lifecycle is reviewed.
 
 ## Open Issues
 
@@ -98,12 +99,13 @@ ADM-001/ADM-002/ADM-003/ADM-004 admissions backlog:
 1. BACK-001 — Reference Data, статусы и permissions приемной комиссии.
 2. BACK-002 — Applicant foundation и безопасная связь с Person.
 3. BACK-003 — Application foundation.
-4. Этап 1 — CRUD абитуриентов.
-5. Этап 2 — Документы.
-6. Этап 3 — Конкурс.
-7. Этап 4 — Приказы.
-8. Этап 5 — Экспорт в ФИС.
-9. Этап 6 — Личный кабинет абитуриента.
+4. BACK-004 — следующий backend slice заявлений после review BACK-003.
+5. Этап 1 — CRUD абитуриентов.
+6. Этап 2 — Документы.
+7. Этап 3 — Конкурс.
+8. Этап 4 — Приказы.
+9. Этап 5 — Экспорт в ФИС.
+10. Этап 6 — Личный кабинет абитуриента.
 
 Documentation governance backlog:
 
@@ -124,3 +126,4 @@ Documentation governance backlog:
 | 2026-07-24 | Added ADM-004 Admissions implementation strategy. |
 | 2026-07-24 | Added BACK-001 Admissions read-only reference foundation. |
 | 2026-07-24 | Added BACK-002 Admissions Person/Applicant foundation. |
+| 2026-07-24 | Added BACK-003 Admissions Application foundation. |

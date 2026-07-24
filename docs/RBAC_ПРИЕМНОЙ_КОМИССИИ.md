@@ -126,12 +126,15 @@
 
 | Permission | Назначение | Роли по умолчанию |
 | --- | --- | --- |
-| `admissions.applications.view` | просмотр заявлений | admin, admissions_secretary, admissions_operator, director, study_office |
-| `admissions.applications.create` | создание заявления | admin, admissions_secretary, admissions_operator |
-| `admissions.applications.update` | редактирование заявления | admin, admissions_secretary, admissions_operator |
-| `admissions.applications.register` | регистрация заявления | admin, admissions_secretary, admissions_operator |
+| `admissions.application.view` | просмотр foundation-заявлений | admin, admission, director, study, academic_office |
+| `admissions.application.create` | создание черновика заявления | admin, admission |
+| `admissions.application.update` | редактирование допустимых полей черновика | admin, admission |
+| `admissions.application.register` | регистрация черновика заявления | admin, admission |
+| `admissions.application.manage` | будущие расширенные операции над заявлениями | admin, admission |
 | `admissions.applications.withdraw` | отзыв заявления | admin, admissions_secretary |
 | `admissions.choices.manage` | управление выбранными программами | admin, admissions_secretary, admissions_operator |
+
+Разрешения `admissions.applications.*` с plural-именованием остаются проектными именами полного CRUD. В BACK-003 реализованы singular permissions `admissions.application.*` для foundation API. Отзыв заявления, choices и документы остаются planned.
 
 ## Документы
 

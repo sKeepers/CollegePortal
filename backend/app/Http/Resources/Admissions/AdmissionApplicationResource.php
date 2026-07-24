@@ -1,0 +1,47 @@
+<?php
+
+namespace App\Http\Resources\Admissions;
+
+use App\Http\Resources\EducationProgramResource;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class AdmissionApplicationResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'uuid' => $this->uuid,
+            'applicant_id' => $this->applicant_id,
+            'admission_year' => $this->admission_year,
+            'application_number' => $this->application_number,
+            'education_program_id' => $this->education_program_id,
+            'education_program' => new EducationProgramResource($this->whenLoaded('educationProgram')),
+            'status' => [
+                'code' => $this->statusCode(),
+                'id' => $this->status_id,
+                'name' => $this->statusItem?->name,
+            ],
+            'source' => $this->whenLoaded('source', fn () => [
+                'id' => $this->source?->id,
+                'code' => $this->source?->code,
+                'name' => $this->source?->name,
+            ]),
+            'submitted_at' => $this->submitted_at?->toDateString(),
+            'registered_at' => $this->registered_at?->toISOString(),
+            'comment' => $this->comment,
+            'applicant' => $this->whenLoaded('applicant', fn () => [
+                'id' => $this->applicant?->id,
+                'uuid' => $this->applicant?->uuid,
+                'display_name' => trim(implode(' ', array_filter([
+                    $this->applicant?->person?->last_name,
+                    $this->applicant?->person?->first_name,
+                    $this->applicant?->person?->middle_name,
+                ]))),
+            ]),
+            'created_at' => $this->created_at?->toISOString(),
+            'updated_at' => $this->updated_at?->toISOString(),
+        ];
+    }
+}

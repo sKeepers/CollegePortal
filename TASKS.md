@@ -168,7 +168,8 @@
 - [x] Подготовить план BACK-001..BACK-010, FRONT-001..FRONT-006, TEST-001..TEST-002.
 - [x] BACK-001: Reference Data, статусы, permissions и read-only API справочников приемной комиссии.
 - [x] BACK-002: Applicant foundation и безопасная связь с Person.
-- [ ] BACK-003: Application foundation.
+- [x] BACK-003: Application foundation.
+- [ ] BACK-004: следующий backend slice заявлений после review foundation API.
 - [ ] FRONT-001: Read-only Admissions workspace.
 - [ ] TEST-001: Backend regression suite.
 ## Приемная комиссия
