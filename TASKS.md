@@ -157,6 +157,20 @@
 - [x] Добавить Mermaid-диаграммы жизненного цикла, статусов и последовательности обработки.
 - [x] Зафиксировать RBAC, audit и действия с подтверждением.
 - [ ] ADM-004: подготовить миграционную стратегию и первый backend implementation slice.
+
+## ADM-004: техническая стратегия реализации подсистемы «Приемная комиссия»
+
+- [x] Создать документ `docs/СТРАТЕГИЯ_РЕАЛИЗАЦИИ_ПРИЕМНОЙ_КОМИССИИ.md`.
+- [x] Создать ADR `docs/adr/ADR-005_СТРАТЕГИЯ_РЕАЛИЗАЦИИ.md`.
+- [x] Зафиксировать структуру backend/frontend каталогов.
+- [x] Описать Domain, Application, Infrastructure, Repository и Services слои.
+- [x] Описать Audit, RBAC, private files, миграции и тестирование.
+- [x] Подготовить план BACK-001..BACK-010, FRONT-001..FRONT-006, TEST-001..TEST-002.
+- [ ] BACK-001: Reference Data, статусы и permissions приемной комиссии.
+- [ ] BACK-002: Applicant и Person linking.
+- [ ] BACK-003: Application foundation.
+- [ ] FRONT-001: Read-only Admissions workspace.
+- [ ] TEST-001: Backend regression suite.
 ## Приемная комиссия
 
 - [x] Справочник специальностей СПО

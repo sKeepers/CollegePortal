@@ -128,3 +128,12 @@ Vuetify остается надежным MIT-вариантом, но Quasar л
 Решение: использовать REST API с отдельными областями applicants, applications, choices, documents, competitions, orders, enrollments, FIS packages, reference и events. Критичные операции оформляются отдельными командными endpoints с RBAC, Audit, подтверждением и preview/apply там, где есть массовый или юридический эффект.
 
 Подробно: `docs/adr/ADR-004_API_ПРИЕМНОЙ_КОМИССИИ.md`.
+## ADR-005: стратегия реализации подсистемы «Приемная комиссия»
+
+Дата: 2026-07-24
+
+Статус: принято для ADM-004 implementation strategy foundation.
+
+Решение: реализовывать подсистему эволюционно через небольшие backend/frontend/test задачи и layered architecture: Frontend Workspace -> API Controllers -> Application Use Cases -> Domain Services -> Repositories -> Database/Private Storage/Audit/Reference Data. Текущий `/admissions` сохраняется до завершения миграций, backfill и smoke.
+
+Подробно: `docs/adr/ADR-005_СТРАТЕГИЯ_РЕАЛИЗАЦИИ.md`.
