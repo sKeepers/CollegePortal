@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class AdmissionApplication extends Model
 {
+    public const RECORD_TYPE_FOUNDATION = 'foundation';
+
     public const STATUS_DRAFT = 'draft';
     public const STATUS_REGISTERED = 'registered';
     public const STATUS_WITHDRAWN = 'withdrawn';
@@ -22,6 +24,8 @@ class AdmissionApplication extends Model
 
     protected $fillable = [
         'uuid',
+        'record_type',
+        'foundation_version',
         'applicant_id',
         'person_id',
         'admission_year',
@@ -54,7 +58,16 @@ class AdmissionApplication extends Model
             'registered_at' => 'datetime',
             'metadata' => 'array',
             'archived_at' => 'datetime',
+            'foundation_version' => 'integer',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (AdmissionApplication $application): void {
+            $application->record_type ??= self::RECORD_TYPE_FOUNDATION;
+            $application->foundation_version ??= 1;
+        });
     }
 
     public function applicant(): BelongsTo
@@ -89,7 +102,9 @@ class AdmissionApplication extends Model
 
     public function scopeFoundation(Builder $query): Builder
     {
-        return $query->whereNotNull('applicant_id');
+        return $query
+            ->where('record_type', self::RECORD_TYPE_FOUNDATION)
+            ->whereNotNull('applicant_id');
     }
 
     public function scopeActive(Builder $query): Builder

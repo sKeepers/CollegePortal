@@ -368,7 +368,10 @@ class DemoDataSeeder extends Seeder
             }
 
             ApplicantApplication::updateOrCreate(
-                ['email' => $application['email']],
+                [
+                    'email' => $application['email'],
+                    'record_type' => ApplicantApplication::RECORD_TYPE_LEGACY,
+                ],
                 [
                     ...$application,
                     'education_program_id' => $program->id,

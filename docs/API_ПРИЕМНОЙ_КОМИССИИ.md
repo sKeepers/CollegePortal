@@ -291,6 +291,17 @@ BACK-003 реализует только foundation-часть API заявле�
 
 `DELETE`, документы, choices, достижения, экзамены, конкурс, приказы, зачисление и ФИС в BACK-003 не реализуются.
 
+## Изоляция BACK-003.1 от legacy `/admissions`
+
+На переходном этапе legacy `/api/applicant-applications` и новый `/api/admissions/applications` используют одну физическую таблицу `applicant_applications`, но разные технические множества данных:
+
+- legacy-записи помечаются `record_type=legacy`;
+- foundation-записи помечаются `record_type=foundation` и дополнительно имеют `applicant_id` и `foundation_version`;
+- legacy API, bulk, CSV import/export, dashboard admissions KPI и подготовка старых ФИС-пакетов читают только `legacy`;
+- foundation API читает и изменяет только `foundation`;
+- попытка открыть foundation-запись через legacy endpoint или legacy-запись через foundation endpoint возвращает `404`;
+- классификатор нужен только для переходного периода и не заменяет будущую нормализованную модель `Application`.
+
 # Диаграммы Mermaid
 
 ## Жизненный цикл заявления

@@ -14,7 +14,7 @@ class BulkSelectionResolver
     /** @return Collection<int, ApplicantApplication> */
     public function admissions(array $selection): Collection
     {
-        return $this->applyAdmissionSelection(ApplicantApplication::query()->with(['educationProgram.specialty', 'documents']), $selection)->get();
+        return $this->applyAdmissionSelection(ApplicantApplication::query()->legacy()->with(['educationProgram.specialty', 'documents']), $selection)->get();
     }
 
     /** @return Collection<int, Student> */

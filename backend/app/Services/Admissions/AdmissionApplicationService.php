@@ -57,6 +57,8 @@ class AdmissionApplicationService
 
             $application = $this->applications->create([
                 'uuid' => (string) Str::uuid(),
+                'record_type' => AdmissionApplication::RECORD_TYPE_FOUNDATION,
+                'foundation_version' => 1,
                 'applicant_id' => $applicant->id,
                 'person_id' => $applicant->person_id,
                 'admission_year' => $admissionYear,
@@ -272,6 +274,7 @@ class AdmissionApplicationService
     {
         return [
             'id' => $application->id,
+            'record_type' => $application->record_type,
             'applicant_id' => $application->applicant_id,
             'admission_year' => $application->admission_year,
             'application_number' => $application->application_number,

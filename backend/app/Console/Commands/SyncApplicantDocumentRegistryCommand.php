@@ -17,7 +17,7 @@ class SyncApplicantDocumentRegistryCommand extends Command
     {
         $dryRun = (bool) $this->option('dry-run') || ! $this->option('apply');
         $types = $registry->documentTypes();
-        $applications = ApplicantApplication::query()->with('documents')->get();
+        $applications = ApplicantApplication::query()->legacy()->with('documents')->get();
         $planned = 0;
         $legacyLinked = 0;
 

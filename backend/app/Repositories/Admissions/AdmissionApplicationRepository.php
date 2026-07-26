@@ -58,6 +58,7 @@ class AdmissionApplicationRepository
     public function applicationNumberExists(int $admissionYear, string $applicationNumber, ?int $ignoreId = null): bool
     {
         return AdmissionApplication::query()
+            ->foundation()
             ->where('admission_year', $admissionYear)
             ->where('application_number', $applicationNumber)
             ->when($ignoreId !== null, fn ($query) => $query->whereKeyNot($ignoreId))

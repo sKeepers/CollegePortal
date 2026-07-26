@@ -73,7 +73,7 @@ class DemoDataController extends Controller
                 'groups' => $this->deleteOnlyUnreferencedGroups($groupIds),
                 'teachers' => $this->deleteOnlyUnreferencedTeachers($teacherIds),
                 'classrooms' => $this->deleteOnlyUnreferencedClassrooms(),
-                'applications' => ApplicantApplication::query()->whereIn('email', $applicationEmails)->delete(),
+                'applications' => ApplicantApplication::query()->legacy()->whereIn('email', $applicationEmails)->delete(),
                 'users' => User::query()->whereIn('email', [...$studentEmails, ...$teacherEmails])->delete(),
             ];
 
@@ -189,7 +189,7 @@ class DemoDataController extends Controller
             'teachers' => Teacher::query()->count(),
             'subjects' => Subject::query()->count(),
             'classrooms' => Classroom::query()->count(),
-            'applicant_applications' => ApplicantApplication::query()->count(),
+            'applicant_applications' => ApplicantApplication::query()->legacy()->count(),
         ];
     }
 }

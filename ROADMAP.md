@@ -86,6 +86,7 @@ Roadmap фиксирует порядок развития проекта пос
 - [x] BACK-001: Reference Data, статусы, permissions и read-only API справочников приемной комиссии.
 - [x] BACK-002: foundation Person/Applicant, безопасная связь с существующей Person и read-only API абитуриентов.
 - [x] BACK-003: foundation `AdmissionApplication`, черновик, редактирование черновика, регистрация, read/write API без DELETE.
+- [x] BACK-003.1: изоляция legacy `/admissions` и нового Admissions Foundation через `record_type`, scopes и API guards.
 - Следующий рекомендуемый этап: BACK-004 — операционный слой заявлений после review foundation API.
 ### Приемная комиссия
 

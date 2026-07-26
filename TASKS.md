@@ -169,6 +169,7 @@
 - [x] BACK-001: Reference Data, статусы, permissions и read-only API справочников приемной комиссии.
 - [x] BACK-002: Applicant foundation и безопасная связь с Person.
 - [x] BACK-003: Application foundation.
+- [x] BACK-003.1: изоляция legacy `/admissions` и нового Admissions Foundation через явный `record_type`.
 - [ ] BACK-004: следующий backend slice заявлений после review foundation API.
 - [ ] FRONT-001: Read-only Admissions workspace.
 - [ ] TEST-001: Backend regression suite.

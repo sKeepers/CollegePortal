@@ -39,7 +39,7 @@ class ApplicantApplicationController extends Controller
     {
         $query = $this->selectionResolver
             ->applyAdmissionSelection(
-                ApplicantApplication::query()->with(['educationProgram.specialty', 'events', 'documents']),
+                ApplicantApplication::query()->legacy()->with(['educationProgram.specialty', 'events', 'documents']),
                 ['filter' => $this->filterFromRequest($request)]
             )
             ->when($request->string('education_base')->toString(), fn ($query, string $base) => $query->where('education_base', $base))
@@ -73,7 +73,7 @@ class ApplicantApplicationController extends Controller
     public function stats(Request $request): JsonResponse
     {
         $filter = $this->filterFromRequest($request);
-        $base = fn () => $this->selectionResolver->applyAdmissionSelection(ApplicantApplication::query(), ['filter' => $filter]);
+        $base = fn () => $this->selectionResolver->applyAdmissionSelection(ApplicantApplication::query()->legacy(), ['filter' => $filter]);
 
         $requiredDocumentsCount = ApplicantApplicationDocumentService::REQUIRED_DOCUMENTS_COUNT;
 
@@ -126,6 +126,7 @@ class ApplicantApplicationController extends Controller
 
     public function show(ApplicantApplication $applicantApplication): ApplicantApplicationResource
     {
+        $this->abortIfFoundationRecord($applicantApplication);
         $this->documentService->ensureDefaultDocuments($applicantApplication);
 
         return new ApplicantApplicationResource($applicantApplication->load(['educationProgram.specialty', 'events', 'documents']));
@@ -133,6 +134,7 @@ class ApplicantApplicationController extends Controller
 
     public function update(UpdateApplicantApplicationRequest $request, ApplicantApplication $applicantApplication): ApplicantApplicationResource
     {
+        $this->abortIfFoundationRecord($applicantApplication);
         $oldStatus = $applicantApplication->status;
         $oldComment = $applicantApplication->comment;
         $applicantApplication->update($request->validated());
@@ -156,6 +158,7 @@ class ApplicantApplicationController extends Controller
 
     public function destroy(ApplicantApplication $applicantApplication): Response
     {
+        $this->abortIfFoundationRecord($applicantApplication);
         $applicantApplication->delete();
 
         return response()->noContent();
@@ -188,6 +191,7 @@ class ApplicantApplicationController extends Controller
 
     public function enroll(EnrollApplicantApplicationRequest $request, ApplicantApplication $applicantApplication): JsonResponse
     {
+        $this->abortIfFoundationRecord($applicantApplication);
         $this->documentService->ensureDefaultDocuments($applicantApplication);
 
         $documentsTotal = $applicantApplication->documents()->count();
@@ -244,6 +248,7 @@ class ApplicantApplicationController extends Controller
         ApplicantApplication $applicantApplication,
         string $type,
     ): ApplicantApplicationResource {
+        $this->abortIfFoundationRecord($applicantApplication);
         $document = $this->documentService->updateDocument($applicantApplication, $type, $request->validated());
         $this->eventService->record(
             $applicantApplication,
@@ -266,5 +271,10 @@ class ApplicantApplicationController extends Controller
             'enrolled' => 'Зачислен',
             default => $status,
         };
+    }
+
+    private function abortIfFoundationRecord(ApplicantApplication $applicantApplication): void
+    {
+        abort_if($applicantApplication->isFoundationRecord(), Response::HTTP_NOT_FOUND);
     }
 }

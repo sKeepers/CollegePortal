@@ -107,7 +107,7 @@ class FisPackageController extends Controller
 
     private function fillAdmissionRecords(FisPackage $package): void
     {
-        ApplicantApplication::query()->with('educationProgram.specialty')
+        ApplicantApplication::query()->legacy()->with('educationProgram.specialty')
             ->when($package->education_program_id, fn ($query, int $id) => $query->where('education_program_id', $id))
             ->whereYear('submitted_at', $package->year)
             ->get()->each(fn (ApplicantApplication $app) => $package->records()->create(['applicant_application_id' => $app->id, 'education_program_id' => $app->education_program_id, 'specialty_id' => $app->educationProgram?->specialty_id, 'status' => 'draft', 'payload' => $this->admissionPayload($app)]));

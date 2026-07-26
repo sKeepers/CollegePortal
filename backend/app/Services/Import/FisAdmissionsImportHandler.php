@@ -360,6 +360,7 @@ class FisAdmissionsImportHandler
         }
 
         $application = ApplicantApplication::query()
+            ->legacy()
             ->with('person')
             ->where('external_source', self::SOURCE)
             ->where('external_application_number', $row['external_application_number'])
@@ -386,7 +387,7 @@ class FisAdmissionsImportHandler
 
     private function findExistingApplication(array $row, ?Person $person): ?ApplicantApplication
     {
-        $query = ApplicantApplication::query()->with('person');
+        $query = ApplicantApplication::query()->legacy()->with('person');
         if ($row['external_application_number'] !== '') {
             $external = (clone $query)->where('external_source', self::SOURCE)->where('external_application_number', $row['external_application_number'])->first();
             if ($external) {

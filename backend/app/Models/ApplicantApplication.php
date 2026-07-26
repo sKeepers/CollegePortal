@@ -2,13 +2,19 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ApplicantApplication extends Model
 {
+    public const RECORD_TYPE_LEGACY = 'legacy';
+    public const RECORD_TYPE_FOUNDATION = 'foundation';
+
     protected $fillable = [
+        'record_type',
+        'foundation_version',
         'person_id',
         'external_source',
         'external_application_number',
@@ -48,7 +54,39 @@ class ApplicantApplication extends Model
             'documents_provided' => 'boolean',
             'recommended_for_enrollment' => 'boolean',
             'fis_raw_data' => 'array',
+            'foundation_version' => 'integer',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (ApplicantApplication $application): void {
+            $application->record_type ??= self::RECORD_TYPE_LEGACY;
+        });
+    }
+
+    public function scopeLegacy(Builder $query): Builder
+    {
+        return $query->where(function (Builder $query): void {
+            $query
+                ->where('record_type', self::RECORD_TYPE_LEGACY)
+                ->orWhereNull('record_type');
+        });
+    }
+
+    public function scopeFoundation(Builder $query): Builder
+    {
+        return $query->where('record_type', self::RECORD_TYPE_FOUNDATION);
+    }
+
+    public function isLegacyRecord(): bool
+    {
+        return $this->record_type === null || $this->record_type === self::RECORD_TYPE_LEGACY;
+    }
+
+    public function isFoundationRecord(): bool
+    {
+        return $this->record_type === self::RECORD_TYPE_FOUNDATION;
     }
 
     public function person(): BelongsTo

@@ -152,6 +152,7 @@ class ApplicantApplicationCsvService
     private function query(Request $request)
     {
         return ApplicantApplication::query()
+            ->legacy()
             ->with('educationProgram.specialty')
             ->when($request->integer('education_program_id'), fn ($query, int $programId) => $query->where('education_program_id', $programId))
             ->when($request->string('status')->toString(), fn ($query, string $status) => $query->where('status', $status))
@@ -275,20 +276,24 @@ class ApplicantApplicationCsvService
     private function findApplication(array $payload): ?ApplicantApplication
     {
         if (!empty($payload['id'])) {
-            return ApplicantApplication::find($payload['id']);
+            return ApplicantApplication::query()->legacy()->find($payload['id']);
         }
 
         if (empty($payload['email'])) {
             return null;
         }
 
-        return ApplicantApplication::where('email', $payload['email'])->first();
+        return ApplicantApplication::query()->legacy()->where('email', $payload['email'])->first();
     }
 
     private function rules(): array
     {
         return [
-            'id' => ['nullable', 'integer', 'exists:applicant_applications,id'],
+            'id' => [
+                'nullable',
+                'integer',
+                Rule::exists('applicant_applications', 'id')->where('record_type', ApplicantApplication::RECORD_TYPE_LEGACY),
+            ],
             'education_program_id' => ['required', 'integer', 'exists:education_programs,id'],
             'education_program' => ['nullable', 'string', 'max:255'],
             'specialty_code' => ['nullable', 'string', 'max:50'],

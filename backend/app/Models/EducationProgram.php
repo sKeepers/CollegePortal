@@ -39,7 +39,8 @@ class EducationProgram extends Model
 
     public function applicantApplications(): HasMany
     {
-        return $this->hasMany(ApplicantApplication::class);
+        return $this->hasMany(ApplicantApplication::class)
+            ->where('record_type', ApplicantApplication::RECORD_TYPE_LEGACY);
     }
 
     public function curricula(): HasMany

@@ -37,7 +37,11 @@ class Person extends Model
     public function students(): HasMany { return $this->hasMany(Student::class); }
     public function teachers(): HasMany { return $this->hasMany(Teacher::class); }
     public function applicants(): HasMany { return $this->hasMany(Applicant::class); }
-    public function applicantApplications(): HasMany { return $this->hasMany(ApplicantApplication::class); }
+    public function applicantApplications(): HasMany
+    {
+        return $this->hasMany(ApplicantApplication::class)
+            ->where('record_type', ApplicantApplication::RECORD_TYPE_LEGACY);
+    }
     public function graduates(): HasMany { return $this->hasMany(Graduate::class); }
     public function users(): HasMany { return $this->hasMany(User::class); }
     public function digitalIdentities(): HasMany { return $this->hasMany(DigitalIdentity::class); }

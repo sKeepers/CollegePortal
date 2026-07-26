@@ -18,6 +18,7 @@ use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\TeachingLoadItem;
 use App\Services\ApplicantApplicationDocumentService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
 
@@ -52,17 +53,17 @@ class DashboardAnalyticsService
             ->get();
         $attendance = $this->attendanceAnalysis->dashboardSummary();
         $requiredDocumentsCount = ApplicantApplicationDocumentService::REQUIRED_DOCUMENTS_COUNT;
-        $applicationsNoDocuments = ApplicantApplication::query()
+        $applicationsNoDocuments = $this->legacyApplicantApplications()
             ->whereDoesntHave('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES))
             ->count();
-        $applicationsIncompleteDocuments = ApplicantApplication::query()
+        $applicationsIncompleteDocuments = $this->legacyApplicantApplications()
             ->whereHas('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '>=', 1)
             ->whereHas('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '<', $requiredDocumentsCount)
             ->count();
-        $applicationsCompleteDocuments = ApplicantApplication::query()
+        $applicationsCompleteDocuments = $this->legacyApplicantApplications()
             ->whereHas('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '>=', $requiredDocumentsCount)
             ->count();
-        $applicationsDocumentsConfirmed = ApplicantApplication::query()->where('documents_provided', true)->count();
+        $applicationsDocumentsConfirmed = $this->legacyApplicantApplications()->where('documents_provided', true)->count();
         $verifiedCompleteDocuments = $this->verifiedCompleteApplicantCount();
 
         return [
@@ -72,7 +73,7 @@ class DashboardAnalyticsService
                         'students_total' => Student::query()->count(),
                         'students_active' => Student::query()->where('status', 'active')->count(),
                         'graduates' => Graduate::query()->count(),
-                        'applicants' => ApplicantApplication::query()->count(),
+                        'applicants' => $this->legacyApplicantApplications()->count(),
                     ],
                     'teachers' => [
                         'teachers_total' => Teacher::query()->count(),
@@ -99,9 +100,9 @@ class DashboardAnalyticsService
                     ],
                     'attendance' => $attendance,
                     'admissions' => [
-                        'new_applications' => ApplicantApplication::query()->where('status', 'new')->count(),
-                        'pending_review' => ApplicantApplication::query()->whereIn('status', ['pending', 'in_review', 'documents_pending'])->count(),
-                        'enrolled' => ApplicantApplication::query()->where('status', 'enrolled')->count(),
+                        'new_applications' => $this->legacyApplicantApplications()->where('status', 'new')->count(),
+                        'pending_review' => $this->legacyApplicantApplications()->whereIn('status', ['pending', 'in_review', 'documents_pending'])->count(),
+                        'enrolled' => $this->legacyApplicantApplications()->where('status', 'enrolled')->count(),
                         'no_documents' => $applicationsNoDocuments,
                         'incomplete_documents' => $applicationsIncompleteDocuments,
                         'complete_documents' => $applicationsCompleteDocuments,
@@ -131,7 +132,7 @@ class DashboardAnalyticsService
                 'charts' => [
                     'applications_7_days' => $lastSevenDays->map(fn (string $date) => [
                         'date' => $date,
-                        'value' => ApplicantApplication::query()->whereDate('submitted_at', $date)->count(),
+                        'value' => $this->legacyApplicantApplications()->whereDate('submitted_at', $date)->count(),
                         'is_demo' => false,
                     ])->values(),
                     'access_7_days' => $lastSevenDays->map(fn (string $date) => [
@@ -173,17 +174,17 @@ class DashboardAnalyticsService
     {
         $studentsWithoutPhoto = Student::query()->whereNull('photo_path')->count();
         $requiredDocumentsCount = ApplicantApplicationDocumentService::REQUIRED_DOCUMENTS_COUNT;
-        $applicationsWithoutDocuments = ApplicantApplication::query()
+        $applicationsWithoutDocuments = $this->legacyApplicantApplications()
             ->whereDoesntHave('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES))
             ->count();
-        $applicationsIncompleteDocuments = ApplicantApplication::query()
+        $applicationsIncompleteDocuments = $this->legacyApplicantApplications()
             ->whereHas('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '>=', 1)
             ->whereHas('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '<', $requiredDocumentsCount)
             ->count();
-        $applicationsCompleteDocuments = ApplicantApplication::query()
+        $applicationsCompleteDocuments = $this->legacyApplicantApplications()
             ->whereHas('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '>=', $requiredDocumentsCount)
             ->count();
-        $applicationsDocumentsConfirmed = ApplicantApplication::query()->where('documents_provided', true)->count();
+        $applicationsDocumentsConfirmed = $this->legacyApplicantApplications()->where('documents_provided', true)->count();
         $applicationsVerifiedCompleteDocuments = $this->verifiedCompleteApplicantCount();
         $frdoErrorCount = $frdoErrors->sum('validation_errors_count');
         $fisErrorCount = $fisErrors->sum('validation_errors_count');
@@ -210,7 +211,7 @@ class DashboardAnalyticsService
 
     private function missingApplicantDocumentType(string $code): int
     {
-        return ApplicantApplication::query()
+        return $this->legacyApplicantApplications()
             ->whereDoesntHave('documents', fn ($query) => $query
                 ->whereHas('documentType', fn ($query) => $query->where('code', $code))
                 ->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES))
@@ -231,7 +232,7 @@ class DashboardAnalyticsService
             return 0;
         }
 
-        return ApplicantApplication::query()
+        return $this->legacyApplicantApplications()
             ->whereDoesntHave('documents', fn ($query) => $query
                 ->whereIn('document_type_id', $requiredIds)
                 ->where('status', '!=', ApplicantApplicationDocument::STATUS_VERIFIED))
@@ -239,6 +240,11 @@ class DashboardAnalyticsService
                 ->whereIn('document_type_id', $requiredIds)
                 ->where('status', ApplicantApplicationDocument::STATUS_VERIFIED), '=', count($requiredIds))
             ->count();
+    }
+
+    private function legacyApplicantApplications(): Builder
+    {
+        return ApplicantApplication::query()->legacy();
     }
 
     private function packageSummary($package): array

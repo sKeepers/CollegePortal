@@ -226,7 +226,7 @@ class PersonService
         return collect()
             ->merge(Student::query()->with(['person', 'user'])->orderBy('id')->get())
             ->merge(Teacher::query()->with(['person', 'user'])->orderBy('id')->get())
-            ->merge(ApplicantApplication::query()->with('person')->orderBy('id')->get())
+            ->merge(ApplicantApplication::query()->legacy()->with('person')->orderBy('id')->get())
             ->merge(Graduate::query()->with(['person', 'student.person', 'student.user'])->orderBy('id')->get());
     }
 
