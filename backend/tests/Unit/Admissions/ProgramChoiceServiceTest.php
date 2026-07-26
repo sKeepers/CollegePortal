@@ -13,6 +13,7 @@ use App\Models\ReferenceItem;
 use App\Models\Setting;
 use App\Models\Specialty;
 use App\Services\Admissions\ProgramChoiceService;
+use Database\Seeders\AdmissionReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -21,6 +22,13 @@ use Tests\TestCase;
 class ProgramChoiceServiceTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seed(AdmissionReferenceSeeder::class);
+    }
 
     public function test_it_creates_choice_for_foundation_application(): void
     {

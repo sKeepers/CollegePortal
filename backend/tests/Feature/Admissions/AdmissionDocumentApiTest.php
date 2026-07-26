@@ -14,6 +14,7 @@ use App\Models\Person;
 use App\Models\ReferenceCatalog;
 use App\Models\ReferenceItem;
 use App\Models\Specialty;
+use Database\Seeders\AdmissionReferenceSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -30,6 +31,7 @@ class AdmissionDocumentApiTest extends TestCase
         parent::setUp();
 
         $this->seed(RoleSeeder::class);
+        $this->seed(AdmissionReferenceSeeder::class);
     }
 
     public function test_admission_user_can_create_update_archive_identity_document_with_masked_resource(): void

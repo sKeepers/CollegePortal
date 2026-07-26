@@ -9,6 +9,7 @@ use App\Models\Person;
 use App\Models\ReferenceCatalog;
 use App\Models\ReferenceItem;
 use App\Models\Specialty;
+use Database\Seeders\AdmissionReferenceSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -23,6 +24,7 @@ class ProgramChoiceApiTest extends TestCase
         parent::setUp();
 
         $this->seed(RoleSeeder::class);
+        $this->seed(AdmissionReferenceSeeder::class);
     }
 
     public function test_admission_user_can_create_list_update_and_delete_choices(): void
