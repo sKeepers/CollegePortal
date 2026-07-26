@@ -214,7 +214,7 @@ class AdmissionDocumentApiTest extends TestCase
         $this->withApiAuth($user)
             ->postJson("/api/admissions/applications/{$application->id}/register", ['confirm_required_fields' => false])
             ->assertOk()
-            ->assertJsonPath('data.status', AdmissionApplication::STATUS_REGISTERED);
+            ->assertJsonPath('data.status.code', AdmissionApplication::STATUS_REGISTERED);
 
         $newIdentity = $this->createIdentityDocument($application, [
             'series' => '9999',
@@ -253,10 +253,10 @@ class AdmissionDocumentApiTest extends TestCase
 
         $this->withApiAuth($user)
             ->putJson("/api/admissions/applications/{$application->id}/identity-document", ['document_id' => $identity->id])
-            ->assertOk();
+            ->assertCreated();
         $this->withApiAuth($user)
             ->putJson("/api/admissions/applications/{$application->id}/education-document", ['document_id' => $education->id])
-            ->assertOk();
+            ->assertCreated();
         $this->withApiAuth($user)
             ->postJson("/api/admissions/applications/{$application->id}/register", ['confirm_required_fields' => false])
             ->assertOk();
@@ -291,10 +291,10 @@ class AdmissionDocumentApiTest extends TestCase
 
         $this->withApiAuth($user)
             ->putJson("/api/admissions/applications/{$application->id}/identity-document", ['document_id' => $identity->id])
-            ->assertOk();
+            ->assertCreated();
         $this->withApiAuth($user)
             ->putJson("/api/admissions/applications/{$application->id}/education-document", ['document_id' => $education->id])
-            ->assertOk();
+            ->assertCreated();
         $this->withApiAuth($user)
             ->postJson("/api/admissions/applications/{$application->id}/register", ['confirm_required_fields' => false])
             ->assertOk();
@@ -344,10 +344,10 @@ class AdmissionDocumentApiTest extends TestCase
 
         $this->withApiAuth($user)
             ->putJson("/api/admissions/applications/{$application->id}/identity-document", ['document_id' => $identity->id])
-            ->assertOk();
+            ->assertCreated();
         $this->withApiAuth($user)
             ->putJson("/api/admissions/applications/{$application->id}/education-document", ['document_id' => $education->id])
-            ->assertOk();
+            ->assertCreated();
         $this->withApiAuth($user)
             ->postJson("/api/admissions/applications/{$application->id}/register", ['confirm_required_fields' => false])
             ->assertOk();
@@ -468,7 +468,7 @@ class AdmissionDocumentApiTest extends TestCase
 
     private function createProgram(string $code, string $name): EducationProgram
     {
-        $specialty = Specialty::query()->create(['code' => $code, 'name' => $name]);
+        $specialty = Specialty::query()->updateOrCreate(['code' => $code], ['name' => $name]);
 
         return EducationProgram::query()->create([
             'specialty_id' => $specialty->id,
