@@ -256,7 +256,7 @@ class AdmissionDocumentApiTest extends TestCase
             ->assertCreated();
         $this->withApiAuth($user)
             ->putJson("/api/admissions/applications/{$application->id}/education-document", ['document_id' => $education->id])
-            ->assertCreated();
+            ->assertOk();
         $this->withApiAuth($user)
             ->postJson("/api/admissions/applications/{$application->id}/register", ['confirm_required_fields' => false])
             ->assertOk();
@@ -294,7 +294,7 @@ class AdmissionDocumentApiTest extends TestCase
             ->assertCreated();
         $this->withApiAuth($user)
             ->putJson("/api/admissions/applications/{$application->id}/education-document", ['document_id' => $education->id])
-            ->assertCreated();
+            ->assertOk();
         $this->withApiAuth($user)
             ->postJson("/api/admissions/applications/{$application->id}/register", ['confirm_required_fields' => false])
             ->assertOk();
@@ -347,7 +347,7 @@ class AdmissionDocumentApiTest extends TestCase
             ->assertCreated();
         $this->withApiAuth($user)
             ->putJson("/api/admissions/applications/{$application->id}/education-document", ['document_id' => $education->id])
-            ->assertCreated();
+            ->assertOk();
         $this->withApiAuth($user)
             ->postJson("/api/admissions/applications/{$application->id}/register", ['confirm_required_fields' => false])
             ->assertOk();
@@ -470,7 +470,7 @@ class AdmissionDocumentApiTest extends TestCase
     {
         $specialty = Specialty::query()->updateOrCreate(['code' => $code], ['name' => $name]);
 
-        return EducationProgram::query()->create([
+        return EducationProgram::query()->updateOrCreate([
             'specialty_id' => $specialty->id,
             'name' => $name,
             'year_start' => 2026,
