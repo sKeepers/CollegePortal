@@ -141,6 +141,17 @@
 
 ## Документы
 
+BACK-005 реализует singular permissions `admissions.document.*` для foundation-документов. Plural permissions `admissions.documents.*` ниже остаются проектными именами будущего полного registry и legacy-процессов.
+
+| Permission | Назначение | Роли по умолчанию |
+| --- | --- | --- |
+| `admissions.document.view` | просмотр документов, masked metadata и readiness foundation-заявления | admin, admission, director, study, academic_office |
+| `admissions.document.create` | создание документа личности или документа об образовании | admin, admission |
+| `admissions.document.update` | обновление документа, СНИЛС, статуса проверки и загрузка файла | admin, admission |
+| `admissions.document.delete` | архивирование документа или файла без физического удаления private-файла | admin, admission |
+| `admissions.document.verify` | проверка или отклонение документа | admin, admission |
+| `admissions.document.download_sensitive` | скачивание private-файлов и просмотр sensitive document data в допустимых ресурсах | admin, admission, director |
+
 | Permission | Назначение | Роли по умолчанию |
 | --- | --- | --- |
 | `admissions.documents.view` | просмотр registry документов | admin, admissions_secretary, admissions_operator, director |

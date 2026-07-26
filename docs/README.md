@@ -55,6 +55,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [API приемной комиссии](API_ПРИЕМНОЙ_КОМИССИИ.md)
 - [RBAC приемной комиссии](RBAC_ПРИЕМНОЙ_КОМИССИИ.md)
 - [Стратегия реализации приемной комиссии](СТРАТЕГИЯ_РЕАЛИЗАЦИИ_ПРИЕМНОЙ_КОМИССИИ.md)
+- [Документы абитуриента](ДОКУМЕНТЫ_АБИТУРИЕНТА.md)
 - [Admissions FIS Import](FIS_ADMISSIONS_IMPORT.md)
 - [Person Model](PERSON_MODEL.md)
 - [Identity Domain](IDENTITY_DOMAIN.md)

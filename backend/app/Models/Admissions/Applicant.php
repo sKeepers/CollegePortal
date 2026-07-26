@@ -59,6 +59,21 @@ class Applicant extends Model
         return $this->hasMany(AdmissionApplication::class);
     }
 
+    public function identityDocuments(): HasMany
+    {
+        return $this->hasMany(IdentityDocument::class);
+    }
+
+    public function educationDocuments(): HasMany
+    {
+        return $this->hasMany(EducationDocument::class);
+    }
+
+    public function documentFiles(): HasMany
+    {
+        return $this->hasMany(AdmissionDocumentFile::class);
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->whereNull('archived_at');

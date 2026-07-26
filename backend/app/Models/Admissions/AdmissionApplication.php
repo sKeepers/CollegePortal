@@ -107,6 +107,11 @@ class AdmissionApplication extends Model
             ->active();
     }
 
+    public function documentFiles(): HasMany
+    {
+        return $this->hasMany(AdmissionDocumentFile::class, 'application_id');
+    }
+
     public function scopeFoundation(Builder $query): Builder
     {
         return $query

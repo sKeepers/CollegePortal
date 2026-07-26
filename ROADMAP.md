@@ -89,7 +89,8 @@ Roadmap фиксирует порядок развития проекта пос
 - [x] BACK-003.1: изоляция legacy `/admissions` и нового Admissions Foundation через `record_type`, scopes и API guards.
 - [x] BACK-004: foundation выбранных образовательных программ заявления с приоритетами и validation rules.
 - [x] FRONT-001: read-only workspace нового Admissions Foundation на `/admissions/foundation`.
-- Следующий рекомендуемый этап: BACK-005 — документы заявления и структурированная комплектность после review workspace.
+- [x] BACK-005: foundation документов заявления, private files, СНИЛС и структурированная комплектность.
+- Следующий рекомендуемый этап: FRONT-002 — подключить документы и readiness к read-only workspace без изменения legacy `/admissions`.
 ### Приемная комиссия
 
 - [x] ADM-001: Приемная комиссия — выполнено;

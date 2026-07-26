@@ -18,15 +18,15 @@ This document is a navigation and status snapshot. GitHub Issues, Pull Requests 
 
 ## Active Branch
 
-- Branch: `feature/front-001-admissions-workspace`
-- Base: stacked on `feature/back-004-program-choices`, потому что BACK-004 еще не входит в `origin/develop`.
-- Scope: read-only workspace Admissions Foundation.
+- Branch: `feature/back-005-admissions-documents`
+- Base: stacked on `feature/front-001-admissions-workspace`, потому что BACK-004/FRONT-001 еще не входят в `origin/develop`.
+- Scope: Admissions Foundation документы, private files, СНИЛС и readiness API.
 
 ## Current Task
 
-- `FRONT-001`: реализовать read-only рабочее пространство Admissions Foundation.
-- Разрешенные изменения: отдельный frontend route `/admissions/foundation`, Pinia store только с GET-запросами, карточка заявления, выбранные программы, фильтры, pagination и минимальные read-only расширения GET Resources.
-- Явно исключено: любые write-действия frontend, изменение legacy `/admissions`, документы BACK-005, конкурс, ФИС, XML/XSD validation, приказы и зачисление.
+- `BACK-005`: реализовать foundation документов заявления и структурированную комплектность.
+- Разрешенные изменения: миграции, модели, repositories, services, resources, API documents/readiness, RBAC, audit и backend tests.
+- Явно исключено: frontend, legacy `/admissions`, конкурс, приказы, зачисление, генерация XML, SOAP/Gateway/FIS send и перенос legacy-данных.
 
 ## Completed Tasks
 
@@ -45,6 +45,8 @@ Recent completed work reflected by current project notes and user-provided statu
 - `BACK-003`: completed as foundation `AdmissionApplication` with draft/update/register API, pending merge to `develop`.
 - `BACK-003.1`: completed as technical isolation between legacy `/admissions` and new Admissions Foundation through explicit `record_type`.
 - `BACK-004`: completed as Program Choices foundation for multiple education programs per application.
+- `FRONT-001`: completed as read-only Admissions Foundation workspace on `/admissions/foundation`.
+- `BACK-005`: completed as Admissions Foundation documents, private files, SNILS hashing and document readiness API.
 
 ## Roadmap Progress
 
@@ -54,10 +56,10 @@ Known roadmap maintenance need: older sections still name early tasks such as GU
 
 ## Next Planned Task
 
-Recommended next planned task after `FRONT-001`:
+Recommended next planned task after `BACK-005`:
 
-- start `BACK-005`: foundation документов заявления and structured document completeness;
-- keep FRONT-001 read-only until write workflows are reviewed separately.
+- start `FRONT-002`: подключить документы и readiness к workspace без изменения legacy `/admissions`;
+- keep FIS XML/package generation as a separate task after mapping review.
 
 ## Open Issues
 
@@ -105,7 +107,7 @@ ADM-001/ADM-002/ADM-003/ADM-004 admissions backlog:
 4. BACK-003.1 — Isolation между legacy `/admissions` и новым `AdmissionApplication` foundation.
 5. BACK-004 — Program Choices foundation: несколько выбранных образовательных программ заявления с приоритетами.
 6. FRONT-001 — Read-only workspace Admissions Foundation: `/admissions/foundation`.
-7. BACK-005 — foundation документов заявления и структурированная комплектность.
+7. BACK-005 — foundation документов заявления, private files, СНИЛС и структурированная комплектность.
 8. Этап 1 — CRUD абитуриентов.
 9. Этап 2 — Документы.
 10. Этап 3 — Конкурс.
@@ -136,3 +138,4 @@ Documentation governance backlog:
 | 2026-07-24 | Added BACK-003.1 Admissions legacy/foundation isolation through explicit `record_type`. |
 | 2026-07-24 | Added BACK-004 Admissions Program Choices foundation. |
 | 2026-07-26 | Added FRONT-001 read-only Admissions Foundation workspace. |
+| 2026-07-26 | Added BACK-005 Admissions document foundation, private files, SNILS hashing and readiness API. |

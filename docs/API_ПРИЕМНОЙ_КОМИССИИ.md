@@ -323,6 +323,38 @@ BACK-004 реализует foundation выбранных образовател
 - удаление является архивированием через `archived_at`;
 - конкурс, документы, достижения, экзамены, ФИС, приказы, зачисление и frontend UI не реализуются.
 
+## Реализация BACK-005
+
+BACK-005 реализует foundation документов абитуриента, private-файлов и расчета готовности заявления. Legacy endpoints старого `/admissions` и `/api/applicant-applications` не изменяются.
+
+| URL | Метод | Статус реализации | Permission |
+| --- | --- | --- | --- |
+| `/api/admissions/applicants/{applicant}/snils` | `PATCH` | обновить СНИЛС связанной `Person` с расчетом `snils_hash` | `admissions.document.update` |
+| `/api/admissions/applicants/{applicant}/identity-documents` | `GET` | список документов личности foundation-абитуриента | `admissions.document.view` |
+| `/api/admissions/applicants/{applicant}/identity-documents` | `POST` | создать документ личности | `admissions.document.create` |
+| `/api/admissions/identity-documents/{document}` | `GET` | карточка документа личности | `admissions.document.view` |
+| `/api/admissions/identity-documents/{document}` | `PATCH` | обновить документ личности, статус проверки или основной признак | `admissions.document.update` |
+| `/api/admissions/identity-documents/{document}` | `DELETE` | архивировать документ личности и его активные файлы | `admissions.document.delete` |
+| `/api/admissions/applicants/{applicant}/education-documents` | `GET` | список документов об образовании foundation-абитуриента | `admissions.document.view` |
+| `/api/admissions/applicants/{applicant}/education-documents` | `POST` | создать документ об образовании | `admissions.document.create` |
+| `/api/admissions/education-documents/{document}` | `GET` | карточка документа об образовании | `admissions.document.view` |
+| `/api/admissions/education-documents/{document}` | `PATCH` | обновить документ об образовании, статус проверки или основной признак | `admissions.document.update` |
+| `/api/admissions/education-documents/{document}` | `DELETE` | архивировать документ об образовании и его активные файлы | `admissions.document.delete` |
+| `/api/admissions/identity-documents/{document}/files` | `POST` | загрузить private-файл к документу личности | `admissions.document.update` |
+| `/api/admissions/education-documents/{document}/files` | `POST` | загрузить private-файл к документу об образовании | `admissions.document.update` |
+| `/api/admissions/document-files/{file}/download` | `GET` | скачать private-файл документа | `admissions.document.download_sensitive` |
+| `/api/admissions/document-files/{file}` | `DELETE` | архивировать файл без физического удаления | `admissions.document.delete` |
+| `/api/admissions/applications/{application}/document-readiness` | `GET` | проверить `internal_complete`, `review_complete` и подготовленность к будущему ФИС-маппингу | `admissions.document.view` |
+
+Ограничения BACK-005:
+
+- ресурсы маскируют СНИЛС, серию и номер без sensitive permission;
+- `storage_path` private-файлов не возвращается в API;
+- загрузка принимает только `PDF`, `JPG`, `JPEG`, `PNG` до 15 МБ;
+- повторная загрузка того же файла к тому же документу отклоняется по `sha256`;
+- регистрация заявления проверяет документы только при `confirm_required_fields=true`, чтобы не сломать существующий foundation-flow;
+- ФИС-готовность фиксирует недостающие mapping-условия, но XML/XSD validation, SOAP, Gateway и отправка не выполняются.
+
 ## Изоляция BACK-003.1 от legacy `/admissions`
 
 На переходном этапе legacy `/api/applicant-applications` и новый `/api/admissions/applications` используют одну физическую таблицу `applicant_applications`, но разные технические множества данных:

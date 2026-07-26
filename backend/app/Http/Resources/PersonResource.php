@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Http\Resources\Admissions\ApplicantResource;
+use App\Services\Admissions\DocumentMaskingService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -11,6 +12,10 @@ class PersonResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $masking = app(DocumentMaskingService::class);
+        $canViewSensitive = (bool) ($request->user()?->hasPermission('admissions.document.download_sensitive')
+            || $request->user()?->hasPermission('people.update'));
+
         return [
             'id' => $this->id,
             'uuid' => $this->uuid,
@@ -25,7 +30,9 @@ class PersonResource extends JsonResource
             'email' => $this->email,
             'photo_path' => $this->photo_path,
             'photo_url' => $this->photo_path ? $request->getSchemeAndHttpHost().Storage::disk('public')->url($this->photo_path) : null,
-            'snils' => $this->snils,
+            'snils' => $this->when($canViewSensitive, $this->snils),
+            'snils_masked' => $masking->snils($this->snils),
+            'has_snils' => filled($this->snils),
             'inn' => $this->inn,
             'status' => $this->status,
             'profiles_count' => [

@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Admissions;
 
 use App\Http\Resources\EducationProgramResource;
+use App\Services\Admissions\DocumentMaskingService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -10,6 +11,8 @@ class AdmissionApplicationResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $masking = app(DocumentMaskingService::class);
+
         return [
             'id' => $this->id,
             'uuid' => $this->uuid,
@@ -58,7 +61,7 @@ class AdmissionApplicationResource extends JsonResource
                     'citizenship' => $this->applicant->person->citizenship,
                     'phone' => $this->applicant->person->phone,
                     'email' => $this->applicant->person->email,
-                    'snils_masked' => $this->maskDocumentNumber($this->applicant->person->snils),
+                    'snils_masked' => $masking->snils($this->applicant->person->snils),
                     'has_snils' => filled($this->applicant->person->snils),
                     'status' => $this->applicant->person->status,
                 ] : null,
@@ -68,20 +71,4 @@ class AdmissionApplicationResource extends JsonResource
         ];
     }
 
-    private function maskDocumentNumber(?string $value): ?string
-    {
-        if (! filled($value)) {
-            return null;
-        }
-
-        $digits = preg_replace('/\D+/', '', $value);
-
-        if (! $digits) {
-            return null;
-        }
-
-        $tail = mb_substr($digits, -4);
-
-        return str_repeat('*', max(0, mb_strlen($digits) - 4)).$tail;
-    }
 }

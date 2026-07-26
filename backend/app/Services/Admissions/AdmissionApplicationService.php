@@ -21,7 +21,10 @@ use Illuminate\Validation\ValidationException;
  */
 class AdmissionApplicationService
 {
-    public function __construct(private readonly AdmissionApplicationRepository $applications)
+    public function __construct(
+        private readonly AdmissionApplicationRepository $applications,
+        private readonly AdmissionDocumentReadinessService $documentReadiness,
+    )
     {
     }
 
@@ -162,6 +165,21 @@ class AdmissionApplicationService
                 throw ValidationException::withMessages([
                     'application' => 'Для регистрации нужны абитуриент, год приема и образовательная программа.',
                 ]);
+            }
+
+            if (filter_var($payload['confirm_required_fields'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                $readiness = $this->documentReadiness->forApplication($application->id);
+
+                if (! ($readiness['internal_complete'] ?? false)) {
+                    AuditLogService::log('Admissions', 'admission_application_registration_rejected', $application, $this->safeSnapshot($application), [
+                        'reason' => 'documents_not_ready',
+                        'blocking_reasons' => $readiness['blocking_reasons'] ?? [],
+                    ], user: $actor);
+
+                    throw ValidationException::withMessages([
+                        'documents' => 'Нельзя зарегистрировать заявление: комплект документов не готов.',
+                    ]);
+                }
             }
 
             $old = $this->safeSnapshot($application);

@@ -72,6 +72,14 @@ class AuditLogService
             'remember_token',
             'api_token_hash',
             'token',
+            'snils',
+            'snils_hash',
+            'series',
+            'number',
+            'number_hash',
+            'storage_path',
+            'stored_path',
+            'fis_raw_data',
         ]);
     }
 }

@@ -9,8 +9,13 @@ use App\Http\Controllers\Api\AdminSettingController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\Admissions\AdmissionApplicationController as AdmissionsAdmissionApplicationController;
+use App\Http\Controllers\Api\Admissions\AdmissionDocumentFileController as AdmissionsAdmissionDocumentFileController;
 use App\Http\Controllers\Api\Admissions\ApplicantController as AdmissionsApplicantController;
+use App\Http\Controllers\Api\Admissions\ApplicantSnilsController as AdmissionsApplicantSnilsController;
 use App\Http\Controllers\Api\Admissions\AdmissionReferenceController;
+use App\Http\Controllers\Api\Admissions\DocumentReadinessController as AdmissionsDocumentReadinessController;
+use App\Http\Controllers\Api\Admissions\EducationDocumentController as AdmissionsEducationDocumentController;
+use App\Http\Controllers\Api\Admissions\IdentityDocumentController as AdmissionsIdentityDocumentController;
 use App\Http\Controllers\Api\Admissions\ProgramChoiceController as AdmissionsProgramChoiceController;
 use App\Http\Controllers\Api\ApplicantApplicationController;
 use App\Http\Controllers\Api\ApplicantDocumentController;
@@ -161,6 +166,9 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('admissions/applicants', [AdmissionsApplicantController::class, 'index']);
         Route::get('admissions/applicants/{id}', [AdmissionsApplicantController::class, 'show'])->whereNumber('id');
     });
+    Route::patch('admissions/applicants/{applicant}/snils', [AdmissionsApplicantSnilsController::class, 'update'])
+        ->whereNumber('applicant')
+        ->middleware('permission:admissions.document.update');
 
     Route::get('admissions/applications', [AdmissionsAdmissionApplicationController::class, 'index'])
         ->middleware('permission:admissions.application.view');
@@ -187,6 +195,51 @@ Route::middleware('api.token')->group(function (): void {
     Route::delete('admissions/choices/{choice}', [AdmissionsProgramChoiceController::class, 'destroy'])
         ->whereNumber('choice')
         ->middleware('permission:admissions.choice.delete');
+    Route::get('admissions/applicants/{applicant}/identity-documents', [AdmissionsIdentityDocumentController::class, 'index'])
+        ->whereNumber('applicant')
+        ->middleware('permission:admissions.document.view');
+    Route::post('admissions/applicants/{applicant}/identity-documents', [AdmissionsIdentityDocumentController::class, 'store'])
+        ->whereNumber('applicant')
+        ->middleware('permission:admissions.document.create');
+    Route::get('admissions/identity-documents/{document}', [AdmissionsIdentityDocumentController::class, 'show'])
+        ->whereNumber('document')
+        ->middleware('permission:admissions.document.view');
+    Route::patch('admissions/identity-documents/{document}', [AdmissionsIdentityDocumentController::class, 'update'])
+        ->whereNumber('document')
+        ->middleware('permission:admissions.document.update');
+    Route::delete('admissions/identity-documents/{document}', [AdmissionsIdentityDocumentController::class, 'destroy'])
+        ->whereNumber('document')
+        ->middleware('permission:admissions.document.delete');
+    Route::get('admissions/applicants/{applicant}/education-documents', [AdmissionsEducationDocumentController::class, 'index'])
+        ->whereNumber('applicant')
+        ->middleware('permission:admissions.document.view');
+    Route::post('admissions/applicants/{applicant}/education-documents', [AdmissionsEducationDocumentController::class, 'store'])
+        ->whereNumber('applicant')
+        ->middleware('permission:admissions.document.create');
+    Route::get('admissions/education-documents/{document}', [AdmissionsEducationDocumentController::class, 'show'])
+        ->whereNumber('document')
+        ->middleware('permission:admissions.document.view');
+    Route::patch('admissions/education-documents/{document}', [AdmissionsEducationDocumentController::class, 'update'])
+        ->whereNumber('document')
+        ->middleware('permission:admissions.document.update');
+    Route::delete('admissions/education-documents/{document}', [AdmissionsEducationDocumentController::class, 'destroy'])
+        ->whereNumber('document')
+        ->middleware('permission:admissions.document.delete');
+    Route::post('admissions/identity-documents/{document}/files', [AdmissionsAdmissionDocumentFileController::class, 'uploadIdentity'])
+        ->whereNumber('document')
+        ->middleware('permission:admissions.document.update');
+    Route::post('admissions/education-documents/{document}/files', [AdmissionsAdmissionDocumentFileController::class, 'uploadEducation'])
+        ->whereNumber('document')
+        ->middleware('permission:admissions.document.update');
+    Route::get('admissions/document-files/{file}/download', [AdmissionsAdmissionDocumentFileController::class, 'download'])
+        ->whereNumber('file')
+        ->middleware('permission:admissions.document.download_sensitive');
+    Route::delete('admissions/document-files/{file}', [AdmissionsAdmissionDocumentFileController::class, 'destroy'])
+        ->whereNumber('file')
+        ->middleware('permission:admissions.document.delete');
+    Route::get('admissions/applications/{application}/document-readiness', [AdmissionsDocumentReadinessController::class, 'show'])
+        ->whereNumber('application')
+        ->middleware('permission:admissions.document.view');
 
     Route::middleware('permission:manage_users')->group(function (): void {
         Route::get('admin/audit', [AuditLogController::class, 'index']);
