@@ -266,7 +266,7 @@ class AdmissionDocumentApiTest extends TestCase
                 'series' => '4321',
                 'number' => '999000',
             ])
-            ->assertOk()
+            ->assertCreated()
             ->assertJsonPath('data.previous_version_id', $identity->id)
             ->assertJsonPath('data.version_number', 2)
             ->json('data.id');
@@ -307,7 +307,7 @@ class AdmissionDocumentApiTest extends TestCase
                 'registration_number' => 'REG-2026-001',
                 'is_nostrificated' => false,
             ])
-            ->assertOk()
+            ->assertCreated()
             ->assertJsonPath('data.previous_version_id', $education->id)
             ->assertJsonPath('data.version_number', 2)
             ->assertJsonPath('data.qualification_name', 'Тестовая квалификация')
