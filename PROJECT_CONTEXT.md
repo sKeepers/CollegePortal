@@ -1128,6 +1128,10 @@ Frontend action-level RBAC доведен до основных CRUD и сист
 
 Добавлен registry документов заявления абитуриента на основе Reference Data. Комплектность Admissions теперь считается по обязательным типам `applicant_document_types`, а `documents_provided` остается отдельным административным флагом. Файлы документов хранятся в приватном storage и скачиваются только через авторизованный API. Добавлены permissions `admissions.documents.*`, audit действий, sync-команда legacy-строк и вкладка документов в карточке заявления.
 
+## BACK-005.1: Documents Foundation hardening
+
+Admissions Foundation documents now preserve registered application history through `admission_application_documents` and document version chains. A registered foundation application keeps links to the exact identity and education document versions used at registration; later Applicant documents do not change historical readiness. Education documents include XSD-confirmed qualification, speciality, registration number and nostrification fields. FIS readiness uses `fis_external_mappings` for dictionary mapping and does not treat internal reference IDs as FIS codes. XML/SOAP/FIS send remain separate tasks.
+
 ## ST-001A: Curriculum Engine foundation
 
 Добавлен foundation нормализованного учебного плана. Новый слой `curriculum_subjects` хранит дисциплины семестров, часы по видам работ, вид контроля из Reference Data, порядок, optional-флаг и заготовку компетенций. Группа может ссылаться на действующий `curriculum_id`, а `CurriculumEngineService` возвращает дисциплины семестра группы, итоги и группировку по семестрам. Существующие `curricula` и legacy `curriculum_items` сохранены для совместимости.

@@ -152,6 +152,13 @@ BACK-005 реализует singular permissions `admissions.document.*` для 
 | `admissions.document.verify` | проверка или отклонение документа | admin, admission |
 | `admissions.document.download_sensitive` | скачивание private-файлов и просмотр sensitive document data в допустимых ресурсах | admin, admission, director |
 
+BACK-005.1 не добавляет новые permissions. Явная фиксация документа в заявлении использует:
+
+- `admissions.document.view` для просмотра `/api/admissions/applications/{application}/documents`;
+- `admissions.document.update` для закрепления identity/education документа;
+- `admissions.document.update` для PATCH, который при зарегистрированном заявлении создает новую версию вместо изменения реквизитов на месте;
+- `admissions.document.delete` для архивирования, но архивирование документа или файла, закрепленного за зарегистрированным заявлением, блокируется сервисным слоем.
+
 | Permission | Назначение | Роли по умолчанию |
 | --- | --- | --- |
 | `admissions.documents.view` | просмотр registry документов | admin, admissions_secretary, admissions_operator, director |
@@ -216,6 +223,7 @@ BACK-005 реализует singular permissions `admissions.document.*` для 
 - Утвержденные приказы и примененные зачисления не редактируются обычным CRUD.
 - Файлы документов скачиваются только через защищенный backend endpoint.
 - Audit payload не должен содержать полный паспорт, СНИЛС, raw ФИС payload, файлы и секреты.
+- Документы зарегистрированного заявления исторически фиксируются через `admission_application_documents`; обычный пользователь не может подменить закрепленную версию.
 
 # Audit
 

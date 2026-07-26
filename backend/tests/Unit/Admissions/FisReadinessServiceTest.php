@@ -52,7 +52,8 @@ class FisReadinessServiceTest extends TestCase
         $this->assertFalse($result['fis_data_ready']);
         $this->assertFalse($result['fis_mapping_ready']);
         $this->assertContains('TIdentityDocument', $result['supported_xsd_structures']);
-        $this->assertContains('identity_document.fis_identity_document_type_id', $result['missing_mappings']);
+        $this->assertContains('identity_document.document_type.fis_mapping', $result['missing_mappings']);
+        $this->assertNotContains('identity_document.fis_identity_document_type_id', $result['missing_mappings']);
         $this->assertContains('fis_xml_package_generation_is_out_of_scope_for_BACK_005', $result['blocking_reasons']);
     }
 

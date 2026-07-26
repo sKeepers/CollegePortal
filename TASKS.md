@@ -173,6 +173,7 @@
 - [x] BACK-004: Program Choices foundation для выбранных образовательных программ заявления с приоритетами.
 - [x] FRONT-001: Read-only workspace Admissions Foundation на `/admissions/foundation`.
 - [x] BACK-005: foundation документов заявления, private files, СНИЛС и структурированная комплектность.
+- [x] BACK-005.1: аудит и hardening Documents Foundation: versions, application-document link, FIS dictionary mapping.
 - [ ] TEST-001: Backend regression suite.
 ## Приемная комиссия
 

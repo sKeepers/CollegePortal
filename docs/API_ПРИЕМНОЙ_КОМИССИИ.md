@@ -223,6 +223,8 @@ API делится на bounded areas:
 | URL | Метод | Назначение | Параметры | Тело запроса | Ответ | Ошибки | Права доступа |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `/api/admissions/applications/{applicationId}/documents` | `GET` | документы заявления | `include=files,requirements` | нет | documents, files summary, requirements, missing list | `401`, `403`, `404` | `admissions.documents.view` |
+| `/api/admissions/applications/{applicationId}/identity-document` | `PUT` | зафиксировать документ личности для заявления | path `applicationId` | `document_id` | application document set | `401`, `403`, `404`, `409`, `422` | `admissions.document.update` |
+| `/api/admissions/applications/{applicationId}/education-document` | `PUT` | зафиксировать документ об образовании для заявления | path `applicationId` | `document_id` | application document set | `401`, `403`, `404`, `409`, `422` | `admissions.document.update` |
 | `/api/admissions/applications/{applicationId}/documents/{documentTypeId}/receive` | `POST` | отметить получение документа | path ids | `received_at`, `number`, `issued_at`, `expires_at`, `comment` | документ и новая комплектность | `401`, `403`, `404`, `409`, `422` | `admissions.documents.receive` |
 | `/api/admissions/applications/{applicationId}/documents/{documentId}/files` | `POST` | загрузить файл | multipart `file` | `file`, `comment` | file metadata без private path | `401`, `403`, `404`, `413`, `415`, `422` | `admissions.documents.upload` |
 | `/api/admissions/applications/{applicationId}/documents/{documentId}/verify` | `POST` | подтвердить документ | path ids | `verified_at`, `comment` | проверенный документ | `401`, `403`, `404`, `409`, `422` | `admissions.documents.verify` |
@@ -345,6 +347,23 @@ BACK-005 реализует foundation документов абитуриент
 | `/api/admissions/document-files/{file}/download` | `GET` | скачать private-файл документа | `admissions.document.download_sensitive` |
 | `/api/admissions/document-files/{file}` | `DELETE` | архивировать файл без физического удаления | `admissions.document.delete` |
 | `/api/admissions/applications/{application}/document-readiness` | `GET` | проверить `internal_complete`, `review_complete` и подготовленность к будущему ФИС-маппингу | `admissions.document.view` |
+
+BACK-005.1 добавляет явную фиксацию версий документов заявления:
+
+| URL | Метод | Статус реализации | Permission |
+| --- | --- | --- | --- |
+| `/api/admissions/applications/{application}/documents` | `GET` | показать закрепленные версии документов заявления без побочной записи в БД | `admissions.document.view` |
+| `/api/admissions/applications/{application}/identity-document` | `PUT` | закрепить текущий документ личности Applicant за foundation-заявлением | `admissions.document.update` |
+| `/api/admissions/applications/{application}/education-document` | `PUT` | закрепить текущий документ об образовании Applicant за foundation-заявлением | `admissions.document.update` |
+
+Правила BACK-005.1:
+
+- документ другого Applicant нельзя назначить заявлению;
+- legacy-заявление не открывается через foundation endpoints;
+- зарегистрированное заявление не позволяет заменить уже закрепленный документ другой записью;
+- изменение реквизитов закрепленного документа создает новую версию, а заявление остается на старой версии;
+- readiness использует закрепленные версии, а для черновика без фиксации применяет fallback на текущие документы Applicant;
+- FIS mapping проверяется через `fis_external_mappings`, внутренние ID справочников не считаются кодами ФИС.
 
 Ограничения BACK-005:
 

@@ -13,7 +13,7 @@ class EducationDocumentRepository
         return EducationDocument::query()
             ->with(['documentType', 'country', 'educationLevel', 'activeFiles'])
             ->where('applicant_id', $applicantId)
-            ->when(! $withArchived, fn ($query) => $query->active())
+            ->when(! $withArchived, fn ($query) => $query->current())
             ->orderByDesc('is_primary')
             ->orderByDesc('issue_date')
             ->orderByDesc('id')

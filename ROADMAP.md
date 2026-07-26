@@ -90,7 +90,8 @@ Roadmap фиксирует порядок развития проекта пос
 - [x] BACK-004: foundation выбранных образовательных программ заявления с приоритетами и validation rules.
 - [x] FRONT-001: read-only workspace нового Admissions Foundation на `/admissions/foundation`.
 - [x] BACK-005: foundation документов заявления, private files, СНИЛС и структурированная комплектность.
-- Следующий рекомендуемый этап: FRONT-002 — подключить документы и readiness к read-only workspace без изменения legacy `/admissions`.
+- [x] BACK-005.1: hardening Documents Foundation — связь заявления с версиями документов, version chain, XSD-поля образования и FIS dictionary mapping.
+- Следующий рекомендуемый этап: FRONT-002 — подключить документы, readiness, версии и закрепленные документы к workspace без изменения legacy `/admissions`.
 ### Приемная комиссия
 
 - [x] ADM-001: Приемная комиссия — выполнено;

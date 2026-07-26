@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Foundation-модель заявления приемной комиссии.
@@ -110,6 +111,11 @@ class AdmissionApplication extends Model
     public function documentFiles(): HasMany
     {
         return $this->hasMany(AdmissionDocumentFile::class, 'application_id');
+    }
+
+    public function documentSet(): HasOne
+    {
+        return $this->hasOne(ApplicationDocumentSet::class, 'application_id');
     }
 
     public function scopeFoundation(Builder $query): Builder

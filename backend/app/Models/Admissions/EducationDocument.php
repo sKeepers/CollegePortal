@@ -28,6 +28,8 @@ class EducationDocument extends Model
 
     protected $fillable = [
         'uuid',
+        'previous_version_id',
+        'version_number',
         'applicant_id',
         'document_type_id',
         'series',
@@ -44,6 +46,10 @@ class EducationDocument extends Model
         'average_score',
         'average_score_scale',
         'has_attachment',
+        'qualification_name',
+        'speciality_name',
+        'registration_number',
+        'is_nostrificated',
         'is_primary',
         'verification_status',
         'verification_comment',
@@ -57,6 +63,9 @@ class EducationDocument extends Model
         'verified_by',
         'verified_at',
         'archived_by',
+        'replaced_by_document_id',
+        'replaced_by',
+        'replaced_at',
         'archived_at',
     ];
 
@@ -69,9 +78,11 @@ class EducationDocument extends Model
             'original_received_at' => 'date',
             'average_score' => 'decimal:2',
             'has_attachment' => 'boolean',
+            'is_nostrificated' => 'boolean',
             'is_primary' => 'boolean',
             'metadata' => 'array',
             'verified_at' => 'datetime',
+            'replaced_at' => 'datetime',
             'archived_at' => 'datetime',
         ];
     }
@@ -79,6 +90,11 @@ class EducationDocument extends Model
     public function scopeActive(Builder $query): Builder
     {
         return $query->whereNull('archived_at');
+    }
+
+    public function scopeCurrent(Builder $query): Builder
+    {
+        return $query->active()->whereNull('replaced_at');
     }
 
     public function applicant(): BelongsTo
@@ -106,6 +122,11 @@ class EducationDocument extends Model
         return $this->hasMany(AdmissionDocumentFile::class, 'education_document_id');
     }
 
+    public function applicationDocumentSets(): HasMany
+    {
+        return $this->hasMany(ApplicationDocumentSet::class, 'education_document_id');
+    }
+
     public function activeFiles(): HasMany
     {
         return $this->files()->whereNull('archived_at');
@@ -124,5 +145,15 @@ class EducationDocument extends Model
     public function verifier(): BelongsTo
     {
         return $this->belongsTo(User::class, 'verified_by');
+    }
+
+    public function previousVersion(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'previous_version_id');
+    }
+
+    public function replacedByDocument(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'replaced_by_document_id');
     }
 }

@@ -31,6 +31,7 @@ class AdmissionDocumentFileService
     public function __construct(
         private readonly AdmissionDocumentFileRepository $files,
         private readonly AdmissionDocumentAudit $audit,
+        private readonly AdmissionApplicationDocumentService $applicationDocuments,
     ) {
     }
 
@@ -125,6 +126,13 @@ class AdmissionDocumentFileService
         $file = $this->files->find($id);
         abort_if(! $file, 404);
 
+        if ($file->identityDocument && $this->applicationDocuments->isIdentityLinkedToRegisteredApplication($file->identityDocument)) {
+            throw ValidationException::withMessages(['file' => 'Файл документа зарегистрированного заявления нельзя архивировать.']);
+        }
+        if ($file->educationDocument && $this->applicationDocuments->isEducationLinkedToRegisteredApplication($file->educationDocument)) {
+            throw ValidationException::withMessages(['file' => 'Файл документа зарегистрированного заявления нельзя архивировать.']);
+        }
+
         $old = $this->audit->file($file);
         $file->update([
             'archived_by' => $actor?->id,
@@ -214,12 +222,18 @@ class AdmissionDocumentFileService
         if ($document->archived_at !== null) {
             throw ValidationException::withMessages(['document' => 'Нельзя загрузить файл к архивному документу.']);
         }
+        if ($document->replaced_at !== null || $this->applicationDocuments->isIdentityLinkedToRegisteredApplication($document)) {
+            throw ValidationException::withMessages(['document' => 'Файлы документа, закрепленного за зарегистрированным заявлением, недоступны для изменения.']);
+        }
     }
 
     private function assertActiveEducation(EducationDocument $document): void
     {
         if ($document->archived_at !== null) {
             throw ValidationException::withMessages(['document' => 'Нельзя загрузить файл к архивному документу.']);
+        }
+        if ($document->replaced_at !== null || $this->applicationDocuments->isEducationLinkedToRegisteredApplication($document)) {
+            throw ValidationException::withMessages(['document' => 'Файлы документа, закрепленного за зарегистрированным заявлением, недоступны для изменения.']);
         }
     }
 }

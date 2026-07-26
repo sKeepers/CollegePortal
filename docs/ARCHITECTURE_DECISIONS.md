@@ -137,3 +137,12 @@ Vuetify остается надежным MIT-вариантом, но Quasar л
 Решение: реализовывать подсистему эволюционно через небольшие backend/frontend/test задачи и layered architecture: Frontend Workspace -> API Controllers -> Application Use Cases -> Domain Services -> Repositories -> Database/Private Storage/Audit/Reference Data. Текущий `/admissions` сохраняется до завершения миграций, backfill и smoke.
 
 Подробно: `docs/adr/ADR-005_СТРАТЕГИЯ_РЕАЛИЗАЦИИ.md`.
+## ADR-006: жизненный цикл документов Admissions Foundation
+
+Дата: 2026-07-26
+
+Статус: принято для BACK-005.1 documents hardening.
+
+Решение: фиксировать документы конкретного foundation-заявления через `admission_application_documents`, вести version chain для реквизитов документов и использовать `fis_external_mappings` для словарных соответствий ФИС вместо внутренних ID справочников.
+
+Подробно: `docs/adr/ADR-006_ЖИЗНЕННЫЙ_ЦИКЛ_ДОКУМЕНТОВ_ADMISSIONS.md`.

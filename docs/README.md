@@ -77,6 +77,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [adr/ADR-003_МОДЕЛЬ_ДАННЫХ_ПРИЕМНОЙ_КОМИССИИ.md](adr/ADR-003_МОДЕЛЬ_ДАННЫХ_ПРИЕМНОЙ_КОМИССИИ.md)
 - [adr/ADR-004_API_ПРИЕМНОЙ_КОМИССИИ.md](adr/ADR-004_API_ПРИЕМНОЙ_КОМИССИИ.md)
 - [adr/ADR-005_СТРАТЕГИЯ_РЕАЛИЗАЦИИ.md](adr/ADR-005_СТРАТЕГИЯ_РЕАЛИЗАЦИИ.md)
+- [adr/ADR-006_ЖИЗНЕННЫЙ_ЦИКЛ_ДОКУМЕНТОВ_ADMISSIONS.md](adr/ADR-006_ЖИЗНЕННЫЙ_ЦИКЛ_ДОКУМЕНТОВ_ADMISSIONS.md)
 - [AGENTS.md](AGENTS.md)
 - [API_ПРИЕМНОЙ_КОМИССИИ.md](API_ПРИЕМНОЙ_КОМИССИИ.md)
 - [APPLICANT_DOCUMENTS.md](APPLICANT_DOCUMENTS.md)

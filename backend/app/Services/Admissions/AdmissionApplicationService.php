@@ -24,8 +24,8 @@ class AdmissionApplicationService
     public function __construct(
         private readonly AdmissionApplicationRepository $applications,
         private readonly AdmissionDocumentReadinessService $documentReadiness,
-    )
-    {
+        private readonly AdmissionApplicationDocumentService $applicationDocuments,
+    ) {
     }
 
     /**
@@ -184,6 +184,7 @@ class AdmissionApplicationService
 
             $old = $this->safeSnapshot($application);
             $number = $application->application_number ?: $this->generateApplicationNumber($application);
+            $this->applicationDocuments->ensureForRegistration($application, $actor);
 
             $application->update([
                 'application_number' => $number,

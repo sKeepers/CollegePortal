@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\Admissions\AdmissionApplicationController as AdmissionsAdmissionApplicationController;
 use App\Http\Controllers\Api\Admissions\AdmissionDocumentFileController as AdmissionsAdmissionDocumentFileController;
+use App\Http\Controllers\Api\Admissions\ApplicationDocumentController as AdmissionsApplicationDocumentController;
 use App\Http\Controllers\Api\Admissions\ApplicantController as AdmissionsApplicantController;
 use App\Http\Controllers\Api\Admissions\ApplicantSnilsController as AdmissionsApplicantSnilsController;
 use App\Http\Controllers\Api\Admissions\AdmissionReferenceController;
@@ -189,6 +190,15 @@ Route::middleware('api.token')->group(function (): void {
     Route::post('admissions/applications/{application}/choices', [AdmissionsProgramChoiceController::class, 'store'])
         ->whereNumber('application')
         ->middleware('permission:admissions.choice.create');
+    Route::get('admissions/applications/{application}/documents', [AdmissionsApplicationDocumentController::class, 'show'])
+        ->whereNumber('application')
+        ->middleware('permission:admissions.document.view');
+    Route::put('admissions/applications/{application}/identity-document', [AdmissionsApplicationDocumentController::class, 'assignIdentity'])
+        ->whereNumber('application')
+        ->middleware('permission:admissions.document.update');
+    Route::put('admissions/applications/{application}/education-document', [AdmissionsApplicationDocumentController::class, 'assignEducation'])
+        ->whereNumber('application')
+        ->middleware('permission:admissions.document.update');
     Route::patch('admissions/choices/{choice}', [AdmissionsProgramChoiceController::class, 'update'])
         ->whereNumber('choice')
         ->middleware('permission:admissions.choice.update');

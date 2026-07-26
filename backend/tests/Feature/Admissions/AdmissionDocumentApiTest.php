@@ -3,6 +3,7 @@
 namespace Tests\Feature\Admissions;
 
 use App\Models\Admissions\AdmissionApplication;
+use App\Models\Admissions\ApplicationDocumentSet;
 use App\Models\Admissions\Applicant;
 use App\Models\Admissions\EducationDocument;
 use App\Models\Admissions\IdentityDocument;
@@ -183,6 +184,177 @@ class AdmissionDocumentApiTest extends TestCase
             ->assertJsonPath('data.review_complete', true)
             ->assertJsonPath('data.fis_data_ready', false)
             ->assertJsonPath('data.fis.fis_mapping_ready', false);
+    }
+
+    public function test_application_document_show_does_not_create_link_row(): void
+    {
+        $user = $this->createApiUser(roleCode: 'admission');
+        $application = $this->createApplication();
+
+        $this->assertSame(0, ApplicationDocumentSet::query()->count());
+
+        $this->withApiAuth($user)
+            ->getJson("/api/admissions/applications/{$application->id}/documents")
+            ->assertOk()
+            ->assertJsonPath('data.application_id', $application->id)
+            ->assertJsonPath('data.id', null);
+
+        $this->assertSame(0, ApplicationDocumentSet::query()->count());
+    }
+
+    public function test_application_references_specific_document_versions_after_registration(): void
+    {
+        $user = $this->createApiUser(roleCode: 'admission');
+        $application = $this->createApplication();
+        $identity = $this->createIdentityDocument($application, ['verification_status' => IdentityDocument::STATUS_VERIFIED]);
+        $education = $this->createEducationDocument($application, ['verification_status' => EducationDocument::STATUS_VERIFIED]);
+
+        $this->withApiAuth($user)
+            ->postJson("/api/admissions/applications/{$application->id}/register", ['confirm_required_fields' => false])
+            ->assertOk()
+            ->assertJsonPath('data.status', AdmissionApplication::STATUS_REGISTERED);
+
+        $newIdentity = $this->createIdentityDocument($application, [
+            'series' => '9999',
+            'number' => '000111',
+            'number_hash' => hash('sha256', '9999|000111'),
+            'is_primary' => true,
+        ]);
+        $newEducation = $this->createEducationDocument($application, [
+            'series' => 'ВГ',
+            'number' => '777777',
+            'number_hash' => hash('sha256', 'ВГ|777777'),
+            'is_primary' => true,
+        ]);
+
+        $this->withApiAuth($user)
+            ->getJson("/api/admissions/applications/{$application->id}/document-readiness")
+            ->assertOk()
+            ->assertJsonPath('data.linked_identity_document_id', $identity->id)
+            ->assertJsonPath('data.linked_education_document_id', $education->id);
+
+        $this->assertDatabaseHas('admission_application_documents', [
+            'application_id' => $application->id,
+            'identity_document_id' => $identity->id,
+            'education_document_id' => $education->id,
+        ]);
+        $this->assertNotSame($identity->id, $newIdentity->id);
+        $this->assertNotSame($education->id, $newEducation->id);
+    }
+
+    public function test_material_patch_of_registered_identity_document_creates_next_version(): void
+    {
+        $user = $this->createApiUser(roleCode: 'admission');
+        $application = $this->createApplication();
+        $identity = $this->createIdentityDocument($application, ['verification_status' => IdentityDocument::STATUS_VERIFIED]);
+        $education = $this->createEducationDocument($application, ['verification_status' => EducationDocument::STATUS_VERIFIED]);
+
+        $this->withApiAuth($user)
+            ->putJson("/api/admissions/applications/{$application->id}/identity-document", ['document_id' => $identity->id])
+            ->assertOk();
+        $this->withApiAuth($user)
+            ->putJson("/api/admissions/applications/{$application->id}/education-document", ['document_id' => $education->id])
+            ->assertOk();
+        $this->withApiAuth($user)
+            ->postJson("/api/admissions/applications/{$application->id}/register", ['confirm_required_fields' => false])
+            ->assertOk();
+
+        $newId = $this->withApiAuth($user)
+            ->patchJson("/api/admissions/identity-documents/{$identity->id}", [
+                'series' => '4321',
+                'number' => '999000',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.previous_version_id', $identity->id)
+            ->assertJsonPath('data.version_number', 2)
+            ->json('data.id');
+
+        $this->assertNotSame($identity->id, $newId);
+        $this->assertNotNull(IdentityDocument::query()->find($identity->id)?->replaced_at);
+        $this->assertDatabaseHas('admission_application_documents', [
+            'application_id' => $application->id,
+            'identity_document_id' => $identity->id,
+        ]);
+        $this->assertFalse(
+            str_contains(json_encode(AuditLog::query()->latest('id')->first()?->new_values, JSON_UNESCAPED_UNICODE), '999000')
+        );
+    }
+
+    public function test_material_patch_of_registered_education_document_creates_next_version(): void
+    {
+        $user = $this->createApiUser(roleCode: 'admission');
+        $application = $this->createApplication();
+        $identity = $this->createIdentityDocument($application, ['verification_status' => IdentityDocument::STATUS_VERIFIED]);
+        $education = $this->createEducationDocument($application, ['verification_status' => EducationDocument::STATUS_VERIFIED]);
+
+        $this->withApiAuth($user)
+            ->putJson("/api/admissions/applications/{$application->id}/identity-document", ['document_id' => $identity->id])
+            ->assertOk();
+        $this->withApiAuth($user)
+            ->putJson("/api/admissions/applications/{$application->id}/education-document", ['document_id' => $education->id])
+            ->assertOk();
+        $this->withApiAuth($user)
+            ->postJson("/api/admissions/applications/{$application->id}/register", ['confirm_required_fields' => false])
+            ->assertOk();
+
+        $newId = $this->withApiAuth($user)
+            ->patchJson("/api/admissions/education-documents/{$education->id}", [
+                'number' => '654999',
+                'qualification_name' => 'Тестовая квалификация',
+                'speciality_name' => 'Тестовая специальность',
+                'registration_number' => 'REG-2026-001',
+                'is_nostrificated' => false,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.previous_version_id', $education->id)
+            ->assertJsonPath('data.version_number', 2)
+            ->assertJsonPath('data.qualification_name', 'Тестовая квалификация')
+            ->json('data.id');
+
+        $this->assertNotSame($education->id, $newId);
+        $this->assertNotNull(EducationDocument::query()->find($education->id)?->replaced_at);
+        $this->assertDatabaseHas('admission_application_documents', [
+            'application_id' => $application->id,
+            'education_document_id' => $education->id,
+        ]);
+    }
+
+    public function test_document_from_another_applicant_cannot_be_assigned_to_application(): void
+    {
+        $user = $this->createApiUser(roleCode: 'admission');
+        $application = $this->createApplication();
+        $otherApplication = $this->createApplication();
+        $otherIdentity = $this->createIdentityDocument($otherApplication);
+
+        $this->withApiAuth($user)
+            ->putJson("/api/admissions/applications/{$application->id}/identity-document", ['document_id' => $otherIdentity->id])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['document_id']);
+    }
+
+    public function test_files_of_registered_application_document_are_immutable(): void
+    {
+        Storage::fake('local');
+        $user = $this->createApiUser(roleCode: 'admission');
+        $application = $this->createApplication();
+        $identity = $this->createIdentityDocument($application, ['verification_status' => IdentityDocument::STATUS_VERIFIED]);
+        $education = $this->createEducationDocument($application, ['verification_status' => EducationDocument::STATUS_VERIFIED]);
+
+        $this->withApiAuth($user)
+            ->putJson("/api/admissions/applications/{$application->id}/identity-document", ['document_id' => $identity->id])
+            ->assertOk();
+        $this->withApiAuth($user)
+            ->putJson("/api/admissions/applications/{$application->id}/education-document", ['document_id' => $education->id])
+            ->assertOk();
+        $this->withApiAuth($user)
+            ->postJson("/api/admissions/applications/{$application->id}/register", ['confirm_required_fields' => false])
+            ->assertOk();
+
+        $this->withApiAuth($user)
+            ->post("/api/admissions/identity-documents/{$identity->id}/files", [
+                'file' => UploadedFile::fake()->create('late-passport.pdf', 8, 'application/pdf'),
+            ])
+            ->assertUnprocessable();
     }
 
     public function test_registration_with_required_documents_flag_rejects_incomplete_application(): void

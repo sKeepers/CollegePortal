@@ -13,7 +13,7 @@ class IdentityDocumentRepository
         return IdentityDocument::query()
             ->with(['documentType', 'releaseCountry', 'activeFiles'])
             ->where('applicant_id', $applicantId)
-            ->when(! $withArchived, fn ($query) => $query->active())
+            ->when(! $withArchived, fn ($query) => $query->current())
             ->orderByDesc('is_primary')
             ->orderByDesc('issue_date')
             ->orderByDesc('id')

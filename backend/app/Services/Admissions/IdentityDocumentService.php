@@ -19,6 +19,7 @@ class IdentityDocumentService
     public function __construct(
         private readonly IdentityDocumentRepository $documents,
         private readonly AdmissionDocumentAudit $audit,
+        private readonly AdmissionApplicationDocumentService $applicationDocuments,
     ) {
     }
 
@@ -75,9 +76,17 @@ class IdentityDocumentService
             $document = $this->documents->find($id);
             abort_if(! $document, 404);
 
+            if ($document->replaced_at !== null) {
+                throw ValidationException::withMessages(['document' => 'Замененная версия документа недоступна для изменения.']);
+            }
+
             $old = $this->audit->identity($document);
             $this->assertReference($payload['document_type_id'] ?? $document->document_type_id, 'admission_identity_document_types', 'document_type_id');
             $this->assertReference($payload['release_country_id'] ?? $document->release_country_id, null, 'release_country_id');
+
+            if ($this->isMaterialUpdate($payload) && $this->applicationDocuments->isIdentityLinkedToRegisteredApplication($document)) {
+                return $this->createNextVersion($document, $payload, $actor, $old);
+            }
 
             if (array_key_exists('is_primary', $payload) && (bool) $payload['is_primary']) {
                 $this->unsetPrimary($document->applicant_id, $document->id);
@@ -109,6 +118,10 @@ class IdentityDocumentService
         DB::transaction(function () use ($id, $actor): void {
             $document = $this->documents->find($id);
             abort_if(! $document, 404);
+
+            if ($this->applicationDocuments->isIdentityLinkedToRegisteredApplication($document)) {
+                throw ValidationException::withMessages(['document' => 'Документ закреплен за зарегистрированным заявлением и не может быть архивирован.']);
+            }
 
             $old = $this->audit->identity($document);
             $document->update([
@@ -159,6 +172,86 @@ class IdentityDocumentService
             ->where('applicant_id', $applicantId)
             ->when($exceptId !== null, fn ($query) => $query->whereKeyNot($exceptId))
             ->update(['is_primary' => false]);
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function isMaterialUpdate(array $payload): bool
+    {
+        return collect($payload)->keys()->intersect([
+            'document_type_id',
+            'series',
+            'number',
+            'issue_date',
+            'issued_by',
+            'subdivision_code',
+            'release_country_id',
+            'release_country_name',
+            'release_place',
+            'valid_until',
+            'fis_uid',
+            'fis_identity_document_type_id',
+            'fis_nationality_type_id',
+            'fis_release_country_id',
+            'metadata',
+        ])->isNotEmpty();
+    }
+
+    /** @param array<string, mixed> $payload @param array<string, mixed> $old */
+    private function createNextVersion(IdentityDocument $document, array $payload, ?User $actor, array $old): IdentityDocument
+    {
+        $base = collect($document->getAttributes())->only([
+            'applicant_id',
+            'person_id',
+            'document_type_id',
+            'series',
+            'number',
+            'issue_date',
+            'issued_by',
+            'subdivision_code',
+            'release_country_id',
+            'release_country_name',
+            'release_place',
+            'valid_until',
+            'is_primary',
+            'fis_uid',
+            'fis_identity_document_type_id',
+            'fis_nationality_type_id',
+            'fis_release_country_id',
+            'metadata',
+        ])->all();
+
+        $status = $this->verificationStatus($payload['verification_status'] ?? IdentityDocument::STATUS_PENDING_REVIEW);
+        if ((bool) ($payload['is_primary'] ?? $document->is_primary)) {
+            $this->unsetPrimary($document->applicant_id, $document->id);
+        }
+
+        $next = $this->documents->create([
+            ...$base,
+            ...$payload,
+            'uuid' => (string) Str::uuid(),
+            'previous_version_id' => $document->id,
+            'version_number' => ((int) $document->version_number) + 1,
+            'number_hash' => $this->documentHash($payload['series'] ?? $document->series, $payload['number'] ?? $document->number),
+            'verification_status' => $status,
+            'created_by' => $actor?->id,
+            'updated_by' => $actor?->id,
+            'verified_by' => $status === IdentityDocument::STATUS_VERIFIED ? $actor?->id : null,
+            'verified_at' => $status === IdentityDocument::STATUS_VERIFIED ? now() : null,
+            'archived_at' => null,
+            'replaced_at' => null,
+        ]);
+
+        $document->update([
+            'is_primary' => false,
+            'replaced_by_document_id' => $next->id,
+            'replaced_by' => $actor?->id,
+            'replaced_at' => now(),
+            'updated_by' => $actor?->id,
+        ]);
+
+        AuditLogService::log('Admissions', 'identity_document_version_created', $next, $old, $this->audit->identity($next), user: $actor);
+
+        return $next;
     }
 
     private function documentHash(?string $series, ?string $number): ?string

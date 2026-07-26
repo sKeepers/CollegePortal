@@ -21,11 +21,12 @@ This document is a navigation and status snapshot. GitHub Issues, Pull Requests 
 - Branch: `feature/back-005-admissions-documents`
 - Base: stacked on `feature/front-001-admissions-workspace`, потому что BACK-004/FRONT-001 еще не входят в `origin/develop`.
 - Scope: Admissions Foundation документы, private files, СНИЛС и readiness API.
+- Current stacked branch: `feature/back-005-1-documents-hardening`, base `feature/back-005-admissions-documents`.
 
 ## Current Task
 
-- `BACK-005`: реализовать foundation документов заявления и структурированную комплектность.
-- Разрешенные изменения: миграции, модели, repositories, services, resources, API documents/readiness, RBAC, audit и backend tests.
+- `BACK-005.1`: аудит и укрепление Documents Foundation.
+- Разрешенные изменения: additive migration, models, repositories/services, resources, application-document API, readiness, FIS dictionary mapping, audit, docs и backend regression tests.
 - Явно исключено: frontend, legacy `/admissions`, конкурс, приказы, зачисление, генерация XML, SOAP/Gateway/FIS send и перенос legacy-данных.
 
 ## Completed Tasks
@@ -47,6 +48,7 @@ Recent completed work reflected by current project notes and user-provided statu
 - `BACK-004`: completed as Program Choices foundation for multiple education programs per application.
 - `FRONT-001`: completed as read-only Admissions Foundation workspace on `/admissions/foundation`.
 - `BACK-005`: completed as Admissions Foundation documents, private files, SNILS hashing and document readiness API.
+- `BACK-005.1`: completed as Documents Foundation hardening: application-document link, document version chain, XSD education fields and FIS dictionary mapping.
 
 ## Roadmap Progress
 
@@ -56,9 +58,9 @@ Known roadmap maintenance need: older sections still name early tasks such as GU
 
 ## Next Planned Task
 
-Recommended next planned task after `BACK-005`:
+Recommended next planned task after `BACK-005.1`:
 
-- start `FRONT-002`: подключить документы и readiness к workspace без изменения legacy `/admissions`;
+- start `FRONT-002`: подключить документы, версии, закрепленные документы и readiness к workspace без изменения legacy `/admissions`;
 - keep FIS XML/package generation as a separate task after mapping review.
 
 ## Open Issues
@@ -88,6 +90,7 @@ Key decision records and decision-oriented documents:
 - [ADR-003: Модель данных приемной комиссии](adr/ADR-003_МОДЕЛЬ_ДАННЫХ_ПРИЕМНОЙ_КОМИССИИ.md)
 - [ADR-004: API приемной комиссии](adr/ADR-004_API_ПРИЕМНОЙ_КОМИССИИ.md)
 - [ADR-005: Стратегия реализации приемной комиссии](adr/ADR-005_СТРАТЕГИЯ_РЕАЛИЗАЦИИ.md)
+- [ADR-006: Жизненный цикл документов Admissions](adr/ADR-006_ЖИЗНЕННЫЙ_ЦИКЛ_ДОКУМЕНТОВ_ADMISSIONS.md)
 - [Integration Gateway Protocol](INTEGRATION_GATEWAY_PROTOCOL.md)
 - [Path Policy](PATH_POLICY.md)
 
@@ -108,12 +111,13 @@ ADM-001/ADM-002/ADM-003/ADM-004 admissions backlog:
 5. BACK-004 — Program Choices foundation: несколько выбранных образовательных программ заявления с приоритетами.
 6. FRONT-001 — Read-only workspace Admissions Foundation: `/admissions/foundation`.
 7. BACK-005 — foundation документов заявления, private files, СНИЛС и структурированная комплектность.
-8. Этап 1 — CRUD абитуриентов.
-9. Этап 2 — Документы.
-10. Этап 3 — Конкурс.
-11. Этап 4 — Приказы.
-12. Этап 5 — Экспорт в ФИС.
-13. Этап 6 — Личный кабинет абитуриента.
+8. BACK-005.1 — hardening Documents Foundation: версии и связь с заявлением.
+9. Этап 1 — CRUD абитуриентов.
+10. Этап 2 — Документы.
+11. Этап 3 — Конкурс.
+12. Этап 4 — Приказы.
+13. Этап 5 — Экспорт в ФИС.
+14. Этап 6 — Личный кабинет абитуриента.
 
 Documentation governance backlog:
 
@@ -139,3 +143,4 @@ Documentation governance backlog:
 | 2026-07-24 | Added BACK-004 Admissions Program Choices foundation. |
 | 2026-07-26 | Added FRONT-001 read-only Admissions Foundation workspace. |
 | 2026-07-26 | Added BACK-005 Admissions document foundation, private files, SNILS hashing and readiness API. |
+| 2026-07-26 | Added BACK-005.1 Documents Foundation hardening and ADR-006. |
