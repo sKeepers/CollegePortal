@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class AdmissionReferenceCatalog extends ReferenceCatalog
 {
+    protected $table = 'reference_catalogs';
+
     /**
      * Ограничивает выборку каталогами, относящимися к приемной комиссии.
      */

@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class AdmissionReferenceItem extends ReferenceItem
 {
+    protected $table = 'reference_items';
+
     /**
      * Ограничивает элементы справочниками приемной комиссии.
      */
