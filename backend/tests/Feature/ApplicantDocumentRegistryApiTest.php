@@ -8,6 +8,7 @@ use App\Models\ApplicantDocumentFile;
 use App\Models\EducationProgram;
 use App\Models\ReferenceCatalog;
 use App\Models\Specialty;
+use App\Services\ApplicantDocumentRegistryService;
 use Database\Seeders\ReferenceDataSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -31,13 +32,15 @@ class ApplicantDocumentRegistryApiTest extends TestCase
     {
         $this->withApiAuth($this->createApiUser(roleCode: 'admission'));
         $application = $this->makeApplication();
+        $documentTypesCount = app(ApplicantDocumentRegistryService::class)->documentTypes()->count();
+        $requiredDocumentsCount = app(ApplicantDocumentRegistryService::class)->documentTypes(requiredOnly: true)->count();
 
         $this->getJson("/api/admissions/{$application->id}/documents")
             ->assertOk()
-            ->assertJsonCount(6, 'data')
+            ->assertJsonCount($documentTypesCount, 'data')
             ->assertJsonPath('meta.documents_status', 'no_documents')
             ->assertJsonPath('meta.documents_count', 0)
-            ->assertJsonPath('meta.required_documents_count', 6);
+            ->assertJsonPath('meta.required_documents_count', $requiredDocumentsCount);
 
         $this->postJson("/api/admissions/{$application->id}/documents/passport/receive")
             ->assertOk()
@@ -47,7 +50,7 @@ class ApplicantDocumentRegistryApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('meta.documents_status', 'incomplete')
             ->assertJsonPath('meta.documents_count', 1)
-            ->assertJsonPath('meta.documents_missing_count', 5);
+            ->assertJsonPath('meta.documents_missing_count', $requiredDocumentsCount - 1);
     }
 
     public function test_it_uploads_file_to_private_storage_with_checksum_and_download_requires_permission(): void
@@ -132,16 +135,17 @@ class ApplicantDocumentRegistryApiTest extends TestCase
     public function test_sync_command_dry_run_does_not_write_and_apply_is_idempotent(): void
     {
         $this->makeApplication();
+        $documentTypesCount = app(ApplicantDocumentRegistryService::class)->documentTypes()->count();
         $this->assertSame(0, ApplicantApplicationDocument::count());
 
         Artisan::call('admissions:sync-document-registry', ['--dry-run' => true]);
         $this->assertSame(0, ApplicantApplicationDocument::count());
 
         Artisan::call('admissions:sync-document-registry', ['--apply' => true]);
-        $this->assertSame(6, ApplicantApplicationDocument::count());
+        $this->assertSame($documentTypesCount, ApplicantApplicationDocument::count());
 
         Artisan::call('admissions:sync-document-registry', ['--apply' => true]);
-        $this->assertSame(6, ApplicantApplicationDocument::count());
+        $this->assertSame($documentTypesCount, ApplicantApplicationDocument::count());
     }
 
     private function makeApplication(): ApplicantApplication

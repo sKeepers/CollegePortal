@@ -8,6 +8,7 @@ use App\Models\EducationProgram;
 use App\Models\Group;
 use App\Models\Specialty;
 use App\Models\Student;
+use App\Services\ApplicantApplicationDocumentService;
 use Database\Seeders\ReferenceDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -448,12 +449,13 @@ class ApplicantApplicationApiTest extends TestCase
 
     private function receiveAllDocuments(ApplicantApplication $application): void
     {
-        $this->patchJson("/api/applicant-applications/{$application->id}/documents/passport", ['is_received' => true]);
-        $this->patchJson("/api/applicant-applications/{$application->id}/documents/education_document", ['is_received' => true]);
-        $this->patchJson("/api/applicant-applications/{$application->id}/documents/snils", ['is_received' => true]);
-        $this->patchJson("/api/applicant-applications/{$application->id}/documents/consent", ['is_received' => true]);
-        $this->patchJson("/api/applicant-applications/{$application->id}/documents/photo", ['is_received' => true]);
-        $this->patchJson("/api/applicant-applications/{$application->id}/documents/medical_certificate", ['is_received' => true]);
+        app(ApplicantApplicationDocumentService::class)->ensureDefaultDocuments($application);
+
+        $application->documents()->update([
+            'status' => ApplicantApplicationDocument::STATUS_RECEIVED,
+            'is_received' => true,
+            'received_at' => now(),
+        ]);
     }
 
     private function payload(EducationProgram $program, array $overrides = []): array

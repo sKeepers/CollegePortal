@@ -23,6 +23,13 @@ class ApplicantController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
+        if ($request->has('with_archived')) {
+            $withArchived = filter_var($request->query('with_archived'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($withArchived !== null) {
+                $request->merge(['with_archived' => $withArchived]);
+            }
+        }
+
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'string', 'max:100'],
