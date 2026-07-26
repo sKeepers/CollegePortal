@@ -14,6 +14,7 @@ use App\Models\Setting;
 use App\Models\Specialty;
 use App\Services\Admissions\ProgramChoiceService;
 use Database\Seeders\AdmissionReferenceSeeder;
+use Database\Seeders\ReferenceDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -27,6 +28,7 @@ class ProgramChoiceServiceTest extends TestCase
     {
         parent::setUp();
 
+        $this->seed(ReferenceDataSeeder::class);
         $this->seed(AdmissionReferenceSeeder::class);
     }
 

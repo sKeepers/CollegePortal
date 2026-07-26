@@ -10,6 +10,7 @@ use App\Models\ReferenceCatalog;
 use App\Models\ReferenceItem;
 use App\Models\Specialty;
 use Database\Seeders\AdmissionReferenceSeeder;
+use Database\Seeders\ReferenceDataSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -24,6 +25,7 @@ class ProgramChoiceApiTest extends TestCase
         parent::setUp();
 
         $this->seed(RoleSeeder::class);
+        $this->seed(ReferenceDataSeeder::class);
         $this->seed(AdmissionReferenceSeeder::class);
     }
 
