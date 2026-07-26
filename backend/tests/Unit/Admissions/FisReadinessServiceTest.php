@@ -24,7 +24,7 @@ class FisReadinessServiceTest extends TestCase
     public function test_it_reports_missing_fis_mapping_and_never_marks_xml_ready_in_back_005(): void
     {
         $this->seed(RoleSeeder::class);
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
         $identity = IdentityDocument::query()->create([
             'uuid' => (string) Str::uuid(),
             'applicant_id' => $application->applicant_id,
@@ -57,7 +57,7 @@ class FisReadinessServiceTest extends TestCase
         $this->assertContains('fis_xml_package_generation_is_out_of_scope_for_BACK_005', $result['blocking_reasons']);
     }
 
-    private function createApplication(): AdmissionApplication
+    private function createAdmissionApplicationFixture(): AdmissionApplication
     {
         $person = Person::query()->create([
             'last_name' => 'Fis',
