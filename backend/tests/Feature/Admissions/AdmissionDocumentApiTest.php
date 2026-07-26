@@ -35,7 +35,7 @@ class AdmissionDocumentApiTest extends TestCase
     public function test_admission_user_can_create_update_archive_identity_document_with_masked_resource(): void
     {
         $user = $this->createApiUser(roleCode: 'admission');
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
         $typeId = $this->referenceItemId('admission_identity_document_types', 'russian_passport');
 
         $id = $this->withApiAuth($user)
@@ -74,7 +74,7 @@ class AdmissionDocumentApiTest extends TestCase
     public function test_admission_user_can_create_education_document_and_resource_masks_number(): void
     {
         $user = $this->createApiUser(roleCode: 'admission');
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
         $typeId = $this->referenceItemId('admission_education_document_types', 'basic_general_certificate');
 
         $this->withApiAuth($user)
@@ -98,7 +98,7 @@ class AdmissionDocumentApiTest extends TestCase
     {
         Storage::fake('local');
         $user = $this->createApiUser(roleCode: 'admission');
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
         $document = $this->createIdentityDocument($application);
 
         $fileId = $this->withApiAuth($user)
@@ -131,7 +131,7 @@ class AdmissionDocumentApiTest extends TestCase
     {
         Storage::fake('local');
         $user = $this->createApiUser(roleCode: 'admission');
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
         $document = $this->createIdentityDocument($application);
 
         $this->withApiAuth($user)
@@ -156,7 +156,7 @@ class AdmissionDocumentApiTest extends TestCase
     {
         Storage::fake('local');
         $user = $this->createApiUser(roleCode: 'admission');
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
 
         $this->withApiAuth($user)
             ->getJson("/api/admissions/applications/{$application->id}/document-readiness")
@@ -189,7 +189,7 @@ class AdmissionDocumentApiTest extends TestCase
     public function test_application_document_show_does_not_create_link_row(): void
     {
         $user = $this->createApiUser(roleCode: 'admission');
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
 
         $this->assertSame(0, ApplicationDocumentSet::query()->count());
 
@@ -205,7 +205,7 @@ class AdmissionDocumentApiTest extends TestCase
     public function test_application_references_specific_document_versions_after_registration(): void
     {
         $user = $this->createApiUser(roleCode: 'admission');
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
         $identity = $this->createIdentityDocument($application, ['verification_status' => IdentityDocument::STATUS_VERIFIED]);
         $education = $this->createEducationDocument($application, ['verification_status' => EducationDocument::STATUS_VERIFIED]);
 
@@ -245,7 +245,7 @@ class AdmissionDocumentApiTest extends TestCase
     public function test_material_patch_of_registered_identity_document_creates_next_version(): void
     {
         $user = $this->createApiUser(roleCode: 'admission');
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
         $identity = $this->createIdentityDocument($application, ['verification_status' => IdentityDocument::STATUS_VERIFIED]);
         $education = $this->createEducationDocument($application, ['verification_status' => EducationDocument::STATUS_VERIFIED]);
 
@@ -283,7 +283,7 @@ class AdmissionDocumentApiTest extends TestCase
     public function test_material_patch_of_registered_education_document_creates_next_version(): void
     {
         $user = $this->createApiUser(roleCode: 'admission');
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
         $identity = $this->createIdentityDocument($application, ['verification_status' => IdentityDocument::STATUS_VERIFIED]);
         $education = $this->createEducationDocument($application, ['verification_status' => EducationDocument::STATUS_VERIFIED]);
 
@@ -322,8 +322,8 @@ class AdmissionDocumentApiTest extends TestCase
     public function test_document_from_another_applicant_cannot_be_assigned_to_application(): void
     {
         $user = $this->createApiUser(roleCode: 'admission');
-        $application = $this->createApplication();
-        $otherApplication = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
+        $otherApplication = $this->createAdmissionApplicationFixture();
         $otherIdentity = $this->createIdentityDocument($otherApplication);
 
         $this->withApiAuth($user)
@@ -336,7 +336,7 @@ class AdmissionDocumentApiTest extends TestCase
     {
         Storage::fake('local');
         $user = $this->createApiUser(roleCode: 'admission');
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
         $identity = $this->createIdentityDocument($application, ['verification_status' => IdentityDocument::STATUS_VERIFIED]);
         $education = $this->createEducationDocument($application, ['verification_status' => EducationDocument::STATUS_VERIFIED]);
 
@@ -360,7 +360,7 @@ class AdmissionDocumentApiTest extends TestCase
     public function test_registration_with_required_documents_flag_rejects_incomplete_application(): void
     {
         $user = $this->createApiUser(roleCode: 'admission');
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
 
         $this->withApiAuth($user)
             ->postJson("/api/admissions/applications/{$application->id}/register", ['confirm_required_fields' => true])
@@ -372,7 +372,7 @@ class AdmissionDocumentApiTest extends TestCase
     {
         $student = $this->createApiUser(roleCode: 'student');
         $admin = $this->createApiUser(roleCode: 'admin');
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
         $program = $this->createProgram('09.02.91', 'Legacy program');
         $legacy = LegacyApplicantApplication::query()->create([
             'education_program_id' => $program->id,
@@ -392,7 +392,7 @@ class AdmissionDocumentApiTest extends TestCase
             ->assertNotFound();
     }
 
-    private function createApplication(array $overrides = []): AdmissionApplication
+    private function createAdmissionApplicationFixture(array $overrides = []): AdmissionApplication
     {
         $applicant = $this->createApplicant();
 

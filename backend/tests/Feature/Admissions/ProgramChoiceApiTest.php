@@ -28,7 +28,7 @@ class ProgramChoiceApiTest extends TestCase
     public function test_admission_user_can_create_list_update_and_delete_choices(): void
     {
         $user = $this->createApiUser(roleCode: 'admission');
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
         $program = $this->createProgram('09.02.31', 'API choice program');
         $secondProgram = $this->createProgram('09.02.32', 'API choice second program');
 
@@ -73,7 +73,7 @@ class ProgramChoiceApiTest extends TestCase
     public function test_choice_api_rejects_duplicate_priority_and_duplicate_program(): void
     {
         $user = $this->createApiUser(roleCode: 'admission');
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
         $program = $this->createProgram('09.02.33', 'Duplicate choice program');
 
         $this->withApiAuth($user)
@@ -103,7 +103,7 @@ class ProgramChoiceApiTest extends TestCase
     public function test_student_cannot_access_program_choices(): void
     {
         $student = $this->createApiUser(roleCode: 'student');
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
 
         $this->withApiAuth($student)
             ->getJson("/api/admissions/applications/{$application->id}/choices")
@@ -126,7 +126,7 @@ class ProgramChoiceApiTest extends TestCase
         }
     }
 
-    private function createApplication(array $overrides = []): AdmissionApplication
+    private function createAdmissionApplicationFixture(array $overrides = []): AdmissionApplication
     {
         $applicant = $this->createApplicant();
 

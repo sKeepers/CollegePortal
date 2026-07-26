@@ -25,7 +25,7 @@ class ProgramChoiceServiceTest extends TestCase
     public function test_it_creates_choice_for_foundation_application(): void
     {
         $service = app(ProgramChoiceService::class);
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
         $program = $this->createProgram('09.02.21', 'Тестовая программа choices');
 
         $choice = $service->create($application->id, [
@@ -48,7 +48,7 @@ class ProgramChoiceServiceTest extends TestCase
     public function test_it_rejects_duplicate_priority_and_duplicate_program(): void
     {
         $service = app(ProgramChoiceService::class);
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
         $program = $this->createProgram('09.02.22', 'Первая программа choices');
 
         $service->create($application->id, [
@@ -80,7 +80,7 @@ class ProgramChoiceServiceTest extends TestCase
     public function test_it_rejects_status_from_wrong_reference_catalog(): void
     {
         $service = app(ProgramChoiceService::class);
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
 
         $this->expectException(ValidationException::class);
         $service->create($application->id, [
@@ -93,7 +93,7 @@ class ProgramChoiceServiceTest extends TestCase
     public function test_it_rejects_priority_gaps(): void
     {
         $service = app(ProgramChoiceService::class);
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
 
         $this->expectException(ValidationException::class);
         $service->create($application->id, [
@@ -105,7 +105,7 @@ class ProgramChoiceServiceTest extends TestCase
     public function test_it_rejects_choices_above_configured_maximum(): void
     {
         $service = app(ProgramChoiceService::class);
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
 
         Setting::query()->updateOrCreate(
             ['group' => 'admissions', 'key' => 'max_choices_per_application'],
@@ -127,7 +127,7 @@ class ProgramChoiceServiceTest extends TestCase
     public function test_it_compacts_priorities_after_delete(): void
     {
         $service = app(ProgramChoiceService::class);
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
         $first = $service->create($application->id, [
             'priority' => 1,
             'education_program_id' => $this->createProgram('09.02.25', 'Первая для удаления')->id,
@@ -148,7 +148,7 @@ class ProgramChoiceServiceTest extends TestCase
     public function test_it_allows_reusing_archived_program_and_priority(): void
     {
         $service = app(ProgramChoiceService::class);
-        $application = $this->createApplication();
+        $application = $this->createAdmissionApplicationFixture();
         $program = $this->createProgram('09.02.29', 'Archived reusable program');
         $choice = $service->create($application->id, [
             'priority' => 1,
@@ -170,7 +170,7 @@ class ProgramChoiceServiceTest extends TestCase
     public function test_it_rejects_changes_for_registered_application(): void
     {
         $service = app(ProgramChoiceService::class);
-        $application = $this->createApplication(['status' => AdmissionApplication::STATUS_REGISTERED]);
+        $application = $this->createAdmissionApplicationFixture(['status' => AdmissionApplication::STATUS_REGISTERED]);
 
         $this->expectException(ValidationException::class);
         $service->create($application->id, [
@@ -179,7 +179,7 @@ class ProgramChoiceServiceTest extends TestCase
         ]);
     }
 
-    private function createApplication(array $overrides = []): AdmissionApplication
+    private function createAdmissionApplicationFixture(array $overrides = []): AdmissionApplication
     {
         $applicant = $this->createApplicant();
         $status = $overrides['status'] ?? AdmissionApplication::STATUS_DRAFT;
