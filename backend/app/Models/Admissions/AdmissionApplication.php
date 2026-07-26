@@ -104,8 +104,7 @@ class AdmissionApplication extends Model
     public function choices(): HasMany
     {
         return $this->hasMany(ProgramChoice::class, 'application_id')
-            ->active()
-            ->orderBy('priority');
+            ->active();
     }
 
     public function scopeFoundation(Builder $query): Builder

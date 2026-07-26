@@ -10,6 +10,7 @@ import {
   Database,
   DoorOpen,
   FileSpreadsheet,
+  FileSearch,
   FileText,
   Gauge,
   GraduationCap,
@@ -88,6 +89,7 @@ const navGroups = [
     items: [
       { label: 'Отчеты', to: '/reports', icon: FileText, permission: 'journal.view' },
       { label: 'Приемная комиссия', to: '/admissions', icon: School, permission: 'admissions.view' },
+      { label: 'Приёмная комиссия', to: '/admissions/foundation', icon: FileSearch, permission: 'admissions.application.view', badge: 'Foundation' },
     ],
   },
   {
@@ -264,6 +266,9 @@ watch(
                 <component :is="item.icon" :size="19" />
               </q-item-section>
               <q-item-section>{{ item.label }}</q-item-section>
+              <q-item-section v-if="item.badge && !workspace.settings.menuCollapsed" side>
+                <q-badge color="blue-1" text-color="primary">{{ item.badge }}</q-badge>
+              </q-item-section>
             </q-item>
           </template>
         </q-list>

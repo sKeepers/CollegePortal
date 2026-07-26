@@ -171,8 +171,8 @@
 - [x] BACK-003: Application foundation.
 - [x] BACK-003.1: изоляция legacy `/admissions` и нового Admissions Foundation через явный `record_type`.
 - [x] BACK-004: Program Choices foundation для выбранных образовательных программ заявления с приоритетами.
-- [ ] BACK-005: следующий backend slice после review choices: документы заявления или frontend workspace.
-- [ ] FRONT-001: Read-only Admissions workspace.
+- [x] FRONT-001: Read-only workspace Admissions Foundation на `/admissions/foundation`.
+- [ ] BACK-005: foundation документов заявления и структурированная комплектность.
 - [ ] TEST-001: Backend regression suite.
 ## Приемная комиссия
 

@@ -26,6 +26,8 @@ class AdmissionApplicationController extends Controller
             'applicant_id' => ['nullable', 'integer'],
             'status' => ['nullable', 'string', 'max:80'],
             'admission_year' => ['nullable', 'integer', 'min:2000', 'max:2100'],
+            'source_id' => ['nullable', 'integer'],
+            'has_choices' => ['nullable', 'boolean'],
             'q' => ['nullable', 'string', 'max:120'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'with_archived' => ['nullable', 'boolean'],

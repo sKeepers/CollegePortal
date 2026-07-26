@@ -291,6 +291,16 @@ BACK-003 реализует только foundation-часть API заявле�
 
 `DELETE`, документы, достижения, экзамены, конкурс, приказы, зачисление и ФИС в BACK-003 не реализуются. Choices реализуются отдельным slice BACK-004.
 
+Для FRONT-001 read-only workspace список foundation-заявлений дополнительно поддерживает безопасные GET-фильтры:
+
+- `source_id`;
+- `has_choices`;
+- `q` по номеру заявления и ФИО Person;
+- `status`;
+- `admission_year`.
+
+Resource списка и карточки возвращает `choices_count`, `record_type`, `foundation_version` и безопасную сводку Person. Полный СНИЛС, паспортные реквизиты, адреса, файлы и private paths не возвращаются для workspace.
+
 ## Реализация BACK-004
 
 BACK-004 реализует foundation выбранных образовательных программ заявления. Доступны только операции с choices для foundation-заявлений:

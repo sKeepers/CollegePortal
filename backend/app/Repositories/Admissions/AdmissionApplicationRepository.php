@@ -21,8 +21,15 @@ class AdmissionApplicationRepository
         return AdmissionApplication::query()
             ->foundation()
             ->with(['applicant.person', 'statusItem', 'source', 'educationProgram.specialty'])
+            ->withCount('choices')
             ->when($filters['applicant_id'] ?? null, fn ($query, int|string $applicantId) => $query->where('applicant_id', $applicantId))
             ->when($filters['admission_year'] ?? null, fn ($query, int|string $year) => $query->where('admission_year', $year))
+            ->when($filters['source_id'] ?? null, fn ($query, int|string $sourceId) => $query->where('source_id', $sourceId))
+            ->when(array_key_exists('has_choices', $filters), function ($query) use ($filters): void {
+                filter_var($filters['has_choices'], FILTER_VALIDATE_BOOLEAN)
+                    ? $query->has('choices')
+                    : $query->doesntHave('choices');
+            })
             ->when($filters['status'] ?? null, function ($query, string $status): void {
                 $query->where(function ($statusQuery) use ($status): void {
                     $statusQuery
@@ -30,7 +37,18 @@ class AdmissionApplicationRepository
                         ->orWhereHas('statusItem', fn ($itemQuery) => $itemQuery->where('code', $status));
                 });
             })
-            ->when($filters['q'] ?? null, fn ($query, string $search) => $query->where('application_number', 'like', "%{$search}%"))
+            ->when($filters['q'] ?? null, function ($query, string $search): void {
+                $query->where(function ($searchQuery) use ($search): void {
+                    $searchQuery
+                        ->where('application_number', 'like', "%{$search}%")
+                        ->orWhereHas('applicant.person', function ($personQuery) use ($search): void {
+                            $personQuery
+                                ->where('last_name', 'like', "%{$search}%")
+                                ->orWhere('first_name', 'like', "%{$search}%")
+                                ->orWhere('middle_name', 'like', "%{$search}%");
+                        });
+                });
+            })
             ->when(! filter_var($filters['with_archived'] ?? false, FILTER_VALIDATE_BOOLEAN), fn ($query) => $query->active())
             ->orderByDesc('submitted_at')
             ->orderByDesc('id')
@@ -42,6 +60,7 @@ class AdmissionApplicationRepository
         return AdmissionApplication::query()
             ->foundation()
             ->with(['applicant.person', 'statusItem', 'source', 'educationProgram.specialty'])
+            ->withCount('choices')
             ->find($id);
     }
 

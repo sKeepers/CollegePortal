@@ -13,11 +13,14 @@ class AdmissionApplicationResource extends JsonResource
         return [
             'id' => $this->id,
             'uuid' => $this->uuid,
+            'record_type' => $this->record_type,
+            'foundation_version' => $this->foundation_version,
             'applicant_id' => $this->applicant_id,
             'admission_year' => $this->admission_year,
             'application_number' => $this->application_number,
             'education_program_id' => $this->education_program_id,
             'education_program' => new EducationProgramResource($this->whenLoaded('educationProgram')),
+            'choices_count' => $this->whenCounted('choices'),
             'status' => [
                 'code' => $this->statusCode(),
                 'id' => $this->status_id,
@@ -39,9 +42,46 @@ class AdmissionApplicationResource extends JsonResource
                     $this->applicant?->person?->first_name,
                     $this->applicant?->person?->middle_name,
                 ]))),
+                'person' => $this->applicant?->person ? [
+                    'id' => $this->applicant->person->id,
+                    'uuid' => $this->applicant->person->uuid,
+                    'last_name' => $this->applicant->person->last_name,
+                    'first_name' => $this->applicant->person->first_name,
+                    'middle_name' => $this->applicant->person->middle_name,
+                    'full_name' => trim(implode(' ', array_filter([
+                        $this->applicant->person->last_name,
+                        $this->applicant->person->first_name,
+                        $this->applicant->person->middle_name,
+                    ]))),
+                    'birth_date' => $this->applicant->person->birth_date?->toDateString(),
+                    'gender' => $this->applicant->person->gender,
+                    'citizenship' => $this->applicant->person->citizenship,
+                    'phone' => $this->applicant->person->phone,
+                    'email' => $this->applicant->person->email,
+                    'snils_masked' => $this->maskDocumentNumber($this->applicant->person->snils),
+                    'has_snils' => filled($this->applicant->person->snils),
+                    'status' => $this->applicant->person->status,
+                ] : null,
             ]),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];
+    }
+
+    private function maskDocumentNumber(?string $value): ?string
+    {
+        if (! filled($value)) {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', $value);
+
+        if (! $digits) {
+            return null;
+        }
+
+        $tail = mb_substr($digits, -4);
+
+        return str_repeat('*', max(0, mb_strlen($digits) - 4)).$tail;
     }
 }

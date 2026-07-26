@@ -137,7 +137,7 @@
 | `admissions.choice.update` | изменение приоритета, формы, финансирования, основания или статуса выбора | admin, admissions_secretary, admissions_operator |
 | `admissions.choice.delete` | архивирование выбранной программы | admin, admissions_secretary, admissions_operator |
 
-Разрешения `admissions.applications.*` с plural-именованием остаются проектными именами полного CRUD. В BACK-003 реализованы singular permissions `admissions.application.*` для foundation API. В BACK-004 реализованы singular permissions `admissions.choice.*` для выбранных образовательных программ заявления. Отзыв заявления, документы, конкурс и зачисление остаются planned.
+Разрешения `admissions.applications.*` с plural-именованием остаются проектными именами полного CRUD. В BACK-003 реализованы singular permissions `admissions.application.*` для foundation API. В BACK-004 реализованы singular permissions `admissions.choice.*` для выбранных образовательных программ заявления. В FRONT-001 route `/admissions/foundation` доступен по `admissions.application.view` и не использует legacy permission `admissions.view`. Отзыв заявления, документы, конкурс и зачисление остаются planned.
 
 ## Документы
 

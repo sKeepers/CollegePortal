@@ -21,6 +21,7 @@ const FisPage = () => import('../pages/fis/FisPage.vue')
 const ReportsPage = () => import('../pages/reports/ReportsPage.vue')
 const AttendancePage = () => import('../pages/attendance/AttendancePage.vue')
 const AdmissionsPage = () => import('../pages/admissions/AdmissionsPage.vue')
+const AdmissionsFoundationPage = () => import('../pages/admissions/FoundationWorkspacePage.vue')
 const DigitalPassesPage = () => import('../pages/identity/DigitalPassesPage.vue')
 const AccessGatePage = () => import('../pages/access/AccessGatePage.vue')
 const MobileScannerPage = () => import('../pages/access/MobileScannerPage.vue')
@@ -217,6 +218,12 @@ export const routes = [
         name: 'admissions',
         component: AdmissionsPage,
         meta: { title: 'Приемная комиссия', permission: 'admissions.view' },
+      },
+      {
+        path: 'admissions/foundation',
+        name: 'admissions-foundation',
+        component: AdmissionsFoundationPage,
+        meta: { title: 'Приёмная комиссия · Foundation', permission: 'admissions.application.view' },
       },
       {
         path: 'hr/employees',
