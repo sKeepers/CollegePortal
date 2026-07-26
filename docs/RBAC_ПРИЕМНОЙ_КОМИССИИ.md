@@ -132,9 +132,12 @@
 | `admissions.application.register` | регистрация черновика заявления | admin, admission |
 | `admissions.application.manage` | будущие расширенные операции над заявлениями | admin, admission |
 | `admissions.applications.withdraw` | отзыв заявления | admin, admissions_secretary |
-| `admissions.choices.manage` | управление выбранными программами | admin, admissions_secretary, admissions_operator |
+| `admissions.choice.view` | просмотр выбранных программ заявления | admin, admissions_secretary, admissions_operator, director, study |
+| `admissions.choice.create` | добавление выбранной программы | admin, admissions_secretary, admissions_operator |
+| `admissions.choice.update` | изменение приоритета, формы, финансирования, основания или статуса выбора | admin, admissions_secretary, admissions_operator |
+| `admissions.choice.delete` | архивирование выбранной программы | admin, admissions_secretary, admissions_operator |
 
-Разрешения `admissions.applications.*` с plural-именованием остаются проектными именами полного CRUD. В BACK-003 реализованы singular permissions `admissions.application.*` для foundation API. Отзыв заявления, choices и документы остаются planned.
+Разрешения `admissions.applications.*` с plural-именованием остаются проектными именами полного CRUD. В BACK-003 реализованы singular permissions `admissions.application.*` для foundation API. В BACK-004 реализованы singular permissions `admissions.choice.*` для выбранных образовательных программ заявления. Отзыв заявления, документы, конкурс и зачисление остаются planned.
 
 ## Документы
 

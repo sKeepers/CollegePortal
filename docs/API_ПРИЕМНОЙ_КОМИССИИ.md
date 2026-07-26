@@ -213,10 +213,10 @@ API делится на bounded areas:
 
 | URL | Метод | Назначение | Параметры | Тело запроса | Ответ | Ошибки | Права доступа |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `/api/admissions/applications/{applicationId}/choices` | `GET` | список выбранных программ | path `applicationId` | нет | choices с приоритетами | `401`, `403`, `404` | `admissions.applications.view` |
-| `/api/admissions/applications/{applicationId}/choices` | `POST` | добавить программу | path `applicationId` | `specialty_id`, `education_program_id`, `priority`, `education_form_id`, `funding_form_id`, `quota_type_id` | созданный choice | `401`, `403`, `404`, `409`, `422` | `admissions.choices.manage` |
-| `/api/admissions/applications/{applicationId}/choices/{choiceId}` | `PUT` | изменить выбор | path ids | `priority`, `education_form_id`, `funding_form_id`, `quota_type_id`, `status_id` | обновленный choice | `401`, `403`, `404`, `409`, `422` | `admissions.choices.manage` |
-| `/api/admissions/applications/{applicationId}/choices/{choiceId}` | `DELETE` | удалить или архивировать выбор | path ids | `reason` | пустой ответ или archived choice | `401`, `403`, `404`, `409`, `422` | `admissions.choices.manage` |
+| `/api/admissions/applications/{applicationId}/choices` | `GET` | список выбранных программ | path `applicationId` | нет | choices с приоритетами | `401`, `403`, `404`, `422` | `admissions.choice.view` |
+| `/api/admissions/applications/{applicationId}/choices` | `POST` | добавить программу | path `applicationId` | `education_program_id`, `priority`, `education_form_id`, `funding_form_id`, `base_education_type_id`, `quota_type_id`, `status_id`, `metadata` | созданный choice | `401`, `403`, `404`, `409`, `422` | `admissions.choice.create` |
+| `/api/admissions/choices/{choiceId}` | `PATCH` | изменить выбор | path `choiceId` | `priority`, `education_program_id`, `education_form_id`, `funding_form_id`, `base_education_type_id`, `quota_type_id`, `status_id`, `metadata` | обновленный choice | `401`, `403`, `404`, `409`, `422` | `admissions.choice.update` |
+| `/api/admissions/choices/{choiceId}` | `DELETE` | архивировать выбор | path `choiceId` | нет | `204 No Content` | `401`, `403`, `404`, `409`, `422` | `admissions.choice.delete` |
 
 ## Документы и комплектность
 
@@ -289,7 +289,29 @@ BACK-003 реализует только foundation-часть API заявле�
 | `/api/admissions/applications/{applicationId}` | `PATCH` | изменение разрешенных полей только в `draft` | `admissions.application.update` |
 | `/api/admissions/applications/{applicationId}/register` | `POST` | идемпотентная регистрация черновика в `registered` | `admissions.application.register` |
 
-`DELETE`, документы, choices, достижения, экзамены, конкурс, приказы, зачисление и ФИС в BACK-003 не реализуются.
+`DELETE`, документы, достижения, экзамены, конкурс, приказы, зачисление и ФИС в BACK-003 не реализуются. Choices реализуются отдельным slice BACK-004.
+
+## Реализация BACK-004
+
+BACK-004 реализует foundation выбранных образовательных программ заявления. Доступны только операции с choices для foundation-заявлений:
+
+| URL | Метод | Статус реализации | Permission |
+| --- | --- | --- | --- |
+| `/api/admissions/applications/{application}/choices` | `GET` | список активных выбранных программ заявления по приоритету | `admissions.choice.view` |
+| `/api/admissions/applications/{application}/choices` | `POST` | добавить выбранную образовательную программу к черновику заявления | `admissions.choice.create` |
+| `/api/admissions/choices/{choice}` | `PATCH` | изменить программу, приоритет, форму, финансирование, основание или статус выбора | `admissions.choice.update` |
+| `/api/admissions/choices/{choice}` | `DELETE` | архивировать выбор и сжать последовательность приоритетов | `admissions.choice.delete` |
+
+Ограничения BACK-004:
+
+- выборы доступны только для foundation-заявлений;
+- изменять choices можно только у заявления в статусе `draft`;
+- приоритеты идут последовательно от `1` без пропусков;
+- один приоритет не повторяется внутри заявления;
+- одна образовательная программа не повторяется внутри заявления;
+- максимум выбранных программ задается настройкой `admissions.max_choices_per_application`, по умолчанию `5`;
+- удаление является архивированием через `archived_at`;
+- конкурс, документы, достижения, экзамены, ФИС, приказы, зачисление и frontend UI не реализуются.
 
 ## Изоляция BACK-003.1 от legacy `/admissions`
 

@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\Admissions\AdmissionApplicationController as AdmissionsAdmissionApplicationController;
 use App\Http\Controllers\Api\Admissions\ApplicantController as AdmissionsApplicantController;
 use App\Http\Controllers\Api\Admissions\AdmissionReferenceController;
+use App\Http\Controllers\Api\Admissions\ProgramChoiceController as AdmissionsProgramChoiceController;
 use App\Http\Controllers\Api\ApplicantApplicationController;
 use App\Http\Controllers\Api\ApplicantDocumentController;
 use App\Http\Controllers\Api\AdmissionBulkController;
@@ -174,6 +175,18 @@ Route::middleware('api.token')->group(function (): void {
     Route::post('admissions/applications/{application}/register', [AdmissionsAdmissionApplicationController::class, 'register'])
         ->whereNumber('application')
         ->middleware('permission:admissions.application.register');
+    Route::get('admissions/applications/{application}/choices', [AdmissionsProgramChoiceController::class, 'index'])
+        ->whereNumber('application')
+        ->middleware('permission:admissions.choice.view');
+    Route::post('admissions/applications/{application}/choices', [AdmissionsProgramChoiceController::class, 'store'])
+        ->whereNumber('application')
+        ->middleware('permission:admissions.choice.create');
+    Route::patch('admissions/choices/{choice}', [AdmissionsProgramChoiceController::class, 'update'])
+        ->whereNumber('choice')
+        ->middleware('permission:admissions.choice.update');
+    Route::delete('admissions/choices/{choice}', [AdmissionsProgramChoiceController::class, 'destroy'])
+        ->whereNumber('choice')
+        ->middleware('permission:admissions.choice.delete');
 
     Route::middleware('permission:manage_users')->group(function (): void {
         Route::get('admin/audit', [AuditLogController::class, 'index']);

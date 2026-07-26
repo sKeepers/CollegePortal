@@ -38,6 +38,7 @@ class SettingService
             'admissions' => [
                 'current_admission_campaign' => ['value' => 'Прием 2026', 'type' => 'string', 'is_public' => false, 'label' => 'Текущая приемная кампания', 'description' => 'Название активной приемной кампании.'],
                 'max_applications_per_applicant' => ['value' => 3, 'type' => 'integer', 'is_public' => false, 'label' => 'Максимум заявлений на абитуриента', 'description' => 'Ограничение для будущих проверок приема.'],
+                'max_choices_per_application' => ['value' => 5, 'type' => 'integer', 'is_public' => false, 'label' => 'Максимум выбранных программ в заявлении', 'description' => 'Ограничение BACK-004 для выбранных образовательных программ одного заявления.'],
             ],
             'graduation' => [
                 'current_graduation_year' => ['value' => 2027, 'type' => 'integer', 'is_public' => false, 'label' => 'Текущий год выпуска', 'description' => 'Используется в выпускниках, дипломах и ФРДО.'],

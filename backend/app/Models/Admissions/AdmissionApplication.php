@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Foundation-модель заявления приемной комиссии.
@@ -98,6 +99,13 @@ class AdmissionApplication extends Model
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function choices(): HasMany
+    {
+        return $this->hasMany(ProgramChoice::class, 'application_id')
+            ->active()
+            ->orderBy('priority');
     }
 
     public function scopeFoundation(Builder $query): Builder
