@@ -18,16 +18,15 @@ This document is a navigation and status snapshot. GitHub Issues, Pull Requests 
 
 ## Active Branch
 
-- Branch: `feature/back-005-admissions-documents`
-- Base: stacked on `feature/front-001-admissions-workspace`, потому что BACK-004/FRONT-001 еще не входят в `origin/develop`.
-- Scope: Admissions Foundation документы, private files, СНИЛС и readiness API.
-- Current stacked branch: `feature/back-005-1-documents-hardening`, base `feature/back-005-admissions-documents`.
+- Branch: `feature/front-002-admissions-editor`
+- Base: stacked on `feature/back-005-1-documents-hardening`, потому что BACK-005.1 еще не входит в `origin/develop`.
+- Scope: Admissions Foundation editor workspace на `/admissions/foundation` без изменения legacy `/admissions` и backend API.
 
 ## Current Task
 
-- `BACK-005.1`: аудит и укрепление Documents Foundation.
-- Разрешенные изменения: additive migration, models, repositories/services, resources, application-document API, readiness, FIS dictionary mapping, audit, docs и backend regression tests.
-- Явно исключено: frontend, legacy `/admissions`, конкурс, приказы, зачисление, генерация XML, SOAP/Gateway/FIS send и перенос legacy-данных.
+- `FRONT-002`: рабочее место приемной комиссии поверх существующего Admissions Foundation API.
+- Разрешенные изменения: frontend store/page, использование существующих endpoints, отображение backend validation, документация.
+- Явно исключено: backend, migrations, permissions, API routes/controllers/services, legacy `/admissions`, XML/SOAP/Gateway/FIS send.
 
 ## Completed Tasks
 
@@ -49,6 +48,7 @@ Recent completed work reflected by current project notes and user-provided statu
 - `FRONT-001`: completed as read-only Admissions Foundation workspace on `/admissions/foundation`.
 - `BACK-005`: completed as Admissions Foundation documents, private files, SNILS hashing and document readiness API.
 - `BACK-005.1`: completed as Documents Foundation hardening: application-document link, document version chain, XSD education fields and FIS dictionary mapping.
+- `FRONT-002`: completed as Admissions Foundation editor workspace using existing backend endpoints.
 
 ## Roadmap Progress
 
@@ -58,9 +58,9 @@ Known roadmap maintenance need: older sections still name early tasks such as GU
 
 ## Next Planned Task
 
-Recommended next planned task after `BACK-005.1`:
+Recommended next planned task after `FRONT-002`:
 
-- start `FRONT-002`: подключить документы, версии, закрепленные документы и readiness к workspace без изменения legacy `/admissions`;
+- start `FRONT-003`: добавить создание/редактирование Applicant/Person после появления backend write API или отдельного backend slice;
 - keep FIS XML/package generation as a separate task after mapping review.
 
 ## Open Issues
@@ -112,12 +112,13 @@ ADM-001/ADM-002/ADM-003/ADM-004 admissions backlog:
 6. FRONT-001 — Read-only workspace Admissions Foundation: `/admissions/foundation`.
 7. BACK-005 — foundation документов заявления, private files, СНИЛС и структурированная комплектность.
 8. BACK-005.1 — hardening Documents Foundation: версии и связь с заявлением.
-9. Этап 1 — CRUD абитуриентов.
-10. Этап 2 — Документы.
-11. Этап 3 — Конкурс.
-12. Этап 4 — Приказы.
-13. Этап 5 — Экспорт в ФИС.
-14. Этап 6 — Личный кабинет абитуриента.
+9. FRONT-002 — editor workspace Admissions Foundation: мастер заявления, документы, файлы, readiness, FIS, история.
+10. Этап 1 — CRUD абитуриентов.
+11. Этап 2 — Документы.
+12. Этап 3 — Конкурс.
+13. Этап 4 — Приказы.
+14. Этап 5 — Экспорт в ФИС.
+15. Этап 6 — Личный кабинет абитуриента.
 
 Documentation governance backlog:
 
@@ -144,3 +145,4 @@ Documentation governance backlog:
 | 2026-07-26 | Added FRONT-001 read-only Admissions Foundation workspace. |
 | 2026-07-26 | Added BACK-005 Admissions document foundation, private files, SNILS hashing and readiness API. |
 | 2026-07-26 | Added BACK-005.1 Documents Foundation hardening and ADR-006. |
+| 2026-07-26 | Added FRONT-002 Admissions Foundation editor workspace. |

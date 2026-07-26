@@ -1132,6 +1132,12 @@ Frontend action-level RBAC доведен до основных CRUD и сист
 
 Admissions Foundation documents now preserve registered application history through `admission_application_documents` and document version chains. A registered foundation application keeps links to the exact identity and education document versions used at registration; later Applicant documents do not change historical readiness. Education documents include XSD-confirmed qualification, speciality, registration number and nostrification fields. FIS readiness uses `fis_external_mappings` for dictionary mapping and does not treat internal reference IDs as FIS codes. XML/SOAP/FIS send remain separate tasks.
 
+## FRONT-002: Admissions Editor Workspace
+
+`/admissions/foundation` расширен из read-only просмотра в рабочее место приемной комиссии. Frontend использует существующие Admissions Foundation endpoints без изменения backend: список заявлений, быстрые фильтры, мастер создания черновика для существующего Applicant, СНИЛС, документы личности и образования, upload/download/delete private-файлов, выбранные программы, регистрация, readiness, FIS blockers и история Audit.
+
+Ограничение FRONT-002: backend foundation пока не предоставляет write API для создания `Applicant`/`Person`, поэтому мастер выбирает уже существующего foundation-абитуриента. Полный CRUD абитуриента остается отдельной задачей FRONT-003/BACK-next.
+
 ## ST-001A: Curriculum Engine foundation
 
 Добавлен foundation нормализованного учебного плана. Новый слой `curriculum_subjects` хранит дисциплины семестров, часы по видам работ, вид контроля из Reference Data, порядок, optional-флаг и заготовку компетенций. Группа может ссылаться на действующий `curriculum_id`, а `CurriculumEngineService` возвращает дисциплины семестра группы, итоги и группировку по семестрам. Существующие `curricula` и legacy `curriculum_items` сохранены для совместимости.

@@ -111,6 +111,13 @@ export const api = {
     })
   },
 
+  async patch(resource, data) {
+    return request(`/${resource}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  },
+
   async delete(resource, id) {
     return request(`/${resource}/${id}`, {
       method: 'DELETE',
