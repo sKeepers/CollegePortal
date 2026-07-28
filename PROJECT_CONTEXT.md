@@ -1146,6 +1146,10 @@ Admissions Foundation documents now preserve registered application history thro
 
 `/admissions/foundation` теперь использует BACK-006 API для управления `Person` и foundation `Applicant`: карточки Person/Applicant доступны в workspace заявления, Person можно создавать и редактировать, Applicant можно создавать, редактировать и архивировать без физического удаления. Мастер нового заявления поддерживает выбор существующего Applicant, создание нового Applicant, выбор существующего Person и создание нового Person после явного duplicate-check через `POST /api/people/duplicates/check`. Автоматический merge не выполняется; при найденных совпадениях оператор выбирает существующий Person вручную. Ограничения registered-заявления из FRONT-002 сохранены: документы, файлы, выбранные программы и реквизиты заявления остаются read-only после регистрации.
 
+### RC1: Admissions Foundation Release Candidate
+
+Admissions Foundation получил первый RC1-аудит готовности к PROD: подготовлен `RC1_READY.md`, проверены backend/frontend/API/RBAC/docs статикой, устранены очевидные замечания мастера нового заявления и duplicate-check. RC1 не добавляет новые бизнес-функции и не меняет backend contracts, migrations, permissions или legacy `/admissions`. Перед PROD остаются обязательными green CI/DEV checks: `npm run build`, `php artisan test`, миграции и ручной smoke `/admissions/foundation`.
+
 ## ST-001A: Curriculum Engine foundation
 
 Добавлен foundation нормализованного учебного плана. Новый слой `curriculum_subjects` хранит дисциплины семестров, часы по видам работ, вид контроля из Reference Data, порядок, optional-флаг и заготовку компетенций. Группа может ссылаться на действующий `curriculum_id`, а `CurriculumEngineService` возвращает дисциплины семестра группы, итоги и группировку по семестрам. Существующие `curricula` и legacy `curriculum_items` сохранены для совместимости.

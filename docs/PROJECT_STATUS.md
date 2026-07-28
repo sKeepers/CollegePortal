@@ -12,7 +12,7 @@
 
 ## Current Milestone
 
-Private DEV/UAT preparation after Release Candidate 0.8.x. Current project work is focused on architecture governance and the Admissions subsystem foundation.
+Private DEV/UAT preparation after Release Candidate 0.8.x. Current project work is focused on Admissions Foundation RC1 readiness.
 
 This document is a navigation and status snapshot. GitHub Issues, Pull Requests and CI remain the authoritative live workflow when GitHub write access is available.
 
@@ -20,13 +20,13 @@ This document is a navigation and status snapshot. GitHub Issues, Pull Requests 
 
 - Branch: `feature/front-003-person-applicant`
 - Base: `feature/back-006-person-applicant-api`.
-- Scope: frontend workspace управления `Person` и foundation `Applicant` в `/admissions/foundation` поверх BACK-006 API без изменения backend, migrations, permissions и legacy `/admissions`.
+- Scope: RC1 audit and release readiness for Admissions Foundation without adding new business features.
 
 ## Current Task
 
-- `FRONT-003`: Person & Applicant Management UI.
-- Разрешенные изменения: frontend workspace `/admissions/foundation` и проектная документация.
-- Явно исключено: backend, migrations, permissions, legacy `/admissions`, XML/SOAP/Gateway/FIS send.
+- `RC1`: Admissions Foundation Release Candidate.
+- Разрешенные изменения: obvious RC1 fixes, release documentation and status notes.
+- Явно исключено: новые функции, backend contracts, migrations, permissions, legacy `/admissions`, XML/SOAP/Gateway/FIS send.
 
 ## Completed Tasks
 
@@ -50,6 +50,7 @@ Recent completed work reflected by current project notes and user-provided statu
 - `BACK-005.1`: completed as Documents Foundation hardening: application-document link, document version chain, XSD education fields and FIS dictionary mapping.
 - `FRONT-002`: completed as Admissions Foundation editor workspace using existing backend endpoints.
 - `BACK-006`: completed as Person & Applicant Management API for FRONT-003.
+- `FRONT-003`: completed as Person & Applicant Management UI on `/admissions/foundation`.
 
 ## Roadmap Progress
 
@@ -59,7 +60,7 @@ Known roadmap maintenance need: older sections still name early tasks such as GU
 
 ## Next Planned Task
 
-Recommended next planned task after `FRONT-003`:
+Recommended next planned task after `RC1`:
 
 - `TEST-001`: regression coverage for Admissions Foundation full operator workflow and registered read-only behavior;
 - keep FIS XML/package generation as a separate task after mapping review.
@@ -151,3 +152,4 @@ Documentation governance backlog:
 | 2026-07-26 | Added FRONT-002 Admissions Foundation editor workspace. |
 | 2026-07-28 | Added BACK-006 Person & Applicant Management API for FRONT-003. |
 | 2026-07-28 | Added FRONT-003 Person & Applicant Management UI for Admissions Foundation. |
+| 2026-07-28 | Prepared Admissions Foundation RC1 readiness report and release audit. |

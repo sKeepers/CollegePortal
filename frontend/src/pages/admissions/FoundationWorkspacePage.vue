@@ -382,6 +382,58 @@ function resetApplicantForm() {
   })
 }
 
+function resetWizardForm() {
+  Object.assign(wizardForm, {
+    applicant_id: null,
+    admission_year: new Date().getFullYear(),
+    application_number: '',
+    education_program_id: null,
+    source_id: null,
+    submitted_at: new Date().toISOString().slice(0, 10),
+    education_base: 'after_9',
+    comment: '',
+    snils: '',
+    identityFiles: [],
+    educationFiles: [],
+  })
+  Object.assign(wizardForm.identity, {
+    document_type_id: null,
+    series: '',
+    number: '',
+    issue_date: '',
+    issued_by: '',
+    subdivision_code: '',
+    release_country_name: 'Россия',
+    is_primary: true,
+    verification_status: 'pending_review',
+  })
+  Object.assign(wizardForm.education, {
+    document_type_id: null,
+    series: '',
+    number: '',
+    issue_date: '',
+    document_organization: '',
+    education_level_id: null,
+    graduation_year: '',
+    is_original: false,
+    average_score: '',
+    average_score_scale: '5',
+    qualification_name: '',
+    speciality_name: '',
+    registration_number: '',
+    is_primary: true,
+    verification_status: 'pending_review',
+  })
+  Object.assign(wizardForm.choice, {
+    priority: 1,
+    education_form_id: null,
+    funding_form_id: null,
+    base_education_type_id: null,
+    quota_type_id: null,
+    status_id: null,
+  })
+}
+
 function fillPersonForm(person = selectedPerson.value) {
   if (!person) return resetPersonForm()
   Object.assign(personForm, {
@@ -445,6 +497,7 @@ function applicantPayload() {
 function duplicatePayload() {
   return normalizePayload({
     ...personPayload(),
+    snils: personForm.snils || wizardForm.snils,
     identity_document: normalizePayload({
       series: wizardForm.identity.series,
       number: wizardForm.identity.number,
@@ -595,7 +648,7 @@ function fillApplicationForm() {
 
 function openWizard() {
   wizardApplicantMode.value = 'existing'
-  wizardForm.applicant_id = null
+  resetWizardForm()
   resetPersonForm()
   resetApplicantForm()
   duplicateResult.value = null
@@ -717,7 +770,10 @@ async function ensureWizardApplicant() {
       throw new Error('Найдены возможные дубли Person. Выберите существующую запись или повторите создание после проверки.')
     }
 
-    const person = await store.createPerson(personPayload())
+    const person = await store.createPerson(normalizePayload({
+      ...personPayload(),
+      snils: personForm.snils || wizardForm.snils,
+    }))
     applicantForm.person_id = person.id
   }
 

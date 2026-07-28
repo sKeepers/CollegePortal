@@ -119,8 +119,11 @@
 | --- | --- | --- |
 | `admissions.applicant.view` | просмотр foundation-профилей абитуриентов | admin, admission, director, study, academic_office |
 | `admissions.applicant.manage` | создание и связывание foundation-профилей через сервисный слой | admin, admission |
+| `admissions.applicant.create` | создание foundation-профиля Applicant через BACK-006 API | admin, admission |
+| `admissions.applicant.update` | изменение служебных полей foundation-профиля Applicant | admin, admission |
+| `admissions.applicant.archive` | архивирование Applicant без физического удаления | admin, admission |
 
-Разрешения `admissions.applicants.create`, `admissions.applicants.update` и `admissions.applicants.archive` остаются проектными именами для будущего полноценного CRUD. В BACK-002 они не реализуются, потому что API абитуриентов открыт только на чтение.
+BACK-006 реализует singular permissions `admissions.applicant.create`, `admissions.applicant.update` и `admissions.applicant.archive`. Plural-имена `admissions.applicants.*` не используются foundation API и остаются только историческим проектным черновиком.
 
 ## Заявления
 

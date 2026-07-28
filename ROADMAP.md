@@ -94,6 +94,7 @@ Roadmap фиксирует порядок развития проекта пос
 - [x] FRONT-002: Admissions Foundation editor workspace — мастер создания заявления, документы, файлы, выбранные программы, readiness, FIS blockers и история на `/admissions/foundation`.
 - [x] BACK-006: Person & Applicant Management API — `POST/PATCH /api/people`, `POST/PATCH /api/admissions/applicants`, archive Applicant, duplicate check, explicit `merge_not_supported`.
 - [x] FRONT-003: Person & Applicant Management UI — создание/редактирование Person, создание/редактирование/архивирование Applicant, duplicate-check и интеграция с мастером заявления на `/admissions/foundation`.
+- [x] RC1: Admissions Foundation release candidate — аудит backend/frontend/API/RBAC/docs, release report `RC1_READY.md`, фиксация очевидных замечаний мастера и duplicate-check.
 - Следующий рекомендуемый этап: TEST-001 — regression suite полного workspace приемной комиссии, включая registered read-only и duplicate-check сценарии.
 ### Приемная комиссия
 

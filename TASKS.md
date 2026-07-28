@@ -177,6 +177,7 @@
 - [x] FRONT-002: Admissions editor workspace на `/admissions/foundation` поверх существующих API без изменения legacy `/admissions`.
 - [x] BACK-006: Person & Applicant Management API для FRONT-003.
 - [x] FRONT-003: Person & Applicant Management UI на `/admissions/foundation`.
+- [x] RC1: Admissions Foundation Release Candidate — аудит, очевидные fixes, `RC1_READY.md`.
 - [ ] TEST-001: Backend regression suite.
 ## Приемная комиссия
 
