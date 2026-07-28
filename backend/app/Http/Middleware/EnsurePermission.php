@@ -36,6 +36,10 @@ class EnsurePermission
             default => $permission,
         };
 
+        if (str_starts_with($path, 'api/digital-identities') && in_array($method, ['GET', 'HEAD'], true)) {
+            return array_values(array_unique(array_filter(['digitalpasses.manage', 'view_own_data', $permission])));
+        }
+
         return array_values(array_unique(array_filter([$mapped, $permission])));
     }
 

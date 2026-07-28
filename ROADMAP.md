@@ -95,8 +95,9 @@ Roadmap фиксирует порядок развития проекта пос
 - [x] BACK-006: Person & Applicant Management API — `POST/PATCH /api/people`, `POST/PATCH /api/admissions/applicants`, archive Applicant, duplicate check, explicit `merge_not_supported`.
 - [x] FRONT-003: Person & Applicant Management UI — создание/редактирование Person, создание/редактирование/архивирование Applicant, duplicate-check и интеграция с мастером заявления на `/admissions/foundation`.
 - [x] RC1: Admissions Foundation release candidate — аудит backend/frontend/API/RBAC/docs, release report `RC1_READY.md`, фиксация очевидных замечаний мастера и duplicate-check.
-- [ ] GUI-009: Dashboard & Navigation Layout Hardening — сворачиваемые группы sidebar, устранение blank `/schedule`, splitter People и compact Dashboard widgets без новых бизнес-функций.
-- Следующий рекомендуемый этап после GUI-009: TEST-001 — regression suite полного workspace приемной комиссии, включая registered read-only и duplicate-check сценарии.
+- [x] GUI-009: Dashboard & Navigation Layout Hardening — сворачиваемые группы sidebar, устранение blank `/schedule`, splitter People и compact Dashboard widgets без новых бизнес-функций.
+- [ ] UAT-002: Portal UX, RBAC and Admissions Stabilization — единый пункт меню приемной комиссии, русские validation/forbidden сообщения, Dashboard без RBAC-noise, существующий QR-пропуск в role-based AppLayout.
+- Следующий рекомендуемый этап после UAT-002: TEST-001 — regression suite полного workspace приемной комиссии, включая registered read-only и duplicate-check сценарии.
 ### Приемная комиссия
 
 - [x] ADM-001: Приемная комиссия — выполнено;
@@ -131,23 +132,17 @@ Roadmap фиксирует порядок развития проекта пос
 - часы, формы контроля и практики;
 - подготовка данных для нагрузки преподавателей и расписания.
 
-### 2. QR-002: Проходная / проверка QR-token
+### 2. QR / Проходная
 
-Цель: продолжить QR-001 и создать рабочее место проходной для проверки token и фиксации входа/выхода.
+QR-пропуска и проходная уже реализованы в рамках Digital Identity / Access Gate и проходят UAT как существующий модуль, а не новая реализация.
 
-План:
+Текущий план стабилизации:
 
-- печатный QR для студенческого билета, бейджа или временного пропуска;
-- мобильный QR в будущем личном кабинете;
-- сканирование QR на проходной USB QR-сканером как HID-клавиатурой;
-- фиксация входа и выхода;
-- журнал входа/выхода;
-- статусы прохода: разрешен, запрещен, просрочен, неизвестный QR;
-- отчеты по студентам;
-- отчеты по преподавателям;
-- отчеты по сотрудникам;
-- отчеты по гостям;
-- связь с Identity Domain, Person и Digital Identity.
+- не создавать второй QR backend/API;
+- переиспользовать `/api/digital-identities`, `/api/digital-identities/{id}/qr`, `/api/access/scan` и существующие страницы проходной;
+- вывести `Мой QR-пропуск` для Student/Teacher/HR;
+- оставить `Цифровые пропуска`, `Проходная`, `Мобильный сканер`, `Отчеты по проходам` только административным и security-ролям;
+- проверить действующий стенд `https://192.168.34.104:5443/` и текущий DEV `http://192.168.34.114:5174/`.
 
 ### 3. MOB-001: Mobile Student Cabinet Phase 1
 

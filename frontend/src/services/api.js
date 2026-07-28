@@ -1,5 +1,64 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
+const VALIDATION_RULE_MESSAGES = {
+  'validation.exists': 'Выбранное значение не найдено. Обновите справочник и выберите значение из списка.',
+  'validation.required': 'Заполните обязательное поле.',
+  'validation.required_without': 'Заполните это поле или выберите существующую запись.',
+  'validation.min.numeric': 'Значение меньше допустимого.',
+  'validation.max.numeric': 'Значение больше допустимого.',
+  'validation.email': 'Укажите корректный email.',
+  'validation.date': 'Укажите корректную дату.',
+  'validation.before': 'Дата должна быть раньше допустимого предела.',
+  'validation.in': 'Выбранное значение недопустимо.',
+}
+
+const FIELD_LABELS = {
+  applicant_id: 'Абитуриент',
+  person_id: 'Человек',
+  education_program_id: 'Образовательная программа',
+  source_id: 'Источник',
+  status_id: 'Статус',
+  admission_year: 'Год приема',
+  application_number: 'Номер заявления',
+  submitted_at: 'Дата подачи',
+  last_name: 'Фамилия',
+  first_name: 'Имя',
+  middle_name: 'Отчество',
+  birth_date: 'Дата рождения',
+  phone: 'Телефон',
+  email: 'Email',
+  snils: 'СНИЛС',
+}
+
+function readableField(field) {
+  const normalized = String(field || '').replace(/^person\./, '')
+  return FIELD_LABELS[normalized] || normalized.replaceAll('_', ' ')
+}
+
+export function humanizeApiMessage(message, field = '') {
+  const text = String(message || '').trim()
+  if (!text) return 'Запрос не выполнен'
+  if (text === 'Forbidden.' || text === 'Forbidden' || text === 'This action is unauthorized.') {
+    return 'У вас нет доступа к этому разделу или действию.'
+  }
+
+  const mapped = VALIDATION_RULE_MESSAGES[text]
+  if (mapped) {
+    return field ? `${readableField(field)}: ${mapped}` : mapped
+  }
+
+  return text
+}
+
+function validationMessages(errors) {
+  if (!errors) return []
+
+  return Object.entries(errors)
+    .flatMap(([field, messages]) => (Array.isArray(messages) ? messages : [messages])
+      .filter(Boolean)
+      .map((message) => humanizeApiMessage(message, field)))
+}
+
 async function request(path, options = {}) {
   const token = localStorage.getItem('college_portal_token')
   const isFormData = options.body instanceof FormData
@@ -21,13 +80,12 @@ async function request(path, options = {}) {
   const payload = await response.json().catch(() => ({}))
 
   if (!response.ok) {
-    const validationMessages = payload.errors
-      ? Object.values(payload.errors).flat().filter(Boolean)
-      : []
-    const message = validationMessages[0] || payload.message || 'Запрос не выполнен'
+    const messages = validationMessages(payload.errors)
+    const message = messages[0] || humanizeApiMessage(payload.message) || 'Запрос не выполнен'
     const error = new Error(message)
     error.status = response.status
     error.errors = payload.errors || {}
+    error.validationMessages = messages
     throw error
   }
 
@@ -146,7 +204,7 @@ export const api = {
 
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}))
-      throw new Error(payload.message || 'Файл не удалось скачать')
+      throw new Error(humanizeApiMessage(payload.message) || 'Файл не удалось скачать')
     }
 
     return response.blob()
@@ -163,7 +221,7 @@ export const api = {
 
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}))
-      throw new Error(payload.message || 'Файл не удалось скачать')
+      throw new Error(humanizeApiMessage(payload.message) || 'Файл не удалось скачать')
     }
 
     return response.blob()

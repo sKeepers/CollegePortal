@@ -108,7 +108,7 @@ const metrics = computed(() => selected.value ? [
   { label: 'Назначений', value: selected.value.assignments?.length || 0 },
 ] : [])
 const quickActions = computed(() => selected.value ? [
-  selected.value.person?.id ? { label: 'Person', to: `/people?person=${selected.value.person.id}` } : null,
+  selected.value.person?.id ? { label: 'Личная карточка', to: `/people?person=${selected.value.person.id}` } : null,
   selected.value.teacher?.id ? { label: 'Преподаватель', to: `/teachers?teacher=${selected.value.teacher.id}` } : null,
   selected.value.teacher?.id ? { label: 'Расписание', to: `/schedule?teacher_id=${selected.value.teacher.id}` } : null,
   selected.value.teacher?.id ? { label: 'Нагрузка', to: `/teaching-load?teacher_id=${selected.value.teacher.id}` } : null,
@@ -247,7 +247,7 @@ watch(() => route.path, (path) => {
       <div>
         <p class="text-overline text-primary q-mb-xs">Отдел кадров</p>
         <h1>Кадровый контур сотрудников</h1>
-        <p>Единая карточка Employee связана с Person и может быть связана с преподавателем без изменения Teacher API.</p>
+        <p>Единая карточка сотрудника связана с личной карточкой и может быть связана с преподавателем без изменения API преподавателей.</p>
       </div>
       <div class="hr-page__actions">
         <q-btn v-if="activeTab === 'employees' && canCreate" color="primary" no-caps @click="openEmployeeDialog()">Новый сотрудник</q-btn>

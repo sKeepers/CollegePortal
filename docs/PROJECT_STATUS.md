@@ -18,15 +18,15 @@ This document is a navigation and status snapshot. GitHub Issues, Pull Requests 
 
 ## Active Branch
 
-- Branch: `feature/gui-009-layout-hardening`
-- Base: `feature/rc1-dev-fixes`.
-- Scope: Dashboard and navigation layout hardening without backend, API, migration, permission or legacy changes.
+- Branch: `feature/uat-002-portal-stabilization`
+- Base: `feature/gui-009-layout-hardening`.
+- Scope: UAT stabilization for Admissions Foundation, role menus, Dashboard RBAC behavior and existing QR pass integration.
 
 ## Current Task
 
-- `GUI-009`: Dashboard & Navigation Layout Hardening.
-- Разрешенные изменения: collapsible sidebar groups, visible `/schedule` loading/error states, People splitter, compact Dashboard widget layout and layout documentation.
-- Явно исключено: новые бизнес-функции, backend contracts, migrations, permissions, legacy `/admissions`, XML/SOAP/Gateway/FIS send.
+- `UAT-002`: Portal UX, RBAC and Admissions Stabilization.
+- Разрешенные изменения: user-facing localization, Admissions Foundation menu cleanup, Dashboard RBAC consistency, reusable splitter, existing QR pass integration and UAT documentation.
+- Явно исключено: новая независимая QR-реализация, новый ФИС/SOAP flow, PROD/UAT changes and merge to `develop`.
 
 ## Completed Tasks
 
@@ -52,6 +52,7 @@ Recent completed work reflected by current project notes and user-provided statu
 - `BACK-006`: completed as Person & Applicant Management API for FRONT-003.
 - `FRONT-003`: completed as Person & Applicant Management UI on `/admissions/foundation`.
 - `RC1-DEV`: completed as DEV release fixes for Admissions Foundation audit data redaction.
+- `GUI-009`: completed as Dashboard and navigation layout hardening: collapsible sidebar groups, visible `/schedule`, People splitter and compact Dashboard widgets.
 
 ## Roadmap Progress
 
@@ -61,9 +62,10 @@ Known roadmap maintenance need: older sections still name early tasks such as GU
 
 ## Next Planned Task
 
-Recommended next planned task after `RC1`:
+Recommended next planned task after `UAT-002`:
 
 - `TEST-001`: regression coverage for Admissions Foundation full operator workflow and registered read-only behavior;
+- `UAT-002-DEV`: deploy current branch to DEV and perform role-based smoke on `http://192.168.34.114:5174`;
 - keep FIS XML/package generation as a separate task after mapping review.
 
 ## Open Issues
@@ -74,6 +76,7 @@ Live GitHub Issues are the source of truth when accessible. From the local docum
 - Documentation status is scattered across root documents, `docs/*`, release notes and task logs.
 - Several project documents reference missing or renamed documentation files.
 - DEV test users are documented in [Test Users](TEST_USERS.md). They are DEV-only and must not be used in PROD.
+- UAT-002 QR integration reuses the existing Digital Identity and Access Gate implementation; no BACK-007/new QR API is planned for this correction.
 
 ## Known Risks
 
@@ -119,12 +122,13 @@ ADM-001/ADM-002/ADM-003/ADM-004 admissions backlog:
 9. FRONT-002 — editor workspace Admissions Foundation: мастер заявления, документы, файлы, readiness, FIS, история.
 10. BACK-006 — Person & Applicant Management API: create/update Person, create/update/archive Applicant, duplicate check, merge stop-gate.
 11. FRONT-003 — Person & Applicant Management UI.
-12. Этап 1 — CRUD абитуриентов.
-13. Этап 2 — Документы.
-14. Этап 3 — Конкурс.
-15. Этап 4 — Приказы.
-16. Этап 5 — Экспорт в ФИС.
-17. Этап 6 — Личный кабинет абитуриента.
+12. UAT-002 — role-based stabilization of Admissions Foundation, Dashboard, QR menu integration and smoke documentation.
+13. Этап 1 — CRUD абитуриентов.
+14. Этап 2 — Документы.
+15. Этап 3 — Конкурс.
+16. Этап 4 — Приказы.
+17. Этап 5 — Экспорт в ФИС.
+18. Этап 6 — Личный кабинет абитуриента.
 
 Documentation governance backlog:
 
@@ -156,3 +160,4 @@ Documentation governance backlog:
 | 2026-07-28 | Added FRONT-003 Person & Applicant Management UI for Admissions Foundation. |
 | 2026-07-28 | Prepared Admissions Foundation RC1 readiness report and release audit. |
 | 2026-07-28 | Started GUI-009 layout hardening: sidebar sections, `/schedule`, People splitter and Dashboard layout persistence. |
+| 2026-07-28 | Started UAT-002 stabilization: Admissions menu cleanup, user-facing localization, Dashboard RBAC behavior and existing QR pass integration. |

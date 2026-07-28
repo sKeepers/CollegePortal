@@ -178,7 +178,8 @@
 - [x] BACK-006: Person & Applicant Management API для FRONT-003.
 - [x] FRONT-003: Person & Applicant Management UI на `/admissions/foundation`.
 - [x] RC1: Admissions Foundation Release Candidate — аудит, очевидные fixes, `RC1_READY.md`.
-- [ ] GUI-009: Dashboard & Navigation Layout Hardening — сворачиваемые группы sidebar, видимое состояние `/schedule`, splitter People, compact Dashboard и versioned localStorage.
+- [x] GUI-009: Dashboard & Navigation Layout Hardening — сворачиваемые группы sidebar, видимое состояние `/schedule`, splitter People, compact Dashboard и versioned localStorage.
+- [ ] UAT-002: Portal UX, RBAC and Admissions Stabilization — единый пункт меню приемной комиссии, русские validation/forbidden сообщения, Dashboard без RBAC-noise и подключение существующего QR-модуля в role-based AppLayout.
 - [ ] TEST-001: Backend regression suite.
 ## Приемная комиссия
 
@@ -215,6 +216,7 @@
 - [x] Создать раздел `/identity/digital-passes`
 - [x] Добавить пункт меню `Identity / Цифровые пропуска`
 - [x] Проверить, что QR не содержит персональные данные
+- [ ] UAT-002: Подключить существующий личный QR-пропуск в основной role-based layout без создания второго QR backend/API.
 
 ## Следующие задачи
 

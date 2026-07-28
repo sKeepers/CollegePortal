@@ -43,17 +43,21 @@ export const useDigitalPassesStore = defineStore('digitalPasses', () => {
   const teacherOptions = computed(() => teachers.value.map((teacher) => ({ label: [fullName(teacher), teacher.department, teacher.position].filter(Boolean).join(' · '), value: teacher.id })))
   const ownerOptions = computed(() => ({ student: studentOptions.value, teacher: teacherOptions.value }))
 
-  async function load() {
+  async function load(options = {}) {
     loading.value = true
     error.value = ''
     try {
+      const identitiesParams = options.mine ? { mine: 1, status: options.status || 'active' } : {}
       const [identitiesPayload, studentsPayload, teachersPayload] = await Promise.all([
-        api.list('digital-identities'), api.list('students'), api.list('teachers'),
+        api.list('digital-identities', identitiesParams),
+        options.includeOwners === false ? Promise.resolve({ data: [] }) : api.list('students'),
+        options.includeOwners === false ? Promise.resolve({ data: [] }) : api.list('teachers'),
       ])
       identities.value = extractRows(identitiesPayload)
       students.value = extractRows(studentsPayload)
       teachers.value = extractRows(teachersPayload)
       if (selectedId.value && !selectedIdentity.value) { selectedId.value = null; qrSvg.value = '' }
+      if (!identities.value.length) { selectedId.value = null; qrSvg.value = '' }
     } catch (err) {
       error.value = err.message || 'Не удалось загрузить цифровые пропуска'
     } finally { loading.value = false }

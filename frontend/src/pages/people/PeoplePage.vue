@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { RefreshCw, Search, UserRound } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
@@ -12,6 +12,7 @@ import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
+import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import { TABLE_ROWS_PER_PAGE_OPTIONS, createTablePagination, persistTablePagination } from '../../services/tableSettings'
 import { usePeopleStore } from '../../stores/people'
 
@@ -21,13 +22,19 @@ const router = useRouter()
 const syncingQuery = ref(false)
 const rowsKey = 'collegePortal.people.rowsPerPage'
 const splitterKey = 'collegePortal.people.splitter.v1'
-const defaultDetailsWidth = 400
-const minDetailsWidth = 340
-const minListWidth = 520
 const tablePagination = ref(createTablePagination(rowsKey, { sortBy: 'last_name', rowsPerPage: 20 }))
-const workspaceRef = ref(null)
-const detailsWidth = ref(loadSplitterWidth())
-const resizing = ref(false)
+const {
+  resetSplitter,
+  startResize,
+  workspaceRef,
+  workspaceStyle,
+} = useResizableWorkspace({
+  storageKey: splitterKey,
+  defaultDetailsWidth: 400,
+  minDetailsWidth: 340,
+  minListWidth: 520,
+  resizeBodyClass: 'people-splitter-resizing',
+})
 
 const profileOptions = [
   { label: 'Все профили', value: '' },
@@ -46,10 +53,7 @@ const columns = [
 ]
 
 const selected = computed(() => store.selected)
-const workspaceStyle = computed(() => ({
-  gridTemplateColumns: `minmax(0, 1fr) 10px minmax(${minDetailsWidth}px, ${detailsWidth.value}px)`,
-}))
-const tableSubtitle = computed(() => `Найдено Person: ${store.people.length}`)
+const tableSubtitle = computed(() => `Найдено людей: ${store.people.length}`)
 const metrics = computed(() => {
   const counts = selected.value?.profiles_count || {}
   return [
@@ -79,52 +83,12 @@ const actions = computed(() => {
 
 function profileCount(person, key) { return person?.profiles_count?.[key] || 0 }
 function statusTone(status) { return status === 'active' ? 'success' : status === 'inactive' ? 'warning' : 'info' }
+function statusLabel(status) {
+  const labels = { active: 'Активен', inactive: 'Неактивен', archived: 'Архив' }
+  return labels[status] || status || '—'
+}
 function tableRowClass(row) { return Number(row.id) === Number(store.selectedId) ? 'people-row--selected' : '' }
 function updatePagination(pagination) { tablePagination.value = pagination; persistTablePagination(rowsKey, pagination) }
-function canUseLocalStorage() {
-  try {
-    return typeof window !== 'undefined' && Boolean(window.localStorage)
-  } catch {
-    return false
-  }
-}
-function loadSplitterWidth() {
-  if (!canUseLocalStorage()) return defaultDetailsWidth
-
-  const value = Number(window.localStorage.getItem(splitterKey))
-  return Number.isFinite(value) ? Math.min(Math.max(value, minDetailsWidth), 640) : defaultDetailsWidth
-}
-function saveSplitterWidth(width) {
-  if (canUseLocalStorage()) window.localStorage.setItem(splitterKey, String(width))
-}
-function resetSplitter() {
-  detailsWidth.value = defaultDetailsWidth
-  saveSplitterWidth(defaultDetailsWidth)
-}
-function stopResize() {
-  if (!resizing.value) return
-  resizing.value = false
-  window.removeEventListener('pointermove', onResize)
-  window.removeEventListener('pointerup', stopResize)
-  document.body.classList.remove('people-splitter-resizing')
-}
-function onResize(event) {
-  if (!resizing.value || !workspaceRef.value) return
-
-  const rect = workspaceRef.value.getBoundingClientRect()
-  const maxWidth = Math.max(minDetailsWidth, Math.min(640, rect.width - minListWidth - 10))
-  const nextWidth = Math.min(Math.max(rect.right - event.clientX, minDetailsWidth), maxWidth)
-  detailsWidth.value = Math.round(nextWidth)
-  saveSplitterWidth(detailsWidth.value)
-}
-function startResize(event) {
-  if (window.innerWidth <= 1100) return
-  resizing.value = true
-  event.currentTarget.setPointerCapture?.(event.pointerId)
-  document.body.classList.add('people-splitter-resizing')
-  window.addEventListener('pointermove', onResize)
-  window.addEventListener('pointerup', stopResize)
-}
 function routeSelectedId() { return route.query.selected ? String(route.query.selected) : '' }
 async function syncQuery(selectedId = routeSelectedId()) {
   const query = { ...route.query }
@@ -154,16 +118,15 @@ onMounted(async () => {
   if (routeSelectedId()) await store.select(routeSelectedId())
 })
 
-onBeforeUnmount(stopResize)
 </script>
 
 <template>
   <AppPage>
-    <PageHeader title="Люди / Person" subtitle="Единая основа для студентов, преподавателей, абитуриентов, выпускников, пользователей и цифровой идентичности." />
+    <PageHeader title="Люди" subtitle="Единая карточка человека для студентов, преподавателей, абитуриентов, выпускников, пользователей и цифровой идентичности." />
     <AppToolbar>
       <span>{{ tableSubtitle }}</span>
       <template #actions>
-        <AppLoading v-if="store.loading || store.detailsLoading" label="Загрузка Person..." />
+        <AppLoading v-if="store.loading || store.detailsLoading" label="Загрузка людей..." />
         <q-btn flat @click="resetSplitter">Сбросить размер</q-btn>
         <q-btn flat :disable="store.loading" @click="store.load"><RefreshCw :size="16" class="q-mr-xs" /> Обновить</q-btn>
       </template>
@@ -205,22 +168,22 @@ onBeforeUnmount(stopResize)
               <q-chip v-if="profileCount(props.row, 'users')" dense>Пользователь</q-chip>
             </q-td>
           </template>
-          <template #body-cell-status="props"><q-td :props="props"><AppStatusBadge :label="props.row.status" :tone="statusTone(props.row.status)" /></q-td></template>
+          <template #body-cell-status="props"><q-td :props="props"><AppStatusBadge :label="statusLabel(props.row.status)" :tone="statusTone(props.row.status)" /></q-td></template>
         </AppTable>
-        <AppEmptyState v-else title="Person не найдены" description="Свяжите существующие профили командой person:link-existing или измените фильтры." />
+        <AppEmptyState v-else title="Люди не найдены" description="Измените фильтры или выполните привязку существующих профилей." />
       </section>
 
       <button
         type="button"
         class="people-splitter"
-        aria-label="Изменить ширину панели Person"
+        aria-label="Изменить ширину карточки человека"
         title="Перетащите, чтобы изменить ширину панели. Двойной клик сбрасывает размер."
         @pointerdown.prevent="startResize"
         @dblclick="resetSplitter"
       />
 
       <aside class="people-side">
-        <AppEmptyState v-if="!selected" title="Person не выбран" description="Выберите строку, чтобы открыть связанные профили." />
+        <AppEmptyState v-if="!selected" title="Человек не выбран" description="Выберите строку, чтобы открыть связанные профили." />
         <WorkspacePanel v-else :title="selected.full_name" :subtitle="[selected.phone, selected.email].filter(Boolean)" :metrics="metrics" :actions="actions">
           <template #photo>
             <q-avatar size="72px" color="grey-2" text-color="grey-8">
@@ -228,7 +191,7 @@ onBeforeUnmount(stopResize)
               <UserRound v-else :size="32" />
             </q-avatar>
           </template>
-          <template #status><AppStatusBadge :label="selected.status" :tone="statusTone(selected.status)" /></template>
+          <template #status><AppStatusBadge :label="statusLabel(selected.status)" :tone="statusTone(selected.status)" /></template>
           <dl class="people-details">
             <div><dt>Дата рождения</dt><dd>{{ selected.birth_date || '—' }}</dd></div>
             <div><dt>Гражданство</dt><dd>{{ selected.citizenship || '—' }}</dd></div>

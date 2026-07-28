@@ -4,8 +4,11 @@ namespace Tests\Feature;
 
 use App\Models\DigitalIdentity;
 use App\Models\Group;
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\Student;
 use App\Models\Teacher;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -126,6 +129,88 @@ class DigitalIdentityApiTest extends TestCase
         }
     }
 
+    public function test_teacher_can_view_and_download_only_own_digital_pass(): void
+    {
+        $teacher = Teacher::create([
+            'last_name' => 'Смирнова',
+            'first_name' => 'Елена',
+            'department' => 'Музыкальное отделение',
+        ]);
+        $otherTeacher = Teacher::create([
+            'last_name' => 'Петров',
+            'first_name' => 'Алексей',
+            'department' => 'Музыкальное отделение',
+        ]);
+        $user = $this->userWithPermissions('teacher', ['view_own_data']);
+        $teacher->forceFill(['user_id' => $user->id])->save();
+
+        $ownIdentity = DigitalIdentity::create([
+            'entity_type' => DigitalIdentity::ENTITY_TEACHER,
+            'entity_id' => $teacher->id,
+            'token' => (string) Str::uuid(),
+            'status' => DigitalIdentity::STATUS_ACTIVE,
+            'issued_at' => now(),
+        ]);
+        $otherIdentity = DigitalIdentity::create([
+            'entity_type' => DigitalIdentity::ENTITY_TEACHER,
+            'entity_id' => $otherTeacher->id,
+            'token' => (string) Str::uuid(),
+            'status' => DigitalIdentity::STATUS_ACTIVE,
+            'issued_at' => now(),
+        ]);
+
+        $this->withApiAuth($user)
+            ->getJson('/api/digital-identities?mine=1')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $ownIdentity->id)
+            ->assertJsonPath('data.0.token', null);
+
+        $this->get("/api/digital-identities/{$ownIdentity->id}/qr")
+            ->assertOk()
+            ->assertHeader('X-QR-Content', 'token');
+
+        $this->get("/api/digital-identities/{$otherIdentity->id}/qr")
+            ->assertForbidden();
+    }
+
+    public function test_teacher_without_manage_permission_does_not_receive_full_registry(): void
+    {
+        $teacher = Teacher::create([
+            'last_name' => 'Смирнова',
+            'first_name' => 'Елена',
+            'department' => 'Музыкальное отделение',
+        ]);
+        $otherTeacher = Teacher::create([
+            'last_name' => 'Петров',
+            'first_name' => 'Алексей',
+            'department' => 'Музыкальное отделение',
+        ]);
+        $user = $this->userWithPermissions('teacher', ['view_own_data']);
+        $teacher->forceFill(['user_id' => $user->id])->save();
+
+        $ownIdentity = DigitalIdentity::create([
+            'entity_type' => DigitalIdentity::ENTITY_TEACHER,
+            'entity_id' => $teacher->id,
+            'token' => (string) Str::uuid(),
+            'status' => DigitalIdentity::STATUS_ACTIVE,
+            'issued_at' => now(),
+        ]);
+        DigitalIdentity::create([
+            'entity_type' => DigitalIdentity::ENTITY_TEACHER,
+            'entity_id' => $otherTeacher->id,
+            'token' => (string) Str::uuid(),
+            'status' => DigitalIdentity::STATUS_ACTIVE,
+            'issued_at' => now(),
+        ]);
+
+        $this->withApiAuth($user)
+            ->getJson('/api/digital-identities')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $ownIdentity->id);
+    }
+
     private function createStudent(): Student
     {
         $group = Group::create([
@@ -143,5 +228,16 @@ class DigitalIdentityApiTest extends TestCase
             'email' => 'student@example.test',
             'status' => 'active',
         ]);
+    }
+
+    private function userWithPermissions(string $roleCode, array $permissionCodes): User
+    {
+        $role = Role::query()->firstOrCreate(['code' => $roleCode], ['name' => $roleCode]);
+        $permissionIds = collect($permissionCodes)->map(function (string $code): int {
+            return Permission::query()->firstOrCreate(['code' => $code], ['name' => $code])->id;
+        });
+        $role->permissions()->sync($permissionIds);
+
+        return $this->createApiUser(roleCode: $roleCode);
     }
 }

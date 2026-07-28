@@ -240,7 +240,7 @@ class RoleSeeder extends Seeder
 
     private function hrPermissions(): array
     {
-        return ['dashboard.view', 'people.view', 'hr.employees.view', 'hr.employees.create', 'hr.employees.update', 'hr.employees.dismiss', 'hr.assignments.manage', 'hr.statuses.manage', 'hr.departments.manage', 'hr.positions.manage', 'hr.documents.view', 'hr.calendar.view', 'hr.calendar.manage', 'hr.absences.manage', 'hr.dismissals.manage', 'hr.replacements.view', 'hr.replacements.manage', 'hr.reports.view', 'teachers.view', 'schedule.view', 'attendance.reports', 'import.manage', 'view_reports'];
+        return ['dashboard.view', 'people.view', 'hr.employees.view', 'hr.employees.create', 'hr.employees.update', 'hr.employees.dismiss', 'hr.assignments.manage', 'hr.statuses.manage', 'hr.departments.manage', 'hr.positions.manage', 'hr.documents.view', 'hr.calendar.view', 'hr.calendar.manage', 'hr.absences.manage', 'hr.dismissals.manage', 'hr.replacements.view', 'hr.replacements.manage', 'hr.reports.view', 'teachers.view', 'schedule.view', 'attendance.reports', 'import.manage', 'view_own_data', 'view_reports'];
     }
 
     private function admissionPermissions(): array
@@ -250,7 +250,7 @@ class RoleSeeder extends Seeder
 
     private function teacherPermissions(): array
     {
-        return ['dashboard.view', 'hr.calendar.view', 'schedule.view', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.export', 'attendance.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'digitalpasses.manage', 'view_own_data', 'manage_journal'];
+        return ['dashboard.view', 'hr.calendar.view', 'schedule.view', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.export', 'attendance.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'view_own_data', 'manage_journal'];
     }
 
     private function studentPermissions(): array

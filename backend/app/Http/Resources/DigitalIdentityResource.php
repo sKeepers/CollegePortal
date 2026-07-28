@@ -6,6 +6,7 @@ use App\Models\Student;
 use App\Models\Teacher;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Gate;
 
 class DigitalIdentityResource extends JsonResource
 {
@@ -18,7 +19,7 @@ class DigitalIdentityResource extends JsonResource
             'person_id' => $this->person_id,
             'entity_type' => $this->entity_type,
             'entity_id' => $this->entity_id,
-            'token' => $this->token,
+            'token' => Gate::allows('permission', 'digitalpasses.manage') ? $this->token : null,
             'status' => $this->effectiveStatus(),
             'issued_at' => $this->issued_at?->toISOString(),
             'expires_at' => $this->expires_at?->toISOString(),

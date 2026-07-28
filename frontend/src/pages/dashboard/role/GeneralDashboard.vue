@@ -48,36 +48,47 @@ const dashboardWidgets = [
   { id: 'notifications', title: 'Уведомления', defaultSize: 'medium' },
 ]
 const statItems = computed(() => [
-  { label: 'Студенты', value: totals.value.students, icon: GraduationCap },
-  { label: 'Группы', value: totals.value.groups, icon: UsersRound },
-  { label: 'Преподаватели', value: totals.value.teachers, icon: UserRound },
-  { label: 'Занятия сегодня', value: totals.value.todayLessons, icon: BookOpenCheck },
-])
-const quickActions = [
-  { label: 'Добавить студента', description: 'Открыть форму создания', icon: Plus, to: { path: '/students', query: { action: 'create' } } },
-  { label: 'Добавить группу', description: 'Открыть форму создания', icon: School, to: { path: '/groups', query: { action: 'create' } } },
+  auth.can('students.view') ? { label: 'Студенты', value: totals.value.students, icon: GraduationCap } : null,
+  auth.can('groups.view') ? { label: 'Группы', value: totals.value.groups, icon: UsersRound } : null,
+  auth.can('teachers.view') ? { label: 'Преподаватели', value: totals.value.teachers, icon: UserRound } : null,
+  auth.can('schedule.view') ? { label: 'Занятия сегодня', value: totals.value.todayLessons, icon: BookOpenCheck } : null,
+].filter(Boolean))
+const quickActionPermissions = {
+  '/students': 'students.view',
+  '/groups': 'groups.view',
+  '/schedule': 'schedule.view',
+  '/journal': 'journal.view',
+}
+const quickActionsSource = [
+  { label: 'Добавить студента', description: 'Открыть форму создания', icon: Plus, to: { path: '/students', query: { action: 'create' } }, permission: 'students.create' },
+  { label: 'Добавить группу', description: 'Открыть форму создания', icon: School, to: { path: '/groups', query: { action: 'create' } }, permission: 'groups.create' },
   { label: 'Открыть расписание', description: 'План занятий и аудиторий', icon: CalendarDays, to: '/schedule' },
   { label: 'Открыть журнал', description: 'Посещаемость и оценки', icon: NotebookTabs, to: '/journal' },
 ]
+const quickActions = computed(() => quickActionsSource.filter((action) => {
+  if (action.permission && !auth.can(action.permission)) return false
+
+  const path = typeof action.to === 'string' ? action.to : action.to?.path
+  const permission = quickActionPermissions[path]
+  return !permission || auth.can(permission)
+}))
 
 async function loadDashboard() {
   loading.value = true
   error.value = ''
 
   try {
-    const [studentsResult, groupsResult, teachersResult, lessonsResult] = await Promise.allSettled([
-      api.list('students'),
-      api.list('groups'),
-      api.list('teachers', { active_only: 1 }),
-      api.list('schedule-lessons', { date: todayIso() }),
-    ])
+    const studentsResult = auth.can('students.view') ? await api.list('students').then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
+    const groupsResult = auth.can('groups.view') ? await api.list('groups').then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
+    const teachersResult = auth.can('teachers.view') ? await api.list('teachers', { active_only: 1 }).then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
+    const lessonsResult = auth.can('schedule.view') ? await api.list('schedule-lessons', { date: todayIso() }).then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
 
-    if (studentsResult.status === 'fulfilled') totals.value.students = extractTotal(studentsResult.value)
-    if (groupsResult.status === 'fulfilled') totals.value.groups = extractTotal(groupsResult.value)
-    if (teachersResult.status === 'fulfilled') totals.value.teachers = extractTotal(teachersResult.value)
-    if (lessonsResult.status === 'fulfilled') totals.value.todayLessons = extractTotal(lessonsResult.value)
+    if (studentsResult?.status === 'fulfilled') totals.value.students = extractTotal(studentsResult.value)
+    if (groupsResult?.status === 'fulfilled') totals.value.groups = extractTotal(groupsResult.value)
+    if (teachersResult?.status === 'fulfilled') totals.value.teachers = extractTotal(teachersResult.value)
+    if (lessonsResult?.status === 'fulfilled') totals.value.todayLessons = extractTotal(lessonsResult.value)
 
-    if ([studentsResult, groupsResult, teachersResult].some((result) => result.status === 'rejected')) {
+    if ([studentsResult, groupsResult, teachersResult, lessonsResult].filter(Boolean).some((result) => result.status === 'rejected')) {
       error.value = 'Часть показателей не удалось загрузить'
     }
   } finally {

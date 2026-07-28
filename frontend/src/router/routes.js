@@ -23,6 +23,7 @@ const AttendancePage = () => import('../pages/attendance/AttendancePage.vue')
 const AdmissionsPage = () => import('../pages/admissions/AdmissionsPage.vue')
 const AdmissionsFoundationPage = () => import('../pages/admissions/FoundationWorkspacePage.vue')
 const DigitalPassesPage = () => import('../pages/identity/DigitalPassesPage.vue')
+const MyDigitalPassPage = () => import('../pages/identity/MyDigitalPassPage.vue')
 const AccessGatePage = () => import('../pages/access/AccessGatePage.vue')
 const MobileScannerPage = () => import('../pages/access/MobileScannerPage.vue')
 const AccessReportsPage = () => import('../pages/access/AccessReportsPage.vue')
@@ -121,7 +122,7 @@ export const routes = [
         path: 'people',
         name: 'people',
         component: PeoplePage,
-        meta: { title: 'Люди / Person', permission: 'people.view' },
+        meta: { title: 'Люди', permission: 'people.view' },
       },
       {
         path: 'students',
@@ -223,7 +224,7 @@ export const routes = [
         path: 'admissions/foundation',
         name: 'admissions-foundation',
         component: AdmissionsFoundationPage,
-        meta: { title: 'Приёмная комиссия · Foundation', permission: 'admissions.application.view' },
+        meta: { title: 'Приёмная комиссия', permission: 'admissions.application.view' },
       },
       {
         path: 'hr/employees',
@@ -253,19 +254,19 @@ export const routes = [
         path: 'access/gate',
         name: 'access-gate',
         component: AccessGatePage,
-        meta: { title: 'Проходная', permission: 'gate.scan' },
+        meta: { title: 'Проходная', roles: ['admin', 'security'], permission: 'gate.scan' },
       },
       {
         path: 'access/mobile-scanner',
         name: 'access-mobile-scanner',
         component: MobileScannerPage,
-        meta: { title: 'Мобильный сканер', permission: 'gate.scan' },
+        meta: { title: 'Мобильный сканер', roles: ['admin', 'security'], permission: 'gate.scan' },
       },
       {
         path: 'access/reports',
         name: 'access-reports',
         component: AccessReportsPage,
-        meta: { title: 'Отчеты по проходам', permission: 'gate.reports' },
+        meta: { title: 'Отчеты по проходам', roles: ['admin', 'security'], permission: 'gate.reports' },
       },
       {
         path: 'access/scanner-test',
@@ -274,10 +275,16 @@ export const routes = [
         meta: { title: 'Тест QR-сканера', adminOnly: true, permission: 'gate.scan' },
       },
       {
+        path: 'identity/my-pass',
+        name: 'identity-my-pass',
+        component: MyDigitalPassPage,
+        meta: { title: 'Мой QR-пропуск', roles: ['student', 'teacher', 'hr'], permissionsAny: ['mobile.student.pass', 'view_own_data'] },
+      },
+      {
         path: 'identity/digital-passes',
         name: 'identity-digital-passes',
         component: DigitalPassesPage,
-        meta: { title: 'Цифровые пропуска', permission: 'digitalpasses.manage' },
+        meta: { title: 'Цифровые пропуска', roles: ['admin', 'security'], permission: 'digitalpasses.manage' },
       },
       {
         path: 'admin/audit',

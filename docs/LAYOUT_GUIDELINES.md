@@ -55,6 +55,8 @@ grid-template-columns: minmax(0, 1fr) clamp(380px, 28vw, 420px);
 
 Страницы с рабочей областью “список + карточка”, где оператору нужно регулярно менять фокус между таблицей и деталями, могут использовать draggable splitter. Текущее эталонное применение: `/people`.
 
+Для повторного использования применять `frontend/src/composables/useResizableWorkspace.js`, а не копировать page-local обработчики `mousemove` / `mouseup`.
+
 Правила splitter:
 
 - левая панель должна оставаться `minmax(0, 1fr)`;

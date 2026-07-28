@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -22,7 +23,10 @@ class DigitalIdentityController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
+        $canManage = Gate::allows('permission', 'digitalpasses.manage');
+        $mineOnly = $request->boolean('mine') || ! $canManage;
         $identities = DigitalIdentity::query()
+            ->when($mineOnly, fn ($query) => $this->scopeToCurrentUser($query, $request))
             ->when($request->string('entity_type')->toString(), fn ($query, string $type) => $query->where('entity_type', $type))
             ->when($request->string('status')->toString(), fn ($query, string $status) => $query->where('status', $status))
             ->orderByDesc('issued_at')
@@ -82,6 +86,10 @@ class DigitalIdentityController extends Controller
 
     public function qr(Request $request, DigitalIdentity $digitalIdentity, QrSvgService $qrSvgService): Response
     {
+        if (! Gate::allows('permission', 'digitalpasses.manage') && ! $this->belongsToCurrentUser($digitalIdentity, $request)) {
+            abort(Response::HTTP_FORBIDDEN, 'Forbidden.');
+        }
+
         $format = strtolower($request->query('format', 'svg'));
 
         if ($format === 'png') {
@@ -121,5 +129,49 @@ class DigitalIdentityController extends Controller
                 'entity_id' => ['Владелец цифрового пропуска не найден.'],
             ]);
         }
+    }
+
+    private function scopeToCurrentUser($query, Request $request)
+    {
+        $studentId = $request->user()->student()->value('id');
+        $teacherId = $request->user()->teacher()->value('id');
+        $personId = $request->user()->person_id;
+
+        return $query->where(function ($ownerQuery) use ($studentId, $teacherId, $personId): void {
+            if ($studentId !== null) {
+                $ownerQuery->orWhere(function ($studentQuery) use ($studentId): void {
+                    $studentQuery
+                        ->where('entity_type', DigitalIdentity::ENTITY_STUDENT)
+                        ->where('entity_id', $studentId);
+                });
+            }
+
+            if ($teacherId !== null) {
+                $ownerQuery->orWhere(function ($teacherQuery) use ($teacherId): void {
+                    $teacherQuery
+                        ->where('entity_type', DigitalIdentity::ENTITY_TEACHER)
+                        ->where('entity_id', $teacherId);
+                });
+            }
+
+            if ($personId !== null) {
+                $ownerQuery->orWhere('person_id', $personId);
+            }
+
+            if ($studentId === null && $teacherId === null && $personId === null) {
+                $ownerQuery->whereRaw('1 = 0');
+            }
+        });
+    }
+
+    private function belongsToCurrentUser(DigitalIdentity $digitalIdentity, Request $request): bool
+    {
+        $studentId = $request->user()->student()->value('id');
+        $teacherId = $request->user()->teacher()->value('id');
+        $personId = $request->user()->person_id;
+
+        return ($digitalIdentity->entity_type === DigitalIdentity::ENTITY_STUDENT && $studentId !== null && (int) $digitalIdentity->entity_id === (int) $studentId)
+            || ($digitalIdentity->entity_type === DigitalIdentity::ENTITY_TEACHER && $teacherId !== null && (int) $digitalIdentity->entity_id === (int) $teacherId)
+            || ($personId !== null && (int) $digitalIdentity->person_id === (int) $personId);
     }
 }

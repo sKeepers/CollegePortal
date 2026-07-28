@@ -157,7 +157,7 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
         await loadApplication(selectedId.value)
       }
     } catch (err) {
-      error.value = err.message || 'Не удалось загрузить заявления Admissions Foundation'
+      error.value = err.message || 'Не удалось загрузить заявления приемной комиссии'
       applications.value = []
     } finally {
       loading.value = false
@@ -188,7 +188,7 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
       return selectedApplication.value
     } catch (err) {
       detailsError.value = err.status === 404
-        ? 'Заявление Admissions Foundation не найдено'
+        ? 'Заявление не найдено'
         : err.message || 'Не удалось загрузить карточку заявления'
       selectedApplication.value = null
       choices.value = []
@@ -226,7 +226,7 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
       people.value = rows(payload)
       return people.value
     } catch (err) {
-      detailsError.value = err.message || 'Не удалось загрузить Person'
+      detailsError.value = err.message || 'Не удалось загрузить людей'
       people.value = []
       return []
     } finally {
@@ -348,7 +348,7 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
 
   async function loadEducationPrograms() {
     try {
-      const payload = await api.list('education-programs', { per_page: 200 })
+      const payload = await api.list('public/education-programs', { per_page: 200 })
       educationPrograms.value = rows(payload)
       return educationPrograms.value
     } catch {

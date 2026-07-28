@@ -7,8 +7,8 @@ import { useAuthStore } from '../../stores/auth'
 const router = useRouter()
 const auth = useAuthStore()
 const form = reactive({
-  email: 'admin@college-portal.local',
-  password: 'password',
+  email: '',
+  password: '',
 })
 
 async function submit() {
@@ -27,13 +27,13 @@ async function submit() {
         </div>
       </q-card-section>
 
-      <q-form class="cp-login-form" @submit.prevent="submit">
+      <q-form class="cp-login-form" autocomplete="off" @submit.prevent="submit">
         <q-card-section class="q-gutter-md">
           <q-input
             v-model="form.email"
             label="Email"
             type="email"
-            autocomplete="username"
+            autocomplete="off"
             outlined
             dense
             required
@@ -42,7 +42,7 @@ async function submit() {
             v-model="form.password"
             label="Пароль"
             type="password"
-            autocomplete="current-password"
+            autocomplete="new-password"
             outlined
             dense
             required

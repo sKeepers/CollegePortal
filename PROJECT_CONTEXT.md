@@ -97,6 +97,7 @@ Frontend:
 - PROD: `/home/andale/college_portal`, frontend `http://192.168.34.104:5173`, API `http://192.168.34.104:8080/api`, PostgreSQL `5432`;
 - Windows development: `C:\!Projects\CollegePortal`; дополнительные worktree только внутри `C:\!Projects\CollegePortal\.worktrees\<branch>`;
 - тестовые пользователи DEV описаны в `docs/TEST_USERS.md`; текущий DEV smoke пароль: `test1234`.
+- активный стенд UAT-002 для проверки Admissions Foundation и role-based меню: `http://192.168.34.114:5174`; рабочий стенд с ранее проверенным QR-пропуском: `https://192.168.34.104:5443`.
 
 Окружения на Ubuntu:
 
@@ -174,6 +175,7 @@ Frontend:
 - `frontend/src/pages/graduation/GraduationPage.vue` — новый раздел выпускников и дипломов с вкладками карточки.
 - `frontend/src/pages/exams/ExamsPage.vue` — новый раздел экзаменов и ГИА с результатами студентов.
 - `frontend/src/services/api.js` — клиент API, токен авторизации, обработка ошибок.
+- `frontend/src/pages/identity/MyDigitalPassPage.vue` — личный QR-пропуск студента/преподавателя/сотрудника на базе существующего Digital Identity API.
 - `frontend/src/services/tableSettings.js` — общий helper для сохранения пользовательских настроек таблиц.
 - `frontend/src/services/layoutService.js` — общий сервис breakpoints, размера viewport, mobile/ultrawide-признаков.
 - layout-настройки sidebar, People splitter и Dashboard сохраняются только локально в браузере через versioned localStorage keys; правила описаны в `docs/LAYOUT_GUIDELINES.md`.

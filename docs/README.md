@@ -35,6 +35,8 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [Path Policy](PATH_POLICY.md)
 - [GitHub Repository](GITHUB_REPOSITORY.md)
 - [Repository Sync](REPOSITORY_SYNC.md)
+- [Role Menu Matrix](ROLE_MENU_MATRIX.md)
+- [Performance Baseline](PERFORMANCE_BASELINE.md)
 
 ## Operations
 
@@ -180,6 +182,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md)
 - [TEST_SCENARIOS.md](TEST_SCENARIOS.md)
 - [UAT_CHECKLIST.md](UAT_CHECKLIST.md)
+- [UAT_002_REPORT.md](UAT_002_REPORT.md)
 - [UAT_EXECUTION_GUIDE.md](UAT_EXECUTION_GUIDE.md)
 - [UAT_FEEDBACK_PROCESS.md](UAT_FEEDBACK_PROCESS.md)
 - [UAT_IMPROVEMENTS.md](UAT_IMPROVEMENTS.md)

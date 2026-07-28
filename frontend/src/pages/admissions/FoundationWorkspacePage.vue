@@ -32,6 +32,7 @@ import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
+import { humanizeApiMessage } from '../../services/api'
 import { createTablePagination, persistTablePagination } from '../../services/tableSettings'
 import {
   choiceProgramName,
@@ -250,13 +251,13 @@ const selectedSubtitle = computed(() => [
 const selectedMetrics = computed(() => [
   { label: 'Программы', value: store.sortedChoices.length },
   { label: 'Документы', value: readinessLabel.value },
-  { label: 'ФИС', value: store.readiness?.fis?.fis_mapping_ready ? 'mapping OK' : 'blockers' },
+  { label: 'ФИС', value: store.readiness?.fis?.fis_mapping_ready ? 'справочники готовы' : 'есть замечания' },
 ])
 const readinessLabel = computed(() => {
   if (!store.readiness) return '—'
   if (store.readiness.internal_complete && store.readiness.review_complete) return 'готово'
   if (store.readiness.internal_complete) return 'на проверке'
-  return 'есть blockers'
+  return 'есть замечания'
 })
 const wizardApplicant = computed(() => store.applicants.find((item) => Number(item.id) === Number(wizardForm.applicant_id)) || null)
 const allFiles = computed(() => [
@@ -297,8 +298,8 @@ const hasChoicesOptions = [
   { label: 'Без выбранных программ', value: '0' },
 ]
 const applicantModeOptions = [
-  { label: 'Выбрать существующего Applicant', value: 'existing' },
-  { label: 'Создать нового Applicant', value: 'new' },
+  { label: 'Выбрать существующего абитуриента', value: 'existing' },
+  { label: 'Создать нового абитуриента', value: 'new' },
 ]
 const personStatusOptions = [
   { label: 'Активен', value: 'active' },
@@ -321,7 +322,9 @@ const filterChips = computed(() => {
   return chips
 })
 const validationMessages = computed(() => Object.entries(store.validationErrors || {}).flatMap(([field, messages]) => (
-  Array.isArray(messages) ? messages.map((message) => `${field}: ${message}`) : [`${field}: ${messages}`]
+  (Array.isArray(messages) ? messages : [messages])
+    .filter(Boolean)
+    .map((message) => humanizeApiMessage(message, field))
 )))
 
 function referenceOptions(code, allLabel, valueField = 'code') {
@@ -344,12 +347,12 @@ function applicantLabel(applicant) {
   const person = applicant?.person || {}
   const fullName = person.full_name || [person.last_name, person.first_name, person.middle_name].filter(Boolean).join(' ')
   const archived = applicant?.archived_at ? ' · архив' : ''
-  return `${fullName || applicant?.uuid || `Applicant #${applicant?.id}`} · ID ${applicant?.id}${archived}`
+  return `${fullName || applicant?.uuid || `Абитуриент #${applicant?.id}`} · ID ${applicant?.id}${archived}`
 }
 
 function personOptionLabel(person) {
   const fullName = person?.full_name || [person?.last_name, person?.first_name, person?.middle_name].filter(Boolean).join(' ')
-  return [fullName || `Person #${person?.id}`, person?.birth_date ? formatDate(person.birth_date) : '', person?.email || '', person?.phone || ''].filter(Boolean).join(' · ')
+  return [fullName || `Человек #${person?.id}`, person?.birth_date ? formatDate(person.birth_date) : '', person?.email || '', person?.phone || ''].filter(Boolean).join(' · ')
 }
 
 function resetPersonForm() {
@@ -511,6 +514,16 @@ function statusTone(value) {
   if (['withdrawn', 'rejected', 'excluded'].includes(value)) return 'danger'
   if (['documents_incomplete', 'replacement_required'].includes(value)) return 'warning'
   return 'neutral'
+}
+
+function personStatusLabel(value) {
+  const labels = { active: 'Активен', inactive: 'Неактивен', archived: 'Архив' }
+  return labels[value] || value || '—'
+}
+
+function genderLabel(value) {
+  const labels = { female: 'Женский', male: 'Мужской' }
+  return labels[value] || 'Не указан'
 }
 
 function documentLabel(document) {
@@ -683,11 +696,11 @@ async function runDuplicateCheck() {
   try {
     duplicateResult.value = await store.checkPersonDuplicates(duplicatePayload())
     if (!duplicateResult.value.has_matches) {
-      $q.notify({ type: 'positive', message: 'Дубли Person не найдены' })
+      $q.notify({ type: 'positive', message: 'Дубли не найдены' })
     }
     return duplicateResult.value
   } catch (err) {
-    detailError.value = err.message || 'Не удалось проверить дубли Person'
+    detailError.value = err.message || 'Не удалось проверить дубли'
     throw err
   }
 }
@@ -697,7 +710,7 @@ function useDuplicatePerson(match) {
   if (!person?.id) return
   applicantForm.person_id = person.id
   fillPersonForm(person)
-  duplicateDecision.value = `Используется существующий Person #${person.id}`
+  duplicateDecision.value = `Используется существующая карточка человека #${person.id}`
   $q.notify({ type: 'info', message: duplicateDecision.value })
 }
 
@@ -712,9 +725,9 @@ async function savePersonCard() {
     fillPersonForm(person)
     if (selected.value?.id) await store.loadApplication(selected.value.id)
     personEditorOpen.value = false
-    $q.notify({ type: 'positive', message: 'Person сохранен' })
+    $q.notify({ type: 'positive', message: 'Карточка человека сохранена' })
   } catch (err) {
-    detailError.value = err.message || 'Не удалось сохранить Person'
+    detailError.value = err.message || 'Не удалось сохранить карточку человека'
   }
 }
 
@@ -729,9 +742,9 @@ async function saveApplicantCard() {
     fillApplicantForm(applicant)
     if (selected.value?.id) await store.loadApplication(selected.value.id)
     applicantEditorOpen.value = false
-    $q.notify({ type: 'positive', message: 'Applicant сохранен' })
+    $q.notify({ type: 'positive', message: 'Абитуриент сохранен' })
   } catch (err) {
-    detailError.value = err.message || 'Не удалось сохранить Applicant'
+    detailError.value = err.message || 'Не удалось сохранить абитуриента'
   }
 }
 
@@ -739,17 +752,17 @@ async function archiveSelectedApplicant() {
   if (!selectedApplicant.value?.id || selectedRegistered.value) return
 
   $q.dialog({
-    title: 'Архивировать Applicant',
-    message: 'Foundation-профиль абитуриента будет архивирован без физического удаления. Продолжить?',
+    title: 'Архивировать абитуриента',
+    message: 'Профиль абитуриента будет архивирован без физического удаления. Продолжить?',
     cancel: true,
     persistent: true,
   }).onOk(async () => {
     try {
       await store.archiveApplicant(selectedApplicant.value.id)
       await refreshSelected()
-      $q.notify({ type: 'positive', message: 'Applicant архивирован' })
+      $q.notify({ type: 'positive', message: 'Абитуриент архивирован' })
     } catch (err) {
-      detailError.value = err.message || 'Не удалось архивировать Applicant'
+      detailError.value = err.message || 'Не удалось архивировать абитуриента'
     }
   })
 }
@@ -757,7 +770,7 @@ async function archiveSelectedApplicant() {
 async function ensureWizardApplicant() {
   if (wizardApplicantMode.value === 'existing') {
     if (!wizardForm.applicant_id) {
-      throw new Error('Выберите существующего Applicant')
+      throw new Error('Выберите существующего абитуриента')
     }
     return wizardForm.applicant_id
   }
@@ -767,7 +780,7 @@ async function ensureWizardApplicant() {
     const matches = duplicate?.matches || []
 
     if (matches.length > 0) {
-      throw new Error('Найдены возможные дубли Person. Выберите существующую запись или повторите создание после проверки.')
+      throw new Error('Найдены возможные дубли человека. Выберите существующую запись или повторите создание после проверки.')
     }
 
     const person = await store.createPerson(normalizePayload({
@@ -973,7 +986,7 @@ onMounted(async () => {
   <AppPage>
     <PageHeader
       title="Приёмная комиссия"
-      subtitle="Рабочее место Admissions Foundation: заявления, документы, выбранные программы, комплектность и регистрация."
+      subtitle="Рабочее место сотрудника приёмной комиссии: заявления, документы, выбранные программы, комплектность и регистрация."
     >
       <template #actions>
         <q-btn color="primary" unelevated @click="openWizard">
@@ -986,7 +999,7 @@ onMounted(async () => {
     <AppToolbar>
       <span>{{ tableSubtitle }}</span>
       <template #actions>
-        <AppLoading v-if="store.loading || store.detailsLoading || store.saving" label="Обработка Admissions Foundation..." />
+        <AppLoading v-if="store.loading || store.detailsLoading || store.saving" label="Обработка заявления..." />
         <q-btn flat :disable="store.loading" @click="load()">
           <RefreshCw :size="16" class="q-mr-xs" />
           Обновить
@@ -998,7 +1011,7 @@ onMounted(async () => {
     <q-banner v-if="validationMessages.length" rounded class="admissions-foundation-warning">
       <AlertCircle :size="18" />
       <div>
-        <strong>Backend validation</strong>
+        <strong>Проверьте поля формы</strong>
         <div v-for="message in validationMessages" :key="message">{{ message }}</div>
       </div>
     </q-banner>
@@ -1054,7 +1067,7 @@ onMounted(async () => {
             <q-td :props="props">
               <div class="admissions-foundation-person-cell">
                 <strong>{{ personName(props.row) }}</strong>
-                <small>{{ props.row.applicant?.uuid || 'Applicant UUID не указан' }}</small>
+                <small>{{ props.row.applicant?.uuid ? `Код абитуриента: ${props.row.applicant.uuid}` : 'Код абитуриента не указан' }}</small>
               </div>
             </q-td>
           </template>
@@ -1075,7 +1088,7 @@ onMounted(async () => {
             </q-td>
           </template>
         </AppTable>
-        <AppEmptyState v-else title="Foundation-заявления не найдены" description="Измените фильтры или создайте новое заявление." />
+        <AppEmptyState v-else title="Заявления не найдены" description="Измените фильтры или создайте новое заявление." />
       </section>
 
       <aside class="admissions-foundation-side">
@@ -1110,8 +1123,8 @@ onMounted(async () => {
 
           <q-tabs v-model="activeTab" dense align="left" class="text-primary admissions-foundation-tabs">
             <q-tab name="general" label="Общее" />
-            <q-tab name="person" label="Person" />
-            <q-tab name="applicant" label="Applicant" />
+            <q-tab name="person" label="Личные данные" />
+            <q-tab name="applicant" label="Абитуриент" />
             <q-tab name="documents" label="Документы" />
             <q-tab name="choices" label="Специальности" />
             <q-tab name="readiness" label="Комплектность" />
@@ -1140,7 +1153,7 @@ onMounted(async () => {
                 <dl>
                   <div><dt>ФИО</dt><dd>{{ personName(selected) }}</dd></div>
                   <div><dt>Дата рождения</dt><dd>{{ formatDate(selectedPerson?.birth_date) }}</dd></div>
-                  <div><dt>Пол</dt><dd>{{ selectedPerson?.gender || '—' }}</dd></div>
+                  <div><dt>Пол</dt><dd>{{ genderLabel(selectedPerson?.gender) }}</dd></div>
                   <div><dt>Гражданство</dt><dd>{{ selectedPerson?.citizenship || '—' }}</dd></div>
                   <div><dt>Телефон</dt><dd>{{ selectedPerson?.phone || '—' }}</dd></div>
                   <div><dt>Email</dt><dd>{{ selectedPerson?.email || '—' }}</dd></div>
@@ -1152,7 +1165,7 @@ onMounted(async () => {
             <q-tab-panel name="person" class="q-pa-none">
               <section class="admissions-foundation-section">
                 <div class="admissions-foundation-section-header">
-                  <h3>Карточка Person</h3>
+                  <h3>Личные данные</h3>
                   <q-btn v-if="!selectedRegistered" color="primary" flat dense no-caps @click="fillPersonForm(); personEditorOpen = !personEditorOpen">
                     <Edit3 :size="15" class="q-mr-xs" /> {{ personEditorOpen ? 'Свернуть' : 'Редактировать' }}
                   </q-btn>
@@ -1160,18 +1173,18 @@ onMounted(async () => {
                 <dl>
                   <div><dt>ФИО</dt><dd>{{ selectedPerson?.full_name || personName(selected) }}</dd></div>
                   <div><dt>Дата рождения</dt><dd>{{ formatDate(selectedPerson?.birth_date) }}</dd></div>
-                  <div><dt>Пол</dt><dd>{{ selectedPerson?.gender || '—' }}</dd></div>
+                  <div><dt>Пол</dt><dd>{{ genderLabel(selectedPerson?.gender) }}</dd></div>
                   <div><dt>Место рождения</dt><dd>{{ selectedPerson?.place_birth || '—' }}</dd></div>
                   <div><dt>Гражданство</dt><dd>{{ selectedPerson?.citizenship || '—' }}</dd></div>
                   <div><dt>Телефон</dt><dd>{{ selectedPerson?.phone || '—' }}</dd></div>
                   <div><dt>Email</dt><dd>{{ selectedPerson?.email || '—' }}</dd></div>
                   <div><dt>СНИЛС</dt><dd>{{ selectedPerson?.snils_masked || 'Не указан' }}</dd></div>
-                  <div><dt>Статус</dt><dd>{{ selectedPerson?.status || '—' }}</dd></div>
+                  <div><dt>Статус</dt><dd>{{ personStatusLabel(selectedPerson?.status) }}</dd></div>
                 </dl>
               </section>
 
               <section v-if="personEditorOpen && !selectedRegistered" class="admissions-foundation-section">
-                <h3>Редактирование Person</h3>
+                <h3>Редактирование личных данных</h3>
                 <div class="admissions-foundation-form-grid">
                   <q-input v-model="personForm.last_name" dense outlined label="Фамилия" />
                   <q-input v-model="personForm.first_name" dense outlined label="Имя" />
@@ -1189,7 +1202,7 @@ onMounted(async () => {
                 <q-input v-model="personForm.address" dense outlined type="textarea" autogrow label="Адрес" />
                 <div class="admissions-foundation-actions">
                   <q-btn color="primary" unelevated :loading="store.saving" @click="savePersonCard">
-                    <Save :size="16" class="q-mr-xs" /> Сохранить Person
+                    <Save :size="16" class="q-mr-xs" /> Сохранить личные данные
                   </q-btn>
                 </div>
               </section>
@@ -1198,7 +1211,7 @@ onMounted(async () => {
             <q-tab-panel name="applicant" class="q-pa-none">
               <section class="admissions-foundation-section">
                 <div class="admissions-foundation-section-header">
-                  <h3>Карточка Applicant</h3>
+                  <h3>Карточка абитуриента</h3>
                   <div class="admissions-foundation-actions">
                     <q-btn v-if="!selectedRegistered" color="primary" flat dense no-caps @click="fillApplicantForm(); applicantEditorOpen = !applicantEditorOpen">
                       <Edit3 :size="15" class="q-mr-xs" /> {{ applicantEditorOpen ? 'Свернуть' : 'Редактировать' }}
@@ -1209,8 +1222,8 @@ onMounted(async () => {
                   </div>
                 </div>
                 <dl>
-                  <div><dt>Applicant ID</dt><dd>{{ selectedApplicant?.id || '—' }}</dd></div>
-                  <div><dt>UUID</dt><dd>{{ selectedApplicant?.uuid || '—' }}</dd></div>
+                  <div><dt>ID абитуриента</dt><dd>{{ selectedApplicant?.id || '—' }}</dd></div>
+                  <div><dt>Код записи</dt><dd>{{ selectedApplicant?.uuid || '—' }}</dd></div>
                   <div><dt>Источник</dt><dd>{{ referenceLabel(selectedApplicant?.source) }}</dd></div>
                   <div><dt>Статус</dt><dd>{{ referenceLabel(selectedApplicant?.status) }}</dd></div>
                   <div><dt>Первый контакт</dt><dd>{{ formatDate(selectedApplicant?.first_contact_at) }}</dd></div>
@@ -1223,9 +1236,9 @@ onMounted(async () => {
               </section>
 
               <section v-if="applicantEditorOpen && !selectedRegistered" class="admissions-foundation-section">
-                <h3>Редактирование Applicant</h3>
+                <h3>Редактирование абитуриента</h3>
                 <div class="admissions-foundation-form-grid">
-                  <q-select v-model="applicantForm.person_id" dense outlined emit-value map-options label="Person" :options="personOptions" disable hint="Связь Person у существующего Applicant не меняется этим API." />
+                  <q-select v-model="applicantForm.person_id" dense outlined emit-value map-options label="Личные данные" :options="personOptions" disable hint="Связь с личной карточкой у существующего абитуриента здесь не меняется." />
                   <q-select v-model="applicantForm.source_id" dense outlined emit-value map-options label="Источник" :options="sourceOptions" />
                   <q-select v-model="applicantForm.status_id" dense outlined emit-value map-options label="Статус" :options="applicantStatusOptions" />
                   <q-input v-model="applicantForm.first_contact_at" dense outlined type="date" label="Первый контакт" />
@@ -1233,7 +1246,7 @@ onMounted(async () => {
                 <q-input v-model="applicantForm.notes" dense outlined type="textarea" autogrow label="Заметки" />
                 <div class="admissions-foundation-actions">
                   <q-btn color="primary" unelevated :loading="store.saving" @click="saveApplicantCard">
-                    <Save :size="16" class="q-mr-xs" /> Сохранить Applicant
+                    <Save :size="16" class="q-mr-xs" /> Сохранить абитуриента
                   </q-btn>
                 </div>
               </section>
@@ -1241,10 +1254,10 @@ onMounted(async () => {
 
             <q-tab-panel name="documents" class="q-pa-none">
               <section class="admissions-foundation-section">
-                <h3>Document Set заявления</h3>
+                <h3>Закрепленные документы заявления</h3>
                 <dl>
-                  <div><dt>Identity document</dt><dd>{{ assignedIdentityId || 'Не закреплен' }}</dd></div>
-                  <div><dt>Education document</dt><dd>{{ assignedEducationId || 'Не закреплен' }}</dd></div>
+                  <div><dt>Документ личности</dt><dd>{{ assignedIdentityId || 'Не закреплен' }}</dd></div>
+                  <div><dt>Документ об образовании</dt><dd>{{ assignedEducationId || 'Не закреплен' }}</dd></div>
                   <div><dt>Фиксация</dt><dd>{{ formatDateTime(store.documentSet?.linked_at) }}</dd></div>
                 </dl>
               </section>
@@ -1341,10 +1354,10 @@ onMounted(async () => {
 
             <q-tab-panel name="readiness" class="q-pa-none">
               <section class="admissions-foundation-section">
-                <h3>Readiness</h3>
+                <h3>Готовность заявления</h3>
                 <div class="admissions-foundation-checklist">
                   <div :class="['admissions-foundation-check', store.readiness?.internal_complete ? 'is-ready' : 'is-pending']">
-                    <span>Внутренняя комплектность</span><strong>{{ store.readiness?.internal_complete ? 'Готово' : 'Есть blockers' }}</strong>
+                    <span>Внутренняя комплектность</span><strong>{{ store.readiness?.internal_complete ? 'Готово' : 'Есть замечания' }}</strong>
                   </div>
                   <div :class="['admissions-foundation-check', store.readiness?.review_complete ? 'is-ready' : 'is-pending']">
                     <span>Проверка документов</span><strong>{{ store.readiness?.review_complete ? 'Готово' : 'Требует проверки' }}</strong>
@@ -1393,7 +1406,7 @@ onMounted(async () => {
 
             <q-tab-panel name="fis" class="q-pa-none">
               <section class="admissions-foundation-section">
-                <h3>FIS Readiness</h3>
+                <h3>Готовность к ФИС</h3>
                 <dl>
                   <div><dt>Данные ФИС</dt><dd>{{ store.readiness?.fis?.fis_data_ready ? 'Готовы' : 'Не готовы' }}</dd></div>
                   <div><dt>Mapping справочников</dt><dd>{{ store.readiness?.fis?.fis_mapping_ready ? 'Готов' : 'Есть несопоставленные значения' }}</dd></div>
@@ -1430,7 +1443,7 @@ onMounted(async () => {
         <q-card-section class="row items-center justify-between">
           <div>
             <h2>Новое заявление</h2>
-            <p>Мастер использует BACK-006 API: можно выбрать существующего Applicant или создать нового Applicant с новым либо существующим Person.</p>
+            <p>Можно выбрать существующего абитуриента или создать нового вместе с личными данными.</p>
           </div>
           <q-btn flat round dense icon="close" @click="wizardOpen = false" />
         </q-card-section>
@@ -1443,7 +1456,7 @@ onMounted(async () => {
               </div>
 
               <section v-if="wizardApplicantMode === 'existing'" class="admissions-foundation-section">
-                <h3>Существующий Applicant</h3>
+                <h3>Существующий абитуриент</h3>
                 <q-select v-model="wizardForm.applicant_id" use-input dense outlined emit-value map-options label="Абитуриент" :options="applicantOptions" :loading="store.applicantsLoading" @filter="filterApplicants" />
                 <q-banner v-if="wizardApplicant" rounded class="admissions-foundation-note q-mt-md">
                   <FileText :size="18" />
@@ -1452,17 +1465,17 @@ onMounted(async () => {
               </section>
 
               <section v-else class="admissions-foundation-section">
-                <h3>Новый Applicant</h3>
+                <h3>Новый абитуриент</h3>
                 <div class="admissions-foundation-form-grid">
-                  <q-select v-model="applicantForm.person_id" use-input dense outlined clearable emit-value map-options label="Использовать существующий Person" :options="personOptions" :loading="store.peopleLoading" @filter="filterPeople" />
+                  <q-select v-model="applicantForm.person_id" use-input dense outlined clearable emit-value map-options label="Использовать существующую личную карточку" :options="personOptions" :loading="store.peopleLoading" @filter="filterPeople" />
                   <q-select v-model="applicantForm.source_id" dense outlined emit-value map-options label="Источник" :options="sourceOptions" />
-                  <q-select v-model="applicantForm.status_id" dense outlined emit-value map-options label="Статус Applicant" :options="applicantStatusOptions" />
+                  <q-select v-model="applicantForm.status_id" dense outlined emit-value map-options label="Статус абитуриента" :options="applicantStatusOptions" />
                   <q-input v-model="applicantForm.first_contact_at" dense outlined type="date" label="Первый контакт" />
                 </div>
-                <q-input v-model="applicantForm.notes" dense outlined type="textarea" autogrow label="Заметки Applicant" />
+                <q-input v-model="applicantForm.notes" dense outlined type="textarea" autogrow label="Заметки по абитуриенту" />
 
                 <div v-if="!applicantForm.person_id" class="admissions-foundation-subsection">
-                  <h3>Новый Person</h3>
+                  <h3>Новые личные данные</h3>
                   <div class="admissions-foundation-form-grid">
                     <q-input v-model="personForm.last_name" dense outlined label="Фамилия" />
                     <q-input v-model="personForm.first_name" dense outlined label="Имя" />
@@ -1486,7 +1499,7 @@ onMounted(async () => {
 
                 <div v-if="duplicateResult" class="admissions-foundation-duplicates">
                   <q-banner v-if="!duplicateResult.has_matches" rounded class="admissions-foundation-note">
-                    <UserCheck :size="18" /> Дубли Person не найдены. При создании заявления будет создан новый Person.
+                    <UserCheck :size="18" /> Дубли не найдены. При создании заявления будет создана новая личная карточка.
                   </q-banner>
                   <q-banner v-else rounded class="admissions-foundation-warning">
                     <AlertCircle :size="18" /> Найдено совпадений: {{ duplicateResult.matches_count }}. Автоматическое объединение не выполняется.

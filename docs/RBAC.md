@@ -83,6 +83,7 @@ RBAC-001 переводит CollegePortal с укрупненных прав (`m
 - `gate.scan`
 - `gate.reports`
 - `digitalpasses.manage`
+- `view_own_data` для личного QR-пропуска через self-scope существующего Digital Identity API
 
 ### System
 
@@ -104,8 +105,8 @@ RBAC-001 переводит CollegePortal с укрупненных прав (`m
 | `study` | Учебная часть: аналогично `deputy` для операционной работы |
 | `academic_office` | Legacy-роль учебной части, синхронизирована с учебным процессом |
 | `admission` | Приемная комиссия, просмотр студентов/групп, импорт и справочники |
-| `teacher` | Свое расписание, журнал, нагрузка, экзамены, QR-пропуск; ownership будет усилен отдельным этапом |
-| `student` | Личный кабинет, свое расписание, журнал/оценки, QR; ownership будет усилен отдельным этапом |
+| `teacher` | Свое расписание, журнал, нагрузка, экзамены, личный QR-пропуск через `view_own_data`; административный реестр цифровых пропусков скрыт |
+| `student` | Личный кабинет, свое расписание, журнал/оценки, личный QR-пропуск |
 | `security` | Проходная, мобильный сканер, отчеты проходной, цифровые пропуска |
 | `curator` | Teacher permissions + просмотр студентов/групп и attendance reports |
 
@@ -123,6 +124,10 @@ Middleware `permission:` принимает старый или новый ко�
 - `POST /api/frdo-packages/{id}/mark-exported` -> `frdo.export`;
 - `POST /api/access/scan` -> `gate.scan`;
 - `GET /api/access/reports/events` -> `gate.reports`.
+- `GET /api/digital-identities?mine=1` -> `digitalpasses.manage` или `view_own_data` с backend-фильтрацией только собственных пропусков;
+- `GET /api/digital-identities/{id}/qr` -> `digitalpasses.manage` или `view_own_data`, при self-доступе контроллер запрещает чужой QR.
+
+Для `POST /api/digital-identities/issue` и `POST /api/digital-identities/{id}/revoke` требуется `digitalpasses.manage`.
 
 ## Frontend
 

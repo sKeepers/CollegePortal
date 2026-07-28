@@ -23,7 +23,6 @@ import {
   ScrollText,
   Settings,
   Tags,
-  School,
   ShieldCheck,
   UserCog,
   UserRound,
@@ -60,7 +59,7 @@ const navGroups = [
   {
     label: 'Контингент',
     items: [
-      { label: 'Люди / Person', to: '/people', icon: UserRound, permission: 'people.view' },
+      { label: 'Люди', to: '/people', icon: UserRound, permission: 'people.view' },
       { label: 'Студенты', to: '/students', icon: GraduationCap, permission: 'students.view' },
       { label: 'Группы', to: '/groups', icon: UsersRound, permission: 'groups.view' },
     ],
@@ -91,8 +90,7 @@ const navGroups = [
     label: 'Прием и отчеты',
     items: [
       { label: 'Отчеты', to: '/reports', icon: FileText, permission: 'journal.view' },
-      { label: 'Приемная комиссия', to: '/admissions', icon: School, permission: 'admissions.view' },
-      { label: 'Приёмная комиссия', to: '/admissions/foundation', icon: FileSearch, permission: 'admissions.application.view', badge: 'Foundation' },
+      { label: 'Приёмная комиссия', to: '/admissions/foundation', icon: FileSearch, permission: 'admissions.application.view' },
     ],
   },
   {
@@ -107,11 +105,12 @@ const navGroups = [
   {
     label: 'Идентификация',
     items: [
-      { label: 'Проходная', to: '/access/gate', icon: DoorOpen, permission: 'gate.scan' },
-      { label: 'Мобильный сканер', to: '/access/mobile-scanner', icon: QrCode, permission: 'gate.scan' },
-      { label: 'Отчеты по проходам', to: '/access/reports', icon: FileText, permission: 'gate.reports' },
+      { label: 'Мой QR-пропуск', to: '/identity/my-pass', icon: QrCode, roles: ['student', 'teacher', 'hr'], permissionsAny: ['mobile.student.pass', 'view_own_data'] },
+      { label: 'Проходная', to: '/access/gate', icon: DoorOpen, roles: ['admin', 'security'], permission: 'gate.scan' },
+      { label: 'Мобильный сканер', to: '/access/mobile-scanner', icon: QrCode, roles: ['admin', 'security'], permission: 'gate.scan' },
+      { label: 'Отчеты по проходам', to: '/access/reports', icon: FileText, roles: ['admin', 'security'], permission: 'gate.reports' },
       { label: 'Тест QR-сканера', to: '/access/scanner-test', icon: QrCode, adminOnly: true },
-      { label: 'Цифровые пропуска', to: '/identity/digital-passes', icon: QrCode, permission: 'digitalpasses.manage' },
+      { label: 'Цифровые пропуска', to: '/identity/digital-passes', icon: QrCode, roles: ['admin', 'security'], permission: 'digitalpasses.manage' },
     ],
   },
   {
@@ -141,6 +140,10 @@ const visibleNavGroups = computed(() =>
         }
 
         if (item.roles && !auth.hasRole(item.roles)) {
+          return false
+        }
+
+        if (item.permissionsAny?.length && !item.permissionsAny.some((permission) => auth.can(permission))) {
           return false
         }
 

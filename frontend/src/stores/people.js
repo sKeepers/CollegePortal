@@ -48,7 +48,7 @@ export const usePeopleStore = defineStore('people', () => {
       selectedId.value = selectedPerson.value?.id || id
       return selectedPerson.value
     } catch (err) {
-      error.value = err.message || 'Не удалось загрузить карточку Person'
+      error.value = err.message || 'Не удалось загрузить карточку человека'
       throw err
     } finally {
       detailsLoading.value = false

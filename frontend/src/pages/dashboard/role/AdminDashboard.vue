@@ -93,7 +93,7 @@ const statItems = computed(() => [
 
 const quickActionsSource = [
   { label: 'Студенты', description: 'Контингент и карточки', icon: GraduationCap, to: '/students' },
-  { label: 'Приемная комиссия', description: 'Заявления абитуриентов', icon: FileCheck2, to: '/admissions' },
+  { label: 'Приемная комиссия', description: 'Заявления абитуриентов', icon: FileCheck2, to: '/admissions/foundation' },
   { label: 'Расписание', description: 'Занятия и аудитории', icon: CalendarDays, to: '/schedule' },
   { label: 'Проходная', description: 'Сканирование QR', icon: DoorOpen, to: '/access/gate' },
   { label: 'Посещаемость', description: 'Опоздания и отсутствия', icon: ClipboardList, to: '/attendance' },
@@ -107,7 +107,7 @@ const quickActionsSource = [
 
 const quickActionPermissions = {
   '/students': 'students.view',
-  '/admissions': 'admissions.view',
+  '/admissions/foundation': 'admissions.application.view',
   '/schedule': 'schedule.view',
   '/access/gate': 'gate.scan',
   '/attendance': 'attendance.reports',
