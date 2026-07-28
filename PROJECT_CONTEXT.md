@@ -1142,6 +1142,10 @@ Admissions Foundation documents now preserve registered application history thro
 
 Добавлен минимальный backend API, необходимый для FRONT-003 без изменения legacy `/admissions`: создание и изменение `Person`, создание и изменение foundation `Applicant`, архивирование Applicant через `archived_at`, проверка дублей `Person` по СНИЛС, email, телефону, паспортному документу и ФИО + дате рождения. Merge намеренно не реализован: endpoint возвращает `501 merge_not_supported` и остается отдельным безопасным этапом. Новые routes используют существующие модели, `ApplicantService::createFoundation()`, RBAC permissions и Audit без хранения чувствительных payload.
 
+### FRONT-003: Person & Applicant Management UI
+
+`/admissions/foundation` теперь использует BACK-006 API для управления `Person` и foundation `Applicant`: карточки Person/Applicant доступны в workspace заявления, Person можно создавать и редактировать, Applicant можно создавать, редактировать и архивировать без физического удаления. Мастер нового заявления поддерживает выбор существующего Applicant, создание нового Applicant, выбор существующего Person и создание нового Person после явного duplicate-check через `POST /api/people/duplicates/check`. Автоматический merge не выполняется; при найденных совпадениях оператор выбирает существующий Person вручную. Ограничения registered-заявления из FRONT-002 сохранены: документы, файлы, выбранные программы и реквизиты заявления остаются read-only после регистрации.
+
 ## ST-001A: Curriculum Engine foundation
 
 Добавлен foundation нормализованного учебного плана. Новый слой `curriculum_subjects` хранит дисциплины семестров, часы по видам работ, вид контроля из Reference Data, порядок, optional-флаг и заготовку компетенций. Группа может ссылаться на действующий `curriculum_id`, а `CurriculumEngineService` возвращает дисциплины семестра группы, итоги и группировку по семестрам. Существующие `curricula` и legacy `curriculum_items` сохранены для совместимости.

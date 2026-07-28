@@ -97,6 +97,7 @@ export function isRegistered(application) {
 export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', () => {
   const applications = ref([])
   const applicants = ref([])
+  const people = ref([])
   const educationPrograms = ref([])
   const choices = ref([])
   const identityDocuments = ref([])
@@ -115,6 +116,7 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
   const readinessLoading = ref(false)
   const auditLoading = ref(false)
   const applicantsLoading = ref(false)
+  const peopleLoading = ref(false)
   const saving = ref(false)
   const error = ref('')
   const detailsError = ref('')
@@ -196,11 +198,15 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
     }
   }
 
-  async function searchApplicants(query = '') {
+  async function searchApplicants(query = '', options = {}) {
     applicantsLoading.value = true
 
     try {
-      const payload = await api.list('admissions/applicants', { q: query, per_page: 30 })
+      const payload = await api.list('admissions/applicants', {
+        q: query,
+        per_page: options.per_page || 30,
+        with_archived: options.with_archived ? 1 : undefined,
+      })
       applicants.value = rows(payload)
       return applicants.value
     } catch (err) {
@@ -209,6 +215,134 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
       return []
     } finally {
       applicantsLoading.value = false
+    }
+  }
+
+  async function searchPeople(query = '') {
+    peopleLoading.value = true
+
+    try {
+      const payload = await api.list('people', { search: query, per_page: 30 })
+      people.value = rows(payload)
+      return people.value
+    } catch (err) {
+      detailsError.value = err.message || 'Не удалось загрузить Person'
+      people.value = []
+      return []
+    } finally {
+      peopleLoading.value = false
+    }
+  }
+
+  async function createPerson(payload) {
+    saving.value = true
+    validationErrors.value = {}
+
+    try {
+      const person = data(await api.create('people', payload))
+      await searchPeople('')
+      return person
+    } catch (err) {
+      validationErrors.value = err.errors || {}
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function updatePerson(personId, payload) {
+    saving.value = true
+    validationErrors.value = {}
+
+    try {
+      const person = data(await api.update('people', personId, payload))
+      if (selectedApplication.value?.applicant?.person?.id === person?.id) {
+        selectedApplication.value = {
+          ...selectedApplication.value,
+          applicant: {
+            ...selectedApplication.value.applicant,
+            person,
+          },
+        }
+      }
+      await searchPeople('')
+      return person
+    } catch (err) {
+      validationErrors.value = err.errors || {}
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function checkPersonDuplicates(payload) {
+    validationErrors.value = {}
+
+    try {
+      return data(await api.post('people/duplicates/check', payload)) || { has_matches: false, matches_count: 0, matches: [] }
+    } catch (err) {
+      validationErrors.value = err.errors || {}
+      throw err
+    }
+  }
+
+  async function createApplicant(payload) {
+    saving.value = true
+    validationErrors.value = {}
+
+    try {
+      const applicant = data(await api.create('admissions/applicants', payload))
+      await searchApplicants('', { with_archived: true })
+      return applicant
+    } catch (err) {
+      validationErrors.value = err.errors || {}
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function updateApplicant(applicantId, payload) {
+    saving.value = true
+    validationErrors.value = {}
+
+    try {
+      const applicant = data(await api.update('admissions/applicants', applicantId, payload))
+      if (selectedApplication.value?.applicant_id === applicant?.id) {
+        selectedApplication.value = {
+          ...selectedApplication.value,
+          applicant,
+        }
+      }
+      await searchApplicants('', { with_archived: true })
+      return applicant
+    } catch (err) {
+      validationErrors.value = err.errors || {}
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function archiveApplicant(applicantId) {
+    saving.value = true
+    validationErrors.value = {}
+
+    try {
+      const applicant = data(await api.post(`admissions/applicants/${applicantId}/archive`, {}))
+      if (selectedApplication.value?.applicant_id === applicant?.id) {
+        selectedApplication.value = {
+          ...selectedApplication.value,
+          applicant,
+        }
+      }
+      await searchApplicants('', { with_archived: true })
+      return applicant
+    } catch (err) {
+      validationErrors.value = err.errors || {}
+      throw err
+    } finally {
+      saving.value = false
     }
   }
 
@@ -356,6 +490,7 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
     await Promise.all([
       loadReferenceCatalog('admission_application_statuses'),
       loadReferenceCatalog('admission_sources'),
+      loadReferenceCatalog('applicant_statuses'),
       loadReferenceCatalog('admission_identity_document_types'),
       loadReferenceCatalog('admission_education_document_types'),
       loadReferenceCatalog('admission_document_verification_statuses'),
@@ -632,6 +767,7 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
   function reset() {
     applications.value = []
     applicants.value = []
+    people.value = []
     educationPrograms.value = []
     choices.value = []
     identityDocuments.value = []
@@ -650,6 +786,7 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
     readinessLoading.value = false
     auditLoading.value = false
     applicantsLoading.value = false
+    peopleLoading.value = false
     saving.value = false
     error.value = ''
     detailsError.value = ''
@@ -660,6 +797,7 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
   return {
     applications,
     applicants,
+    people,
     educationPrograms,
     choices,
     identityDocuments,
@@ -684,6 +822,7 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
     readinessLoading,
     auditLoading,
     applicantsLoading,
+    peopleLoading,
     saving,
     error,
     detailsError,
@@ -692,6 +831,13 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
     loadApplications,
     loadApplication,
     searchApplicants,
+    searchPeople,
+    createPerson,
+    updatePerson,
+    checkPersonDuplicates,
+    createApplicant,
+    updateApplicant,
+    archiveApplicant,
     loadEducationPrograms,
     loadChoices,
     loadApplicationDocuments,

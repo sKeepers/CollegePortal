@@ -176,7 +176,7 @@
 - [x] BACK-005.1: аудит и hardening Documents Foundation: versions, application-document link, FIS dictionary mapping.
 - [x] FRONT-002: Admissions editor workspace на `/admissions/foundation` поверх существующих API без изменения legacy `/admissions`.
 - [x] BACK-006: Person & Applicant Management API для FRONT-003.
-- [ ] FRONT-003: Person & Applicant Management UI на `/admissions/foundation`.
+- [x] FRONT-003: Person & Applicant Management UI на `/admissions/foundation`.
 - [ ] TEST-001: Backend regression suite.
 ## Приемная комиссия
 

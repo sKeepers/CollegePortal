@@ -4,18 +4,23 @@ import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import {
   AlertCircle,
+  Archive,
   ClipboardCheck,
   Download,
+  Edit3,
   Eye,
   FileSearch,
   FileText,
   History,
+  Link,
   Plus,
   RefreshCw,
   Save,
   Search,
   Trash2,
   Upload,
+  UserCheck,
+  Users,
 } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
@@ -51,7 +56,12 @@ const syncingQuery = ref(false)
 const activeTab = ref('general')
 const wizardOpen = ref(false)
 const wizardStep = ref('application')
+const wizardApplicantMode = ref('existing')
+const personEditorOpen = ref(false)
+const applicantEditorOpen = ref(false)
 const detailError = ref('')
+const duplicateResult = ref(null)
+const duplicateDecision = ref('')
 const selectedUploadIdentityId = ref(null)
 const selectedUploadEducationId = ref(null)
 const uploadCategory = ref('other')
@@ -117,6 +127,32 @@ const wizardForm = reactive({
   },
   identityFiles: [],
   educationFiles: [],
+})
+
+const personForm = reactive({
+  id: null,
+  last_name: '',
+  first_name: '',
+  middle_name: '',
+  birth_date: '',
+  gender: '',
+  citizenship: '',
+  place_birth: '',
+  phone: '',
+  email: '',
+  address: '',
+  snils: '',
+  inn: '',
+  status: 'active',
+})
+
+const applicantForm = reactive({
+  id: null,
+  person_id: null,
+  source_id: null,
+  status_id: null,
+  first_contact_at: new Date().toISOString().slice(0, 10),
+  notes: '',
 })
 
 const identityForm = reactive({
@@ -201,6 +237,7 @@ const fileColumns = [
 
 const selected = computed(() => store.selectedApplication)
 const selectedPerson = computed(() => store.selectedPerson)
+const selectedApplicant = computed(() => selected.value?.applicant || null)
 const selectedRegistered = computed(() => store.selectedRegistered)
 const selectedStatusTone = computed(() => statusTone(statusCode(selected.value)))
 const tableSubtitle = computed(() => `Найдено foundation-заявлений: ${store.pagination.total || 0}`)
@@ -232,7 +269,9 @@ const identityUploadOptions = computed(() => store.currentIdentityDocuments.map(
 const educationUploadOptions = computed(() => store.currentEducationDocuments.map((document) => ({ label: documentLabel(document), value: document.id })))
 const statusOptions = computed(() => referenceOptions('admission_application_statuses', 'Все статусы'))
 const sourceOptions = computed(() => referenceOptions('admission_sources', 'Все источники', 'id'))
+const applicantStatusOptions = computed(() => referenceOptions('applicant_statuses', 'Не выбран', 'id'))
 const applicantOptions = computed(() => store.applicants.map((item) => ({ label: applicantLabel(item), value: item.id })))
+const personOptions = computed(() => store.people.map((item) => ({ label: personOptionLabel(item), value: item.id })))
 const programOptions = computed(() => store.educationPrograms.map((program) => ({ label: programName(program), value: program.id })))
 const identityTypeOptions = computed(() => referenceOptions('admission_identity_document_types', 'Не выбран', 'id'))
 const educationTypeOptions = computed(() => referenceOptions('admission_education_document_types', 'Не выбран', 'id'))
@@ -257,6 +296,21 @@ const hasChoicesOptions = [
   { label: 'Есть выбранные программы', value: '1' },
   { label: 'Без выбранных программ', value: '0' },
 ]
+const applicantModeOptions = [
+  { label: 'Выбрать существующего Applicant', value: 'existing' },
+  { label: 'Создать нового Applicant', value: 'new' },
+]
+const personStatusOptions = [
+  { label: 'Активен', value: 'active' },
+  { label: 'Неактивен', value: 'inactive' },
+  { label: 'Архив', value: 'archived' },
+]
+const genderOptions = [
+  { label: 'Не указан', value: '' },
+  { label: 'Женский', value: 'female' },
+  { label: 'Мужской', value: 'male' },
+]
+const duplicateMatches = computed(() => duplicateResult.value?.matches || [])
 const filterChips = computed(() => {
   const chips = []
   if (store.filters.q) chips.push({ key: 'q', label: `Поиск: ${store.filters.q}` })
@@ -289,7 +343,113 @@ function optionLabel(options, value) {
 function applicantLabel(applicant) {
   const person = applicant?.person || {}
   const fullName = person.full_name || [person.last_name, person.first_name, person.middle_name].filter(Boolean).join(' ')
-  return `${fullName || applicant?.uuid || `Applicant #${applicant?.id}`} · ID ${applicant?.id}`
+  const archived = applicant?.archived_at ? ' · архив' : ''
+  return `${fullName || applicant?.uuid || `Applicant #${applicant?.id}`} · ID ${applicant?.id}${archived}`
+}
+
+function personOptionLabel(person) {
+  const fullName = person?.full_name || [person?.last_name, person?.first_name, person?.middle_name].filter(Boolean).join(' ')
+  return [fullName || `Person #${person?.id}`, person?.birth_date ? formatDate(person.birth_date) : '', person?.email || '', person?.phone || ''].filter(Boolean).join(' · ')
+}
+
+function resetPersonForm() {
+  Object.assign(personForm, {
+    id: null,
+    last_name: '',
+    first_name: '',
+    middle_name: '',
+    birth_date: '',
+    gender: '',
+    citizenship: '',
+    place_birth: '',
+    phone: '',
+    email: '',
+    address: '',
+    snils: '',
+    inn: '',
+    status: 'active',
+  })
+}
+
+function resetApplicantForm() {
+  Object.assign(applicantForm, {
+    id: null,
+    person_id: null,
+    source_id: null,
+    status_id: null,
+    first_contact_at: new Date().toISOString().slice(0, 10),
+    notes: '',
+  })
+}
+
+function fillPersonForm(person = selectedPerson.value) {
+  if (!person) return resetPersonForm()
+  Object.assign(personForm, {
+    id: person.id || null,
+    last_name: person.last_name || '',
+    first_name: person.first_name || '',
+    middle_name: person.middle_name || '',
+    birth_date: person.birth_date || '',
+    gender: person.gender || '',
+    citizenship: person.citizenship || '',
+    place_birth: person.place_birth || '',
+    phone: person.phone || '',
+    email: person.email || '',
+    address: person.address || '',
+    snils: person.snils || '',
+    inn: person.inn || '',
+    status: person.status || 'active',
+  })
+}
+
+function fillApplicantForm(applicant = selectedApplicant.value) {
+  if (!applicant) return resetApplicantForm()
+  Object.assign(applicantForm, {
+    id: applicant.id || null,
+    person_id: applicant.person_id || applicant.person?.id || null,
+    source_id: applicant.source_id || applicant.source?.id || null,
+    status_id: applicant.status_id || applicant.status?.id || null,
+    first_contact_at: applicant.first_contact_at ? String(applicant.first_contact_at).slice(0, 10) : '',
+    notes: applicant.notes || '',
+  })
+}
+
+function personPayload() {
+  return normalizePayload({
+    last_name: personForm.last_name,
+    first_name: personForm.first_name,
+    middle_name: personForm.middle_name,
+    birth_date: personForm.birth_date,
+    gender: personForm.gender,
+    citizenship: personForm.citizenship,
+    place_birth: personForm.place_birth,
+    phone: personForm.phone,
+    email: personForm.email,
+    address: personForm.address,
+    snils: personForm.snils,
+    inn: personForm.inn,
+    status: personForm.status,
+  })
+}
+
+function applicantPayload() {
+  return normalizePayload({
+    person_id: applicantForm.person_id,
+    source_id: applicantForm.source_id,
+    status_id: applicantForm.status_id,
+    first_contact_at: applicantForm.first_contact_at,
+    notes: applicantForm.notes,
+  })
+}
+
+function duplicatePayload() {
+  return normalizePayload({
+    ...personPayload(),
+    identity_document: normalizePayload({
+      series: wizardForm.identity.series,
+      number: wizardForm.identity.number,
+    }),
+  })
 }
 
 function statusTone(value) {
@@ -403,6 +563,8 @@ async function selectApplication(application) {
   detailError.value = ''
   await store.selectApplication(application)
   fillApplicationForm()
+  fillPersonForm()
+  fillApplicantForm()
   await syncQuery(application?.id || '')
 }
 
@@ -410,6 +572,8 @@ async function refreshSelected() {
   if (store.selectedId) {
     await store.loadApplication(store.selectedId)
     fillApplicationForm()
+    fillPersonForm()
+    fillApplicantForm()
   }
 }
 
@@ -430,6 +594,12 @@ function fillApplicationForm() {
 }
 
 function openWizard() {
+  wizardApplicantMode.value = 'existing'
+  wizardForm.applicant_id = null
+  resetPersonForm()
+  resetApplicantForm()
+  duplicateResult.value = null
+  duplicateDecision.value = ''
   wizardOpen.value = true
   wizardStep.value = 'application'
   detailError.value = ''
@@ -445,25 +615,133 @@ function snilsMask(value) {
 }
 
 function filterApplicants(value, update) {
-  store.searchApplicants(value).finally(() => update(() => {}))
+  store.searchApplicants(value, { with_archived: true }).finally(() => update(() => {}))
+}
+
+function filterPeople(value, update) {
+  store.searchPeople(value).finally(() => update(() => {}))
+}
+
+async function runDuplicateCheck() {
+  detailError.value = ''
+  duplicateDecision.value = ''
+  duplicateResult.value = null
+
+  try {
+    duplicateResult.value = await store.checkPersonDuplicates(duplicatePayload())
+    if (!duplicateResult.value.has_matches) {
+      $q.notify({ type: 'positive', message: 'Дубли Person не найдены' })
+    }
+    return duplicateResult.value
+  } catch (err) {
+    detailError.value = err.message || 'Не удалось проверить дубли Person'
+    throw err
+  }
+}
+
+function useDuplicatePerson(match) {
+  const person = match?.person || match
+  if (!person?.id) return
+  applicantForm.person_id = person.id
+  fillPersonForm(person)
+  duplicateDecision.value = `Используется существующий Person #${person.id}`
+  $q.notify({ type: 'info', message: duplicateDecision.value })
+}
+
+async function savePersonCard() {
+  if (selectedRegistered.value) return
+  detailError.value = ''
+
+  try {
+    const person = personForm.id
+      ? await store.updatePerson(personForm.id, personPayload())
+      : await store.createPerson(personPayload())
+    fillPersonForm(person)
+    if (selected.value?.id) await store.loadApplication(selected.value.id)
+    personEditorOpen.value = false
+    $q.notify({ type: 'positive', message: 'Person сохранен' })
+  } catch (err) {
+    detailError.value = err.message || 'Не удалось сохранить Person'
+  }
+}
+
+async function saveApplicantCard() {
+  if (selectedRegistered.value) return
+  detailError.value = ''
+
+  try {
+    const applicant = applicantForm.id
+      ? await store.updateApplicant(applicantForm.id, applicantPayload())
+      : await store.createApplicant(applicantPayload())
+    fillApplicantForm(applicant)
+    if (selected.value?.id) await store.loadApplication(selected.value.id)
+    applicantEditorOpen.value = false
+    $q.notify({ type: 'positive', message: 'Applicant сохранен' })
+  } catch (err) {
+    detailError.value = err.message || 'Не удалось сохранить Applicant'
+  }
+}
+
+async function archiveSelectedApplicant() {
+  if (!selectedApplicant.value?.id || selectedRegistered.value) return
+
+  $q.dialog({
+    title: 'Архивировать Applicant',
+    message: 'Foundation-профиль абитуриента будет архивирован без физического удаления. Продолжить?',
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    try {
+      await store.archiveApplicant(selectedApplicant.value.id)
+      await refreshSelected()
+      $q.notify({ type: 'positive', message: 'Applicant архивирован' })
+    } catch (err) {
+      detailError.value = err.message || 'Не удалось архивировать Applicant'
+    }
+  })
+}
+
+async function ensureWizardApplicant() {
+  if (wizardApplicantMode.value === 'existing') {
+    if (!wizardForm.applicant_id) {
+      throw new Error('Выберите существующего Applicant')
+    }
+    return wizardForm.applicant_id
+  }
+
+  if (!applicantForm.person_id) {
+    const duplicate = await runDuplicateCheck()
+    const matches = duplicate?.matches || []
+
+    if (matches.length > 0) {
+      throw new Error('Найдены возможные дубли Person. Выберите существующую запись или повторите создание после проверки.')
+    }
+
+    const person = await store.createPerson(personPayload())
+    applicantForm.person_id = person.id
+  }
+
+  const applicant = await store.createApplicant(applicantPayload())
+  wizardForm.applicant_id = applicant.id
+  return applicant.id
 }
 
 async function finishWizard() {
   detailError.value = ''
-  const applicationPayload = normalizePayload({
-    applicant_id: wizardForm.applicant_id,
-    admission_year: wizardForm.admission_year,
-    application_number: wizardForm.application_number,
-    education_program_id: wizardForm.education_program_id,
-    source_id: wizardForm.source_id,
-    submitted_at: wizardForm.submitted_at,
-    education_base: wizardForm.education_base,
-    comment: wizardForm.comment,
-  })
 
   try {
+    const applicantId = await ensureWizardApplicant()
+    const applicationPayload = normalizePayload({
+      applicant_id: applicantId,
+      admission_year: wizardForm.admission_year,
+      application_number: wizardForm.application_number,
+      education_program_id: wizardForm.education_program_id,
+      source_id: wizardForm.source_id,
+      submitted_at: wizardForm.submitted_at,
+      education_base: wizardForm.education_base,
+      comment: wizardForm.comment,
+    })
     const application = await store.createApplication(applicationPayload)
-    const applicantId = application?.applicant_id || wizardForm.applicant_id
 
     if (wizardForm.snils) {
       await store.updateSnils(applicantId, wizardForm.snils)
@@ -596,6 +874,8 @@ watch(() => route.query.selected, async (value) => {
   if (value) {
     await store.loadApplication(String(value)).catch(() => {})
     fillApplicationForm()
+    fillPersonForm()
+    fillApplicantForm()
   } else {
     await store.selectApplication(null)
   }
@@ -607,7 +887,11 @@ watch(() => [route.query.status, route.query.admission_year, route.query.source_
   await load(tablePagination.value)
 }, { deep: true })
 
-watch(selected, fillApplicationForm)
+watch(selected, () => {
+  fillApplicationForm()
+  fillPersonForm()
+  fillApplicantForm()
+})
 
 onMounted(async () => {
   store.reset()
@@ -616,12 +900,15 @@ onMounted(async () => {
     store.loadReferences(),
     store.loadEducationPrograms(),
     store.searchApplicants(''),
+    store.searchPeople(''),
   ])
   await load(tablePagination.value)
 
   if (routeSelectedId()) {
     await store.loadApplication(routeSelectedId()).catch(() => {})
     fillApplicationForm()
+    fillPersonForm()
+    fillApplicantForm()
   }
 })
 </script>
@@ -767,6 +1054,8 @@ onMounted(async () => {
 
           <q-tabs v-model="activeTab" dense align="left" class="text-primary admissions-foundation-tabs">
             <q-tab name="general" label="Общее" />
+            <q-tab name="person" label="Person" />
+            <q-tab name="applicant" label="Applicant" />
             <q-tab name="documents" label="Документы" />
             <q-tab name="choices" label="Специальности" />
             <q-tab name="readiness" label="Комплектность" />
@@ -801,6 +1090,96 @@ onMounted(async () => {
                   <div><dt>Email</dt><dd>{{ selectedPerson?.email || '—' }}</dd></div>
                   <div><dt>СНИЛС</dt><dd>{{ selectedPerson?.snils_masked || 'Не указан' }}</dd></div>
                 </dl>
+              </section>
+            </q-tab-panel>
+
+            <q-tab-panel name="person" class="q-pa-none">
+              <section class="admissions-foundation-section">
+                <div class="admissions-foundation-section-header">
+                  <h3>Карточка Person</h3>
+                  <q-btn v-if="!selectedRegistered" color="primary" flat dense no-caps @click="fillPersonForm(); personEditorOpen = !personEditorOpen">
+                    <Edit3 :size="15" class="q-mr-xs" /> {{ personEditorOpen ? 'Свернуть' : 'Редактировать' }}
+                  </q-btn>
+                </div>
+                <dl>
+                  <div><dt>ФИО</dt><dd>{{ selectedPerson?.full_name || personName(selected) }}</dd></div>
+                  <div><dt>Дата рождения</dt><dd>{{ formatDate(selectedPerson?.birth_date) }}</dd></div>
+                  <div><dt>Пол</dt><dd>{{ selectedPerson?.gender || '—' }}</dd></div>
+                  <div><dt>Место рождения</dt><dd>{{ selectedPerson?.place_birth || '—' }}</dd></div>
+                  <div><dt>Гражданство</dt><dd>{{ selectedPerson?.citizenship || '—' }}</dd></div>
+                  <div><dt>Телефон</dt><dd>{{ selectedPerson?.phone || '—' }}</dd></div>
+                  <div><dt>Email</dt><dd>{{ selectedPerson?.email || '—' }}</dd></div>
+                  <div><dt>СНИЛС</dt><dd>{{ selectedPerson?.snils_masked || 'Не указан' }}</dd></div>
+                  <div><dt>Статус</dt><dd>{{ selectedPerson?.status || '—' }}</dd></div>
+                </dl>
+              </section>
+
+              <section v-if="personEditorOpen && !selectedRegistered" class="admissions-foundation-section">
+                <h3>Редактирование Person</h3>
+                <div class="admissions-foundation-form-grid">
+                  <q-input v-model="personForm.last_name" dense outlined label="Фамилия" />
+                  <q-input v-model="personForm.first_name" dense outlined label="Имя" />
+                  <q-input v-model="personForm.middle_name" dense outlined label="Отчество" />
+                  <q-input v-model="personForm.birth_date" dense outlined type="date" label="Дата рождения" />
+                  <q-select v-model="personForm.gender" dense outlined emit-value map-options label="Пол" :options="genderOptions" />
+                  <q-input v-model="personForm.citizenship" dense outlined label="Гражданство" />
+                  <q-input v-model="personForm.place_birth" dense outlined label="Место рождения" />
+                  <q-input v-model="personForm.phone" dense outlined label="Телефон" />
+                  <q-input v-model="personForm.email" dense outlined type="email" label="Email" />
+                  <q-input :model-value="personForm.snils" dense outlined label="СНИЛС" @update:model-value="personForm.snils = snilsMask($event)" />
+                  <q-input v-model="personForm.inn" dense outlined label="ИНН" />
+                  <q-select v-model="personForm.status" dense outlined emit-value map-options label="Статус" :options="personStatusOptions" />
+                </div>
+                <q-input v-model="personForm.address" dense outlined type="textarea" autogrow label="Адрес" />
+                <div class="admissions-foundation-actions">
+                  <q-btn color="primary" unelevated :loading="store.saving" @click="savePersonCard">
+                    <Save :size="16" class="q-mr-xs" /> Сохранить Person
+                  </q-btn>
+                </div>
+              </section>
+            </q-tab-panel>
+
+            <q-tab-panel name="applicant" class="q-pa-none">
+              <section class="admissions-foundation-section">
+                <div class="admissions-foundation-section-header">
+                  <h3>Карточка Applicant</h3>
+                  <div class="admissions-foundation-actions">
+                    <q-btn v-if="!selectedRegistered" color="primary" flat dense no-caps @click="fillApplicantForm(); applicantEditorOpen = !applicantEditorOpen">
+                      <Edit3 :size="15" class="q-mr-xs" /> {{ applicantEditorOpen ? 'Свернуть' : 'Редактировать' }}
+                    </q-btn>
+                    <q-btn v-if="!selectedRegistered && !selectedApplicant?.archived_at" color="negative" flat dense no-caps @click="archiveSelectedApplicant">
+                      <Archive :size="15" class="q-mr-xs" /> Архивировать
+                    </q-btn>
+                  </div>
+                </div>
+                <dl>
+                  <div><dt>Applicant ID</dt><dd>{{ selectedApplicant?.id || '—' }}</dd></div>
+                  <div><dt>UUID</dt><dd>{{ selectedApplicant?.uuid || '—' }}</dd></div>
+                  <div><dt>Источник</dt><dd>{{ referenceLabel(selectedApplicant?.source) }}</dd></div>
+                  <div><dt>Статус</dt><dd>{{ referenceLabel(selectedApplicant?.status) }}</dd></div>
+                  <div><dt>Первый контакт</dt><dd>{{ formatDate(selectedApplicant?.first_contact_at) }}</dd></div>
+                  <div><dt>Ответственный</dt><dd>{{ selectedApplicant?.responsible_user?.name || '—' }}</dd></div>
+                  <div><dt>Архив</dt><dd>{{ selectedApplicant?.archived_at ? formatDateTime(selectedApplicant.archived_at) : 'Нет' }}</dd></div>
+                </dl>
+                <q-banner v-if="selectedApplicant?.notes" rounded class="admissions-foundation-note">
+                  <FileText :size="18" /> {{ selectedApplicant.notes }}
+                </q-banner>
+              </section>
+
+              <section v-if="applicantEditorOpen && !selectedRegistered" class="admissions-foundation-section">
+                <h3>Редактирование Applicant</h3>
+                <div class="admissions-foundation-form-grid">
+                  <q-select v-model="applicantForm.person_id" dense outlined emit-value map-options label="Person" :options="personOptions" disable hint="Связь Person у существующего Applicant не меняется этим API." />
+                  <q-select v-model="applicantForm.source_id" dense outlined emit-value map-options label="Источник" :options="sourceOptions" />
+                  <q-select v-model="applicantForm.status_id" dense outlined emit-value map-options label="Статус" :options="applicantStatusOptions" />
+                  <q-input v-model="applicantForm.first_contact_at" dense outlined type="date" label="Первый контакт" />
+                </div>
+                <q-input v-model="applicantForm.notes" dense outlined type="textarea" autogrow label="Заметки" />
+                <div class="admissions-foundation-actions">
+                  <q-btn color="primary" unelevated :loading="store.saving" @click="saveApplicantCard">
+                    <Save :size="16" class="q-mr-xs" /> Сохранить Applicant
+                  </q-btn>
+                </div>
               </section>
             </q-tab-panel>
 
@@ -995,7 +1374,7 @@ onMounted(async () => {
         <q-card-section class="row items-center justify-between">
           <div>
             <h2>Новое заявление</h2>
-            <p>Мастер использует только существующие Admissions Foundation API. Создание нового Applicant/Person пока не реализовано backend-контуром, поэтому выберите уже созданного foundation-абитуриента.</p>
+            <p>Мастер использует BACK-006 API: можно выбрать существующего Applicant или создать нового Applicant с новым либо существующим Person.</p>
           </div>
           <q-btn flat round dense icon="close" @click="wizardOpen = false" />
         </q-card-section>
@@ -1003,8 +1382,73 @@ onMounted(async () => {
         <q-card-section>
           <q-stepper v-model="wizardStep" flat animated contracted class="admissions-foundation-stepper">
             <q-step name="application" title="Общие сведения" :done="wizardStep !== 'application'">
-              <div class="admissions-foundation-form-grid">
+              <div class="admissions-foundation-mode">
+                <q-option-group v-model="wizardApplicantMode" inline :options="applicantModeOptions" color="primary" />
+              </div>
+
+              <section v-if="wizardApplicantMode === 'existing'" class="admissions-foundation-section">
+                <h3>Существующий Applicant</h3>
                 <q-select v-model="wizardForm.applicant_id" use-input dense outlined emit-value map-options label="Абитуриент" :options="applicantOptions" :loading="store.applicantsLoading" @filter="filterApplicants" />
+                <q-banner v-if="wizardApplicant" rounded class="admissions-foundation-note q-mt-md">
+                  <FileText :size="18" />
+                  {{ applicantLabel(wizardApplicant) }}
+                </q-banner>
+              </section>
+
+              <section v-else class="admissions-foundation-section">
+                <h3>Новый Applicant</h3>
+                <div class="admissions-foundation-form-grid">
+                  <q-select v-model="applicantForm.person_id" use-input dense outlined clearable emit-value map-options label="Использовать существующий Person" :options="personOptions" :loading="store.peopleLoading" @filter="filterPeople" />
+                  <q-select v-model="applicantForm.source_id" dense outlined emit-value map-options label="Источник" :options="sourceOptions" />
+                  <q-select v-model="applicantForm.status_id" dense outlined emit-value map-options label="Статус Applicant" :options="applicantStatusOptions" />
+                  <q-input v-model="applicantForm.first_contact_at" dense outlined type="date" label="Первый контакт" />
+                </div>
+                <q-input v-model="applicantForm.notes" dense outlined type="textarea" autogrow label="Заметки Applicant" />
+
+                <div v-if="!applicantForm.person_id" class="admissions-foundation-subsection">
+                  <h3>Новый Person</h3>
+                  <div class="admissions-foundation-form-grid">
+                    <q-input v-model="personForm.last_name" dense outlined label="Фамилия" />
+                    <q-input v-model="personForm.first_name" dense outlined label="Имя" />
+                    <q-input v-model="personForm.middle_name" dense outlined label="Отчество" />
+                    <q-input v-model="personForm.birth_date" dense outlined type="date" label="Дата рождения" />
+                    <q-select v-model="personForm.gender" dense outlined emit-value map-options label="Пол" :options="genderOptions" />
+                    <q-input v-model="personForm.citizenship" dense outlined label="Гражданство" />
+                    <q-input v-model="personForm.place_birth" dense outlined label="Место рождения" />
+                    <q-input v-model="personForm.phone" dense outlined label="Телефон" />
+                    <q-input v-model="personForm.email" dense outlined type="email" label="Email" />
+                    <q-input :model-value="personForm.snils" dense outlined label="СНИЛС" @update:model-value="personForm.snils = snilsMask($event)" />
+                    <q-input v-model="personForm.inn" dense outlined label="ИНН" />
+                  </div>
+                  <q-input v-model="personForm.address" dense outlined type="textarea" autogrow label="Адрес" />
+                  <div class="admissions-foundation-actions">
+                    <q-btn flat color="primary" :loading="store.saving" @click="runDuplicateCheck">
+                      <Users :size="16" class="q-mr-xs" /> Проверить дубли
+                    </q-btn>
+                  </div>
+                </div>
+
+                <div v-if="duplicateResult" class="admissions-foundation-duplicates">
+                  <q-banner v-if="!duplicateResult.has_matches" rounded class="admissions-foundation-note">
+                    <UserCheck :size="18" /> Дубли Person не найдены. При создании заявления будет создан новый Person.
+                  </q-banner>
+                  <q-banner v-else rounded class="admissions-foundation-warning">
+                    <AlertCircle :size="18" /> Найдено совпадений: {{ duplicateResult.matches_count }}. Автоматическое объединение не выполняется.
+                  </q-banner>
+                  <div v-for="match in duplicateMatches" :key="match.person.id" class="admissions-foundation-duplicate">
+                    <div>
+                      <strong>{{ personOptionLabel(match.person) }}</strong>
+                      <small>Совпадение: {{ match.matched_by.join(', ') }}</small>
+                    </div>
+                    <q-btn flat dense no-caps color="primary" @click="useDuplicatePerson(match)">
+                      <Link :size="15" class="q-mr-xs" /> Использовать
+                    </q-btn>
+                  </div>
+                  <q-banner v-if="duplicateDecision" rounded class="admissions-foundation-note">{{ duplicateDecision }}</q-banner>
+                </div>
+              </section>
+
+              <div class="admissions-foundation-form-grid">
                 <q-select v-model="wizardForm.education_program_id" dense outlined emit-value map-options label="Основная программа" :options="programOptions" />
                 <q-input v-model.number="wizardForm.admission_year" dense outlined type="number" label="Год приема" />
                 <q-input v-model="wizardForm.application_number" dense outlined label="Номер заявления" />
@@ -1012,12 +1456,8 @@ onMounted(async () => {
                 <q-input v-model="wizardForm.submitted_at" dense outlined type="date" label="Дата подачи" />
                 <q-select v-model="wizardForm.education_base" dense outlined emit-value map-options label="База поступления" :options="legacyEducationBaseOptions" />
               </div>
-              <q-banner v-if="wizardApplicant" rounded class="admissions-foundation-note q-mt-md">
-                <FileText :size="18" />
-                {{ applicantLabel(wizardApplicant) }}
-              </q-banner>
               <q-stepper-navigation>
-                <q-btn color="primary" :disable="!wizardForm.applicant_id || !wizardForm.education_program_id" @click="wizardStep = 'identity'">Далее</q-btn>
+                <q-btn color="primary" :disable="(wizardApplicantMode === 'existing' && !wizardForm.applicant_id) || !wizardForm.education_program_id" @click="wizardStep = 'identity'">Далее</q-btn>
               </q-stepper-navigation>
             </q-step>
             <q-step name="identity" title="Паспорт и СНИЛС">
@@ -1151,11 +1591,26 @@ onMounted(async () => {
   margin-bottom: 18px;
 }
 
+.admissions-foundation-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .admissions-foundation-section h3 {
   margin: 0;
   color: #0f172a;
   font-size: 15px;
   font-weight: 800;
+}
+
+.admissions-foundation-subsection {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 12px;
 }
 
 .admissions-foundation-section dl {
@@ -1186,6 +1641,34 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.admissions-foundation-mode {
+  margin-bottom: 14px;
+}
+
+.admissions-foundation-duplicates {
+  display: grid;
+  gap: 8px;
+}
+
+.admissions-foundation-duplicate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.admissions-foundation-duplicate div {
+  display: grid;
+  gap: 2px;
+}
+
+.admissions-foundation-duplicate small {
+  color: #64748b;
 }
 
 .admissions-foundation-checklist,
