@@ -96,7 +96,7 @@ Frontend:
 - DEV: `/srv/college-dev`, frontend `http://192.168.34.104:5174`, API `http://192.168.34.104:8001/api`, PostgreSQL `5433`;
 - PROD: `/home/andale/college_portal`, frontend `http://192.168.34.104:5173`, API `http://192.168.34.104:8080/api`, PostgreSQL `5432`;
 - Windows development: `C:\!Projects\CollegePortal`; дополнительные worktree только внутри `C:\!Projects\CollegePortal\.worktrees\<branch>`;
-- тестовый администратор: `admin@college-portal.local` / `password`.
+- тестовые пользователи DEV описаны в `docs/TEST_USERS.md`; текущий DEV smoke пароль: `test1234`.
 
 Окружения на Ubuntu:
 

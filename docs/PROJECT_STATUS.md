@@ -73,6 +73,7 @@ Live GitHub Issues are the source of truth when accessible. From the local docum
 - GitHub write access from the current Codex environment is unreliable and may block automatic Issue/PR creation.
 - Documentation status is scattered across root documents, `docs/*`, release notes and task logs.
 - Several project documents reference missing or renamed documentation files.
+- DEV test users are documented in [Test Users](TEST_USERS.md). They are DEV-only and must not be used in PROD.
 
 ## Known Risks
 
