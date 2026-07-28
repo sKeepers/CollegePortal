@@ -13,7 +13,7 @@ export const dashboardLayoutService = {
       name: DASHBOARD_LAYOUT_PROFILE,
       is_default: true,
       layout: {
-        version: 1,
+        version: 2,
         widgets: widgets.map((widget, index) => ({
           id: widget.id,
           order: index,

@@ -176,6 +176,7 @@ Frontend:
 - `frontend/src/services/api.js` — клиент API, токен авторизации, обработка ошибок.
 - `frontend/src/services/tableSettings.js` — общий helper для сохранения пользовательских настроек таблиц.
 - `frontend/src/services/layoutService.js` — общий сервис breakpoints, размера viewport, mobile/ultrawide-признаков.
+- layout-настройки sidebar, People splitter и Dashboard сохраняются только локально в браузере через versioned localStorage keys; правила описаны в `docs/LAYOUT_GUIDELINES.md`.
 - `frontend/src/style.css` — стили старого legacy-интерфейса.
 - `frontend/src/main.js` — входная точка Vue.
 

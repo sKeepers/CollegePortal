@@ -6,6 +6,8 @@ import {
   BriefcaseBusiness,
   Building2,
   CalendarDays,
+  ChevronDown,
+  ChevronRight,
   ClipboardList,
   Database,
   DoorOpen,
@@ -46,6 +48,7 @@ const settingsStore = useSettingsStore()
 useLayoutService()
 const drawerOpen = ref(true)
 const feedbackOpen = ref(false)
+const NAVIGATION_SECTIONS_KEY = 'collegePortal.navigation.sections.v1'
 
 const navGroups = [
   {
@@ -147,6 +150,7 @@ const visibleNavGroups = computed(() =>
     .filter((group) => group.items.length > 0),
 )
 
+const collapsedSections = ref(loadNavigationSections())
 const pageTitle = computed(() => route.meta.title || 'CollegePortal')
 const collegeShortName = computed(() => settingsStore.publicValue('general', 'college_short_name', 'Колледж искусств'))
 const collegeFullName = computed(() => settingsStore.publicValue('general', 'college_full_name', 'Рабочее место колледжа'))
@@ -157,6 +161,60 @@ const layoutStyle = computed(() => ({
   '--cp-viewport-height': `${workspace.viewportHeight}px`,
   ...getEnvironmentCssVars(),
 }))
+
+function navGroupKey(group) {
+  return String(group.label || '')
+    .toLowerCase()
+    .replaceAll('ё', 'е')
+    .replace(/[^a-zа-я0-9]+/giu, '-')
+    .replace(/^-|-$/g, '')
+}
+
+function canUseLocalStorage() {
+  try {
+    return typeof window !== 'undefined' && Boolean(window.localStorage)
+  } catch {
+    return false
+  }
+}
+
+function loadNavigationSections() {
+  if (!canUseLocalStorage()) {
+    return {}
+  }
+
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(NAVIGATION_SECTIONS_KEY) || '{}')
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function saveNavigationSections() {
+  if (!canUseLocalStorage()) {
+    return
+  }
+
+  window.localStorage.setItem(NAVIGATION_SECTIONS_KEY, JSON.stringify(collapsedSections.value))
+}
+
+function isGroupCollapsed(group) {
+  if (workspace.settings.menuCollapsed && !workspace.isMobile) {
+    return false
+  }
+
+  return Boolean(collapsedSections.value[navGroupKey(group)])
+}
+
+function toggleNavGroup(group) {
+  const key = navGroupKey(group)
+  collapsedSections.value = {
+    ...collapsedSections.value,
+    [key]: !collapsedSections.value[key],
+  }
+  saveNavigationSections()
+}
 
 async function logout() {
   await auth.logout()
@@ -253,23 +311,43 @@ watch(
       <q-scroll-area class="cp-sidebar-scroll">
         <q-list class="cp-nav-list">
           <template v-for="group in visibleNavGroups" :key="group.label">
-            <q-item-label header>{{ group.label }}</q-item-label>
-            <q-item
-              v-for="item in group.items"
-              :key="item.to"
-              clickable
-              :active="route.path === item.to"
-              active-class="cp-nav-active"
-              :to="item.to"
+            <q-item-label header class="cp-nav-section-label">
+              <button
+                type="button"
+                class="cp-nav-section-toggle"
+                :aria-expanded="!isGroupCollapsed(group)"
+                :aria-controls="`cp-nav-section-${navGroupKey(group)}`"
+                @click="toggleNavGroup(group)"
+                @keydown.enter.prevent="toggleNavGroup(group)"
+                @keydown.space.prevent="toggleNavGroup(group)"
+              >
+                <span>{{ group.label }}</span>
+                <ChevronRight v-if="isGroupCollapsed(group)" :size="15" aria-hidden="true" />
+                <ChevronDown v-else :size="15" aria-hidden="true" />
+              </button>
+            </q-item-label>
+            <div
+              v-show="!isGroupCollapsed(group)"
+              :id="`cp-nav-section-${navGroupKey(group)}`"
+              class="cp-nav-section-items"
             >
-              <q-item-section avatar>
-                <component :is="item.icon" :size="19" />
-              </q-item-section>
-              <q-item-section>{{ item.label }}</q-item-section>
-              <q-item-section v-if="item.badge && !workspace.settings.menuCollapsed" side>
-                <q-badge color="blue-1" text-color="primary">{{ item.badge }}</q-badge>
-              </q-item-section>
-            </q-item>
+              <q-item
+                v-for="item in group.items"
+                :key="item.to"
+                clickable
+                :active="route.path === item.to"
+                active-class="cp-nav-active"
+                :to="item.to"
+              >
+                <q-item-section avatar>
+                  <component :is="item.icon" :size="19" />
+                </q-item-section>
+                <q-item-section>{{ item.label }}</q-item-section>
+                <q-item-section v-if="item.badge && !workspace.settings.menuCollapsed" side>
+                  <q-badge color="blue-1" text-color="primary">{{ item.badge }}</q-badge>
+                </q-item-section>
+              </q-item>
+            </div>
           </template>
         </q-list>
       </q-scroll-area>

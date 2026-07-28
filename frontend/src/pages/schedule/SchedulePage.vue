@@ -32,7 +32,7 @@ const createSubmitting = ref(false)
 const previewMode = ref('create')
 const draggedLesson = ref(null)
 const createForm = ref({})
-const templateForm = ref(defaultTemplateForm())
+const templateForm = ref({})
 
 const activeView = ref(route.query.view ? String(route.query.view) : 'week')
 const selectedDate = ref(route.query.date ? String(route.query.date) : todayString())
@@ -182,6 +182,8 @@ const weekRange = computed(() => {
   const days = selectedWeekDays.value
   return { date_from: days[0]?.value, date_to: days[6]?.value }
 })
+const scheduleInitialLoading = computed(() => store.loading && !store.lessons.length)
+const scheduleBlockingError = computed(() => store.error && !store.loading && !store.lessons.length)
 
 function defaultTemplateForm() {
   return {
@@ -570,7 +572,21 @@ onMounted(async () => {
       </template>
     </AppToolbar>
 
-    <AppErrorBanner :message="store.error" />
+    <AppErrorBanner :message="scheduleBlockingError ? '' : store.error" />
+
+    <div v-if="scheduleInitialLoading" class="schedule-state-panel">
+      <AppLoading label="Загрузка расписания..." />
+    </div>
+
+    <q-banner v-else-if="scheduleBlockingError" rounded class="schedule-state-panel schedule-state-panel--error">
+      <div>
+        <strong>Расписание не загрузилось</strong>
+        <p>{{ store.error }}</p>
+      </div>
+      <template #action>
+        <q-btn flat color="primary" :loading="store.loading" @click="refresh">Повторить</q-btn>
+      </template>
+    </q-banner>
 
     <div class="schedule-summary">
       <div>

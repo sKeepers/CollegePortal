@@ -18,15 +18,15 @@ This document is a navigation and status snapshot. GitHub Issues, Pull Requests 
 
 ## Active Branch
 
-- Branch: `feature/front-003-person-applicant`
-- Base: `feature/back-006-person-applicant-api`.
-- Scope: RC1 audit and release readiness for Admissions Foundation without adding new business features.
+- Branch: `feature/gui-009-layout-hardening`
+- Base: `feature/rc1-dev-fixes`.
+- Scope: Dashboard and navigation layout hardening without backend, API, migration, permission or legacy changes.
 
 ## Current Task
 
-- `RC1`: Admissions Foundation Release Candidate.
-- Разрешенные изменения: obvious RC1 fixes, release documentation and status notes.
-- Явно исключено: новые функции, backend contracts, migrations, permissions, legacy `/admissions`, XML/SOAP/Gateway/FIS send.
+- `GUI-009`: Dashboard & Navigation Layout Hardening.
+- Разрешенные изменения: collapsible sidebar groups, visible `/schedule` loading/error states, People splitter, compact Dashboard widget layout and layout documentation.
+- Явно исключено: новые бизнес-функции, backend contracts, migrations, permissions, legacy `/admissions`, XML/SOAP/Gateway/FIS send.
 
 ## Completed Tasks
 
@@ -51,6 +51,7 @@ Recent completed work reflected by current project notes and user-provided statu
 - `FRONT-002`: completed as Admissions Foundation editor workspace using existing backend endpoints.
 - `BACK-006`: completed as Person & Applicant Management API for FRONT-003.
 - `FRONT-003`: completed as Person & Applicant Management UI on `/admissions/foundation`.
+- `RC1-DEV`: completed as DEV release fixes for Admissions Foundation audit data redaction.
 
 ## Roadmap Progress
 
@@ -153,3 +154,4 @@ Documentation governance backlog:
 | 2026-07-28 | Added BACK-006 Person & Applicant Management API for FRONT-003. |
 | 2026-07-28 | Added FRONT-003 Person & Applicant Management UI for Admissions Foundation. |
 | 2026-07-28 | Prepared Admissions Foundation RC1 readiness report and release audit. |
+| 2026-07-28 | Started GUI-009 layout hardening: sidebar sections, `/schedule`, People splitter and Dashboard layout persistence. |

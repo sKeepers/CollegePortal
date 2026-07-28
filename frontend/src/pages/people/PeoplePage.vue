@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { RefreshCw, Search, UserRound } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
@@ -20,7 +20,14 @@ const route = useRoute()
 const router = useRouter()
 const syncingQuery = ref(false)
 const rowsKey = 'collegePortal.people.rowsPerPage'
+const splitterKey = 'collegePortal.people.splitter.v1'
+const defaultDetailsWidth = 400
+const minDetailsWidth = 340
+const minListWidth = 520
 const tablePagination = ref(createTablePagination(rowsKey, { sortBy: 'last_name', rowsPerPage: 20 }))
+const workspaceRef = ref(null)
+const detailsWidth = ref(loadSplitterWidth())
+const resizing = ref(false)
 
 const profileOptions = [
   { label: 'Все профили', value: '' },
@@ -39,6 +46,9 @@ const columns = [
 ]
 
 const selected = computed(() => store.selected)
+const workspaceStyle = computed(() => ({
+  gridTemplateColumns: `minmax(0, 1fr) 10px minmax(${minDetailsWidth}px, ${detailsWidth.value}px)`,
+}))
 const tableSubtitle = computed(() => `Найдено Person: ${store.people.length}`)
 const metrics = computed(() => {
   const counts = selected.value?.profiles_count || {}
@@ -71,6 +81,50 @@ function profileCount(person, key) { return person?.profiles_count?.[key] || 0 }
 function statusTone(status) { return status === 'active' ? 'success' : status === 'inactive' ? 'warning' : 'info' }
 function tableRowClass(row) { return Number(row.id) === Number(store.selectedId) ? 'people-row--selected' : '' }
 function updatePagination(pagination) { tablePagination.value = pagination; persistTablePagination(rowsKey, pagination) }
+function canUseLocalStorage() {
+  try {
+    return typeof window !== 'undefined' && Boolean(window.localStorage)
+  } catch {
+    return false
+  }
+}
+function loadSplitterWidth() {
+  if (!canUseLocalStorage()) return defaultDetailsWidth
+
+  const value = Number(window.localStorage.getItem(splitterKey))
+  return Number.isFinite(value) ? Math.min(Math.max(value, minDetailsWidth), 640) : defaultDetailsWidth
+}
+function saveSplitterWidth(width) {
+  if (canUseLocalStorage()) window.localStorage.setItem(splitterKey, String(width))
+}
+function resetSplitter() {
+  detailsWidth.value = defaultDetailsWidth
+  saveSplitterWidth(defaultDetailsWidth)
+}
+function stopResize() {
+  if (!resizing.value) return
+  resizing.value = false
+  window.removeEventListener('pointermove', onResize)
+  window.removeEventListener('pointerup', stopResize)
+  document.body.classList.remove('people-splitter-resizing')
+}
+function onResize(event) {
+  if (!resizing.value || !workspaceRef.value) return
+
+  const rect = workspaceRef.value.getBoundingClientRect()
+  const maxWidth = Math.max(minDetailsWidth, Math.min(640, rect.width - minListWidth - 10))
+  const nextWidth = Math.min(Math.max(rect.right - event.clientX, minDetailsWidth), maxWidth)
+  detailsWidth.value = Math.round(nextWidth)
+  saveSplitterWidth(detailsWidth.value)
+}
+function startResize(event) {
+  if (window.innerWidth <= 1100) return
+  resizing.value = true
+  event.currentTarget.setPointerCapture?.(event.pointerId)
+  document.body.classList.add('people-splitter-resizing')
+  window.addEventListener('pointermove', onResize)
+  window.addEventListener('pointerup', stopResize)
+}
 function routeSelectedId() { return route.query.selected ? String(route.query.selected) : '' }
 async function syncQuery(selectedId = routeSelectedId()) {
   const query = { ...route.query }
@@ -99,6 +153,8 @@ onMounted(async () => {
   await store.load()
   if (routeSelectedId()) await store.select(routeSelectedId())
 })
+
+onBeforeUnmount(stopResize)
 </script>
 
 <template>
@@ -108,6 +164,7 @@ onMounted(async () => {
       <span>{{ tableSubtitle }}</span>
       <template #actions>
         <AppLoading v-if="store.loading || store.detailsLoading" label="Загрузка Person..." />
+        <q-btn flat @click="resetSplitter">Сбросить размер</q-btn>
         <q-btn flat :disable="store.loading" @click="store.load"><RefreshCw :size="16" class="q-mr-xs" /> Обновить</q-btn>
       </template>
     </AppToolbar>
@@ -120,7 +177,7 @@ onMounted(async () => {
       <q-select v-model="store.filters.profile" dense outlined clearable emit-value map-options label="Профиль" :options="profileOptions" />
     </AppFilterBar>
 
-    <div class="people-workspace">
+    <div ref="workspaceRef" class="people-workspace" :style="workspaceStyle">
       <section class="people-main">
         <AppTable
           v-if="store.people.length || store.loading"
@@ -153,6 +210,15 @@ onMounted(async () => {
         <AppEmptyState v-else title="Person не найдены" description="Свяжите существующие профили командой person:link-existing или измените фильтры." />
       </section>
 
+      <button
+        type="button"
+        class="people-splitter"
+        aria-label="Изменить ширину панели Person"
+        title="Перетащите, чтобы изменить ширину панели. Двойной клик сбрасывает размер."
+        @pointerdown.prevent="startResize"
+        @dblclick="resetSplitter"
+      />
+
       <aside class="people-side">
         <AppEmptyState v-if="!selected" title="Person не выбран" description="Выберите строку, чтобы открыть связанные профили." />
         <WorkspacePanel v-else :title="selected.full_name" :subtitle="[selected.phone, selected.email].filter(Boolean)" :metrics="metrics" :actions="actions">
@@ -176,13 +242,33 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.people-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; align-items: start; }
+.people-workspace { display: grid; gap: 0; align-items: start; }
 .people-main, .people-side { min-width: 0; }
+.people-main { padding-right: 10px; }
+.people-side { padding-left: 10px; }
+.people-splitter {
+  width: 10px;
+  min-height: 360px;
+  align-self: stretch;
+  border: 0;
+  border-radius: 8px;
+  background: linear-gradient(90deg, transparent 0 3px, #cbd5e1 3px 7px, transparent 7px 10px);
+  cursor: col-resize;
+}
+.people-splitter:hover,
+.people-splitter:focus-visible {
+  background: linear-gradient(90deg, transparent 0 2px, #2563eb 2px 8px, transparent 8px 10px);
+  outline: none;
+}
 .people-profile-chips { white-space: normal; }
 .people-details { display: grid; gap: 10px; margin: 0; }
 .people-details div { display: grid; gap: 2px; }
 .people-details dt { color: #64748b; font-size: 12px; }
 .people-details dd { margin: 0; color: #0f172a; overflow-wrap: anywhere; }
 :deep(.people-row--selected) { background: #eef6ff; }
-@media (max-width: 1200px) { .people-workspace { grid-template-columns: 1fr; } }
+@media (max-width: 1100px) {
+  .people-workspace { grid-template-columns: 1fr !important; gap: 16px; }
+  .people-main, .people-side { padding: 0; }
+  .people-splitter { display: none; }
+}
 </style>

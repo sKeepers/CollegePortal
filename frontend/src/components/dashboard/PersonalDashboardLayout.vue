@@ -25,6 +25,7 @@ const savedCustomWidgets = ref(null)
 const activeWidgets = ref([])
 const draftWidgets = ref([])
 const draggedId = ref(null)
+const DASHBOARD_LOCAL_LAYOUT_KEY = 'collegePortal.dashboard.layout.v2'
 
 const sizeLabels = {
   small: 'S',
@@ -39,9 +40,63 @@ const currentWidgets = computed(() => editing.value ? draftWidgets.value : activ
 const visibleWidgets = computed(() => currentWidgets.value.filter((widget) => widget.visible))
 const hiddenWidgets = computed(() => draftWidgets.value.filter((widget) => !widget.visible))
 const canUseCustom = computed(() => Boolean(customLayoutId.value || savedCustomWidgets.value))
+const localStorageKey = computed(() => `${DASHBOARD_LOCAL_LAYOUT_KEY}.${props.dashboardType}`)
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value))
+}
+
+function canUseLocalStorage() {
+  try {
+    return typeof window !== 'undefined' && Boolean(window.localStorage)
+  } catch {
+    return false
+  }
+}
+
+function normalizeForStorage(widgets) {
+  return widgets.map((widget, index) => ({
+    id: widget.id,
+    order: Number.isInteger(widget.order) ? widget.order : index,
+    size: widget.size || widget.defaultSize || 'medium',
+    visible: widget.visible !== false,
+  }))
+}
+
+function loadLocalLayout() {
+  if (!canUseLocalStorage()) {
+    return null
+  }
+
+  try {
+    const payload = JSON.parse(window.localStorage.getItem(localStorageKey.value) || 'null')
+    if (payload?.version !== 2 || !Array.isArray(payload.widgets)) {
+      return null
+    }
+
+    return payload.widgets
+  } catch {
+    return null
+  }
+}
+
+function saveLocalLayout(widgets) {
+  if (!canUseLocalStorage()) {
+    return
+  }
+
+  window.localStorage.setItem(localStorageKey.value, JSON.stringify({
+    version: 2,
+    dashboardType: props.dashboardType,
+    widgets: normalizeForStorage(widgets),
+    savedAt: new Date().toISOString(),
+  }))
+}
+
+function clearLocalLayout() {
+  if (canUseLocalStorage()) {
+    window.localStorage.removeItem(localStorageKey.value)
+  }
 }
 
 function normalizeWidgets(layoutWidgets = null) {
@@ -87,11 +142,25 @@ async function loadLayouts() {
       savedCustomWidgets.value = null
       applyStandard()
     }
+
+    const localLayout = loadLocalLayout()
+    if (localLayout) {
+      savedCustomWidgets.value = normalizeWidgets(localLayout)
+      activeWidgets.value = clone(savedCustomWidgets.value)
+      profile.value = 'custom'
+    }
   } catch (err) {
     error.value = 'Персональные настройки Dashboard недоступны. Показан стандартный вид.'
     customLayoutId.value = null
     savedCustomWidgets.value = null
-    applyStandard()
+    const localLayout = loadLocalLayout()
+    if (localLayout) {
+      savedCustomWidgets.value = normalizeWidgets(localLayout)
+      activeWidgets.value = clone(savedCustomWidgets.value)
+      profile.value = 'custom'
+    } else {
+      applyStandard()
+    }
   } finally {
     loading.value = false
   }
@@ -117,6 +186,7 @@ async function saveEditing() {
     customLayoutId.value = payload?.data?.id || customLayoutId.value
     savedCustomWidgets.value = clone(normalized)
     activeWidgets.value = clone(normalized)
+    saveLocalLayout(normalized)
     profile.value = 'custom'
     editing.value = false
   } catch (err) {
@@ -135,6 +205,7 @@ async function resetToStandard() {
     customLayoutId.value = null
     savedCustomWidgets.value = null
     draftWidgets.value = clone(defaultWidgets.value)
+    clearLocalLayout()
     applyStandard()
     editing.value = false
   } catch (err) {
@@ -189,14 +260,19 @@ function onDrop(widgetId) {
 }
 
 function cycleSize(widgetId) {
+  const widget = draftWidgets.value.find((item) => item.id === widgetId)
+  const currentIndex = sizeSequence.indexOf(widget?.size)
+  const nextSize = sizeSequence[(currentIndex + 1) % sizeSequence.length]
+  setWidgetSize(widgetId, nextSize)
+}
+
+function setWidgetSize(widgetId, size) {
   draftWidgets.value = draftWidgets.value.map((widget) => {
     if (widget.id !== widgetId) {
       return widget
     }
 
-    const currentIndex = sizeSequence.indexOf(widget.size)
-    const nextSize = sizeSequence[(currentIndex + 1) % sizeSequence.length]
-    return { ...widget, size: nextSize }
+    return { ...widget, size: sizeSequence.includes(size) ? size : 'medium' }
   })
 }
 
@@ -266,7 +342,7 @@ onMounted(loadLayouts)
     <AppErrorBanner :message="error" />
 
     <div v-if="editing" class="personal-dashboard__hint">
-      Перетащите виджет мышью, нажмите размер S/M/L/XL для изменения ширины или скройте ненужный блок.
+      Перетащите виджет мышью, выберите размер S/M/L/XL или скройте ненужный блок. Сохранение применит layout и запишет его в локальное хранилище браузера.
     </div>
 
     <div v-if="editing && hiddenWidgets.length" class="personal-dashboard__hidden">
@@ -288,9 +364,21 @@ onMounted(loadLayouts)
       >
         <div v-if="editing" class="personal-dashboard__widget-toolbar">
           <span><GripVertical :size="16" /> {{ widget.title }}</span>
-          <div>
-            <button type="button" @click="cycleSize(widget.id)">{{ sizeLabels[widget.size] || 'M' }}</button>
-            <button type="button" @click="setVisible(widget.id, false)"><EyeOff :size="14" /> Скрыть</button>
+          <div class="personal-dashboard__widget-tools">
+            <div class="personal-dashboard__size-controls" role="group" :aria-label="`Размер виджета ${widget.title}`">
+              <button
+                v-for="size in sizeSequence"
+                :key="`${widget.id}-${size}`"
+                type="button"
+                :class="{ 'personal-dashboard__size-control--active': widget.size === size }"
+                :title="`Размер ${sizeLabels[size]}`"
+                @click="setWidgetSize(widget.id, size)"
+              >
+                {{ sizeLabels[size] }}
+              </button>
+            </div>
+            <button type="button" title="Следующий размер" @click="cycleSize(widget.id)">Размер</button>
+            <button type="button" title="Скрыть виджет" @click="setVisible(widget.id, false)"><EyeOff :size="14" /> Скрыть</button>
           </div>
         </div>
         <slot :name="widget.id" :widget="widget" />

@@ -178,6 +178,7 @@
 - [x] BACK-006: Person & Applicant Management API для FRONT-003.
 - [x] FRONT-003: Person & Applicant Management UI на `/admissions/foundation`.
 - [x] RC1: Admissions Foundation Release Candidate — аудит, очевидные fixes, `RC1_READY.md`.
+- [ ] GUI-009: Dashboard & Navigation Layout Hardening — сворачиваемые группы sidebar, видимое состояние `/schedule`, splitter People, compact Dashboard и versioned localStorage.
 - [ ] TEST-001: Backend regression suite.
 ## Приемная комиссия
 
