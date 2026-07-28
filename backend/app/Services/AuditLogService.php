@@ -67,7 +67,7 @@ class AuditLogService
             return null;
         }
 
-        return Arr::except($values, [
+        return self::redactSensitiveValues(Arr::except($values, [
             'password',
             'remember_token',
             'api_token_hash',
@@ -80,6 +80,34 @@ class AuditLogService
             'storage_path',
             'stored_path',
             'fis_raw_data',
-        ]);
+        ]));
+    }
+
+    private static function redactSensitiveValues(array $values): array
+    {
+        $sensitiveKeys = [
+            'email',
+            'phone',
+            'address',
+            'registration_address',
+            'residential_address',
+            'place_birth',
+            'inn',
+            'passport',
+            'identity_document',
+        ];
+
+        foreach ($values as $key => $value) {
+            if (in_array((string) $key, $sensitiveKeys, true)) {
+                $values[$key] = '[redacted]';
+                continue;
+            }
+
+            if (is_array($value)) {
+                $values[$key] = self::redactSensitiveValues($value);
+            }
+        }
+
+        return $values;
     }
 }

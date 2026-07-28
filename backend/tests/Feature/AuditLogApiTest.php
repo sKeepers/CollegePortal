@@ -40,6 +40,40 @@ class AuditLogApiTest extends TestCase
         $this->assertArrayNotHasKey('api_token_hash', $log->new_values);
     }
 
+    public function test_audit_service_redacts_contact_and_identity_values(): void
+    {
+        $user = $this->createApiUser();
+
+        AuditLogService::log(
+            'identity',
+            'update',
+            ['type' => 'Person', 'id' => 10],
+            ['email' => 'old@example.test', 'phone' => '+7 900 111-22-33', 'name' => 'Old'],
+            [
+                'email' => 'new@example.test',
+                'phone' => '+7 900 444-55-66',
+                'address' => 'Тестовый адрес',
+                'identity_document' => ['series' => '1234', 'number' => '567890'],
+                'name' => 'New',
+            ],
+            null,
+            $user,
+        );
+
+        $log = AuditLog::firstOrFail();
+
+        $this->assertSame('[redacted]', $log->old_values['email']);
+        $this->assertSame('[redacted]', $log->old_values['phone']);
+        $this->assertSame('Old', $log->old_values['name']);
+        $this->assertSame('[redacted]', $log->new_values['email']);
+        $this->assertSame('[redacted]', $log->new_values['phone']);
+        $this->assertSame('[redacted]', $log->new_values['address']);
+        $this->assertSame('[redacted]', $log->new_values['identity_document']);
+        $this->assertSame('New', $log->new_values['name']);
+        $this->assertStringNotContainsString('new@example.test', json_encode($log->new_values));
+        $this->assertStringNotContainsString('9004445566', json_encode($log->new_values));
+    }
+
     public function test_admin_can_list_and_show_audit_logs(): void
     {
         $user = $this->createApiUser();
