@@ -3,15 +3,26 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DuplicatePersonCheckRequest;
+use App\Http\Requests\StorePersonRequest;
+use App\Http\Requests\UpdatePersonRequest;
 use App\Http\Resources\PersonResource;
 use App\Models\Person;
+use App\Services\AuditLogService;
+use App\Services\PersonDuplicateService;
 use App\Services\PersonService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response;
 
 class PersonController extends Controller
 {
+    public function __construct(private readonly PersonService $people)
+    {
+    }
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $operator = Person::query()->getModel()->getConnection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
@@ -62,6 +73,81 @@ class PersonController extends Controller
         ])->loadCount(['students', 'teachers', 'applicants', 'applicantApplications', 'graduates', 'users', 'digitalIdentities']));
     }
 
+    public function store(StorePersonRequest $request): JsonResponse
+    {
+        $person = $this->people->createPerson($request->validated());
+
+        AuditLogService::log('Identity', 'person_created', $person, null, [
+            'id' => $person->id,
+            'has_snils_hash' => filled($person->snils_hash),
+            'status' => $person->status,
+        ], $request);
+
+        return (new PersonResource($this->loadPersonCard($person)))
+            ->response()
+            ->setStatusCode(Response::HTTP_CREATED);
+    }
+
+    public function update(UpdatePersonRequest $request, Person $person): PersonResource
+    {
+        $old = $this->safePersonSnapshot($person);
+        $payload = array_merge([
+            'uuid' => $person->uuid,
+            'last_name' => $person->last_name,
+            'first_name' => $person->first_name,
+            'middle_name' => $person->middle_name,
+            'birth_date' => $person->birth_date?->toDateString(),
+            'gender' => $person->gender,
+            'citizenship' => $person->citizenship,
+            'place_birth' => $person->place_birth,
+            'phone' => $person->phone,
+            'email' => $person->email,
+            'address' => $person->address,
+            'photo_path' => $person->photo_path,
+            'snils' => $person->snils,
+            'inn' => $person->inn,
+            'status' => $person->status,
+        ], $request->validated());
+
+        $person = $this->people->updateSharedData($person, $payload);
+
+        AuditLogService::log('Identity', 'person_updated', $person, $old, $this->safePersonSnapshot($person), $request);
+
+        return new PersonResource($this->loadPersonCard($person));
+    }
+
+    public function duplicateCheck(DuplicatePersonCheckRequest $request, PersonDuplicateService $duplicates): array
+    {
+        $result = $duplicates->check($request->validated());
+
+        AuditLogService::log('Identity', 'person_duplicate_check', ['type' => 'Person', 'id' => null], null, [
+            'criteria' => $result['criteria'],
+            'matches_count' => count($result['matches']),
+            'matched_person_ids' => collect($result['matches'])->pluck('person.id')->values()->all(),
+        ], $request);
+
+        return [
+            'data' => [
+                'has_matches' => count($result['matches']) > 0,
+                'matches_count' => count($result['matches']),
+                'criteria' => $result['criteria'],
+                'matches' => collect($result['matches'])->map(fn (array $match): array => [
+                    'matched_by' => $match['matched_by'],
+                    'person' => (new PersonResource($match['person']))->resolve($request),
+                ])->values(),
+            ],
+        ];
+    }
+
+    public function merge(): JsonResponse
+    {
+        return response()->json([
+            'message' => 'merge_not_supported',
+            'code' => 'merge_not_supported',
+            'details' => 'Объединение Person будет реализовано отдельным безопасным этапом.',
+        ], Response::HTTP_NOT_IMPLEMENTED);
+    }
+
     public function profiles(Person $person, PersonService $personService): array
     {
         return [
@@ -71,6 +157,43 @@ class PersonController extends Controller
                 'count' => $items->count(),
                 'items' => $items->values(),
             ])->values(),
+        ];
+    }
+
+    private function loadPersonCard(Person $person): Person
+    {
+        return $person->load([
+            'students.group',
+            'teachers.subjects',
+            'applicants.status',
+            'applicants.source',
+            'applicantApplications.educationProgram',
+            'graduates.student',
+            'graduates.group',
+            'graduates.diploma',
+            'users.roles',
+            'digitalIdentities',
+        ])->loadCount(['students', 'teachers', 'applicants', 'applicantApplications', 'graduates', 'users', 'digitalIdentities']);
+    }
+
+    /** @return array<string, mixed> */
+    private function safePersonSnapshot(Person $person): array
+    {
+        return [
+            'id' => $person->id,
+            'last_name' => $person->last_name,
+            'first_name' => $person->first_name,
+            'middle_name' => $person->middle_name,
+            'birth_date' => $person->birth_date?->toDateString(),
+            'gender' => $person->gender,
+            'citizenship' => $person->citizenship,
+            'place_birth' => $person->place_birth,
+            'phone' => $person->phone,
+            'email' => $person->email,
+            'address' => $person->address,
+            'has_snils_hash' => filled($person->snils_hash),
+            'inn' => $person->inn,
+            'status' => $person->status,
         ];
     }
 }

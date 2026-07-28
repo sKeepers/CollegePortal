@@ -63,4 +63,14 @@ class ApplicantRepository
     {
         return Applicant::query()->create($data)->load(['person', 'status', 'source', 'responsibleUser']);
     }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public function update(Applicant $applicant, array $data): Applicant
+    {
+        $applicant->update($data);
+
+        return $applicant->refresh()->load(['person', 'status', 'source', 'responsibleUser']);
+    }
 }

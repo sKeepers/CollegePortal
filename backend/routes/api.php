@@ -145,9 +145,13 @@ Route::middleware('api.token')->group(function (): void {
 
     Route::middleware('permission:people.view')->group(function (): void {
         Route::get('people', [PersonController::class, 'index']);
+        Route::post('people/duplicates/check', [PersonController::class, 'duplicateCheck']);
+        Route::post('people/merge', [PersonController::class, 'merge'])->middleware('permission:people.update');
         Route::get('people/{person}', [PersonController::class, 'show']);
         Route::get('people/{person}/profiles', [PersonController::class, 'profiles']);
     });
+    Route::post('people', [PersonController::class, 'store'])->middleware('permission:people.create');
+    Route::patch('people/{person}', [PersonController::class, 'update'])->middleware('permission:people.update');
 
     Route::middleware('permission:view_reports')->group(function (): void {
         Route::get('dashboard/analytics/executive', [DashboardAnalyticsController::class, 'executive']);
@@ -167,6 +171,14 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('admissions/applicants', [AdmissionsApplicantController::class, 'index']);
         Route::get('admissions/applicants/{id}', [AdmissionsApplicantController::class, 'show'])->whereNumber('id');
     });
+    Route::post('admissions/applicants', [AdmissionsApplicantController::class, 'store'])
+        ->middleware('permission:admissions.applicant.create');
+    Route::patch('admissions/applicants/{applicant}', [AdmissionsApplicantController::class, 'update'])
+        ->whereNumber('applicant')
+        ->middleware('permission:admissions.applicant.update');
+    Route::post('admissions/applicants/{applicant}/archive', [AdmissionsApplicantController::class, 'archive'])
+        ->whereNumber('applicant')
+        ->middleware('permission:admissions.applicant.archive');
     Route::patch('admissions/applicants/{applicant}/snils', [AdmissionsApplicantSnilsController::class, 'update'])
         ->whereNumber('applicant')
         ->middleware('permission:admissions.document.update');

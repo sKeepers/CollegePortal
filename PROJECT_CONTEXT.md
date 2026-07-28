@@ -1136,7 +1136,11 @@ Admissions Foundation documents now preserve registered application history thro
 
 `/admissions/foundation` расширен из read-only просмотра в рабочее место приемной комиссии. Frontend использует существующие Admissions Foundation endpoints без изменения backend: список заявлений, быстрые фильтры, мастер создания черновика для существующего Applicant, СНИЛС, документы личности и образования, upload/download/delete private-файлов, выбранные программы, регистрация, readiness, FIS blockers и история Audit.
 
-Ограничение FRONT-002: backend foundation пока не предоставляет write API для создания `Applicant`/`Person`, поэтому мастер выбирает уже существующего foundation-абитуриента. Полный CRUD абитуриента остается отдельной задачей FRONT-003/BACK-next.
+Историческое ограничение FRONT-002: на момент реализации frontend backend foundation еще не предоставлял write API для создания `Applicant`/`Person`, поэтому мастер выбирал уже существующего foundation-абитуриента. BACK-006 закрывает этот backend gap и разблокирует FRONT-003.
+
+### BACK-006: Person & Applicant Management API
+
+Добавлен минимальный backend API, необходимый для FRONT-003 без изменения legacy `/admissions`: создание и изменение `Person`, создание и изменение foundation `Applicant`, архивирование Applicant через `archived_at`, проверка дублей `Person` по СНИЛС, email, телефону, паспортному документу и ФИО + дате рождения. Merge намеренно не реализован: endpoint возвращает `501 merge_not_supported` и остается отдельным безопасным этапом. Новые routes используют существующие модели, `ApplicantService::createFoundation()`, RBAC permissions и Audit без хранения чувствительных payload.
 
 ## ST-001A: Curriculum Engine foundation
 

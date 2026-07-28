@@ -84,6 +84,51 @@ class ApplicantService
     }
 
     /**
+     * Изменяет служебные поля foundation-профиля абитуриента.
+     *
+     * @param array<string, mixed> $payload
+     */
+    public function updateFoundation(Applicant $applicant, array $payload, ?User $actor = null): Applicant
+    {
+        return DB::transaction(function () use ($applicant, $payload, $actor): Applicant {
+            if ($applicant->archived_at !== null) {
+                throw ValidationException::withMessages(['applicant' => 'Архивный профиль абитуриента недоступен для изменения.']);
+            }
+
+            $old = $this->auditPayload($applicant);
+            $updated = $this->applicants->update($applicant, collect($payload)->only([
+                'source_id',
+                'status_id',
+                'first_contact_at',
+                'responsible_user_id',
+                'notes',
+            ])->all());
+
+            AuditLogService::log('Admissions', 'applicant_updated', $updated, $old, $this->auditPayload($updated), user: $actor);
+
+            return $updated;
+        });
+    }
+
+    public function archiveFoundation(Applicant $applicant, ?User $actor = null): Applicant
+    {
+        return DB::transaction(function () use ($applicant, $actor): Applicant {
+            if ($applicant->archived_at !== null) {
+                return $applicant->load(['person', 'status', 'source', 'responsibleUser']);
+            }
+
+            $old = $this->auditPayload($applicant);
+            $updated = $this->applicants->update($applicant, [
+                'archived_at' => now(),
+            ]);
+
+            AuditLogService::log('Admissions', 'applicant_archived', $updated, $old, $this->auditPayload($updated), user: $actor);
+
+            return $updated;
+        });
+    }
+
+    /**
      * @param array<string, mixed> $personData
      */
     private function resolvePerson(array $personData): Person
@@ -103,6 +148,7 @@ class ApplicantService
         if ($matches->count() > 1) {
             throw ValidationException::withMessages([
                 'person_id' => 'Найдено несколько возможных Person. Выберите существующую запись вручную.',
+                'duplicate_person_ids' => $matches->pluck('id')->map(fn (int $id): string => (string) $id)->values()->all(),
             ]);
         }
 
@@ -140,5 +186,19 @@ class ApplicantService
         }
 
         return (int) $itemId;
+    }
+
+    /** @return array<string, mixed> */
+    private function auditPayload(Applicant $applicant): array
+    {
+        return [
+            'id' => $applicant->id,
+            'person_id' => $applicant->person_id,
+            'source_id' => $applicant->source_id,
+            'status_id' => $applicant->status_id,
+            'first_contact_at' => $applicant->first_contact_at?->toISOString(),
+            'responsible_user_id' => $applicant->responsible_user_id,
+            'archived_at' => $applicant->archived_at?->toISOString(),
+        ];
     }
 }

@@ -12,6 +12,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class PersonService
 {
@@ -206,16 +207,20 @@ class PersonService
     private function normalizePersonData(array $data): array
     {
         return [
+            'uuid' => $this->blankToNull($data['uuid'] ?? null) ?: (string) Str::uuid(),
             'last_name' => trim((string) ($data['last_name'] ?? '')),
             'first_name' => trim((string) ($data['first_name'] ?? '')),
             'middle_name' => $this->blankToNull($data['middle_name'] ?? null),
             'birth_date' => $this->blankToNull($data['birth_date'] ?? null),
             'gender' => $this->blankToNull($data['gender'] ?? null),
             'citizenship' => $this->blankToNull($data['citizenship'] ?? null),
+            'place_birth' => $this->blankToNull($data['place_birth'] ?? null),
             'phone' => $this->normalizePhone($data['phone'] ?? null),
             'email' => $this->normalizeEmail($data['email'] ?? null),
+            'address' => $this->blankToNull($data['address'] ?? null),
             'photo_path' => $this->blankToNull($data['photo_path'] ?? null),
             'snils' => $this->normalizeDigits($data['snils'] ?? null),
+            'snils_hash' => ($snils = $this->normalizeDigits($data['snils'] ?? null)) ? hash('sha256', $snils) : null,
             'inn' => $this->normalizeDigits($data['inn'] ?? null),
             'status' => $this->blankToNull($data['status'] ?? null) ?: 'active',
         ];

@@ -3,11 +3,16 @@
 namespace App\Http\Controllers\Api\Admissions;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admissions\StoreApplicantRequest;
+use App\Http\Requests\Admissions\UpdateApplicantRequest;
 use App\Http\Resources\Admissions\ApplicantResource;
+use App\Models\Admissions\Applicant;
 use App\Services\Admissions\ApplicantService;
 use App\Services\AuditLogService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Read-only API foundation-профилей абитуриентов.
@@ -63,5 +68,40 @@ class ApplicantController extends Controller
         ], $request);
 
         return new ApplicantResource($applicant);
+    }
+
+    /**
+     * Создает foundation-профиль абитуриента через ApplicantService::createFoundation().
+     */
+    public function store(StoreApplicantRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+        $personData = $validated['person'] ?? [];
+        if (! empty($validated['person_id'])) {
+            $personData['person_id'] = $validated['person_id'];
+        }
+
+        $applicantData = collect($validated)->except(['person', 'person_id'])->all();
+        $applicant = $this->applicants->createFoundation($personData, $applicantData, $request->user());
+
+        return (new ApplicantResource($applicant))
+            ->response()
+            ->setStatusCode(Response::HTTP_CREATED);
+    }
+
+    /**
+     * Изменяет служебные поля foundation-профиля абитуриента.
+     */
+    public function update(UpdateApplicantRequest $request, Applicant $applicant): ApplicantResource
+    {
+        return new ApplicantResource($this->applicants->updateFoundation($applicant, $request->validated(), $request->user()));
+    }
+
+    /**
+     * Архивирует foundation-профиль без физического удаления.
+     */
+    public function archive(Request $request, Applicant $applicant): ApplicantResource
+    {
+        return new ApplicantResource($this->applicants->archiveFoundation($applicant, $request->user()));
     }
 }

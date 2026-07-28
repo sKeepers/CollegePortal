@@ -192,11 +192,25 @@ API делится на bounded areas:
 
 | URL | Метод | Назначение | Параметры | Тело запроса | Ответ | Ошибки | Права доступа |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `/api/admissions/applicants` | `GET` | список абитуриентов | `q`, `status`, `source`, `campaign_id`, `responsible_user_id`, `page`, `per_page`, `sort` | нет | applicants, Person summary, active applications, pagination | `401`, `403`, `422` | `admissions.applicants.view` |
-| `/api/admissions/applicants` | `POST` | создать Applicant и при необходимости Person | нет | `person`, `source_id`, `responsible_user_id`, `duplicate_resolution` | Applicant, Person, duplicate warnings | `401`, `403`, `409`, `422` | `admissions.applicants.create`, `people.link` |
-| `/api/admissions/applicants/{applicantId}` | `GET` | карточка абитуриента | `include` | нет | Applicant, Person, applications, events | `401`, `403`, `404` | `admissions.applicants.view` |
-| `/api/admissions/applicants/{applicantId}` | `PUT` | обновить профиль абитуриента | path `applicantId` | `source_id`, `responsible_user_id`, `status_id`, `notes` | обновленный Applicant | `401`, `403`, `404`, `409`, `422` | `admissions.applicants.update` |
-| `/api/admissions/applicants/{applicantId}/archive` | `POST` | архивировать профиль | path `applicantId` | `reason` | архивированный Applicant | `401`, `403`, `404`, `409`, `422` | `admissions.applicants.archive` |
+| `/api/admissions/applicants` | `GET` | список абитуриентов | `q`, `status`, `source`, `responsible_user_id`, `with_archived`, `page`, `per_page` | нет | applicants, Person summary, pagination | `401`, `403`, `422` | `admissions.applicant.view` |
+| `/api/admissions/applicants` | `POST` | создать Applicant и при необходимости Person | нет | `person_id` или `person`, `source_id/source_code`, `status_id/status_code`, `responsible_user_id`, `notes` | Applicant, Person | `401`, `403`, `422` | `admissions.applicant.create` |
+| `/api/admissions/applicants/{applicantId}` | `GET` | карточка абитуриента | path `applicantId` | нет | Applicant, Person, source, status | `401`, `403`, `404` | `admissions.applicant.view` |
+| `/api/admissions/applicants/{applicantId}` | `PATCH` | обновить служебные поля профиля абитуриента | path `applicantId` | `source_id`, `responsible_user_id`, `status_id`, `first_contact_at`, `notes` | обновленный Applicant | `401`, `403`, `404`, `422` | `admissions.applicant.update` |
+| `/api/admissions/applicants/{applicantId}/archive` | `POST` | архивировать профиль без физического удаления | path `applicantId` | нет | архивированный Applicant | `401`, `403`, `404`, `422` | `admissions.applicant.archive` |
+
+## Person и проверка дублей
+
+BACK-006 добавляет write API для `Person`, достаточный для создания нового foundation-абитуриента из интерфейса приемной комиссии. Физическое удаление и архивирование `Person` не реализуются. Объединение дублей намеренно возвращает `501 merge_not_supported` до отдельного безопасного этапа.
+
+| URL | Метод | Назначение | Параметры | Тело запроса | Ответ | Ошибки | Права доступа |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `/api/people` | `GET` | список Person | `search`, `profile`, `page` | нет | people с counters профилей | `401`, `403`, `422` | `people.view` |
+| `/api/people` | `POST` | создать Person | нет | ФИО, дата рождения, пол, контакты, адрес, СНИЛС, ИНН, статус | Person resource | `401`, `403`, `422` | `people.create` |
+| `/api/people/{person}` | `GET` | карточка Person | path `person` | нет | Person с профилями | `401`, `403`, `404` | `people.view` |
+| `/api/people/{person}` | `PATCH` | изменить общие данные Person | path `person` | изменяемые поля Person | Person resource | `401`, `403`, `404`, `422` | `people.update` |
+| `/api/people/{person}/profiles` | `GET` | связанные профили Person | path `person` | нет | Student/Teacher/Applicant/Graduate/User/DigitalIdentity profiles | `401`, `403`, `404` | `people.view` |
+| `/api/people/duplicates/check` | `POST` | проверить возможные дубли Person | нет | СНИЛС, email, phone, паспорт, ФИО + дата рождения | `has_matches`, `criteria`, `matches[]` | `401`, `403`, `422` | `people.view` |
+| `/api/people/merge` | `POST` | явный stop-gate merge | нет | `source_id`, `target_id` | `501 merge_not_supported` | `401`, `403`, `501` | `people.update` |
 
 ## Заявления
 

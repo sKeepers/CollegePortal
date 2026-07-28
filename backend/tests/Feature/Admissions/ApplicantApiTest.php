@@ -85,14 +85,19 @@ class ApplicantApiTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_applicants_api_is_get_only(): void
+    public function test_user_without_manage_permission_cannot_create_applicant(): void
     {
         $this->seed(RoleSeeder::class);
-        $admin = $this->createApiUser(roleCode: 'admin');
+        $student = $this->createApiUser(roleCode: 'student');
 
-        $this->withApiAuth($admin)
-            ->postJson('/api/admissions/applicants', [])
-            ->assertStatus(405);
+        $this->withApiAuth($student)
+            ->postJson('/api/admissions/applicants', [
+                'person' => [
+                    'last_name' => 'Нет',
+                    'first_name' => 'Прав',
+                ],
+            ])
+            ->assertForbidden();
     }
 
     public function test_permissions_are_registered_for_roles(): void
@@ -109,12 +114,22 @@ class ApplicantApiTest extends TestCase
             'module' => 'Admissions',
             'active' => true,
         ]);
+        foreach (['admissions.applicant.create', 'admissions.applicant.update', 'admissions.applicant.archive'] as $code) {
+            $this->assertDatabaseHas('permissions', [
+                'code' => $code,
+                'module' => 'Admissions',
+                'active' => true,
+            ]);
+        }
 
         $admissionRole = Role::query()->where('code', 'admission')->firstOrFail();
         $codes = $admissionRole->permissions()->pluck('code')->all();
 
         $this->assertContains('admissions.applicant.view', $codes);
         $this->assertContains('admissions.applicant.manage', $codes);
+        $this->assertContains('admissions.applicant.create', $codes);
+        $this->assertContains('admissions.applicant.update', $codes);
+        $this->assertContains('admissions.applicant.archive', $codes);
     }
 
     /**

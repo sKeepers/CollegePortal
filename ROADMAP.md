@@ -92,7 +92,8 @@ Roadmap фиксирует порядок развития проекта пос
 - [x] BACK-005: foundation документов заявления, private files, СНИЛС и структурированная комплектность.
 - [x] BACK-005.1: hardening Documents Foundation — связь заявления с версиями документов, version chain, XSD-поля образования и FIS dictionary mapping.
 - [x] FRONT-002: Admissions Foundation editor workspace — мастер создания заявления, документы, файлы, выбранные программы, readiness, FIS blockers и история на `/admissions/foundation`.
-- Следующий рекомендуемый этап: FRONT-003 — write API/UI для создания и редактирования Applicant/Person либо отдельный backend slice перед полным CRUD абитуриентов.
+- [x] BACK-006: Person & Applicant Management API — `POST/PATCH /api/people`, `POST/PATCH /api/admissions/applicants`, archive Applicant, duplicate check, explicit `merge_not_supported`.
+- Следующий рекомендуемый этап: FRONT-003 — UI создания и редактирования Applicant/Person в `/admissions/foundation` поверх BACK-006.
 ### Приемная комиссия
 
 - [x] ADM-001: Приемная комиссия — выполнено;
