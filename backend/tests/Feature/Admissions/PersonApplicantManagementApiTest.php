@@ -42,7 +42,7 @@ class PersonApplicantManagementApiTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.last_name', 'Новый')
             ->assertJsonPath('data.phone', '79001112233')
-            ->assertJsonPath('data.snils_masked', '112-233-*** 95')
+            ->assertJsonPath('data.snils_masked', '***-***-445 95')
             ->json('data.id');
 
         $this->withApiAuth($user)
