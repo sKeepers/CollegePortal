@@ -45,7 +45,7 @@ class SnilsService
         $hash = $this->hash($normalized);
 
         if ($hash !== null && Person::query()->where('snils_hash', $hash)->whereKeyNot($person->id)->exists()) {
-            throw ValidationException::withMessages(['snils' => 'СНИЛС уже используется другой записью Person.']);
+            throw ValidationException::withMessages(['snils' => 'СНИЛС уже используется другой личной карточкой.']);
         }
 
         $old = [

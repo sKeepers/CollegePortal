@@ -2,11 +2,15 @@ import { getCurrentEnvironment } from './environmentService'
 
 const DEFAULT_VERSION_INFO = {
   name: 'CollegePortal',
-  version: '0.7.0-dev',
-  release: 'Release 0.7',
+  version: 'unknown',
+  release: 'unknown',
   build: 'unknown',
   buildDate: null,
   environment: 'development',
+  gitCommit: 'unknown',
+  frontendStack: 'unknown',
+  backendStack: 'unknown',
+  apiVersion: 'unknown',
 }
 
 let cachedVersion = null

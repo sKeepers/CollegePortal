@@ -139,7 +139,7 @@ class AdminUserApiTest extends TestCase
                 'person_id' => 999999,
             ])
             ->assertUnprocessable()
-            ->assertJsonPath('errors.person_id.0', 'Выбранная запись Person не найдена.');
+            ->assertJsonPath('errors.person_id.0', 'Выбранная личная карточка не найдена.');
     }
 
     public function test_user_update_allows_current_email_and_blank_password(): void

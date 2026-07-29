@@ -344,7 +344,7 @@ export const routes = [
         path: 'system/ui-foundation',
         name: 'system-ui-foundation',
         component: UiFoundationPage,
-        meta: { title: 'UI Foundation', adminOnly: true },
+        meta: { title: 'Библиотека интерфейса', adminOnly: true },
       },
     ],
   },

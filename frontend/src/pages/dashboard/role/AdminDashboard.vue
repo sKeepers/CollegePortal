@@ -310,8 +310,8 @@ onMounted(() => {
       <template #system>
         <AppCard title="Система" subtitle="Версия, сборка и состояние платформы">
           <dl class="executive-system-list">
-            <div><dt>Версия</dt><dd>{{ version.version || '0.7.0-dev' }}</dd></div>
-            <div><dt>Релиз</dt><dd>{{ version.release || 'Release 0.7' }}</dd></div>
+            <div><dt>Версия</dt><dd>{{ version.version || 'unknown' }}</dd></div>
+            <div><dt>Релиз</dt><dd>{{ version.release || 'unknown' }}</dd></div>
             <div><dt>Build</dt><dd>{{ version.build || 'unknown' }}</dd></div>
             <div><dt>Дата сборки</dt><dd>{{ version.buildDate || '—' }}</dd></div>
             <div><dt>Окружение</dt><dd>{{ version.environment || 'development' }}</dd></div>

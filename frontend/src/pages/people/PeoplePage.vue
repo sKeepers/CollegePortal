@@ -12,6 +12,7 @@ import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
+import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import { TABLE_ROWS_PER_PAGE_OPTIONS, createTablePagination, persistTablePagination } from '../../services/tableSettings'
 import { usePeopleStore } from '../../stores/people'
@@ -173,14 +174,7 @@ onMounted(async () => {
         <AppEmptyState v-else title="Люди не найдены" description="Измените фильтры или выполните привязку существующих профилей." />
       </section>
 
-      <button
-        type="button"
-        class="people-splitter"
-        aria-label="Изменить ширину карточки человека"
-        title="Перетащите, чтобы изменить ширину панели. Двойной клик сбрасывает размер."
-        @pointerdown.prevent="startResize"
-        @dblclick="resetSplitter"
-      />
+      <WorkspaceSplitter label="Изменить ширину карточки человека" @resize-start="startResize" @reset="resetSplitter" />
 
       <aside class="people-side">
         <AppEmptyState v-if="!selected" title="Человек не выбран" description="Выберите строку, чтобы открыть связанные профили." />
@@ -209,20 +203,6 @@ onMounted(async () => {
 .people-main, .people-side { min-width: 0; }
 .people-main { padding-right: 10px; }
 .people-side { padding-left: 10px; }
-.people-splitter {
-  width: 10px;
-  min-height: 360px;
-  align-self: stretch;
-  border: 0;
-  border-radius: 8px;
-  background: linear-gradient(90deg, transparent 0 3px, #cbd5e1 3px 7px, transparent 7px 10px);
-  cursor: col-resize;
-}
-.people-splitter:hover,
-.people-splitter:focus-visible {
-  background: linear-gradient(90deg, transparent 0 2px, #2563eb 2px 8px, transparent 8px 10px);
-  outline: none;
-}
 .people-profile-chips { white-space: normal; }
 .people-details { display: grid; gap: 10px; margin: 0; }
 .people-details div { display: grid; gap: 2px; }
@@ -232,6 +212,5 @@ onMounted(async () => {
 @media (max-width: 1100px) {
   .people-workspace { grid-template-columns: 1fr !important; gap: 16px; }
   .people-main, .people-side { padding: 0; }
-  .people-splitter { display: none; }
 }
 </style>

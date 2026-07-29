@@ -14,7 +14,7 @@ const VALIDATION_RULE_MESSAGES = {
 
 const FIELD_LABELS = {
   applicant_id: 'Абитуриент',
-  person_id: 'Человек',
+  person_id: 'Личная карточка',
   education_program_id: 'Образовательная программа',
   source_id: 'Источник',
   status_id: 'Статус',
@@ -28,10 +28,25 @@ const FIELD_LABELS = {
   phone: 'Телефон',
   email: 'Email',
   snils: 'СНИЛС',
+  inn: 'ИНН',
+  document_type_id: 'Тип документа',
+  series: 'Серия',
+  number: 'Номер',
+  issue_date: 'Дата выдачи',
+  issued_by: 'Кем выдан',
+  subdivision_code: 'Код подразделения',
+  address: 'Адрес',
+  registration_address: 'Адрес регистрации',
+  residential_address: 'Адрес проживания',
 }
 
 function readableField(field) {
-  const normalized = String(field || '').replace(/^person\./, '')
+  const normalized = String(field || '')
+    .replace(/^person\./, '')
+    .replace(/^identity_document\./, '')
+    .replace(/^identity\./, '')
+    .replace(/^education\./, '')
+    .replace(/\.\d+\./g, '.')
   return FIELD_LABELS[normalized] || normalized.replaceAll('_', ' ')
 }
 

@@ -317,7 +317,7 @@ onMounted(async () => {
 
 <template>
   <AppPage>
-    <PageHeader title="Пользователи" subtitle="Управление учетными записями CollegePortal: доступ, статус, роль и связь с Person." />
+    <PageHeader title="Пользователи" subtitle="Управление учетными записями CollegePortal: доступ, статус, роль и связь с личной карточкой." />
     <AppToolbar>
       <span>Роли на этом этапе используются как основа RBAC, без сложных сценариев делегирования.</span>
       <template #actions>
@@ -382,7 +382,7 @@ onMounted(async () => {
       </section>
 
       <aside class="users-side">
-        <AppCard v-if="selectedUser" title="Карточка пользователя" subtitle="Доступ и связь с Person">
+        <AppCard v-if="selectedUser" title="Карточка пользователя" subtitle="Доступ и связь с личной карточкой">
           <div class="users-card-head">
             <div class="users-avatar"><UserRound :size="28" /></div>
             <div>
@@ -399,9 +399,9 @@ onMounted(async () => {
           <dl class="users-fields">
             <dt>Связанная персона</dt>
             <dd>{{ selectedUser.person?.name || personTypeLabel(selectedUser.person_type) }}</dd>
-            <dt>Тип Person</dt>
+            <dt>Тип связанной записи</dt>
             <dd>{{ personTypeLabel(selectedUser.person_type) }}</dd>
-            <dt>ID Person</dt>
+            <dt>ID связанной записи</dt>
             <dd>{{ selectedUser.person_id || '—' }}</dd>
             <dt>Последний вход</dt>
             <dd>{{ formatDate(selectedUser.last_login_at) }}</dd>
@@ -432,8 +432,8 @@ onMounted(async () => {
           <q-input ref="emailInput" v-model="form.email" outlined dense label="Email *" type="email" :error="Boolean(formErrors.email)" :error-message="formErrors.email" bottom-slots />
           <q-input ref="passwordInput" v-model="form.password" outlined dense :label="editingUser ? 'Новый пароль, если нужно' : 'Пароль *'" type="password" :error="Boolean(formErrors.password)" :error-message="formErrors.password" bottom-slots />
           <q-select ref="roleInput" v-model="form.role_id" outlined dense emit-value map-options label="Роль *" :options="store.roleOptions" :error="Boolean(formErrors.role_id)" :error-message="formErrors.role_id" bottom-slots />
-          <q-select v-model="form.person_type" outlined dense clearable emit-value map-options label="Тип Person" :options="store.personTypeOptions" :error="Boolean(formErrors.person_type)" :error-message="formErrors.person_type" bottom-slots />
-          <q-input ref="personIdInput" v-model.number="form.person_id" outlined dense clearable label="Связанная запись Person" type="number" hint="Укажите ID только если учетная запись уже связана с существующей записью Person." :error="Boolean(formErrors.person_id)" :error-message="formErrors.person_id" bottom-slots />
+          <q-select v-model="form.person_type" outlined dense clearable emit-value map-options label="Тип связанной записи" :options="store.personTypeOptions" :error="Boolean(formErrors.person_type)" :error-message="formErrors.person_type" bottom-slots />
+          <q-input ref="personIdInput" v-model.number="form.person_id" outlined dense clearable label="Связанная запись" type="number" hint="Укажите ID только если учетная запись уже связана с существующей личной карточкой." :error="Boolean(formErrors.person_id)" :error-message="formErrors.person_id" bottom-slots />
           <q-toggle v-model="form.is_active" label="Активен" />
         </q-card-section>
         <q-card-actions align="right">

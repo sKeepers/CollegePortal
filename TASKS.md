@@ -179,7 +179,8 @@
 - [x] FRONT-003: Person & Applicant Management UI на `/admissions/foundation`.
 - [x] RC1: Admissions Foundation Release Candidate — аудит, очевидные fixes, `RC1_READY.md`.
 - [x] GUI-009: Dashboard & Navigation Layout Hardening — сворачиваемые группы sidebar, видимое состояние `/schedule`, splitter People, compact Dashboard и versioned localStorage.
-- [ ] UAT-002: Portal UX, RBAC and Admissions Stabilization — единый пункт меню приемной комиссии, русские validation/forbidden сообщения, Dashboard без RBAC-noise и подключение существующего QR-модуля в role-based AppLayout.
+- [x] UAT-002: Portal UX, RBAC and Admissions Stabilization — единый пункт меню приемной комиссии, русские validation/forbidden сообщения, Dashboard без RBAC-noise и подключение существующего QR-модуля в role-based AppLayout.
+- [ ] UAT-002.1: Final portal stabilization — inline-валидация мастера `/admissions/foundation`, ролевые Dashboard, reusable splitter, версия сборки, DEV QR/data smoke.
 - [ ] TEST-001: Backend regression suite.
 ## Приемная комиссия
 
@@ -316,6 +317,11 @@
 - [x] Проверить автокоды дисциплины, специальности, учебного плана и группы
 - [x] Проверить загрузку, замену, удаление и валидацию фото
 - [x] Проверить маршруты `/admin/data-management`, `/students`, `/teachers`, `/graduation`, `/m/student`, `/access/gate`, `/legacy`
+- [ ] Финализировать мастер `/admissions/foundation`: кнопка «Далее», понятные ошибки, паспортные поля, адреса и дополнительный ИНН.
+- [ ] Убрать лишние demo-виджеты с Dashboard обычных ролей.
+- [ ] Проверить существующий QR-пропуск для student/teacher и role-based пункты меню.
+- [ ] Проверить reusable splitter на People и Admissions Foundation.
+- [ ] Проверить единый источник version/build metadata.
 - [x] Прогнать `php artisan test` и `npm run build`
 - [x] Сделать Git checkpoint
 

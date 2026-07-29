@@ -87,7 +87,7 @@ class DigitalIdentityController extends Controller
     public function qr(Request $request, DigitalIdentity $digitalIdentity, QrSvgService $qrSvgService): Response
     {
         if (! Gate::allows('permission', 'digitalpasses.manage') && ! $this->belongsToCurrentUser($digitalIdentity, $request)) {
-            abort(Response::HTTP_FORBIDDEN, 'Forbidden.');
+            abort(Response::HTTP_FORBIDDEN, 'У вас нет доступа к этому пропуску.');
         }
 
         $format = strtolower($request->query('format', 'svg'));

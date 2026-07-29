@@ -137,7 +137,7 @@ class ApplicantService
             $person = $this->people->find((int) $personData['person_id']);
 
             if ($person === null) {
-                throw ValidationException::withMessages(['person_id' => 'Выбранная запись Person не найдена.']);
+                throw ValidationException::withMessages(['person_id' => 'Выбранная личная карточка не найдена.']);
             }
 
             return $this->ensurePersonUuid($person);

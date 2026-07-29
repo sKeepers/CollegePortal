@@ -7,11 +7,15 @@ const dialogOpen = ref(false)
 const loading = ref(false)
 const versionInfo = ref({
   name: 'CollegePortal',
-  version: '0.7.0-dev',
-  release: 'Release 0.7',
+  version: 'unknown',
+  release: 'unknown',
   build: 'unknown',
+  gitCommit: 'unknown',
   buildDate: null,
   environment: 'development',
+  frontendStack: 'unknown',
+  backendStack: 'unknown',
+  apiVersion: 'unknown',
 })
 
 const environment = computed(() => getRuntimeEnvironmentInfo())
@@ -23,11 +27,12 @@ const rows = computed(() => [
   { label: 'Версия', value: versionInfo.value.version },
   { label: 'Релиз', value: versionInfo.value.release },
   { label: 'Build', value: versionInfo.value.build },
+  { label: 'Git commit', value: versionInfo.value.gitCommit || versionInfo.value.build },
   { label: 'Дата сборки', value: buildDateLabel.value },
   { label: 'Окружение', value: environmentLabel.value },
-  { label: 'Frontend stack', value: 'Vue + Quasar' },
-  { label: 'Backend stack', value: 'Laravel' },
-  { label: 'API', value: 'v1' },
+  { label: 'Frontend stack', value: versionInfo.value.frontendStack || 'unknown' },
+  { label: 'Backend stack', value: versionInfo.value.backendStack || 'unknown' },
+  { label: 'API', value: versionInfo.value.apiVersion || 'unknown' },
 ])
 
 async function loadVersion() {

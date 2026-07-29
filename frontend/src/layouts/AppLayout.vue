@@ -125,7 +125,7 @@ const navGroups = [
       { label: 'Импорт данных', to: '/admin/import', icon: FileSpreadsheet, permission: 'import.manage' },
       { label: 'Управление данными', to: '/admin/data-management', icon: Database, permission: 'import.manage' },
       { label: 'UAT', to: '/admin/uat', icon: MessageSquareWarning, permission: 'uat.manage' },
-      { label: 'UI Foundation', to: '/system/ui-foundation', icon: Settings, adminOnly: true },
+      { label: 'Библиотека интерфейса', to: '/system/ui-foundation', icon: Settings, adminOnly: true },
     ],
   },
 ]

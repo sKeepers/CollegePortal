@@ -216,7 +216,7 @@ class AdminUserController extends Controller
             'password.min' => 'Пароль должен содержать не менее :min символов.',
             'role_id.required' => 'Выберите роль.',
             'role_id.exists' => 'Выбранная роль не найдена.',
-            'person_id.exists' => 'Выбранная запись Person не найдена.',
+            'person_id.exists' => 'Выбранная личная карточка не найдена.',
         ]);
 
         if ($validator->fails()) {

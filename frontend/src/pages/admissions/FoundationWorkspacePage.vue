@@ -32,6 +32,8 @@ import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
+import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
+import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import { humanizeApiMessage } from '../../services/api'
 import { createTablePagination, persistTablePagination } from '../../services/tableSettings'
 import {
@@ -53,6 +55,7 @@ const router = useRouter()
 const $q = useQuasar()
 
 const rowsKey = 'collegePortal.admissionsFoundation.rowsPerPage'
+const splitterKey = 'collegePortal.admissionsFoundation.splitter.v1'
 const syncingQuery = ref(false)
 const activeTab = ref('general')
 const wizardOpen = ref(false)
@@ -63,12 +66,27 @@ const applicantEditorOpen = ref(false)
 const detailError = ref('')
 const duplicateResult = ref(null)
 const duplicateDecision = ref('')
+const wizardError = ref('')
+const wizardTouched = reactive({})
 const selectedUploadIdentityId = ref(null)
 const selectedUploadEducationId = ref(null)
 const uploadCategory = ref('other')
 const uploadFiles = ref([])
 const rowsPerPageOptions = [10, 20, 50]
 const tablePagination = ref(createTablePagination(rowsKey, { sortBy: 'submitted_at', descending: true, rowsPerPage: 20 }))
+const {
+  resetSplitter,
+  startResize,
+  workspaceRef,
+  workspaceStyle,
+} = useResizableWorkspace({
+  storageKey: splitterKey,
+  defaultDetailsWidth: 520,
+  minDetailsWidth: 420,
+  maxDetailsWidth: 760,
+  minListWidth: 620,
+  resizeBodyClass: 'admissions-foundation-splitter-resizing',
+})
 
 const applicationForm = reactive({
   admission_year: new Date().getFullYear(),
@@ -128,6 +146,12 @@ const wizardForm = reactive({
   },
   identityFiles: [],
   educationFiles: [],
+})
+
+const wizardAdditionalPerson = reactive({
+  registration_address: '',
+  residential_address: '',
+  inn: '',
 })
 
 const personForm = reactive({
@@ -327,6 +351,61 @@ const validationMessages = computed(() => Object.entries(store.validationErrors 
     .map((message) => humanizeApiMessage(message, field))
 )))
 
+function fieldError(key) {
+  return wizardTouched[key] ? wizardTouched[key] : ''
+}
+
+function requiredField(value, message) {
+  return value !== '' && value !== null && value !== undefined ? '' : message
+}
+
+function validateWizardStep(step = wizardStep.value) {
+  const errors = {}
+
+  if (step === 'application') {
+    if (wizardApplicantMode.value === 'existing') {
+      errors.applicant_id = requiredField(wizardForm.applicant_id, 'Выберите абитуриента или переключитесь на создание нового.')
+    } else if (!applicantForm.person_id) {
+      errors.last_name = requiredField(personForm.last_name, 'Укажите фамилию.')
+      errors.first_name = requiredField(personForm.first_name, 'Укажите имя.')
+      errors.birth_date = requiredField(personForm.birth_date, 'Укажите дату рождения.')
+    }
+
+    errors.education_program_id = requiredField(wizardForm.education_program_id, 'Выберите основную образовательную программу.')
+    errors.admission_year = requiredField(wizardForm.admission_year, 'Укажите год приема.')
+    errors.source_id = requiredField(wizardForm.source_id, 'Выберите источник заявления.')
+  }
+
+  if (step === 'identity' && hasDocumentInput(wizardForm.identity)) {
+    errors.identity_document_type_id = requiredField(wizardForm.identity.document_type_id, 'Выберите тип документа.')
+    errors.identity_number = requiredField(wizardForm.identity.number, 'Укажите номер документа.')
+  }
+
+  if (step === 'education' && hasDocumentInput(wizardForm.education)) {
+    errors.education_document_type_id = requiredField(wizardForm.education.document_type_id, 'Выберите тип документа об образовании.')
+    errors.education_number = requiredField(wizardForm.education.number, 'Укажите номер документа об образовании.')
+  }
+
+  Object.keys(wizardTouched).forEach((key) => { delete wizardTouched[key] })
+  Object.entries(errors)
+    .filter(([, message]) => Boolean(message))
+    .forEach(([key, message]) => { wizardTouched[key] = message })
+
+  const messages = Object.values(wizardTouched)
+  wizardError.value = messages[0] || ''
+  return messages.length === 0
+}
+
+function goWizardStep(nextStep) {
+  if (!validateWizardStep()) {
+    $q.notify({ type: 'warning', message: wizardError.value || 'Проверьте поля текущего шага.' })
+    return
+  }
+
+  wizardError.value = ''
+  wizardStep.value = nextStep
+}
+
 function referenceOptions(code, allLabel, valueField = 'code') {
   const items = store.referenceCatalogs[code]?.items || []
   return [
@@ -435,6 +514,13 @@ function resetWizardForm() {
     quota_type_id: null,
     status_id: null,
   })
+  Object.assign(wizardAdditionalPerson, {
+    registration_address: '',
+    residential_address: '',
+    inn: '',
+  })
+  Object.keys(wizardTouched).forEach((key) => { delete wizardTouched[key] })
+  wizardError.value = ''
 }
 
 function fillPersonForm(person = selectedPerson.value) {
@@ -470,6 +556,12 @@ function fillApplicantForm(applicant = selectedApplicant.value) {
 }
 
 function personPayload() {
+  const addressParts = [
+    wizardAdditionalPerson.registration_address ? `Адрес регистрации: ${wizardAdditionalPerson.registration_address}` : '',
+    wizardAdditionalPerson.residential_address ? `Адрес проживания: ${wizardAdditionalPerson.residential_address}` : '',
+  ].filter(Boolean)
+  const address = addressParts.length ? addressParts.join('\n') : personForm.address
+
   return normalizePayload({
     last_name: personForm.last_name,
     first_name: personForm.first_name,
@@ -480,9 +572,9 @@ function personPayload() {
     place_birth: personForm.place_birth,
     phone: personForm.phone,
     email: personForm.email,
-    address: personForm.address,
+    address,
     snils: personForm.snils,
-    inn: personForm.inn,
+    inn: personForm.inn || wizardAdditionalPerson.inn,
     status: personForm.status,
   })
 }
@@ -797,6 +889,10 @@ async function ensureWizardApplicant() {
 
 async function finishWizard() {
   detailError.value = ''
+  if (!validateWizardStep()) {
+    $q.notify({ type: 'warning', message: wizardError.value || 'Проверьте поля текущего шага.' })
+    return
+  }
 
   try {
     const applicantId = await ensureWizardApplicant()
@@ -846,7 +942,8 @@ async function finishWizard() {
     await selectApplication(application)
     $q.notify({ type: 'positive', message: 'Черновик заявления создан' })
   } catch (err) {
-    detailError.value = err.message || 'Не удалось создать заявление'
+    const messages = err.validationMessages?.length ? err.validationMessages : [err.message].filter(Boolean)
+    detailError.value = messages.join('\n') || 'Не удалось создать заявление'
     $q.notify({ type: 'negative', message: detailError.value })
   }
 }
@@ -1000,6 +1097,7 @@ onMounted(async () => {
       <span>{{ tableSubtitle }}</span>
       <template #actions>
         <AppLoading v-if="store.loading || store.detailsLoading || store.saving" label="Обработка заявления..." />
+        <q-btn flat @click="resetSplitter">Сбросить размер</q-btn>
         <q-btn flat :disable="store.loading" @click="load()">
           <RefreshCw :size="16" class="q-mr-xs" />
           Обновить
@@ -1042,7 +1140,7 @@ onMounted(async () => {
       </template>
     </AppFilterBar>
 
-    <div class="admissions-foundation-workspace">
+    <div ref="workspaceRef" class="admissions-foundation-workspace" :style="workspaceStyle">
       <section class="admissions-foundation-main">
         <AppTable
           v-if="store.applications.length || store.loading"
@@ -1090,6 +1188,8 @@ onMounted(async () => {
         </AppTable>
         <AppEmptyState v-else title="Заявления не найдены" description="Измените фильтры или создайте новое заявление." />
       </section>
+
+      <WorkspaceSplitter label="Изменить ширину карточки заявления" @resize-start="startResize" @reset="resetSplitter" />
 
       <aside class="admissions-foundation-side">
         <AppEmptyState v-if="!selected && !store.detailsError" title="Заявление не выбрано" description="Выберите строку или создайте новое заявление.">
@@ -1451,13 +1551,16 @@ onMounted(async () => {
         <q-card-section>
           <q-stepper v-model="wizardStep" flat animated contracted class="admissions-foundation-stepper">
             <q-step name="application" title="Общие сведения" :done="wizardStep !== 'application'">
+              <q-banner v-if="wizardError" rounded class="admissions-foundation-warning q-mb-md">
+                <AlertCircle :size="18" /> {{ wizardError }}
+              </q-banner>
               <div class="admissions-foundation-mode">
                 <q-option-group v-model="wizardApplicantMode" inline :options="applicantModeOptions" color="primary" />
               </div>
 
               <section v-if="wizardApplicantMode === 'existing'" class="admissions-foundation-section">
                 <h3>Существующий абитуриент</h3>
-                <q-select v-model="wizardForm.applicant_id" use-input dense outlined emit-value map-options label="Абитуриент" :options="applicantOptions" :loading="store.applicantsLoading" @filter="filterApplicants" />
+                <q-select v-model="wizardForm.applicant_id" use-input dense outlined emit-value map-options label="Абитуриент" :options="applicantOptions" :loading="store.applicantsLoading" :error="Boolean(fieldError('applicant_id'))" :error-message="fieldError('applicant_id')" @filter="filterApplicants" />
                 <q-banner v-if="wizardApplicant" rounded class="admissions-foundation-note q-mt-md">
                   <FileText :size="18" />
                   {{ applicantLabel(wizardApplicant) }}
@@ -1477,19 +1580,24 @@ onMounted(async () => {
                 <div v-if="!applicantForm.person_id" class="admissions-foundation-subsection">
                   <h3>Новые личные данные</h3>
                   <div class="admissions-foundation-form-grid">
-                    <q-input v-model="personForm.last_name" dense outlined label="Фамилия" />
-                    <q-input v-model="personForm.first_name" dense outlined label="Имя" />
+                    <q-input v-model="personForm.last_name" dense outlined label="Фамилия" :error="Boolean(fieldError('last_name'))" :error-message="fieldError('last_name')" />
+                    <q-input v-model="personForm.first_name" dense outlined label="Имя" :error="Boolean(fieldError('first_name'))" :error-message="fieldError('first_name')" />
                     <q-input v-model="personForm.middle_name" dense outlined label="Отчество" />
-                    <q-input v-model="personForm.birth_date" dense outlined type="date" label="Дата рождения" />
+                    <q-input v-model="personForm.birth_date" dense outlined type="date" label="Дата рождения" :error="Boolean(fieldError('birth_date'))" :error-message="fieldError('birth_date')" />
                     <q-select v-model="personForm.gender" dense outlined emit-value map-options label="Пол" :options="genderOptions" />
                     <q-input v-model="personForm.citizenship" dense outlined label="Гражданство" />
                     <q-input v-model="personForm.place_birth" dense outlined label="Место рождения" />
                     <q-input v-model="personForm.phone" dense outlined label="Телефон" />
                     <q-input v-model="personForm.email" dense outlined type="email" label="Email" />
                     <q-input :model-value="personForm.snils" dense outlined label="СНИЛС" @update:model-value="personForm.snils = snilsMask($event)" />
-                    <q-input v-model="personForm.inn" dense outlined label="ИНН" />
                   </div>
-                  <q-input v-model="personForm.address" dense outlined type="textarea" autogrow label="Адрес" />
+                  <q-input v-model="wizardAdditionalPerson.registration_address" dense outlined type="textarea" autogrow label="Адрес регистрации" />
+                  <q-input v-model="wizardAdditionalPerson.residential_address" dense outlined type="textarea" autogrow label="Адрес проживания" hint="Заполняется, если отличается от адреса регистрации." />
+                  <q-expansion-item dense label="Дополнительные данные" caption="Не обязательны для основного сценария приема">
+                    <div class="admissions-foundation-form-grid q-pt-sm">
+                      <q-input v-model="wizardAdditionalPerson.inn" dense outlined label="ИНН" />
+                    </div>
+                  </q-expansion-item>
                   <div class="admissions-foundation-actions">
                     <q-btn flat color="primary" :loading="store.saving" @click="runDuplicateCheck">
                       <Users :size="16" class="q-mr-xs" /> Проверить дубли
@@ -1518,37 +1626,44 @@ onMounted(async () => {
               </section>
 
               <div class="admissions-foundation-form-grid">
-                <q-select v-model="wizardForm.education_program_id" dense outlined emit-value map-options label="Основная программа" :options="programOptions" />
-                <q-input v-model.number="wizardForm.admission_year" dense outlined type="number" label="Год приема" />
+                <q-select v-model="wizardForm.education_program_id" dense outlined emit-value map-options label="Основная программа" :options="programOptions" :error="Boolean(fieldError('education_program_id'))" :error-message="fieldError('education_program_id')" />
+                <q-input v-model.number="wizardForm.admission_year" dense outlined type="number" label="Год приема" :error="Boolean(fieldError('admission_year'))" :error-message="fieldError('admission_year')" />
                 <q-input v-model="wizardForm.application_number" dense outlined label="Номер заявления" />
-                <q-select v-model="wizardForm.source_id" dense outlined emit-value map-options label="Источник" :options="sourceOptions" />
+                <q-select v-model="wizardForm.source_id" dense outlined emit-value map-options label="Источник" :options="sourceOptions" :error="Boolean(fieldError('source_id'))" :error-message="fieldError('source_id')" />
                 <q-input v-model="wizardForm.submitted_at" dense outlined type="date" label="Дата подачи" />
                 <q-select v-model="wizardForm.education_base" dense outlined emit-value map-options label="База поступления" :options="legacyEducationBaseOptions" />
               </div>
               <q-stepper-navigation>
-                <q-btn color="primary" :disable="(wizardApplicantMode === 'existing' && !wizardForm.applicant_id) || !wizardForm.education_program_id" @click="wizardStep = 'identity'">Далее</q-btn>
+                <q-btn color="primary" @click="goWizardStep('identity')">Далее</q-btn>
               </q-stepper-navigation>
             </q-step>
             <q-step name="identity" title="Паспорт и СНИЛС">
+              <q-banner v-if="wizardError" rounded class="admissions-foundation-warning q-mb-md">
+                <AlertCircle :size="18" /> {{ wizardError }}
+              </q-banner>
               <div class="admissions-foundation-form-grid">
                 <q-input :model-value="wizardForm.snils" dense outlined label="СНИЛС" @update:model-value="wizardForm.snils = snilsMask($event)" />
-                <q-select v-model="wizardForm.identity.document_type_id" dense outlined emit-value map-options label="Тип документа" :options="identityTypeOptions" />
+                <q-select v-model="wizardForm.identity.document_type_id" dense outlined emit-value map-options label="Тип документа" :options="identityTypeOptions" :error="Boolean(fieldError('identity_document_type_id'))" :error-message="fieldError('identity_document_type_id')" />
                 <q-input v-model="wizardForm.identity.series" dense outlined label="Серия" />
-                <q-input v-model="wizardForm.identity.number" dense outlined label="Номер" />
+                <q-input v-model="wizardForm.identity.number" dense outlined label="Номер" :error="Boolean(fieldError('identity_number'))" :error-message="fieldError('identity_number')" />
                 <q-input v-model="wizardForm.identity.issue_date" dense outlined type="date" label="Дата выдачи" />
                 <q-input v-model="wizardForm.identity.issued_by" dense outlined label="Кем выдан" />
                 <q-input v-model="wizardForm.identity.subdivision_code" dense outlined label="Код подразделения" />
+                <q-input v-model="personForm.place_birth" dense outlined label="Место рождения" />
               </div>
               <q-stepper-navigation>
                 <q-btn flat @click="wizardStep = 'application'">Назад</q-btn>
-                <q-btn color="primary" @click="wizardStep = 'education'">Далее</q-btn>
+                <q-btn color="primary" @click="goWizardStep('education')">Далее</q-btn>
               </q-stepper-navigation>
             </q-step>
             <q-step name="education" title="Образование">
+              <q-banner v-if="wizardError" rounded class="admissions-foundation-warning q-mb-md">
+                <AlertCircle :size="18" /> {{ wizardError }}
+              </q-banner>
               <div class="admissions-foundation-form-grid">
-                <q-select v-model="wizardForm.education.document_type_id" dense outlined emit-value map-options label="Тип документа" :options="educationTypeOptions" />
+                <q-select v-model="wizardForm.education.document_type_id" dense outlined emit-value map-options label="Тип документа" :options="educationTypeOptions" :error="Boolean(fieldError('education_document_type_id'))" :error-message="fieldError('education_document_type_id')" />
                 <q-input v-model="wizardForm.education.series" dense outlined label="Серия" />
-                <q-input v-model="wizardForm.education.number" dense outlined label="Номер" />
+                <q-input v-model="wizardForm.education.number" dense outlined label="Номер" :error="Boolean(fieldError('education_number'))" :error-message="fieldError('education_number')" />
                 <q-input v-model="wizardForm.education.issue_date" dense outlined type="date" label="Дата выдачи" />
                 <q-input v-model="wizardForm.education.document_organization" dense outlined label="Выдавшая организация" />
                 <q-select v-model="wizardForm.education.education_level_id" dense outlined emit-value map-options label="Уровень образования" :options="educationLevelOptions" />
@@ -1556,7 +1671,7 @@ onMounted(async () => {
               </div>
               <q-stepper-navigation>
                 <q-btn flat @click="wizardStep = 'identity'">Назад</q-btn>
-                <q-btn color="primary" @click="wizardStep = 'files'">Далее</q-btn>
+                <q-btn color="primary" @click="goWizardStep('files')">Далее</q-btn>
               </q-stepper-navigation>
             </q-step>
             <q-step name="files" title="Файлы">
@@ -1567,7 +1682,7 @@ onMounted(async () => {
               </div>
               <q-stepper-navigation>
                 <q-btn flat @click="wizardStep = 'education'">Назад</q-btn>
-                <q-btn color="primary" @click="wizardStep = 'choices'">Далее</q-btn>
+                <q-btn color="primary" @click="goWizardStep('choices')">Далее</q-btn>
               </q-stepper-navigation>
             </q-step>
             <q-step name="choices" title="Специальности">
@@ -1608,14 +1723,21 @@ onMounted(async () => {
 
 .admissions-foundation-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(420px, 520px);
-  gap: 16px;
+  gap: 0;
   align-items: start;
 }
 
 .admissions-foundation-main,
 .admissions-foundation-side {
   min-width: 0;
+}
+
+.admissions-foundation-main {
+  padding-right: 10px;
+}
+
+.admissions-foundation-side {
+  padding-left: 10px;
 }
 
 .admissions-foundation-filter-chips,
@@ -1811,6 +1933,12 @@ onMounted(async () => {
 @media (max-width: 1180px) {
   .admissions-foundation-workspace {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .admissions-foundation-main,
+  .admissions-foundation-side {
+    padding: 0;
   }
 }
 

@@ -15,6 +15,13 @@ import TasksWidget from '../widgets/TasksWidget.vue'
 import PersonalDashboardLayout from '../../../components/dashboard/PersonalDashboardLayout.vue'
 import { currentDateRu, extractTotal, todayIso } from './dashboardData'
 
+const props = defineProps({
+  primaryRole: {
+    type: String,
+    default: 'guest',
+  },
+})
+
 const auth = useAuthStore()
 const settingsStore = useSettingsStore()
 const loading = ref(false)
@@ -40,13 +47,13 @@ const mockTasks = [
 const currentDate = computed(currentDateRu)
 const userName = computed(() => auth.user?.name || 'пользователь')
 const dashboardSubtitle = computed(() => `Рабочая сводка ${settingsStore.publicValue('general', 'college_short_name', 'CollegePortal')}`)
-const dashboardWidgets = [
-  { id: 'stats', title: 'Ключевые показатели', defaultSize: 'full' },
+const isStudent = computed(() => props.primaryRole === 'student')
+const isAdmission = computed(() => props.primaryRole === 'admission')
+const dashboardWidgets = computed(() => [
+  { id: 'stats', title: isAdmission.value ? 'Приёмная комиссия' : 'Ключевые показатели', defaultSize: 'full' },
   { id: 'actions', title: 'Быстрые действия', defaultSize: 'medium' },
-  { id: 'tasks', title: 'Мои задачи', defaultSize: 'medium' },
-  { id: 'activity', title: 'Последние действия', defaultSize: 'medium' },
-  { id: 'notifications', title: 'Уведомления', defaultSize: 'medium' },
-]
+  { id: 'notifications', title: isStudent.value ? 'Учебные уведомления' : 'Рабочие уведомления', defaultSize: 'medium' },
+].filter(Boolean))
 const statItems = computed(() => [
   auth.can('students.view') ? { label: 'Студенты', value: totals.value.students, icon: GraduationCap } : null,
   auth.can('groups.view') ? { label: 'Группы', value: totals.value.groups, icon: UsersRound } : null,
@@ -58,14 +65,20 @@ const quickActionPermissions = {
   '/groups': 'groups.view',
   '/schedule': 'schedule.view',
   '/journal': 'journal.view',
+  '/identity/my-pass': 'view_own_data',
+  '/admissions/foundation': 'admissions.application.view',
 }
 const quickActionsSource = [
   { label: 'Добавить студента', description: 'Открыть форму создания', icon: Plus, to: { path: '/students', query: { action: 'create' } }, permission: 'students.create' },
   { label: 'Добавить группу', description: 'Открыть форму создания', icon: School, to: { path: '/groups', query: { action: 'create' } }, permission: 'groups.create' },
   { label: 'Открыть расписание', description: 'План занятий и аудиторий', icon: CalendarDays, to: '/schedule' },
   { label: 'Открыть журнал', description: 'Посещаемость и оценки', icon: NotebookTabs, to: '/journal' },
+  { label: 'Мой QR-пропуск', description: 'Цифровой пропуск', icon: GraduationCap, to: '/identity/my-pass' },
+  { label: 'Заявления', description: 'Рабочее место приёмной комиссии', icon: NotebookTabs, to: '/admissions/foundation' },
 ]
 const quickActions = computed(() => quickActionsSource.filter((action) => {
+  if (isStudent.value && !['/schedule', '/identity/my-pass'].includes(typeof action.to === 'string' ? action.to : action.to?.path)) return false
+  if (isAdmission.value && !['/admissions/foundation'].includes(typeof action.to === 'string' ? action.to : action.to?.path)) return false
   if (action.permission && !auth.can(action.permission)) return false
 
   const path = typeof action.to === 'string' ? action.to : action.to?.path
@@ -88,7 +101,7 @@ async function loadDashboard() {
     if (teachersResult?.status === 'fulfilled') totals.value.teachers = extractTotal(teachersResult.value)
     if (lessonsResult?.status === 'fulfilled') totals.value.todayLessons = extractTotal(lessonsResult.value)
 
-    if ([studentsResult, groupsResult, teachersResult, lessonsResult].filter(Boolean).some((result) => result.status === 'rejected')) {
+    if (!isStudent.value && !isAdmission.value && [studentsResult, groupsResult, teachersResult, lessonsResult].filter(Boolean).some((result) => result.status === 'rejected')) {
       error.value = 'Часть показателей не удалось загрузить'
     }
   } finally {
@@ -105,9 +118,9 @@ onMounted(() => {
 <template>
   <AppPage>
     <PageHeader title="Панель" :subtitle="dashboardSubtitle"><template #actions><q-btn flat :loading="loading" @click="loadDashboard">Обновить</q-btn></template></PageHeader>
-    <section class="dashboard-hero"><div><span>{{ currentDate }}</span><h2>Добро пожаловать, {{ userName }}</h2><p>Здесь собраны основные показатели, быстрые действия и рабочие уведомления.</p></div></section>
+    <section class="dashboard-hero"><div><span>{{ currentDate }}</span><h2>Добро пожаловать, {{ userName }}</h2><p>{{ isStudent ? 'Личный учебный кабинет: расписание, ближайшие занятия и QR-пропуск.' : isAdmission ? 'Рабочая панель приемной комиссии: заявления, документы и комплектность.' : 'Здесь собраны основные показатели, быстрые действия и рабочие уведомления.' }}</p></div></section>
     <AppErrorBanner :message="error" />
-    <PersonalDashboardLayout dashboard-type="general" :widgets="dashboardWidgets">
+    <PersonalDashboardLayout :dashboard-type="`general-${primaryRole}`" :widgets="dashboardWidgets">
       <template #stats>
         <StatsWidget :items="statItems" :loading="loading" />
       </template>
@@ -115,13 +128,13 @@ onMounted(() => {
         <QuickActionsWidget :actions="quickActions" />
       </template>
       <template #tasks>
-        <TasksWidget :items="mockTasks" />
+        <TasksWidget :items="[]" />
       </template>
       <template #activity>
-        <RecentActivityWidget :items="mockRecentActivity" />
+        <RecentActivityWidget :items="[]" />
       </template>
       <template #notifications>
-        <NotificationsWidget :items="mockNotifications" />
+        <NotificationsWidget :items="isStudent ? [{ id: 1, title: 'Расписание', description: 'Проверьте ближайшие занятия в личном кабинете.', status: 'Учебное', tone: 'info' }] : isAdmission ? [{ id: 1, title: 'Комплектность', description: 'Проверяйте документы и готовность заявлений перед регистрацией.', status: 'Приём', tone: 'info' }] : mockNotifications" />
       </template>
     </PersonalDashboardLayout>
   </AppPage>

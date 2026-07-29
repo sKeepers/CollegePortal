@@ -940,22 +940,21 @@ body {
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-flow: dense;
   gap: 12px;
   min-width: 0;
 }
 
 .dashboard-grid:not(.personal-dashboard__grid--editing) {
-  display: block;
-  column-count: 2;
-  column-gap: 12px;
+  align-items: start;
 }
 
 .workspace-bp-xl .dashboard-grid:not(.personal-dashboard__grid--editing) {
-  column-count: 3;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .workspace-bp-xxl .dashboard-grid:not(.personal-dashboard__grid--editing) {
-  column-count: 4;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .workspace-bp-xl .dashboard-grid {
@@ -5899,9 +5898,6 @@ body {
 
 .personal-dashboard__widget {
   min-width: 0;
-  margin-bottom: 12px;
-  break-inside: avoid;
-  page-break-inside: avoid;
 }
 
 .personal-dashboard__widget--full {
@@ -5999,7 +5995,7 @@ body {
 
 @media (max-width: 1023px) {
   .dashboard-grid:not(.personal-dashboard__grid--editing) {
-    column-count: 1;
+    grid-template-columns: 1fr;
   }
 
   .personal-dashboard__bar {

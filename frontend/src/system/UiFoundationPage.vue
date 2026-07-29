@@ -39,7 +39,7 @@ const statusMap = {
 <template>
   <AppPage>
     <PageHeader
-      title="UI Foundation"
+      title="Библиотека интерфейса"
       subtitle="Демонстрация базовых компонентов нового GUI CollegePortal."
     >
       <template #actions>

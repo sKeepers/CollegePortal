@@ -51,7 +51,7 @@ const quickActions = computed(() => [
   { label: 'Журнал', description: 'Посещаемость и оценки', icon: NotebookTabs, to: teacherId.value ? { path: '/journal', query: { teacher: teacherId.value, mode: 'today' } } : { path: '/journal', query: { mode: 'today' } } },
   { label: 'Нагрузка', description: 'Учебная нагрузка', icon: ClipboardList, to: teacherId.value ? { path: '/teaching-load', query: { teacher: teacherId.value } } : '/teaching-load' },
   { label: 'Экзамены', description: 'Экзамены и ГИА', icon: BookOpen, to: teacherId.value ? { path: '/exams', query: { teacher: teacherId.value } } : '/exams' },
-  { label: 'Мой QR-пропуск', description: 'Цифровая идентификация', icon: BadgeCheck, to: teacherId.value ? { path: '/identity/digital-passes', query: { owner: 'teacher', selected: teacherId.value } } : '/identity/digital-passes' },
+  { label: 'Мой QR-пропуск', description: 'Цифровая идентификация', icon: BadgeCheck, to: '/identity/my-pass' },
 ])
 const lessonActivity = computed(() => todayLessons.value.slice(0, 5).map((lesson) => ({
   id: lesson.id,

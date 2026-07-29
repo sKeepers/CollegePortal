@@ -19,7 +19,7 @@ class EnsurePermission
             }
         }
 
-        return response()->json(['message' => 'Forbidden.'], Response::HTTP_FORBIDDEN);
+        return response()->json(['message' => 'У вас нет доступа к этому действию.'], Response::HTTP_FORBIDDEN);
     }
 
     /** @return list<string> */

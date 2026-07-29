@@ -150,7 +150,7 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
             <q-step :name="6" title="Итог" />
           </q-stepper>
           <div v-if="fisResult" class="fis-import-report">
-            <div v-for="item in [fisStat('Строк', fisResult.total_rows), fisStat('Валидных', fisResult.valid_rows), fisStat('Person', fisResult.unique_persons), fisStat('Новых Person', fisResult.new_persons), fisStat('Найдено Person', fisResult.found_persons), fisStat('Новых заявлений', fisResult.applications_to_create), fisStat('Обновлений', fisResult.applications_to_update), fisStat('Неоднозначных дублей', fisResult.ambiguous_duplicates), fisStat('Конкурсов', fisResult.unique_competitions), fisStat('Несопоставлено', fisResult.unresolved_competitions), fisStat('Критических ошибок', fisResult.critical_errors)]" :key="item.label">
+            <div v-for="item in [fisStat('Строк', fisResult.total_rows), fisStat('Валидных', fisResult.valid_rows), fisStat('Персон', fisResult.unique_persons), fisStat('Новых персон', fisResult.new_persons), fisStat('Найдено персон', fisResult.found_persons), fisStat('Новых заявлений', fisResult.applications_to_create), fisStat('Обновлений', fisResult.applications_to_update), fisStat('Неоднозначных дублей', fisResult.ambiguous_duplicates), fisStat('Конкурсов', fisResult.unique_competitions), fisStat('Несопоставлено', fisResult.unresolved_competitions), fisStat('Критических ошибок', fisResult.critical_errors)]" :key="item.label">
               <span>{{ item.label }}</span><strong>{{ item.value }}</strong>
             </div>
           </div>
@@ -167,7 +167,7 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
             { name: 'fio', label: 'ФИО', field: 'fio', align: 'left' },
             { name: 'snils', label: 'СНИЛС', field: 'snils', align: 'left' },
             { name: 'competition', label: 'Конкурс', field: 'competition', align: 'left' },
-            { name: 'person', label: 'Person', field: 'person', align: 'left' },
+            { name: 'person', label: 'Персона', field: 'person', align: 'left' },
             { name: 'application', label: 'Заявление', field: 'application', align: 'left' },
           ]" :pagination="{ rowsPerPage: 5 }" :rows-per-page-options="[5, 10, 20]" /></div>
         </AppCard>

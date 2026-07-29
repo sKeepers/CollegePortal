@@ -12,20 +12,20 @@
 
 ## Current Milestone
 
-Private DEV/UAT preparation after Release Candidate 0.8.x. Current project work is focused on Admissions Foundation RC1 readiness.
+Private DEV/UAT preparation after Release Candidate 0.8.x. Current project work is focused on final portal stabilization before a broader manual UAT pass.
 
 This document is a navigation and status snapshot. GitHub Issues, Pull Requests and CI remain the authoritative live workflow when GitHub write access is available.
 
 ## Active Branch
 
-- Branch: `feature/uat-002-portal-stabilization`
-- Base: `feature/gui-009-layout-hardening`.
-- Scope: UAT stabilization for Admissions Foundation, role menus, Dashboard RBAC behavior and existing QR pass integration.
+- Branch: `feature/uat-002-1-final-stabilization`
+- Base: `feature/uat-002-portal-stabilization`.
+- Scope: final UAT fixes for Admissions Foundation wizard validation, role dashboards, menu wording, reusable splitter behavior, Dashboard edit layout and unified version metadata.
 
 ## Current Task
 
-- `UAT-002`: Portal UX, RBAC and Admissions Stabilization.
-- Разрешенные изменения: user-facing localization, Admissions Foundation menu cleanup, Dashboard RBAC consistency, reusable splitter, existing QR pass integration and UAT documentation.
+- `UAT-002.1`: Final portal stabilization.
+- Разрешенные изменения: user-facing validation/localization fixes, Admissions Foundation wizard stabilization, role dashboard cleanup, reusable splitter hardening, existing QR pass readiness on DEV, DEV data cleanup and version/build metadata.
 - Явно исключено: новая независимая QR-реализация, новый ФИС/SOAP flow, PROD/UAT changes and merge to `develop`.
 
 ## Completed Tasks
@@ -53,6 +53,7 @@ Recent completed work reflected by current project notes and user-provided statu
 - `FRONT-003`: completed as Person & Applicant Management UI on `/admissions/foundation`.
 - `RC1-DEV`: completed as DEV release fixes for Admissions Foundation audit data redaction.
 - `GUI-009`: completed as Dashboard and navigation layout hardening: collapsible sidebar groups, visible `/schedule`, People splitter and compact Dashboard widgets.
+- `UAT-002`: completed as Portal UX, RBAC and Admissions stabilization baseline deployed to DEV branch.
 
 ## Roadmap Progress
 
@@ -62,10 +63,10 @@ Known roadmap maintenance need: older sections still name early tasks such as GU
 
 ## Next Planned Task
 
-Recommended next planned task after `UAT-002`:
+Recommended next planned task after `UAT-002.1`:
 
 - `TEST-001`: regression coverage for Admissions Foundation full operator workflow and registered read-only behavior;
-- `UAT-002-DEV`: deploy current branch to DEV and perform role-based smoke on `http://192.168.34.114:5174`;
+- `UAT-002.1-DEV`: deploy current branch to DEV and perform role-based smoke on `http://192.168.34.114:5174`;
 - keep FIS XML/package generation as a separate task after mapping review.
 
 ## Open Issues
@@ -123,7 +124,8 @@ ADM-001/ADM-002/ADM-003/ADM-004 admissions backlog:
 10. BACK-006 — Person & Applicant Management API: create/update Person, create/update/archive Applicant, duplicate check, merge stop-gate.
 11. FRONT-003 — Person & Applicant Management UI.
 12. UAT-002 — role-based stabilization of Admissions Foundation, Dashboard, QR menu integration and smoke documentation.
-13. Этап 1 — CRUD абитуриентов.
+13. UAT-002.1 — final portal stabilization before broader manual UAT.
+14. Этап 1 — CRUD абитуриентов.
 14. Этап 2 — Документы.
 15. Этап 3 — Конкурс.
 16. Этап 4 — Приказы.

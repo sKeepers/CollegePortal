@@ -271,11 +271,15 @@ class DashboardAnalyticsService
 
         return [
             'name' => 'CollegePortal',
-            'version' => config('app.version', '0.7.0-dev'),
-            'release' => 'Release 0.7',
+            'version' => config('app.version', env('APP_VERSION', 'unknown')),
+            'release' => env('APP_RELEASE', 'unknown'),
             'build' => 'unknown',
+            'gitCommit' => 'unknown',
             'buildDate' => now()->toDateString(),
             'environment' => app()->environment(),
+            'frontendStack' => 'Vue 3 + Quasar + Vite',
+            'backendStack' => 'Laravel 12 + PHP '.PHP_VERSION,
+            'apiVersion' => 'v1',
         ];
     }
 }
