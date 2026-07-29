@@ -46,8 +46,8 @@ const educationProgramImportSummary = ref(null)
 const applicantApplicationImportFile = ref(null)
 const applicantApplicationImportSummary = ref(null)
 const loginForm = reactive({
-  email: 'admin@college-portal.local',
-  password: 'password',
+  email: '',
+  password: '',
 })
 
 const state = reactive({
