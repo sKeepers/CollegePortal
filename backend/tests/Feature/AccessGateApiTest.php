@@ -128,6 +128,36 @@ class AccessGateApiTest extends TestCase
             ->assertJsonPath('data.direction', AccessEvent::DIRECTION_OUT);
     }
 
+    public function test_scan_accepts_short_lived_cp2_payload(): void
+    {
+        $identity = $this->createStudentIdentity();
+        $payload = app(\App\Services\QrSvgService::class)->dynamicPayload($identity)['payload'];
+
+        $this->assertStringStartsWith('CP2:', $payload);
+        $this->assertLessThanOrEqual(32, strlen($payload));
+        $this->assertStringNotContainsString($identity->token, $payload);
+
+        $this->postJson('/api/access/scan', ['token' => $payload])
+            ->assertOk()
+            ->assertJsonPath('data.result', AccessEvent::RESULT_ALLOWED)
+            ->assertJsonPath('data.direction', AccessEvent::DIRECTION_IN)
+            ->assertJsonPath('data.owner.last_name', 'Иванов');
+    }
+
+    public function test_expired_cp2_payload_is_denied_without_identity_lookup(): void
+    {
+        $identity = $this->createStudentIdentity();
+        $payload = app(\App\Services\QrSvgService::class)->dynamicPayload($identity, 5)['payload'];
+
+        $this->travel(6)->seconds();
+
+        $this->postJson('/api/access/scan', ['token' => $payload])
+            ->assertOk()
+            ->assertJsonPath('data.result', AccessEvent::RESULT_DENIED)
+            ->assertJsonPath('data.reason', 'Пропуск не найден.')
+            ->assertJsonPath('data.owner', null);
+    }
+
 
 
     public function test_access_scan_permissions_allow_security_and_block_teacher_student(): void

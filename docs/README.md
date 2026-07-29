@@ -46,6 +46,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [Deployment](DEPLOYMENT.md)
 - [Environments](ENVIRONMENTS.md)
 - [DEV HTTPS](DEV_HTTPS.md)
+- [Demo Data](DEMO_DATA.md)
 - [Production Security Checklist](PRODUCTION_SECURITY_CHECKLIST.md)
 - [Production Deployment Readiness](PRODUCTION_DEPLOYMENT_READINESS.md)
 
@@ -99,6 +100,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md)
 - [DEV_ENVIRONMENT.md](DEV_ENVIRONMENT.md)
 - [DEV_HTTPS.md](DEV_HTTPS.md)
+- [DEMO_DATA.md](DEMO_DATA.md)
 - [DIGITAL_PASSES.md](DIGITAL_PASSES.md)
 - [DOMAIN_MODEL.md](DOMAIN_MODEL.md)
 - [ENVIRONMENTS.md](ENVIRONMENTS.md)

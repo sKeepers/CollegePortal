@@ -30,6 +30,8 @@ export const useMobileStudentStore = defineStore('mobileStudent', () => {
   const attendanceSummary = ref({ present: 0, absent: 0, late: 0, excused: 0 })
   const digitalIdentity = ref(null)
   const qrSvg = ref('')
+  const qrExpiresAt = ref(null)
+  const qrRefreshSeconds = ref(30)
   const notifications = ref([])
   const message = ref('')
   const loading = ref(false)
@@ -59,6 +61,8 @@ export const useMobileStudentStore = defineStore('mobileStudent', () => {
       attendanceSummary.value = payload.attendance_summary || { present: 0, absent: 0, late: 0, excused: 0 }
       digitalIdentity.value = payload.digital_identity || null
       qrSvg.value = payload.qr_svg || ''
+      qrExpiresAt.value = payload.qr_expires_at || null
+      qrRefreshSeconds.value = Number(payload.qr_refresh_seconds || 30)
       notifications.value = payload.notifications || []
       message.value = payload.message || ''
     } catch (err) {
@@ -77,6 +81,8 @@ export const useMobileStudentStore = defineStore('mobileStudent', () => {
     attendanceSummary,
     digitalIdentity,
     qrSvg,
+    qrExpiresAt,
+    qrRefreshSeconds,
     notifications,
     message,
     loading,

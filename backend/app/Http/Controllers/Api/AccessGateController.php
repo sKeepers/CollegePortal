@@ -16,8 +16,7 @@ class AccessGateController extends Controller
     public function scan(ScanAccessPassRequest $request, QrSvgService $qrSvgService): AccessEventResource
     {
         $validated = $request->validated();
-        $token = $qrSvgService->normalizeScannedToken($validated['token']);
-        $identity = DigitalIdentity::query()->where('token', $token)->first();
+        $identity = $qrSvgService->resolveScannedIdentity($validated['token']);
 
         if ($identity !== null) {
             $recentEvent = $this->recentEvent($identity);

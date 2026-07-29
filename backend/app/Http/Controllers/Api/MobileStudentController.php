@@ -37,6 +37,8 @@ class MobileStudentController extends Controller
                     'attendance_summary' => ['present' => 0, 'absent' => 0, 'late' => 0, 'excused' => 0],
                     'digital_identity' => null,
                     'qr_svg' => null,
+                    'qr_expires_at' => null,
+                    'qr_refresh_seconds' => QrSvgService::DYNAMIC_TTL_SECONDS,
                     'notifications' => $this->mockNotifications(),
                 ],
             ];
@@ -85,6 +87,8 @@ class MobileStudentController extends Controller
             ->latest('issued_at')
             ->first();
 
+        $dynamicQr = $digitalIdentity ? $qrSvgService->dynamicPayload($digitalIdentity) : null;
+
         return [
             'data' => [
                 'student' => new StudentResource($student),
@@ -99,7 +103,9 @@ class MobileStudentController extends Controller
                     'excused' => (int) ($attendanceSummary['excused'] ?? 0),
                 ],
                 'digital_identity' => $digitalIdentity ? new DigitalIdentityResource($digitalIdentity) : null,
-                'qr_svg' => $digitalIdentity ? $qrSvgService->renderSvg($digitalIdentity->token) : null,
+                'qr_svg' => $dynamicQr ? $qrSvgService->renderSvg($dynamicQr['payload']) : null,
+                'qr_expires_at' => $dynamicQr ? $dynamicQr['expires_at']->toIso8601String() : null,
+                'qr_refresh_seconds' => QrSvgService::DYNAMIC_TTL_SECONDS,
                 'notifications' => $this->mockNotifications(),
             ],
         ];

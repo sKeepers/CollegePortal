@@ -97,7 +97,7 @@ Roadmap фиксирует порядок развития проекта пос
 - [x] RC1: Admissions Foundation release candidate — аудит backend/frontend/API/RBAC/docs, release report `RC1_READY.md`, фиксация очевидных замечаний мастера и duplicate-check.
 - [x] GUI-009: Dashboard & Navigation Layout Hardening — сворачиваемые группы sidebar, устранение blank `/schedule`, splitter People и compact Dashboard widgets без новых бизнес-функций.
 - [x] UAT-002: Portal UX, RBAC and Admissions Stabilization — единый пункт меню приемной комиссии, русские validation/forbidden сообщения, Dashboard без RBAC-noise, существующий QR-пропуск в role-based AppLayout.
-- [ ] UAT-002.1: Final portal stabilization — мастер Admissions Foundation с понятной inline-валидацией, ролевые Dashboard без лишних demo-блоков, reusable splitter, единые version/build metadata и DEV data smoke.
+- [ ] UAT-002.1: Final portal stabilization — мастер Admissions Foundation с понятной inline-валидацией, ролевые Dashboard без лишних demo-блоков, reusable splitter, единые version/build metadata, HTTPS-only DEV entrypoint, динамический QR 30 секунд и расширенный DEV demo data smoke.
 - Следующий рекомендуемый этап после UAT-002.1: TEST-001 — regression suite полного workspace приемной комиссии, включая registered read-only и duplicate-check сценарии.
 ### Приемная комиссия
 
@@ -144,6 +144,8 @@ QR-пропуска и проходная уже реализованы в ра�
 - вывести `Мой QR-пропуск` для Student/Teacher/HR;
 - оставить `Цифровые пропуска`, `Проходная`, `Мобильный сканер`, `Отчеты по проходам` только административным и security-ролям;
 - проверить действующий стенд `https://192.168.34.104:5443/` и текущий DEV `http://192.168.34.114:5174/`.
+- основной текущий DEV для мобильного UAT: `https://192.168.34.114:5443/`; порт `5174` является HTTP-only.
+- мобильный QR студента должен обновляться каждые 30 секунд и не содержать постоянный token пропуска.
 
 ### 3. MOB-001: Mobile Student Cabinet Phase 1
 

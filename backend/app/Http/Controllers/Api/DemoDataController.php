@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AccessEvent;
 use App\Models\ApplicantApplication;
 use App\Models\Attendance;
 use App\Models\Classroom;
+use App\Models\DigitalIdentity;
 use App\Models\Grade;
 use App\Models\Group;
 use App\Models\ScheduleLesson;
@@ -50,21 +52,39 @@ class DemoDataController extends Controller
         abort_if(app()->environment('production'), Response::HTTP_FORBIDDEN, 'Очистка демо-данных запрещена в production.');
 
         $summary = DB::transaction(function (): array {
-            $studentEmails = ['student@college-portal.local', 'student2@college-portal.local'];
-            $teacherEmails = ['teacher@college-portal.local'];
-            $applicationEmails = ['anohin@example.test', 'borisova@example.test', 'kazachenko@example.test'];
+            $studentEmails = Student::query()
+                ->where('email', 'student@college-portal.local')
+                ->orWhere('email', 'like', 'student.demo.%@demo.college.local')
+                ->pluck('email');
+            $teacherEmails = Teacher::query()
+                ->where('email', 'teacher@college-portal.local')
+                ->orWhere('email', 'like', 'teacher.demo.%@demo.college.local')
+                ->pluck('email');
+            $applicationEmails = ApplicantApplication::query()
+                ->legacy()
+                ->where('email', 'like', 'applicant.demo.%@demo.college.local')
+                ->pluck('email');
 
             $studentIds = Student::query()->whereIn('email', $studentEmails)->pluck('id');
             $teacherIds = Teacher::query()->whereIn('email', $teacherEmails)->pluck('id');
-            $groupIds = Group::query()->whereIn('name', ['ИСП-101', 'M-101'])->pluck('id');
-            $subjectIds = Subject::query()->whereIn('code', ['MUS-101'])->pluck('id');
+            $groupIds = Group::query()->where('name', 'like', 'ДЕМО-%')->pluck('id');
+            $subjectIds = Subject::query()
+                ->where('code', 'MUS-101')
+                ->orWhere('code', 'like', 'DEMO-SUB-%')
+                ->pluck('id');
             $lessonIds = ScheduleLesson::query()
                 ->whereIn('group_id', $groupIds)
                 ->orWhereIn('teacher_id', $teacherIds)
                 ->orWhereIn('subject_id', $subjectIds)
                 ->pluck('id');
+            $identityIds = DigitalIdentity::query()
+                ->where(fn ($query) => $query->where('entity_type', DigitalIdentity::ENTITY_STUDENT)->whereIn('entity_id', $studentIds))
+                ->orWhere(fn ($query) => $query->where('entity_type', DigitalIdentity::ENTITY_TEACHER)->whereIn('entity_id', $teacherIds))
+                ->pluck('id');
 
             $deleted = [
+                'access_events' => AccessEvent::query()->whereIn('digital_identity_id', $identityIds)->delete(),
+                'digital_identities' => DigitalIdentity::query()->whereIn('id', $identityIds)->delete(),
                 'grades' => Grade::query()->whereIn('schedule_lesson_id', $lessonIds)->delete(),
                 'attendance' => Attendance::query()->whereIn('schedule_lesson_id', $lessonIds)->delete(),
                 'schedule_lessons' => ScheduleLesson::query()->whereIn('id', $lessonIds)->delete(),
@@ -74,7 +94,7 @@ class DemoDataController extends Controller
                 'teachers' => $this->deleteOnlyUnreferencedTeachers($teacherIds),
                 'classrooms' => $this->deleteOnlyUnreferencedClassrooms(),
                 'applications' => ApplicantApplication::query()->legacy()->whereIn('email', $applicationEmails)->delete(),
-                'users' => User::query()->whereIn('email', [...$studentEmails, ...$teacherEmails])->delete(),
+                'users' => User::query()->whereIn('email', $studentEmails->merge($teacherEmails)->values()->all())->delete(),
             ];
 
             return [
@@ -174,8 +194,7 @@ class DemoDataController extends Controller
     private function deleteOnlyUnreferencedClassrooms(): int
     {
         return Classroom::query()
-            ->where('number', '201')
-            ->where('building', 'Главный корпус')
+            ->where('building', 'Демо-корпус')
             ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('schedule_lessons')->whereColumn('schedule_lessons.classroom_id', 'classrooms.id'))
             ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('exams')->whereColumn('exams.classroom_id', 'classrooms.id'))
             ->delete();
@@ -189,6 +208,10 @@ class DemoDataController extends Controller
             'teachers' => Teacher::query()->count(),
             'subjects' => Subject::query()->count(),
             'classrooms' => Classroom::query()->count(),
+            'schedule_lessons' => ScheduleLesson::query()->count(),
+            'attendance' => Attendance::query()->count(),
+            'grades' => Grade::query()->count(),
+            'access_events' => AccessEvent::query()->count(),
             'applicant_applications' => ApplicantApplication::query()->legacy()->count(),
         ];
     }

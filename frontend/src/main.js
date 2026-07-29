@@ -8,8 +8,10 @@ import './styles/main.css'
 import App from './app/App.vue'
 import { router } from './router'
 import { applyEnvironmentTitle } from './services/environmentService'
+import { enforceHttpsRedirect } from './services/httpsRedirectService'
 
 applyEnvironmentTitle()
+enforceHttpsRedirect()
 
 createApp(App)
   .use(createPinia())

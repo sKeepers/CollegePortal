@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import jsQR from 'jsqr'
 import { Camera, CheckCircle2, FlipHorizontal, Flashlight, Keyboard, Play, ScanLine, XCircle } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
@@ -25,9 +25,7 @@ const manualToken = ref('')
 const lastScannedValue = ref('')
 const lastScanAt = ref(0)
 const scanCooldownMs = 2200
-const detector = typeof window !== 'undefined' && 'BarcodeDetector' in window
-  ? new window.BarcodeDetector({ formats: ['qr_code'] })
-  : null
+const detector = createBarcodeDetector()
 let animationFrame = null
 let audioContext = null
 
@@ -35,6 +33,17 @@ const resultClass = computed(() => store.lastEvent?.result === 'allowed' ? 'mobi
 const resultIcon = computed(() => store.lastEvent?.result === 'allowed' ? CheckCircle2 : XCircle)
 const scannerEngine = computed(() => detector ? 'BarcodeDetector' : 'jsQR fallback')
 const canTorch = computed(() => torchSupported.value && stream.value)
+const isSecureContext = computed(() => Boolean(globalThis?.isSecureContext))
+const hasCameraApi = computed(() => Boolean(navigator.mediaDevices?.getUserMedia))
+
+function createBarcodeDetector() {
+  try {
+    if (typeof window === 'undefined' || !('BarcodeDetector' in window)) return null
+    return new window.BarcodeDetector({ formats: ['qr_code'] })
+  } catch {
+    return null
+  }
+}
 
 function vibrateAllowed() { navigator.vibrate?.(90) }
 function vibrateDenied() { navigator.vibrate?.([80, 70, 80]) }
@@ -65,6 +74,18 @@ async function startCamera(deviceId = selectedDeviceId.value) {
   cameraError.value = ''
   cameraStatus.value = 'Запрос доступа к камере...'
   stopCamera()
+
+  if (!isSecureContext.value) {
+    cameraError.value = 'Камера доступна только через HTTPS. Откройте портал по адресу https://192.168.34.114:5443.'
+    cameraStatus.value = 'Нужен HTTPS'
+    return
+  }
+
+  if (!hasCameraApi.value) {
+    cameraError.value = 'Браузер не предоставил доступ к камере. Проверьте разрешения сайта и используйте HTTPS.'
+    cameraStatus.value = 'Камера недоступна'
+    return
+  }
 
   try {
     const constraints = {
@@ -173,6 +194,15 @@ function scanAgain() {
   store.warning = ''
 }
 
+onMounted(async () => {
+  await loadCameras().catch(() => {})
+  if (isSecureContext.value && hasCameraApi.value) {
+    await startCamera()
+  } else {
+    cameraStatus.value = isSecureContext.value ? 'Камера недоступна' : 'Нужен HTTPS'
+  }
+})
+
 onBeforeUnmount(stopCamera)
 </script>
 
@@ -199,7 +229,7 @@ onBeforeUnmount(stopCamera)
 
         <div class="mobile-scanner-meta">
           <AppStatusBadge :label="scannerEngine" tone="info" />
-          <AppStatusBadge :label="window.isSecureContext ? 'Secure context' : 'Нужен HTTPS'" :tone="window.isSecureContext ? 'success' : 'warning'" />
+          <AppStatusBadge :label="isSecureContext ? 'Secure context' : 'Нужен HTTPS'" :tone="isSecureContext ? 'success' : 'warning'" />
           <AppStatusBadge :label="paused ? 'Пауза после скана' : 'Готов к сканированию'" :tone="paused ? 'warning' : 'success'" />
         </div>
       </section>

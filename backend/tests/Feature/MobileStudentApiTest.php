@@ -61,7 +61,12 @@ class MobileStudentApiTest extends TestCase
             ->assertJsonPath('data.grades.0.grade', '5')
             ->assertJsonPath('data.attendance_summary.present', 1)
             ->assertJsonPath('data.digital_identity.id', $identity->id)
-            ->assertJsonStructure(['data' => ['qr_svg']]);
+            ->assertJsonPath('data.qr_refresh_seconds', 30)
+            ->assertJsonStructure(['data' => ['qr_svg', 'qr_expires_at']]);
+
+        $payload = $this->withApiAuth($user)->getJson('/api/mobile/student')->json('data');
+        $this->assertStringContainsString('<svg', $payload['qr_svg']);
+        $this->assertStringNotContainsString($identity->token, $payload['qr_svg']);
     }
 
     public function test_it_returns_placeholder_when_user_is_not_linked_to_student(): void

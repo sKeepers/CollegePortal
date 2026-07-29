@@ -40,6 +40,18 @@
 - [x] API для посещаемости
 - [x] API для оценок
 
+## UAT-002.1: финальная стабилизация DEV
+
+- [x] Исправить DEV test credentials для `test1234`.
+- [x] Синхронизировать версию `0.8.0-rc2` и build metadata.
+- [x] Восстановить читаемый QR-генератор после регрессии fixed QR v3.
+- [x] Перевести мобильный QR студента на CP2 payload с TTL 30 секунд.
+- [x] Исправить blank page мобильного сканера при обращении к `window.isSecureContext`.
+- [x] Зафиксировать основной DEV HTTPS endpoint `https://192.168.34.114:5443`.
+- [x] Добавить HTTP -> HTTPS redirect для не-localhost frontend.
+- [x] Расширить `DemoDataSeeder` до демонстрационного набора колледжа без реальных ПДн.
+- [ ] Проверить на телефоне: `/m/student/pass` и `/access/mobile-scanner` через HTTPS после установки/доверия DEV CA.
+
 ## Frontend
 
 - [x] Layout
