@@ -15,6 +15,7 @@ function gitValue(command, fallback = 'unknown') {
 }
 
 const commit = process.env.VITE_BUILD_COMMIT || gitValue('git rev-parse --short=12 HEAD')
+const fullCommit = process.env.VITE_BUILD_FULL_COMMIT || gitValue('git rev-parse HEAD', commit)
 const buildDate = process.env.VITE_BUILD_DATE || new Date().toISOString().slice(0, 10)
 const environment = process.env.VITE_APP_ENV || process.env.APP_ENV || 'development'
 const version = process.env.VITE_APP_VERSION || process.env.APP_VERSION || 'unknown'
@@ -25,7 +26,7 @@ const payload = {
   version,
   release,
   build: commit,
-  gitCommit: gitValue('git rev-parse HEAD', commit),
+  gitCommit: fullCommit,
   buildDate,
   environment,
   frontendStack: 'Vue 3 + Quasar + Vite',
