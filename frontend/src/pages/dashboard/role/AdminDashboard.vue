@@ -20,6 +20,7 @@ import AppCard from '../../../components/ui/AppCard.vue'
 import AppErrorBanner from '../../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../../components/ui/AppStatusBadge.vue'
 import { api } from '../../../services/api'
+import { getVersionInfo } from '../../../services/versionService'
 import { useAuthStore } from '../../../stores/auth'
 import { useSettingsStore } from '../../../stores/settings'
 import StatsWidget from '../widgets/StatsWidget.vue'
@@ -33,6 +34,7 @@ const settingsStore = useSettingsStore()
 const loading = ref(false)
 const error = ref('')
 const analytics = ref(null)
+const frontendVersion = ref(null)
 
 const roleLabel = computed(() => auth.user?.role?.code === 'director' ? 'директора' : 'администратора')
 const currentDate = computed(currentDateRu)
@@ -65,7 +67,10 @@ const admissions = computed(() => kpi.value.admissions || {})
 const frdo = computed(() => kpi.value.frdo || {})
 const fis = computed(() => kpi.value.fis || {})
 const system = computed(() => kpi.value.system || {})
-const version = computed(() => system.value.version || {})
+const version = computed(() => ({
+  ...(system.value.version || {}),
+  ...(frontendVersion.value || {}),
+}))
 const attentionItems = computed(() => payload.value.attention || [])
 const charts = computed(() => payload.value.charts || {})
 const latestPackages = computed(() => frdo.value.latest_packages || [])
@@ -177,6 +182,9 @@ async function loadDashboard() {
 
 onMounted(() => {
   settingsStore.loadPublic().catch(() => {})
+  getVersionInfo().then((payload) => {
+    frontendVersion.value = payload
+  }).catch(() => {})
   loadDashboard()
 })
 </script>
