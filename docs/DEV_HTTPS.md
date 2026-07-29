@@ -6,13 +6,13 @@ DEV HTTPS нужен для проверки функций браузера, к
 
 PROD не затрагивается. HTTP-порты DEV остаются доступными:
 
-- frontend diagnostics: `http://192.168.34.104:5174`
-- backend/API diagnostics: `http://192.168.34.104:8001`
-- PostgreSQL DEV: `192.168.34.104:5433`
+- frontend diagnostics: `http://192.168.34.114:5174`
+- backend/API diagnostics: `http://192.168.34.114:8001`
+- PostgreSQL DEV: `192.168.34.114:5433`
 
 Основной HTTPS endpoint DEV:
 
-- `https://192.168.34.104:5443`
+- `https://192.168.34.114:5443`
 - `https://college-dev.local:5443`, если имя прописано в DNS или `hosts`
 
 ## Схема
@@ -57,10 +57,10 @@ docker compose up -d https-proxy
 Проверка:
 
 ```bash
-curl -k -I https://192.168.34.104:5443
-curl -k -I https://192.168.34.104:5443/access/mobile-scanner
-curl -k -I https://192.168.34.104:5443/version.json
-curl -k -I https://192.168.34.104:5443/api/settings/public
+curl -k -I https://192.168.34.114:5443
+curl -k -I https://192.168.34.114:5443/access/mobile-scanner
+curl -k -I https://192.168.34.114:5443/version.json
+curl -k -I https://192.168.34.114:5443/api/settings/public
 ```
 
 После установки CA на устройство `-k` в `curl` не нужен.
@@ -70,7 +70,7 @@ curl -k -I https://192.168.34.104:5443/api/settings/public
 Если локального DNS нет, добавьте запись на клиентском устройстве или роутере:
 
 ```text
-192.168.34.104 college-dev.local
+192.168.34.114 college-dev.local
 ```
 
 На Windows файл hosts находится здесь:
@@ -90,7 +90,7 @@ C:\Windows\System32\drivers\etc\hosts
 5. Поместите сертификат в `Доверенные корневые центры сертификации`.
 6. Подтвердите установку.
 7. Перезапустите браузер.
-8. Откройте `https://192.168.34.104:5443`.
+8. Откройте `https://192.168.34.114:5443`.
 
 ## Установка CA на Android
 
@@ -102,7 +102,7 @@ C:\Windows\System32\drivers\etc\hosts
 4. Выберите `Сертификат CA`.
 5. Установите файл `college-dev-root-ca.crt`.
 6. Если Android попросит PIN/пароль экрана, задайте или подтвердите его.
-7. Откройте Chrome/Edge: `https://192.168.34.104:5443/access/mobile-scanner`.
+7. Откройте Chrome/Edge: `https://192.168.34.114:5443/access/mobile-scanner`.
 8. Разрешите доступ к камере.
 
 Важно: некоторые приложения на Android не доверяют пользовательским CA. Для проверки используйте Chrome или Edge.
@@ -114,7 +114,7 @@ C:\Windows\System32\drivers\etc\hosts
 3. Перейдите в `Настройки` -> `Основные` -> `VPN и управление устройством` и установите профиль.
 4. Перейдите в `Настройки` -> `Основные` -> `Об этом устройстве` -> `Доверие сертификатам`.
 5. Включите полное доверие для `CollegePortal DEV Local CA`.
-6. Откройте Safari: `https://192.168.34.104:5443/access/mobile-scanner`.
+6. Откройте Safari: `https://192.168.34.114:5443/access/mobile-scanner`.
 7. Разрешите доступ к камере.
 
 ## Проверка secure context

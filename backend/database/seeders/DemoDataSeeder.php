@@ -25,13 +25,14 @@ class DemoDataSeeder extends Seeder
         $adminRole = Role::where('code', 'admin')->firstOrFail();
         $teacherRole = Role::where('code', 'teacher')->firstOrFail();
         $studentRole = Role::where('code', 'student')->firstOrFail();
+        $demoPassword = env('DEMO_USER_PASSWORD', 'test1234');
 
         User::updateOrCreate(
             ['email' => 'admin@college-portal.local'],
             [
                 'role_id' => $adminRole->id,
                 'name' => 'Администратор системы',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($demoPassword),
                 'is_active' => true,
             ]
         );
@@ -41,7 +42,7 @@ class DemoDataSeeder extends Seeder
             [
                 'role_id' => $teacherRole->id,
                 'name' => 'Смирнова Елена Викторовна',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($demoPassword),
                 'is_active' => true,
             ]
         );
@@ -99,7 +100,7 @@ class DemoDataSeeder extends Seeder
             [
                 'role_id' => $studentRole->id,
                 'name' => 'Иванов Дмитрий Сергеевич',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($demoPassword),
                 'is_active' => true,
             ]
         );

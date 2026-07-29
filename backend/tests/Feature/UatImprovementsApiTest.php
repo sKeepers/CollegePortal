@@ -11,9 +11,11 @@ use App\Models\Role;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Teacher;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -141,6 +143,9 @@ class UatImprovementsApiTest extends TestCase
 
         $this->assertDatabaseHas('students', ['email' => 'student@college-portal.local']);
         $this->assertDatabaseHas('teachers', ['email' => 'teacher@college-portal.local']);
+        $this->assertTrue(Hash::check('test1234', User::where('email', 'admin@college-portal.local')->firstOrFail()->password));
+        $this->assertTrue(Hash::check('test1234', User::where('email', 'teacher@college-portal.local')->firstOrFail()->password));
+        $this->assertTrue(Hash::check('test1234', User::where('email', 'student@college-portal.local')->firstOrFail()->password));
 
         $this->postJson('/api/admin/demo-data/clear')
             ->assertOk()

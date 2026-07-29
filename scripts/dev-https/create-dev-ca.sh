@@ -3,7 +3,7 @@ set -eu
 
 CERT_DIR="${DEV_HTTPS_CERT_DIR:-infra/dev-https/certs}"
 DEV_HOST="${DEV_HTTPS_HOST:-college-dev.local}"
-DEV_IP="${DEV_HTTPS_IP:-192.168.34.104}"
+DEV_IP="${DEV_HTTPS_IP:-192.168.34.114}"
 
 mkdir -p "$CERT_DIR"
 chmod 700 "$CERT_DIR"
