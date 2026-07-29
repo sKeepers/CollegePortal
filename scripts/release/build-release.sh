@@ -16,6 +16,7 @@ docker compose exec -T backend php artisan test
 printf '[INFO] Running frontend build.\n'
 docker compose exec -T frontend npm run build
 commit=$(git rev-parse --short HEAD)
+full_commit=$(git rev-parse HEAD)
 build_date=$(date -Is)
 tmp=$(mktemp -d)
 trap 'rm -rf "${tmp}"' EXIT
@@ -26,6 +27,7 @@ cat > "${tmp}/release-metadata.json" <<JSON
   "version": "${version}",
   "release": "${release}",
   "build": "${commit}",
+  "gitCommit": "${full_commit}",
   "buildDate": "${build_date}"
 }
 JSON
@@ -35,8 +37,12 @@ cat > "${tmp}/frontend/public/version.json" <<JSON
   "version": "${version}",
   "release": "${release}",
   "build": "${commit}",
+  "gitCommit": "${full_commit}",
   "buildDate": "${build_date}",
-  "environment": "production"
+  "environment": "production",
+  "frontendStack": "Vue 3 + Quasar + Vite",
+  "backendStack": "Laravel 12 + PHP",
+  "apiVersion": "v1"
 }
 JSON
 rm -rf "${tmp}/.env" "${tmp}/backend/.env" "${tmp}/frontend/.env" "${tmp}/node_modules" "${tmp}/vendor" "${tmp}/frontend/dist" "${tmp}/tmp" "${tmp}/logs" "${tmp}/certs" "${tmp}/releases"

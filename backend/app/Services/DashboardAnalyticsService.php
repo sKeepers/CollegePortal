@@ -271,8 +271,8 @@ class DashboardAnalyticsService
 
         return [
             'name' => 'CollegePortal',
-            'version' => config('app.version', env('APP_VERSION', 'unknown')),
-            'release' => env('APP_RELEASE', 'unknown'),
+            'version' => config('app.version', env('APP_VERSION', '0.8.0-rc2')),
+            'release' => env('APP_RELEASE', 'v0.8.0-rc2'),
             'build' => 'unknown',
             'gitCommit' => 'unknown',
             'buildDate' => now()->toDateString(),

@@ -68,12 +68,12 @@ class UatApiTest extends TestCase
             'expected_result' => 'Открывается журнал занятия',
             'actual_result' => 'Ошибка',
             'page_url' => '/journal?mode=today',
-            'app_version' => '0.7.0-dev',
+            'app_version' => '0.8.0-rc2',
             'build_hash' => 'abc1234',
             'environment' => 'development',
             'screenshot' => UploadedFile::fake()->image('feedback.png'),
         ])->assertCreated()
-            ->assertJsonPath('data.app_version', '0.7.0-dev')
+            ->assertJsonPath('data.app_version', '0.8.0-rc2')
             ->assertJsonPath('data.build_hash', 'abc1234')
             ->json('data.id');
 

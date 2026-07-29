@@ -18,8 +18,8 @@ const commit = process.env.VITE_BUILD_COMMIT || gitValue('git rev-parse --short=
 const fullCommit = process.env.VITE_BUILD_FULL_COMMIT || gitValue('git rev-parse HEAD', commit)
 const buildDate = process.env.VITE_BUILD_DATE || new Date().toISOString().slice(0, 10)
 const environment = process.env.VITE_APP_ENV || process.env.APP_ENV || 'development'
-const version = process.env.VITE_APP_VERSION || process.env.APP_VERSION || 'unknown'
-const release = process.env.VITE_APP_RELEASE || process.env.APP_RELEASE || 'unknown'
+const version = process.env.VITE_APP_VERSION || process.env.APP_VERSION || '0.8.0-rc2'
+const release = process.env.VITE_APP_RELEASE || process.env.APP_RELEASE || 'v0.8.0-rc2'
 
 const payload = {
   name: 'CollegePortal',

@@ -32,6 +32,8 @@ services:
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
+      APP_VERSION: ${APP_VERSION:-0.8.0-rc2}
+      APP_RELEASE: ${APP_RELEASE:-v0.8.0-rc2}
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: 5432
@@ -46,8 +48,8 @@ services:
     working_dir: /app
     environment:
       VITE_APP_ENV: ${VITE_APP_ENV:-development}
-      VITE_APP_VERSION: ${APP_VERSION:-unknown}
-      VITE_APP_RELEASE: ${APP_RELEASE:-unknown}
+      VITE_APP_VERSION: ${APP_VERSION:-0.8.0-rc2}
+      VITE_APP_RELEASE: ${APP_RELEASE:-v0.8.0-rc2}
     volumes:
       - ./frontend:/app
     ports:

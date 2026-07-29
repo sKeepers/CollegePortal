@@ -1,12 +1,12 @@
 {
   "name": "CollegePortal",
-  "version": "unknown",
-  "release": "unknown",
+  "version": "0.8.0-rc2",
+  "release": "v0.8.0-rc2",
   "build": "unknown",
   "gitCommit": "unknown",
   "buildDate": null,
   "environment": "development",
-  "frontendStack": "unknown",
-  "backendStack": "unknown",
-  "apiVersion": "unknown"
+  "frontendStack": "Vue 3 + Quasar + Vite",
+  "backendStack": "Laravel 12 + PHP 8.4",
+  "apiVersion": "v1"
 }

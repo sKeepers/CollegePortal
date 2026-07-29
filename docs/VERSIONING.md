@@ -14,10 +14,16 @@ frontend/public/version.json
 
 ## Текущая схема версии
 
-Для Release 0.7 используется версия:
+Актуальная публичная RC-версия CollegePortal:
 
 ```text
-0.7.0-dev
+0.8.0-rc2
+```
+
+GitHub release tag:
+
+```text
+v0.8.0-rc2
 ```
 
 Формат:
@@ -36,11 +42,15 @@ major.minor.patch-suffix
 ```json
 {
   "name": "CollegePortal",
-  "version": "0.7.0-dev",
-  "release": "Release 0.7",
+  "version": "0.8.0-rc2",
+  "release": "v0.8.0-rc2",
   "build": "git-short-hash",
+  "gitCommit": "git-full-hash",
   "buildDate": "YYYY-MM-DD",
-  "environment": "development"
+  "environment": "development",
+  "frontendStack": "Vue 3 + Quasar + Vite",
+  "backendStack": "Laravel 12 + PHP 8.4",
+  "apiVersion": "v1"
 }
 ```
 
@@ -50,8 +60,10 @@ major.minor.patch-suffix
 - `version` — техническая версия.
 - `release` — человекочитаемое имя релиза.
 - `build` — короткий Git hash сборки.
+- `gitCommit` — полный Git hash сборки.
 - `buildDate` — дата подготовки сборки.
 - `environment` — окружение сборки: `development`, `test`, `production`.
+- `frontendStack`, `backendStack`, `apiVersion` — диагностическая информация для окна `О системе`.
 
 ## Отображение в интерфейсе
 
@@ -59,7 +71,7 @@ major.minor.patch-suffix
 
 ```text
 CollegePortal
-v0.7.0-dev
+v0.8.0-rc2
 Build: <hash>
 DEV
 ```
@@ -80,23 +92,43 @@ DEV
 
 ## Как обновлять version.json
 
-Перед сборкой релиза обновить:
+`frontend/public/version.json` генерируется перед frontend build командой:
 
-1. `version`.
-2. `release`.
-3. `build` текущим коротким hash:
+```bash
+npm run build
+```
+
+Генератор находится в:
+
+```text
+frontend/scripts/generate-version.mjs
+```
+
+Он берет значения из переменных окружения:
+
+```text
+APP_VERSION=0.8.0-rc2
+APP_RELEASE=v0.8.0-rc2
+VITE_APP_VERSION=0.8.0-rc2
+VITE_APP_RELEASE=v0.8.0-rc2
+VITE_BUILD_COMMIT=<short-hash>
+VITE_BUILD_FULL_COMMIT=<full-hash>
+VITE_BUILD_DATE=YYYY-MM-DD
+```
+
+Если переменные не заданы, используются безопасные значения актуального RC:
+
+```text
+version=0.8.0-rc2
+release=v0.8.0-rc2
+```
+
+Для точной сборки стенда рекомендуется передавать текущий Git hash:
 
 ```bash
 git rev-parse --short HEAD
+git rev-parse HEAD
 ```
-
-4. `buildDate` текущей датой:
-
-```bash
-date +%F
-```
-
-5. `environment` целевым окружением.
 
 Для будущего production deployment рекомендуется автоматизировать генерацию `version.json` в deploy-скрипте, чтобы `build` точно соответствовал выкладываемому commit.
 
@@ -104,7 +136,7 @@ date +%F
 
 ### 0.8
 
-Версия `0.8.x` предназначена для следующего расширения после пилотной загрузки реальных данных: стабилизация импорта, UAT-исправления, права доступа и эксплуатационные доработки.
+Версия `0.8.x` предназначена для Private Release Candidate и UAT-стабилизации: приемная комиссия, импорт, права доступа, установщик, демонстрационный контур и эксплуатационные доработки.
 
 ### 0.9
 

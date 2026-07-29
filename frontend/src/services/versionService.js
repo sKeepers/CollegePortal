@@ -2,15 +2,15 @@ import { getCurrentEnvironment } from './environmentService'
 
 const DEFAULT_VERSION_INFO = {
   name: 'CollegePortal',
-  version: 'unknown',
-  release: 'unknown',
+  version: '0.8.0-rc2',
+  release: 'v0.8.0-rc2',
   build: 'unknown',
   buildDate: null,
   environment: 'development',
   gitCommit: 'unknown',
-  frontendStack: 'unknown',
-  backendStack: 'unknown',
-  apiVersion: 'unknown',
+  frontendStack: 'Vue 3 + Quasar + Vite',
+  backendStack: 'Laravel 12 + PHP 8.4',
+  apiVersion: 'v1',
 }
 
 let cachedVersion = null
