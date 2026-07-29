@@ -54,7 +54,7 @@ services:
     volumes:
       - ./frontend:/app
     ports:
-      - "${FRONTEND_PORT:-5174}:5173"
+      - "${FRONTEND_BIND:-127.0.0.1}:${FRONTEND_PORT:-5174}:5173"
     command: sh -c "if [ -f package.json ]; then npm install && npm run dev -- --host 0.0.0.0; else tail -f /dev/null; fi"
 
   nginx:
