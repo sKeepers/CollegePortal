@@ -9,6 +9,7 @@ use App\Models\Role;
 use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Services\QrSvgService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -120,13 +121,31 @@ class DigitalIdentityApiTest extends TestCase
         $this->assertMatchesRegularExpression('/^[\x21-\x7E]+$/', $token);
         $this->assertStringStartsWith('<svg', $svg);
         $this->assertStringStartsWith("\x89PNG\r\n\x1a\n", $png);
-        $this->assertStringContainsString('fill="#000000"', $svg);
-        $this->assertStringContainsString('fill="#ffffff"', $svg);
+        $this->assertStringContainsString('shape-rendering="crispEdges"', $svg);
 
         foreach (['Иванов', 'Дмитрий', 'student@example.test', '+79990000001'] as $personalData) {
             $this->assertStringNotContainsString($personalData, $svg);
             $this->assertStringNotContainsString($personalData, $png);
         }
+    }
+
+    public function test_qr_service_renders_readable_sized_png_and_crisp_svg_for_synthetic_token(): void
+    {
+        $token = 'CP2:ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        $service = app(QrSvgService::class);
+
+        $svg = $service->renderSvg($token);
+        $png = $service->renderPng($token);
+        $image = getimagesizefromstring($png);
+
+        $this->assertIsArray($image);
+        $this->assertGreaterThanOrEqual(360, $image[0]);
+        $this->assertSame($image[0], $image[1]);
+        $this->assertStringContainsString('<svg', $svg);
+        $this->assertStringContainsString('shape-rendering="crispEdges"', $svg);
+        $this->assertStringNotContainsString('Иванов', $svg);
+        $this->assertStringNotContainsString('student@example.test', $svg);
+        $this->assertStringStartsWith("\x89PNG", $png);
     }
 
     public function test_teacher_can_view_and_download_only_own_digital_pass(): void
