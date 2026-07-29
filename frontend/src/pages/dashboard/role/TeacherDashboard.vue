@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { BadgeCheck, BookOpen, CalendarDays, ClipboardList, GraduationCap, NotebookTabs } from '@lucide/vue'
+import { BadgeCheck, CalendarDays, ClipboardList, NotebookTabs } from '@lucide/vue'
 import AppPage from '../../../components/ui/AppPage.vue'
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import AppErrorBanner from '../../../components/ui/AppErrorBanner.vue'
@@ -13,7 +13,7 @@ import QuickActionsWidget from '../widgets/QuickActionsWidget.vue'
 import RecentActivityWidget from '../widgets/RecentActivityWidget.vue'
 import NotificationsWidget from '../widgets/NotificationsWidget.vue'
 import PersonalDashboardLayout from '../../../components/dashboard/PersonalDashboardLayout.vue'
-import { currentDateRu, extractRows, extractTotal, groupName, teacherName, todayIso } from './dashboardData'
+import { currentDateRu, extractRows, groupName, teacherName } from './dashboardData'
 
 const auth = useAuthStore()
 const settingsStore = useSettingsStore()
@@ -22,7 +22,6 @@ const error = ref('')
 const teacher = ref(null)
 const todayLessons = ref([])
 const teachingLoads = ref([])
-const exams = ref([])
 const journals = ref([])
 const teacherGroups = ref([])
 
@@ -36,7 +35,7 @@ const dashboardWidgets = [
   { id: 'activity', title: 'Сегодняшние занятия', defaultSize: 'medium' },
   { id: 'nearest', title: 'Ближайшее занятие', defaultSize: 'medium' },
 ]
-const teacherId = computed(() => teacher.value?.id || auth.user?.person_id || null)
+const teacherId = computed(() => teacher.value?.id || (auth.user?.person?.type === 'teacher' ? auth.user.person.id : null))
 const nearestLesson = computed(() => todayLessons.value[0] || null)
 const journalsNeedFill = computed(() => journals.value.filter((lesson) => ['draft', 'in_progress', 'reopened', 'planned', 'opened'].includes(lesson.status) || !lesson.topic).length)
 const journalsAwaitSign = computed(() => journals.value.filter((lesson) => lesson.status === 'completed').length)
@@ -50,7 +49,6 @@ const quickActions = computed(() => [
   { label: 'Мое расписание', description: 'Занятия преподавателя', icon: CalendarDays, to: teacherId.value ? { path: '/schedule', query: { teacher: teacherId.value } } : '/schedule' },
   { label: 'Журнал', description: 'Посещаемость и оценки', icon: NotebookTabs, to: teacherId.value ? { path: '/journal', query: { teacher: teacherId.value, mode: 'today' } } : { path: '/journal', query: { mode: 'today' } } },
   { label: 'Нагрузка', description: 'Учебная нагрузка', icon: ClipboardList, to: teacherId.value ? { path: '/teaching-load', query: { teacher: teacherId.value } } : '/teaching-load' },
-  { label: 'Экзамены', description: 'Экзамены и ГИА', icon: BookOpen, to: teacherId.value ? { path: '/exams', query: { teacher: teacherId.value } } : '/exams' },
   { label: 'Мой QR-пропуск', description: 'Цифровая идентификация', icon: BadgeCheck, to: '/identity/my-pass' },
 ])
 const lessonActivity = computed(() => todayLessons.value.slice(0, 5).map((lesson) => ({
@@ -91,20 +89,17 @@ async function loadDashboard() {
   error.value = ''
 
   try {
-    const teachersPayload = await api.list('teachers', { active_only: 1 }).catch(() => ({ data: [] }))
+    const teachersPayload = auth.can('teachers.view') ? await api.list('teachers', { active_only: 1 }).catch(() => ({ data: [] })) : { data: [] }
     teacher.value = findTeacher(extractRows(teachersPayload))
     const id = teacherId.value
-    const today = todayIso()
-    const [lessonsResult, loadsResult, examsResult, journalResult] = await Promise.allSettled([
+    const [lessonsResult, loadsResult, journalResult] = await Promise.allSettled([
       api.list('journal/lessons', id ? { teacher_id: id, mode: 'today', per_page: 20 } : { mode: 'today', per_page: 20 }),
       api.list('teaching-loads', id ? { teacher_id: id } : {}),
-      api.list('exams', id ? { teacher_id: id } : {}),
       api.list('journal/lessons', id ? { teacher_id: id, mode: 'week', per_page: 50 } : { mode: 'week', per_page: 50 }),
     ])
 
     if (lessonsResult.status === 'fulfilled') todayLessons.value = extractRows(lessonsResult.value)
     if (loadsResult.status === 'fulfilled') teachingLoads.value = extractRows(loadsResult.value)
-    if (examsResult.status === 'fulfilled') exams.value = extractRows(examsResult.value)
     if (journalResult.status === 'fulfilled') journals.value = extractRows(journalResult.value)
 
     const groups = new Map()
@@ -118,7 +113,7 @@ async function loadDashboard() {
     })
     teacherGroups.value = Array.from(groups.values())
 
-    if ([lessonsResult, loadsResult, examsResult].some((result) => result.status === 'rejected')) {
+    if ([lessonsResult, loadsResult].some((result) => result.status === 'rejected')) {
       error.value = 'Часть показателей преподавателя не удалось загрузить'
     }
   } finally {

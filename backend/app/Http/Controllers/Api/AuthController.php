@@ -44,13 +44,13 @@ class AuthController extends Controller
         return response()->json([
             'token' => $token,
             'token_type' => 'Bearer',
-            'user' => new UserResource($user->refresh()->load(['role.permissions', 'roles.permissions'])),
+            'user' => new UserResource($user->refresh()->load(['role.permissions', 'roles.permissions', 'student.group', 'teacher'])),
         ]);
     }
 
     public function me(Request $request): UserResource
     {
-        return new UserResource($request->user()->load(['role.permissions', 'roles.permissions']));
+        return new UserResource($request->user()->load(['role.permissions', 'roles.permissions', 'student.group', 'teacher']));
     }
 
     public function logout(Request $request): JsonResponse

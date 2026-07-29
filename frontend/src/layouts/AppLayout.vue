@@ -34,6 +34,7 @@ import { useWorkspaceStore } from '../stores/workspace'
 import { useSettingsStore } from '../stores/settings'
 import { useLayoutService } from '../services/layoutService'
 import { getEnvironmentCssVars } from '../services/environmentService'
+import { isRoleScopedRouteAllowed } from '../services/roleNavigation'
 import GlobalSearch from '../components/search/GlobalSearch.vue'
 import EnvironmentBadge from '../components/system/EnvironmentBadge.vue'
 import SystemInfoPanel from '../components/system/SystemInfoPanel.vue'
@@ -136,6 +137,10 @@ const visibleNavGroups = computed(() =>
       ...group,
       items: group.items.filter((item) => {
         if (item.adminOnly && !auth.isAdmin) {
+          return false
+        }
+
+        if (!isRoleScopedRouteAllowed(auth, typeof item.to === 'string' ? item.to : item.to?.path)) {
           return false
         }
 

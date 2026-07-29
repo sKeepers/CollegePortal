@@ -1,11 +1,13 @@
 <script setup>
 import { reactive, ref, watch } from 'vue'
+import { useQuasar } from 'quasar'
 import { api } from '../../services/api'
 import { useAuthStore } from '../../stores/auth'
 import { getVersionInfo, getRuntimeEnvironmentInfo } from '../../services/versionService'
 
 const props = defineProps({ modelValue: { type: Boolean, default: false } })
 const emit = defineEmits(['update:modelValue'])
+const $q = useQuasar()
 const auth = useAuthStore()
 const saving = ref(false)
 const error = ref('')
@@ -17,7 +19,7 @@ const categoryOptions = [
   { label: 'Ошибка', value: 'error' }, { label: 'Неудобство', value: 'ux' }, { label: 'Предложение', value: 'suggestion' }, { label: 'Данные', value: 'data' }, { label: 'Права доступа', value: 'access' },
 ]
 const severityOptions = [
-  { label: 'Critical', value: 'critical' }, { label: 'High', value: 'high' }, { label: 'Medium', value: 'medium' }, { label: 'Low', value: 'low' }, { label: 'UX', value: 'ux' },
+  { label: 'Критическая', value: 'critical' }, { label: 'Высокая', value: 'high' }, { label: 'Средняя', value: 'medium' }, { label: 'Низкая', value: 'low' }, { label: 'UX', value: 'ux' },
 ]
 
 watch(() => props.modelValue, async (open) => {
@@ -41,6 +43,7 @@ async function submit() {
     if (screenshot.value) data.append('screenshot', screenshot.value)
     await api.upload('/uat/feedback', data)
     form.title = ''; form.description = ''; form.expected_result = ''; form.actual_result = ''; screenshot.value = null
+    $q.notify({ type: 'positive', message: 'Замечание сохранено в реестре UAT' })
     close()
   } catch (err) {
     error.value = err.message || 'Не удалось отправить замечание'
@@ -53,7 +56,7 @@ async function submit() {
 <template>
   <q-dialog :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)">
     <q-card class="uat-feedback-dialog">
-      <q-card-section><h3>Сообщить о проблеме</h3><p>Замечание попадет в private UAT registry. Скриншот не публикуется прямой ссылкой.</p></q-card-section>
+      <q-card-section><h3>Сообщить о проблеме</h3><p>Замечание попадет в закрытый реестр UAT. Скриншот хранится в private storage и доступен только ответственным пользователям.</p></q-card-section>
       <q-card-section class="uat-feedback-form">
         <q-banner v-if="error" rounded class="bg-red-1 text-negative">{{ error }}</q-banner>
         <q-input v-model="form.page_url" outlined readonly label="Страница" />
@@ -65,7 +68,7 @@ async function submit() {
         <q-input v-model="form.expected_result" outlined autogrow label="Ожидаемое поведение" />
         <q-input v-model="form.actual_result" outlined autogrow label="Фактическое поведение" />
         <q-file v-model="screenshot" outlined clearable accept=".jpg,.jpeg,.png,.webp" label="Скриншот" />
-        <div class="uat-feedback-meta"><span>Version: {{ form.app_version }}</span><span>Build: {{ form.build_hash }}</span><span>{{ form.environment }}</span></div>
+        <div class="uat-feedback-meta"><span>Версия: {{ form.app_version }}</span><span>Build: {{ form.build_hash }}</span><span>{{ form.environment }}</span></div>
       </q-card-section>
       <q-card-actions align="right"><q-btn flat :disable="saving" @click="close">Отмена</q-btn><q-btn color="primary" :loading="saving" :disable="!form.title || !form.description" @click="submit">Отправить</q-btn></q-card-actions>
     </q-card>

@@ -26,7 +26,7 @@ const auth = useAuthStore()
 const settingsStore = useSettingsStore()
 const loading = ref(false)
 const error = ref('')
-const totals = ref({ students: 0, groups: 0, teachers: 0, todayLessons: 0 })
+const totals = ref({ students: 0, groups: 0, teachers: 0, todayLessons: 0, applications: 0 })
 
 const mockRecentActivity = [
   { id: 1, title: 'Обновлена карточка студента', description: 'Изменены контактные данные и статус обучения', time: 'Сегодня' },
@@ -55,11 +55,12 @@ const dashboardWidgets = computed(() => [
   { id: 'notifications', title: isStudent.value ? 'Учебные уведомления' : 'Рабочие уведомления', defaultSize: 'medium' },
 ].filter(Boolean))
 const statItems = computed(() => [
+  isAdmission.value ? { label: 'Заявления', value: totals.value.applications, icon: NotebookTabs } : null,
   auth.can('students.view') ? { label: 'Студенты', value: totals.value.students, icon: GraduationCap } : null,
   auth.can('groups.view') ? { label: 'Группы', value: totals.value.groups, icon: UsersRound } : null,
   auth.can('teachers.view') ? { label: 'Преподаватели', value: totals.value.teachers, icon: UserRound } : null,
   auth.can('schedule.view') ? { label: 'Занятия сегодня', value: totals.value.todayLessons, icon: BookOpenCheck } : null,
-].filter(Boolean))
+].filter((item) => item && (!isAdmission.value || item.label === 'Заявления')))
 const quickActionPermissions = {
   '/students': 'students.view',
   '/groups': 'groups.view',
@@ -91,11 +92,13 @@ async function loadDashboard() {
   error.value = ''
 
   try {
-    const studentsResult = auth.can('students.view') ? await api.list('students').then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
-    const groupsResult = auth.can('groups.view') ? await api.list('groups').then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
-    const teachersResult = auth.can('teachers.view') ? await api.list('teachers', { active_only: 1 }).then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
-    const lessonsResult = auth.can('schedule.view') ? await api.list('schedule-lessons', { date: todayIso() }).then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
+    const applicationsResult = isAdmission.value && auth.can('admissions.application.view') ? await api.list('admissions/applications', { per_page: 1 }).then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
+    const studentsResult = !isAdmission.value && auth.can('students.view') ? await api.list('students').then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
+    const groupsResult = !isAdmission.value && auth.can('groups.view') ? await api.list('groups').then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
+    const teachersResult = !isAdmission.value && auth.can('teachers.view') ? await api.list('teachers', { active_only: 1 }).then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
+    const lessonsResult = !isAdmission.value && auth.can('schedule.view') ? await api.list('schedule-lessons', { date: todayIso() }).then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
 
+    if (applicationsResult?.status === 'fulfilled') totals.value.applications = extractTotal(applicationsResult.value)
     if (studentsResult?.status === 'fulfilled') totals.value.students = extractTotal(studentsResult.value)
     if (groupsResult?.status === 'fulfilled') totals.value.groups = extractTotal(groupsResult.value)
     if (teachersResult?.status === 'fulfilled') totals.value.teachers = extractTotal(teachersResult.value)

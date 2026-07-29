@@ -9,6 +9,22 @@ class UserResource extends JsonResource
 {
     private function personSummary(): ?array
     {
+        if ($this->relationLoaded('student') && $this->student) {
+            return [
+                'type' => 'student',
+                'id' => $this->student->id,
+                'name' => trim("{$this->student->last_name} {$this->student->first_name} {$this->student->middle_name}"),
+            ];
+        }
+
+        if ($this->relationLoaded('teacher') && $this->teacher) {
+            return [
+                'type' => 'teacher',
+                'id' => $this->teacher->id,
+                'name' => trim("{$this->teacher->last_name} {$this->teacher->first_name} {$this->teacher->middle_name}"),
+            ];
+        }
+
         if (! $this->person_type || ! $this->person_id) {
             return null;
         }

@@ -359,6 +359,23 @@ function requiredField(value, message) {
   return value !== '' && value !== null && value !== undefined ? '' : message
 }
 
+function firstOptionValue(options = []) {
+  return options.find((option) => option.value !== '' && option.value !== null && option.value !== undefined)?.value || null
+}
+
+function applyWizardDefaults() {
+  const defaultSourceId = firstOptionValue(sourceOptions.value)
+  const defaultApplicantStatusId = firstOptionValue(applicantStatusOptions.value)
+  const defaultChoiceStatusId = firstOptionValue(choiceStatusOptions.value)
+  const defaultBaseEducationTypeId = firstOptionValue(baseEducationOptions.value)
+
+  if (!wizardForm.source_id && defaultSourceId) wizardForm.source_id = defaultSourceId
+  if (!applicantForm.source_id && defaultSourceId) applicantForm.source_id = defaultSourceId
+  if (!applicantForm.status_id && defaultApplicantStatusId) applicantForm.status_id = defaultApplicantStatusId
+  if (!wizardForm.choice.status_id && defaultChoiceStatusId) wizardForm.choice.status_id = defaultChoiceStatusId
+  if (!wizardForm.choice.base_education_type_id && defaultBaseEducationTypeId) wizardForm.choice.base_education_type_id = defaultBaseEducationTypeId
+}
+
 function validateWizardStep(step = wizardStep.value) {
   const errors = {}
 
@@ -752,10 +769,11 @@ function fillApplicationForm() {
 }
 
 function openWizard() {
-  wizardApplicantMode.value = 'existing'
+  wizardApplicantMode.value = 'new'
   resetWizardForm()
   resetPersonForm()
   resetApplicantForm()
+  applyWizardDefaults()
   duplicateResult.value = null
   duplicateDecision.value = ''
   wizardOpen.value = true

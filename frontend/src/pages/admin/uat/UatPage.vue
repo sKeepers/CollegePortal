@@ -16,6 +16,20 @@ const completeDialog = ref(false)
 const summary = ref('')
 const resultDraft = reactive({})
 const newRun = reactive({ title: '', role_code: 'study', tester_user_id: null })
+const categoryLabels = {
+  error: 'Ошибка',
+  ux: 'Неудобство',
+  suggestion: 'Предложение',
+  data: 'Данные',
+  access: 'Права доступа',
+}
+const severityLabels = {
+  critical: 'Критическая',
+  high: 'Высокая',
+  medium: 'Средняя',
+  low: 'Низкая',
+  ux: 'UX',
+}
 
 const selectedResults = computed(() => store.selectedRun?.results || [])
 const progressPercent = computed(() => {
@@ -35,7 +49,25 @@ async function createRun() {
 }
 async function saveResult(result) { await store.updateResult(store.selectedRun.id, result.id, resultModel(result)) }
 async function completeRun() { await store.completeRun(store.selectedRun.id, summary.value); completeDialog.value = false }
-function download(path) { window.open(`${api.baseUrl}${path}`, '_blank') }
+function formatDateTime(value) {
+  if (!value) return '—'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+function filenameFromPath(path, fallback = 'uat-download') {
+  return String(path || '').split('/').pop()?.split('?')[0] || fallback
+}
+async function download(path, fallback) {
+  const blob = await api.download(path)
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fallback || filenameFromPath(path)
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
 
 onMounted(store.load)
 </script>
@@ -110,10 +142,36 @@ onMounted(store.load)
       <aside class="uat-feedback">
         <h3>Замечания</h3>
         <article v-for="item in store.feedback" :key="item.id" class="uat-feedback-item">
-          <div><strong>{{ item.title }}</strong><span>{{ item.page_url }}</span></div>
-          <AppStatusBadge :label="statusLabels[item.status] || item.status" :tone="statusTone(item.status)" />
+          <div class="uat-feedback-item__head">
+            <div>
+              <strong>#{{ item.id }} · {{ item.title }}</strong>
+              <span>{{ formatDateTime(item.created_at) }} · {{ roleLabels[item.role_code] || item.role_code || 'роль не указана' }}</span>
+            </div>
+            <AppStatusBadge :label="statusLabels[item.status] || item.status" :tone="statusTone(item.status)" />
+          </div>
+          <dl class="uat-feedback-item__meta">
+            <div><dt>Автор</dt><dd>{{ item.user?.name || item.user?.email || 'Не указан' }}</dd></div>
+            <div><dt>Страница</dt><dd>{{ item.page_url || '—' }}</dd></div>
+            <div><dt>Категория</dt><dd>{{ categoryLabels[item.category] || item.category }}</dd></div>
+            <div><dt>Важность</dt><dd>{{ severityLabels[item.severity] || item.severity }}</dd></div>
+            <div><dt>Версия</dt><dd>{{ item.app_version || '—' }}</dd></div>
+            <div><dt>Build</dt><dd>{{ item.build_hash || '—' }}</dd></div>
+          </dl>
           <p>{{ item.description }}</p>
+          <div v-if="item.expected_result || item.actual_result" class="uat-feedback-item__details">
+            <div v-if="item.expected_result"><b>Ожидалось:</b> {{ item.expected_result }}</div>
+            <div v-if="item.actual_result"><b>Фактически:</b> {{ item.actual_result }}</div>
+          </div>
+          <q-input
+            :model-value="item.resolution"
+            dense
+            outlined
+            autogrow
+            label="Решение / комментарий"
+            @change="store.updateFeedback(item.id, { resolution: $event })"
+          />
           <q-select :model-value="item.status" dense outlined emit-value map-options label="Статус" :options="['new','confirmed','in_progress','fixed','rejected','retest','closed'].map((value) => ({ label: statusLabels[value], value }))" @update:model-value="store.updateFeedback(item.id, { status: $event })" />
+          <q-btn v-if="item.has_screenshot" flat dense color="primary" @click="download(`/admin/uat/feedback/${item.id}/screenshot`, `uat-feedback-${item.id}-screenshot`)">Скачать скриншот</q-btn>
         </article>
       </aside>
     </div>
@@ -157,6 +215,13 @@ onMounted(store.load)
 .uat-result-grid { display: grid; grid-template-columns: 180px 1fr 1fr 220px; gap: 8px; align-items: start; }
 .uat-scenario-actions { display: flex; gap: 8px; }
 .uat-feedback-item { display: grid; gap: 8px; }
+.uat-feedback-item__head { display: flex; justify-content: space-between; gap: 10px; align-items: start; }
+.uat-feedback-item__head > div { display: grid; gap: 3px; }
+.uat-feedback-item__meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; margin: 0; font-size: 13px; }
+.uat-feedback-item__meta div { min-width: 0; }
+.uat-feedback-item__meta dt { color: #64748b; }
+.uat-feedback-item__meta dd { margin: 0; overflow-wrap: anywhere; }
+.uat-feedback-item__details { display: grid; gap: 4px; color: #334155; font-size: 13px; }
 .uat-dialog { min-width: 520px; }
 .uat-dialog-form { display: grid; gap: 12px; }
 @media (max-width: 1439px) { .uat-layout { grid-template-columns: 1fr; } .uat-summary, .uat-result-grid { grid-template-columns: 1fr; } }
