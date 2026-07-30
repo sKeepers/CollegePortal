@@ -951,6 +951,8 @@ UAT проводится только в DEV. PROD не используется
 
 Дополнительный ручной smoke выявил расхождение демо-контингента: студенты и преподаватели создавались с массовыми повторами ФИО и без полной связи с `people`/`employees`, поэтому разделы «Люди» и «Сотрудники» не отражали реальный объем демо-данных. Исправление UAT-002.1 связывает demo Student/Teacher с Person, создает Employee для преподавателей, обновляет очистку демо-данных, нормализует события проходной и возвращает время посещаемости в локальном формате без UTC-сдвига. Мастер Admissions Foundation валидирует текущий шаг до перехода дальше, а reusable splitter не должен растягивать правую карточку за край viewport.
 
+Security hardening по `PROJECT_ANALYSIS.md` от 30.07.2026 начал закрываться с backend-auth slice: API bearer-токены теперь должны иметь индексированный `api_token_lookup_hash`, срок действия `api_token_expires_at`, login throttling и authenticated API throttling. Middleware `api.token` больше не должен перебирать всех активных пользователей и выполнять bcrypt `Hash::check` на каждый request. Оставшиеся production-блокеры вынесены отдельно: убрать bearer token из frontend `localStorage`, перейти на HttpOnly Secure cookie/Sanctum или другой backend-controlled session flow, добавить encryption-at-rest для ПДн/backups/private storage и настроить TLS/security headers.
+
 ## IMPORT-001: универсальный импорт реальных данных
 
 Добавлен раздел `/admin/import` для загрузки реальных данных колледжа из CSV/XLSX. Поддержаны студенты, группы, преподаватели, дисциплины, аудитории и абитуриенты. Импорт выполняется через предварительный просмотр, сопоставление колонок, проверку ошибок и подтверждение. История загрузок хранится в таблице `import_jobs`.

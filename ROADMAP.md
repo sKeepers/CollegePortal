@@ -98,6 +98,9 @@ Roadmap фиксирует порядок развития проекта пос
 - [x] GUI-009: Dashboard & Navigation Layout Hardening — сворачиваемые группы sidebar, устранение blank `/schedule`, splitter People и compact Dashboard widgets без новых бизнес-функций.
 - [x] UAT-002: Portal UX, RBAC and Admissions Stabilization — единый пункт меню приемной комиссии, русские validation/forbidden сообщения, Dashboard без RBAC-noise, существующий QR-пропуск в role-based AppLayout.
 - [ ] UAT-002.1: Final portal stabilization — мастер Admissions Foundation с понятной inline-валидацией, ролевые Dashboard без лишних demo-блоков, reusable splitter, единые version/build metadata, HTTPS-only DEV entrypoint, динамический QR 30 секунд, согласованные demo Person/Student/Teacher/Employee и расширенный DEV demo data smoke.
+- [x] SEC-001: API token hardening — indexed SHA-256 token lookup, token TTL and login/authenticated API rate limiting после `PROJECT_ANALYSIS.md`.
+- [ ] SEC-002: frontend-auth hardening — убрать bearer token из `localStorage`, перейти на HttpOnly Secure cookie/Sanctum или другой backend-controlled session flow.
+- [ ] SEC-003: production security hardening — encryption-at-rest для ПДн/backups/private storage, TLS/security headers, CSP/HSTS и retention policies.
 - Следующий рекомендуемый этап после UAT-002.1: TEST-001 — regression suite полного workspace приемной комиссии, включая registered read-only и duplicate-check сценарии.
 ### Приемная комиссия
 

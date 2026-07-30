@@ -15,7 +15,7 @@ class AuthApiTest extends TestCase
     public function test_user_can_login_and_get_token(): void
     {
         $role = Role::create(['name' => 'Administrator', 'code' => 'admin']);
-        User::factory()->create([
+        $user = User::factory()->create([
             'role_id' => $role->id,
             'email' => 'admin@example.test',
             'password' => Hash::make('password'),
@@ -30,7 +30,16 @@ class AuthApiTest extends TestCase
             ->assertJsonPath('token_type', 'Bearer')
             ->assertJsonPath('user.email', 'admin@example.test')
             ->assertJsonPath('user.role.code', 'admin')
-            ->assertJsonStructure(['token']);
+            ->assertJsonStructure(['token'])
+            ->assertJsonMissingPath('user.api_token_hash')
+            ->assertJsonMissingPath('user.api_token_lookup_hash');
+
+        $user->refresh();
+
+        $this->assertNotNull($user->api_token_hash);
+        $this->assertNotNull($user->api_token_lookup_hash);
+        $this->assertNotNull($user->api_token_expires_at);
+        $this->assertTrue($user->api_token_expires_at->greaterThan(now()));
     }
 
     public function test_login_rejects_invalid_credentials(): void
@@ -46,6 +55,33 @@ class AuthApiTest extends TestCase
             'password' => 'wrong-password',
         ])
             ->assertUnprocessable();
+    }
+
+    public function test_login_is_rate_limited(): void
+    {
+        User::factory()->create([
+            'email' => 'limited@example.test',
+            'password' => Hash::make('password'),
+            'is_active' => true,
+        ]);
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this
+                ->withServerVariables(['REMOTE_ADDR' => '203.0.113.77'])
+                ->postJson('/api/auth/login', [
+                    'email' => 'limited@example.test',
+                    'password' => 'wrong-password',
+                ])
+                ->assertUnprocessable();
+        }
+
+        $this
+            ->withServerVariables(['REMOTE_ADDR' => '203.0.113.77'])
+            ->postJson('/api/auth/login', [
+                'email' => 'limited@example.test',
+                'password' => 'wrong-password',
+            ])
+            ->assertTooManyRequests();
     }
 
     public function test_protected_api_requires_token(): void
@@ -70,6 +106,40 @@ class AuthApiTest extends TestCase
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
             'api_token_hash' => null,
+            'api_token_lookup_hash' => null,
+            'api_token_expires_at' => null,
         ]);
+    }
+
+    public function test_expired_api_token_is_rejected(): void
+    {
+        $token = 'expired-token';
+        $user = $this->createApiUser();
+        $user->forceFill([
+            'api_token_hash' => Hash::make($token),
+            'api_token_lookup_hash' => hash('sha256', $token),
+            'api_token_expires_at' => now()->subMinute(),
+        ])->save();
+
+        $this
+            ->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/auth/me')
+            ->assertUnauthorized();
+    }
+
+    public function test_legacy_bcrypt_only_api_token_is_rejected(): void
+    {
+        $token = 'legacy-token';
+        $user = $this->createApiUser();
+        $user->forceFill([
+            'api_token_hash' => Hash::make($token),
+            'api_token_lookup_hash' => null,
+            'api_token_expires_at' => now()->addHour(),
+        ])->save();
+
+        $this
+            ->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/auth/me')
+            ->assertUnauthorized();
     }
 }

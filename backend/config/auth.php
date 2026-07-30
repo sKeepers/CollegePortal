@@ -114,4 +114,17 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | API Token Lifetime
+    |--------------------------------------------------------------------------
+    |
+    | Bearer tokens are stored as indexed SHA-256 lookup hashes and expire
+    | automatically. The legacy bcrypt token hash column is kept only for
+    | rollback compatibility and is not used for request authentication.
+    |
+    */
+
+    'api_token_ttl_minutes' => (int) env('API_TOKEN_TTL_MINUTES', 720),
+
 ];

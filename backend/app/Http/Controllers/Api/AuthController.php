@@ -36,6 +36,8 @@ class AuthController extends Controller
 
         $user->forceFill([
             'api_token_hash' => Hash::make($token),
+            'api_token_lookup_hash' => hash('sha256', $token),
+            'api_token_expires_at' => now()->addMinutes((int) config('auth.api_token_ttl_minutes', 720)),
             'last_login_at' => now(),
         ])->save();
 
@@ -57,7 +59,11 @@ class AuthController extends Controller
     {
         $user = $request->user();
         AuditLogService::log('auth', 'logout', $user, null, ['email' => $user->email], $request, $user);
-        $user->forceFill(['api_token_hash' => null])->save();
+        $user->forceFill([
+            'api_token_hash' => null,
+            'api_token_lookup_hash' => null,
+            'api_token_expires_at' => null,
+        ])->save();
 
         return response()->json(['message' => 'Logged out.']);
     }

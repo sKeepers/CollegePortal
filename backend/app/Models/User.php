@@ -28,6 +28,8 @@ class User extends Authenticatable
         'password',
         'is_active',
         'api_token_hash',
+        'api_token_lookup_hash',
+        'api_token_expires_at',
         'last_login_at',
         'person_type',
         'person_id',
@@ -42,6 +44,7 @@ class User extends Authenticatable
         'password',
         'remember_token',
         'api_token_hash',
+        'api_token_lookup_hash',
     ];
 
     /**
@@ -55,6 +58,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'api_token_expires_at' => 'datetime',
             'last_login_at' => 'datetime',
             'person_id' => 'integer',
         ];
