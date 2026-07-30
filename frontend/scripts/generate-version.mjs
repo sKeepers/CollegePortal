@@ -1,21 +1,82 @@
 import { execSync } from 'node:child_process'
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, isAbsolute, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+const repoPath = resolve(__dirname, '../..')
 const publicPath = resolve(__dirname, '../public/version.json')
 
-function gitValue(command, fallback = 'unknown') {
+function gitValue(command) {
   try {
-    return execSync(command, { cwd: resolve(__dirname, '../..'), encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || fallback
+    return execSync(command, { cwd: repoPath, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || null
   } catch {
-    return fallback
+    return null
   }
 }
 
-const commit = process.env.VITE_BUILD_COMMIT || gitValue('git rev-parse --short=12 HEAD')
-const fullCommit = process.env.VITE_BUILD_FULL_COMMIT || gitValue('git rev-parse HEAD', commit)
+function readText(path) {
+  return existsSync(path) ? readFileSync(path, 'utf8').trim() : null
+}
+
+function gitDirectory() {
+  const gitPath = resolve(repoPath, '.git')
+
+  if (!existsSync(gitPath)) {
+    return null
+  }
+
+  const gitPointer = readText(gitPath)
+
+  if (gitPointer?.startsWith('gitdir:')) {
+    const target = gitPointer.slice('gitdir:'.length).trim()
+
+    return isAbsolute(target) ? target : resolve(repoPath, target)
+  }
+
+  return gitPath
+}
+
+function packedRef(gitDir, refName) {
+  const refs = readText(resolve(gitDir, 'packed-refs'))
+
+  if (!refs) {
+    return null
+  }
+
+  return refs
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#') && !line.startsWith('^'))
+    .map((line) => line.split(/\s+/))
+    .find(([, ref]) => ref === refName)?.[0] || null
+}
+
+function gitHeadCommit() {
+  const gitDir = gitDirectory()
+
+  if (!gitDir) {
+    return null
+  }
+
+  const head = readText(resolve(gitDir, 'HEAD'))
+
+  if (!head) {
+    return null
+  }
+
+  if (!head.startsWith('ref:')) {
+    return head
+  }
+
+  const refName = head.slice('ref:'.length).trim()
+
+  return readText(resolve(gitDir, refName)) || packedRef(gitDir, refName)
+}
+
+const detectedCommit = gitValue('git rev-parse HEAD') || gitHeadCommit()
+const fullCommit = process.env.VITE_BUILD_FULL_COMMIT || detectedCommit || 'unknown'
+const commit = process.env.VITE_BUILD_COMMIT || (fullCommit === 'unknown' ? 'unknown' : fullCommit.slice(0, 12))
 const buildDate = process.env.VITE_BUILD_DATE || new Date().toISOString().slice(0, 10)
 const environment = process.env.VITE_APP_ENV || process.env.APP_ENV || 'development'
 const version = process.env.VITE_APP_VERSION || process.env.APP_VERSION || '0.8.0-rc2'
