@@ -7,9 +7,14 @@ use App\Models\Attendance;
 use App\Models\ApplicantApplication;
 use App\Models\Classroom;
 use App\Models\DigitalIdentity;
+use App\Models\Department;
 use App\Models\EducationProgram;
+use App\Models\Employee;
+use App\Models\EmployeeAssignment;
 use App\Models\Grade;
 use App\Models\Group;
+use App\Models\Person;
+use App\Models\Position;
 use App\Models\Role;
 use App\Models\ScheduleLesson;
 use App\Models\Specialty;
@@ -51,7 +56,8 @@ class DemoDataSeeder extends Seeder
             $programs = $this->seedApplicantPrograms();
             $subjects = $this->seedSubjects();
             $classrooms = $this->seedClassrooms();
-            $teachers = $this->seedTeachers($teacherRole, $demoPassword);
+            $hr = $this->seedHrReferences();
+            $teachers = $this->seedTeachers($teacherRole, $demoPassword, $hr);
             $groups = $this->seedGroups($programs, $teachers);
             $students = $this->seedStudents($studentRole, $demoPassword, $groups);
 
@@ -153,41 +159,74 @@ class DemoDataSeeder extends Seeder
         ))->values();
     }
 
+    private function seedHrReferences(): array
+    {
+        $departments = collect([
+            ['DEMO-MUSIC', 'Музыкальное отделение'],
+            ['DEMO-GENERAL', 'Общеобразовательное отделение'],
+        ])->mapWithKeys(fn (array $item): array => [
+            $item[1] => Department::updateOrCreate(
+                ['code' => $item[0]],
+                ['name' => $item[1], 'type' => 'academic', 'is_active' => true]
+            ),
+        ]);
+
+        $positions = collect([
+            ['DEMO-TEACHER', 'Преподаватель', true],
+            ['DEMO-DEPARTMENT-HEAD', 'Заведующий отделением', true],
+        ])->mapWithKeys(fn (array $item): array => [
+            $item[1] => Position::updateOrCreate(
+                ['code' => $item[0]],
+                ['name' => $item[1], 'category' => 'teaching', 'is_teaching_position' => $item[2], 'is_active' => true]
+            ),
+        ]);
+
+        return ['departments' => $departments, 'positions' => $positions];
+    }
+
     /**
      * @return \Illuminate\Support\Collection<int, Teacher>
      */
-    private function seedTeachers(Role $teacherRole, string $demoPassword)
+    private function seedTeachers(Role $teacherRole, string $demoPassword, array $hr)
     {
         $lastNames = ['Смирнова', 'Петров', 'Орлова', 'Климов', 'Соколова', 'Никитин', 'Федорова', 'Лебедев', 'Егорова', 'Макаров'];
         $firstNames = ['Елена', 'Алексей', 'Марина', 'Игорь', 'Анна', 'Павел', 'Ольга', 'Дмитрий', 'Наталья', 'Сергей'];
         $middleNames = ['Викторовна', 'Андреевич', 'Петровна', 'Сергеевич', 'Павловна', 'Ильич', 'Романовна', 'Олегович', 'Игоревна', 'Михайлович'];
 
-        return collect(range(1, self::TEACHER_COUNT))->map(function (int $index) use ($teacherRole, $demoPassword, $lastNames, $firstNames, $middleNames): Teacher {
+        return collect(range(1, self::TEACHER_COUNT))->map(function (int $index) use ($teacherRole, $demoPassword, $lastNames, $firstNames, $middleNames, $hr): Teacher {
             $email = $index === 1 ? 'teacher@college-portal.local' : sprintf('teacher.demo.%03d@%s', $index, self::DEMO_DOMAIN);
             $lastName = $lastNames[($index - 1) % count($lastNames)];
-            $firstName = $firstNames[($index - 1) % count($firstNames)];
-            $middleName = $middleNames[($index - 1) % count($middleNames)];
+            $firstName = $firstNames[intdiv($index - 1, count($lastNames)) % count($firstNames)];
+            $middleName = $middleNames[intdiv($index - 1, count($lastNames) * count($firstNames)) % count($middleNames)];
+            $positionName = $index % 6 === 0 ? 'Заведующий отделением' : 'Преподаватель';
+            $departmentName = $index % 4 === 0 ? 'Общеобразовательное отделение' : 'Музыкальное отделение';
+            $person = $this->seedPerson($lastName, $firstName, $middleName, null, $email, sprintf('+7900%07d', 1000000 + $index));
 
             $user = $index === 1
                 ? User::updateOrCreate(
                     ['email' => $email],
-                    ['role_id' => $teacherRole->id, 'name' => "{$lastName} {$firstName} {$middleName}", 'password' => Hash::make($demoPassword), 'is_active' => true]
+                    ['role_id' => $teacherRole->id, 'person_id' => $person->id, 'person_type' => 'person', 'name' => "{$lastName} {$firstName} {$middleName}", 'password' => Hash::make($demoPassword), 'is_active' => true]
                 )
                 : null;
 
-            return Teacher::updateOrCreate(
+            $teacher = Teacher::updateOrCreate(
                 ['email' => $email],
                 [
+                    'person_id' => $person->id,
                     'user_id' => $user?->id,
                     'last_name' => $lastName,
                     'first_name' => $firstName,
                     'middle_name' => $middleName,
                     'phone' => sprintf('+7900%07d', 1000000 + $index),
-                    'position' => $index % 6 === 0 ? 'Заведующий отделением' : 'Преподаватель',
-                    'department' => $index % 4 === 0 ? 'Общеобразовательное отделение' : 'Музыкальное отделение',
+                    'position' => $positionName,
+                    'department' => $departmentName,
                     'is_active' => true,
                 ]
             );
+
+            $this->seedEmployeeForTeacher($person, $index, $departmentName, $positionName, $hr);
+
+            return $teacher;
         })->values();
     }
 
@@ -228,27 +267,30 @@ class DemoDataSeeder extends Seeder
         return collect(range(1, self::STUDENT_COUNT))->map(function (int $index) use ($studentRole, $demoPassword, $groups, $lastNames, $firstNames, $middleNames): Student {
             $email = $index === 1 ? 'student@college-portal.local' : sprintf('student.demo.%03d@%s', $index, self::DEMO_DOMAIN);
             $lastName = $lastNames[($index - 1) % count($lastNames)];
-            $firstName = $firstNames[($index - 1) % count($firstNames)];
-            $middleName = $middleNames[($index - 1) % count($middleNames)];
+            $firstName = $firstNames[intdiv($index - 1, count($lastNames)) % count($firstNames)];
+            $middleName = $middleNames[intdiv($index - 1, count($lastNames) * count($firstNames)) % count($middleNames)];
             $group = $groups[($index - 1) % $groups->count()];
+            $birthDate = Carbon::create(2006 + ($group->course % 4), (($index - 1) % 12) + 1, (($index - 1) % 24) + 1)->toDateString();
+            $person = $this->seedPerson($lastName, $firstName, $middleName, $birthDate, $email, sprintf('+7910%07d', 1000000 + $index));
 
             $user = $index === 1
                 ? User::updateOrCreate(
                     ['email' => $email],
-                    ['role_id' => $studentRole->id, 'name' => "{$lastName} {$firstName} {$middleName}", 'password' => Hash::make($demoPassword), 'is_active' => true]
+                    ['role_id' => $studentRole->id, 'person_id' => $person->id, 'person_type' => 'person', 'name' => "{$lastName} {$firstName} {$middleName}", 'password' => Hash::make($demoPassword), 'is_active' => true]
                 )
                 : null;
 
             return Student::updateOrCreate(
                 ['email' => $email],
                 [
+                    'person_id' => $person->id,
                     'user_id' => $user?->id,
                     'group_id' => $group->id,
                     'course' => $group->course,
                     'last_name' => $lastName,
                     'first_name' => $firstName,
                     'middle_name' => $middleName,
-                    'birth_date' => Carbon::create(2006 + ($group->course % 4), (($index - 1) % 12) + 1, (($index - 1) % 24) + 1)->toDateString(),
+                    'birth_date' => $birthDate,
                     'phone' => sprintf('+7910%07d', 1000000 + $index),
                     'status' => $index % 37 === 0 ? 'academic_leave' : 'active',
                     'enrollment_date' => Carbon::create($group->year_start, 9, 1)->toDateString(),
@@ -330,14 +372,14 @@ class DemoDataSeeder extends Seeder
         foreach ($students as $student) {
             DigitalIdentity::updateOrCreate(
                 ['entity_type' => DigitalIdentity::ENTITY_STUDENT, 'entity_id' => $student->id],
-                ['token' => (string) Str::uuid(), 'status' => DigitalIdentity::STATUS_ACTIVE, 'issued_at' => now(), 'expires_at' => null, 'revoked_at' => null]
+                ['person_id' => $student->person_id, 'token' => (string) Str::uuid(), 'status' => DigitalIdentity::STATUS_ACTIVE, 'issued_at' => now(), 'expires_at' => null, 'revoked_at' => null]
             );
         }
 
         foreach ($teachers as $teacher) {
             DigitalIdentity::updateOrCreate(
                 ['entity_type' => DigitalIdentity::ENTITY_TEACHER, 'entity_id' => $teacher->id],
-                ['token' => (string) Str::uuid(), 'status' => DigitalIdentity::STATUS_ACTIVE, 'issued_at' => now(), 'expires_at' => null, 'revoked_at' => null]
+                ['person_id' => $teacher->person_id, 'token' => (string) Str::uuid(), 'status' => DigitalIdentity::STATUS_ACTIVE, 'issued_at' => now(), 'expires_at' => null, 'revoked_at' => null]
             );
         }
     }
@@ -352,22 +394,123 @@ class DemoDataSeeder extends Seeder
             })
             ->get();
 
-        foreach ($identities as $index => $identity) {
-            AccessEvent::updateOrCreate(
-                [
+        if ($identities->isNotEmpty()) {
+            AccessEvent::query()
+                ->whereIn('digital_identity_id', $identities->pluck('id'))
+                ->where('device_name', 'Демо-турникет')
+                ->delete();
+        }
+
+        foreach ($identities->values() as $index => $identity) {
+            if ($index % 17 === 0) {
+                AccessEvent::create([
                     'digital_identity_id' => $identity->id,
-                    'event_time' => Carbon::today()->setTime(8, 10)->addMinutes($index % 70),
-                    'direction' => AccessEvent::DIRECTION_IN,
-                ],
-                [
                     'entity_type' => $identity->entity_type,
                     'entity_id' => $identity->entity_id,
                     'access_point' => 'Главный вход',
                     'device_name' => 'Демо-турникет',
-                    'result' => $index % 29 === 0 ? AccessEvent::RESULT_DENIED : AccessEvent::RESULT_ALLOWED,
-                    'reason' => $index % 29 === 0 ? 'Демо-отказ: пропуск требует проверки.' : null,
-                ]
-            );
+                    'direction' => AccessEvent::DIRECTION_IN,
+                    'event_time' => Carbon::today()->setTime(8, 15)->addMinutes($index % 8),
+                    'result' => AccessEvent::RESULT_DENIED,
+                    'reason' => 'Демо-отказ: пропуск требует проверки.',
+                ]);
+                continue;
+            }
+
+            if ($index % 13 === 0) {
+                continue;
+            }
+
+            $offset = match (true) {
+                $index % 11 === 0 => 16 + ($index % 22),
+                $index % 7 === 0 => 1 + ($index % 12),
+                default => -25 + ($index % 20),
+            };
+            $entryTime = Carbon::today()->setTime(8, 30)->addMinutes($offset);
+
+            AccessEvent::create([
+                'digital_identity_id' => $identity->id,
+                'entity_type' => $identity->entity_type,
+                'entity_id' => $identity->entity_id,
+                'access_point' => 'Главный вход',
+                'device_name' => 'Демо-турникет',
+                'direction' => AccessEvent::DIRECTION_IN,
+                'event_time' => $entryTime,
+                'result' => AccessEvent::RESULT_ALLOWED,
+                'reason' => null,
+            ]);
+
+            if ($index % 5 !== 0) {
+                AccessEvent::create([
+                    'digital_identity_id' => $identity->id,
+                    'entity_type' => $identity->entity_type,
+                    'entity_id' => $identity->entity_id,
+                    'access_point' => 'Главный вход',
+                    'device_name' => 'Демо-турникет',
+                    'direction' => AccessEvent::DIRECTION_OUT,
+                    'event_time' => Carbon::today()->setTime(14, 20)->addMinutes($index % 70),
+                    'result' => AccessEvent::RESULT_ALLOWED,
+                    'reason' => null,
+                ]);
+            }
+        }
+    }
+
+    private function seedPerson(string $lastName, string $firstName, ?string $middleName, ?string $birthDate, string $email, string $phone): Person
+    {
+        $person = Person::firstOrNew(['email' => $email]);
+        $person->fill([
+            'last_name' => $lastName,
+            'first_name' => $firstName,
+            'middle_name' => $middleName,
+            'birth_date' => $birthDate,
+            'phone' => $phone,
+            'status' => 'active',
+        ]);
+        if (empty($person->uuid)) {
+            $person->uuid = (string) Str::uuid();
+        }
+        $person->save();
+
+        return $person;
+    }
+
+    private function seedEmployeeForTeacher(Person $person, int $index, string $departmentName, string $positionName, array $hr): void
+    {
+        $department = $hr['departments'][$departmentName] ?? null;
+        $position = $hr['positions'][$positionName] ?? null;
+
+        $employee = Employee::updateOrCreate(
+            ['employee_number' => sprintf('DEMO-T%03d', $index)],
+            [
+                'person_id' => $person->id,
+                'status' => 'active',
+                'employment_type' => 'full_time',
+                'hired_at' => Carbon::create(2024, 9, 1)->toDateString(),
+                'dismissed_at' => null,
+                'primary_department_id' => $department?->id,
+                'primary_position_id' => $position?->id,
+                'workload_rate' => 1,
+                'is_teacher' => true,
+                'comment' => 'Демонстрационная кадровая запись преподавателя.',
+            ]
+        );
+
+        if ($department && $position) {
+            $employee->assignments()
+                ->where('comment', 'Демонстрационное основное назначение.')
+                ->delete();
+
+            EmployeeAssignment::create([
+                'employee_id' => $employee->id,
+                'department_id' => $department->id,
+                'position_id' => $position->id,
+                'employment_type' => 'full_time',
+                'rate' => 1,
+                'started_at' => Carbon::create(2024, 9, 1)->toDateString(),
+                'is_primary' => true,
+                'comment' => 'Демонстрационное основное назначение.',
+            ]);
         }
     }
 

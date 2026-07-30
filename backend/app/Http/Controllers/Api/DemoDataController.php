@@ -8,8 +8,12 @@ use App\Models\ApplicantApplication;
 use App\Models\Attendance;
 use App\Models\Classroom;
 use App\Models\DigitalIdentity;
+use App\Models\Employee;
+use App\Models\EmployeeAssignment;
+use App\Models\EmployeeStatusPeriod;
 use App\Models\Grade;
 use App\Models\Group;
+use App\Models\Person;
 use App\Models\ScheduleLesson;
 use App\Models\Student;
 use App\Models\Subject;
@@ -67,6 +71,13 @@ class DemoDataController extends Controller
 
             $studentIds = Student::query()->whereIn('email', $studentEmails)->pluck('id');
             $teacherIds = Teacher::query()->whereIn('email', $teacherEmails)->pluck('id');
+            $studentPersonIds = Student::query()->whereIn('id', $studentIds)->whereNotNull('person_id')->pluck('person_id');
+            $teacherPersonIds = Teacher::query()->whereIn('id', $teacherIds)->whereNotNull('person_id')->pluck('person_id');
+            $personIds = $studentPersonIds->merge($teacherPersonIds)->unique()->values();
+            $employeeIds = Employee::query()
+                ->where('employee_number', 'like', 'DEMO-T%')
+                ->orWhereIn('person_id', $teacherPersonIds)
+                ->pluck('id');
             $groupIds = Group::query()->where('name', 'like', 'ДЕМО-%')->pluck('id');
             $subjectIds = Subject::query()
                 ->where('code', 'MUS-101')
@@ -88,12 +99,16 @@ class DemoDataController extends Controller
                 'grades' => Grade::query()->whereIn('schedule_lesson_id', $lessonIds)->delete(),
                 'attendance' => Attendance::query()->whereIn('schedule_lesson_id', $lessonIds)->delete(),
                 'schedule_lessons' => ScheduleLesson::query()->whereIn('id', $lessonIds)->delete(),
+                'employee_assignments' => EmployeeAssignment::query()->whereIn('employee_id', $employeeIds)->delete(),
+                'employee_status_periods' => EmployeeStatusPeriod::query()->whereIn('employee_id', $employeeIds)->delete(),
+                'employees' => Employee::query()->whereIn('id', $employeeIds)->delete(),
                 'students' => $this->deleteOnlyUnreferencedStudents($studentIds),
                 'subjects' => $this->deleteOnlyUnreferencedSubjects($subjectIds),
                 'groups' => $this->deleteOnlyUnreferencedGroups($groupIds),
                 'teachers' => $this->deleteOnlyUnreferencedTeachers($teacherIds),
                 'classrooms' => $this->deleteOnlyUnreferencedClassrooms(),
                 'applications' => ApplicantApplication::query()->legacy()->whereIn('email', $applicationEmails)->delete(),
+                'people' => $this->deleteOnlyUnreferencedPeople($personIds),
                 'users' => User::query()->whereIn('email', $studentEmails->merge($teacherEmails)->values()->all())->delete(),
             ];
 
@@ -200,10 +215,31 @@ class DemoDataController extends Controller
             ->delete();
     }
 
+    private function deleteOnlyUnreferencedPeople($personIds): int
+    {
+        return Person::query()
+            ->whereIn('id', $personIds)
+            ->where(function ($query): void {
+                $query
+                    ->where('email', 'student@college-portal.local')
+                    ->orWhere('email', 'teacher@college-portal.local')
+                    ->orWhere('email', 'like', 'student.demo.%@demo.college.local')
+                    ->orWhere('email', 'like', 'teacher.demo.%@demo.college.local');
+            })
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('students')->whereColumn('students.person_id', 'people.id'))
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('teachers')->whereColumn('teachers.person_id', 'people.id'))
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('employees')->whereColumn('employees.person_id', 'people.id'))
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('applicant_applications')->whereColumn('applicant_applications.person_id', 'people.id'))
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('graduates')->whereColumn('graduates.person_id', 'people.id'))
+            ->delete();
+    }
+
     private function summary(): array
     {
         return [
+            'people' => Person::query()->count(),
             'students' => Student::query()->count(),
+            'employees' => Employee::query()->count(),
             'groups' => Group::query()->count(),
             'teachers' => Teacher::query()->count(),
             'subjects' => Subject::query()->count(),

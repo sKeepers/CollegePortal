@@ -60,6 +60,7 @@ const syncingQuery = ref(false)
 const activeTab = ref('general')
 const wizardOpen = ref(false)
 const wizardStep = ref('application')
+const wizardSteps = ['application', 'identity', 'education', 'files', 'choices']
 const wizardApplicantMode = ref('existing')
 const personEditorOpen = ref(false)
 const applicantEditorOpen = ref(false)
@@ -81,10 +82,10 @@ const {
   workspaceStyle,
 } = useResizableWorkspace({
   storageKey: splitterKey,
-  defaultDetailsWidth: 520,
-  minDetailsWidth: 420,
-  maxDetailsWidth: 760,
-  minListWidth: 620,
+  defaultDetailsWidth: 480,
+  minDetailsWidth: 360,
+  maxDetailsWidth: 640,
+  minListWidth: 560,
   resizeBodyClass: 'admissions-foundation-splitter-resizing',
 })
 
@@ -359,6 +360,37 @@ function requiredField(value, message) {
   return value !== '' && value !== null && value !== undefined ? '' : message
 }
 
+function digitsOnly(value) {
+  return String(value || '').replace(/\D/g, '')
+}
+
+function validEmail(value) {
+  return !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim())
+}
+
+function validPhone(value) {
+  const digits = digitsOnly(value)
+  return !digits || digits.length >= 10
+}
+
+function validSnils(value) {
+  const digits = digitsOnly(value)
+  return !digits || digits.length === 11
+}
+
+function wizardStepIndex(step) {
+  return wizardSteps.indexOf(step)
+}
+
+function isWizardStepDone(step) {
+  return wizardStepIndex(wizardStep.value) > wizardStepIndex(step)
+}
+
+function wizardStepColor(step) {
+  if (isWizardStepDone(step)) return 'positive'
+  return wizardStep.value === step ? 'primary' : 'grey-6'
+}
+
 function firstOptionValue(options = []) {
   return options.find((option) => option.value !== '' && option.value !== null && option.value !== undefined)?.value || null
 }
@@ -376,7 +408,7 @@ function applyWizardDefaults() {
   if (!wizardForm.choice.base_education_type_id && defaultBaseEducationTypeId) wizardForm.choice.base_education_type_id = defaultBaseEducationTypeId
 }
 
-function validateWizardStep(step = wizardStep.value) {
+function wizardStepErrors(step = wizardStep.value) {
   const errors = {}
 
   if (step === 'application') {
@@ -386,11 +418,18 @@ function validateWizardStep(step = wizardStep.value) {
       errors.last_name = requiredField(personForm.last_name, 'Укажите фамилию.')
       errors.first_name = requiredField(personForm.first_name, 'Укажите имя.')
       errors.birth_date = requiredField(personForm.birth_date, 'Укажите дату рождения.')
+      if (!validEmail(personForm.email)) errors.email = 'Укажите корректный email.'
+      if (!validPhone(personForm.phone)) errors.phone = 'Телефон должен содержать не менее 10 цифр.'
+      if (!validSnils(personForm.snils)) errors.person_snils = 'СНИЛС должен содержать 11 цифр.'
     }
 
     errors.education_program_id = requiredField(wizardForm.education_program_id, 'Выберите основную образовательную программу.')
     errors.admission_year = requiredField(wizardForm.admission_year, 'Укажите год приема.')
     errors.source_id = requiredField(wizardForm.source_id, 'Выберите источник заявления.')
+  }
+
+  if (step === 'identity' && !validSnils(wizardForm.snils)) {
+    errors.snils = 'СНИЛС должен содержать 11 цифр.'
   }
 
   if (step === 'identity' && hasDocumentInput(wizardForm.identity)) {
@@ -401,8 +440,21 @@ function validateWizardStep(step = wizardStep.value) {
   if (step === 'education' && hasDocumentInput(wizardForm.education)) {
     errors.education_document_type_id = requiredField(wizardForm.education.document_type_id, 'Выберите тип документа об образовании.')
     errors.education_number = requiredField(wizardForm.education.number, 'Укажите номер документа об образовании.')
+    if (wizardForm.education.average_score !== '' && (Number(wizardForm.education.average_score) < 0 || Number(wizardForm.education.average_score) > 5)) {
+      errors.education_average_score = 'Средний балл должен быть от 0 до 5.'
+    }
   }
 
+  if (step === 'choices') {
+    if (!Number.isFinite(Number(wizardForm.choice.priority)) || Number(wizardForm.choice.priority) < 1) {
+      errors.choice_priority = 'Приоритет должен быть положительным числом.'
+    }
+  }
+
+  return errors
+}
+
+function applyWizardErrors(errors) {
   Object.keys(wizardTouched).forEach((key) => { delete wizardTouched[key] })
   Object.entries(errors)
     .filter(([, message]) => Boolean(message))
@@ -413,10 +465,41 @@ function validateWizardStep(step = wizardStep.value) {
   return messages.length === 0
 }
 
-function goWizardStep(nextStep) {
+function validateWizardStep(step = wizardStep.value) {
+  return applyWizardErrors(wizardStepErrors(step))
+}
+
+function validateWizardAll() {
+  for (const step of wizardSteps) {
+    const errors = wizardStepErrors(step)
+    if (Object.values(errors).some(Boolean)) {
+      wizardStep.value = step
+      return applyWizardErrors(errors)
+    }
+  }
+
+  return applyWizardErrors({})
+}
+
+async function goWizardStep(nextStep) {
   if (!validateWizardStep()) {
     $q.notify({ type: 'warning', message: wizardError.value || 'Проверьте поля текущего шага.' })
     return
+  }
+
+  if (wizardStep.value === 'identity' && wizardApplicantMode.value === 'new' && !applicantForm.person_id) {
+    try {
+      const duplicate = await runDuplicateCheck({ silent: true })
+      if ((duplicate?.matches || []).length > 0) {
+        wizardError.value = 'Найдены возможные дубли человека. Выберите существующую запись перед продолжением.'
+        $q.notify({ type: 'warning', message: wizardError.value })
+        return
+      }
+    } catch {
+      wizardError.value = detailError.value || 'Не удалось проверить дубли перед продолжением.'
+      $q.notify({ type: 'warning', message: wizardError.value })
+      return
+    }
   }
 
   wizardError.value = ''
@@ -798,14 +881,14 @@ function filterPeople(value, update) {
   store.searchPeople(value).finally(() => update(() => {}))
 }
 
-async function runDuplicateCheck() {
+async function runDuplicateCheck({ silent = false } = {}) {
   detailError.value = ''
   duplicateDecision.value = ''
   duplicateResult.value = null
 
   try {
     duplicateResult.value = await store.checkPersonDuplicates(duplicatePayload())
-    if (!duplicateResult.value.has_matches) {
+    if (!silent && !duplicateResult.value.has_matches) {
       $q.notify({ type: 'positive', message: 'Дубли не найдены' })
     }
     return duplicateResult.value
@@ -907,7 +990,7 @@ async function ensureWizardApplicant() {
 
 async function finishWizard() {
   detailError.value = ''
-  if (!validateWizardStep()) {
+  if (!validateWizardAll()) {
     $q.notify({ type: 'warning', message: wizardError.value || 'Проверьте поля текущего шага.' })
     return
   }
@@ -1567,8 +1650,8 @@ onMounted(async () => {
         </q-card-section>
         <q-separator />
         <q-card-section>
-          <q-stepper v-model="wizardStep" flat animated contracted class="admissions-foundation-stepper">
-            <q-step name="application" title="Общие сведения" :done="wizardStep !== 'application'">
+          <q-stepper v-model="wizardStep" flat animated contracted class="admissions-foundation-stepper" active-color="primary" done-color="positive">
+            <q-step name="application" title="Общие сведения" :done="isWizardStepDone('application')" :color="wizardStepColor('application')">
               <q-banner v-if="wizardError" rounded class="admissions-foundation-warning q-mb-md">
                 <AlertCircle :size="18" /> {{ wizardError }}
               </q-banner>
@@ -1605,9 +1688,9 @@ onMounted(async () => {
                     <q-select v-model="personForm.gender" dense outlined emit-value map-options label="Пол" :options="genderOptions" />
                     <q-input v-model="personForm.citizenship" dense outlined label="Гражданство" />
                     <q-input v-model="personForm.place_birth" dense outlined label="Место рождения" />
-                    <q-input v-model="personForm.phone" dense outlined label="Телефон" />
-                    <q-input v-model="personForm.email" dense outlined type="email" label="Email" />
-                    <q-input :model-value="personForm.snils" dense outlined label="СНИЛС" @update:model-value="personForm.snils = snilsMask($event)" />
+                    <q-input v-model="personForm.phone" dense outlined label="Телефон" :error="Boolean(fieldError('phone'))" :error-message="fieldError('phone')" />
+                    <q-input v-model="personForm.email" dense outlined type="email" label="Email" :error="Boolean(fieldError('email'))" :error-message="fieldError('email')" />
+                    <q-input :model-value="personForm.snils" dense outlined label="СНИЛС" :error="Boolean(fieldError('person_snils'))" :error-message="fieldError('person_snils')" @update:model-value="personForm.snils = snilsMask($event)" />
                   </div>
                   <q-input v-model="wizardAdditionalPerson.registration_address" dense outlined type="textarea" autogrow label="Адрес регистрации" />
                   <q-input v-model="wizardAdditionalPerson.residential_address" dense outlined type="textarea" autogrow label="Адрес проживания" hint="Заполняется, если отличается от адреса регистрации." />
@@ -1655,12 +1738,12 @@ onMounted(async () => {
                 <q-btn color="primary" @click="goWizardStep('identity')">Далее</q-btn>
               </q-stepper-navigation>
             </q-step>
-            <q-step name="identity" title="Паспорт и СНИЛС">
+            <q-step name="identity" title="Паспорт и СНИЛС" :done="isWizardStepDone('identity')" :color="wizardStepColor('identity')">
               <q-banner v-if="wizardError" rounded class="admissions-foundation-warning q-mb-md">
                 <AlertCircle :size="18" /> {{ wizardError }}
               </q-banner>
               <div class="admissions-foundation-form-grid">
-                <q-input :model-value="wizardForm.snils" dense outlined label="СНИЛС" @update:model-value="wizardForm.snils = snilsMask($event)" />
+                <q-input :model-value="wizardForm.snils" dense outlined label="СНИЛС" :error="Boolean(fieldError('snils'))" :error-message="fieldError('snils')" @update:model-value="wizardForm.snils = snilsMask($event)" />
                 <q-select v-model="wizardForm.identity.document_type_id" dense outlined emit-value map-options label="Тип документа" :options="identityTypeOptions" :error="Boolean(fieldError('identity_document_type_id'))" :error-message="fieldError('identity_document_type_id')" />
                 <q-input v-model="wizardForm.identity.series" dense outlined label="Серия" />
                 <q-input v-model="wizardForm.identity.number" dense outlined label="Номер" :error="Boolean(fieldError('identity_number'))" :error-message="fieldError('identity_number')" />
@@ -1674,7 +1757,7 @@ onMounted(async () => {
                 <q-btn color="primary" @click="goWizardStep('education')">Далее</q-btn>
               </q-stepper-navigation>
             </q-step>
-            <q-step name="education" title="Образование">
+            <q-step name="education" title="Образование" :done="isWizardStepDone('education')" :color="wizardStepColor('education')">
               <q-banner v-if="wizardError" rounded class="admissions-foundation-warning q-mb-md">
                 <AlertCircle :size="18" /> {{ wizardError }}
               </q-banner>
@@ -1685,14 +1768,14 @@ onMounted(async () => {
                 <q-input v-model="wizardForm.education.issue_date" dense outlined type="date" label="Дата выдачи" />
                 <q-input v-model="wizardForm.education.document_organization" dense outlined label="Выдавшая организация" />
                 <q-select v-model="wizardForm.education.education_level_id" dense outlined emit-value map-options label="Уровень образования" :options="educationLevelOptions" />
-                <q-input v-model.number="wizardForm.education.average_score" dense outlined type="number" step="0.01" label="Средний балл" />
+                <q-input v-model.number="wizardForm.education.average_score" dense outlined type="number" step="0.01" label="Средний балл" :error="Boolean(fieldError('education_average_score'))" :error-message="fieldError('education_average_score')" />
               </div>
               <q-stepper-navigation>
                 <q-btn flat @click="wizardStep = 'identity'">Назад</q-btn>
                 <q-btn color="primary" @click="goWizardStep('files')">Далее</q-btn>
               </q-stepper-navigation>
             </q-step>
-            <q-step name="files" title="Файлы">
+            <q-step name="files" title="Файлы" :done="isWizardStepDone('files')" :color="wizardStepColor('files')">
               <div class="admissions-foundation-form-grid">
                 <q-select v-model="uploadCategory" dense outlined emit-value map-options label="Категория" :options="fileCategoryOptions" />
                 <q-file v-model="wizardForm.identityFiles" dense outlined multiple label="Файлы паспорта" />
@@ -1703,9 +1786,9 @@ onMounted(async () => {
                 <q-btn color="primary" @click="goWizardStep('choices')">Далее</q-btn>
               </q-stepper-navigation>
             </q-step>
-            <q-step name="choices" title="Специальности">
+            <q-step name="choices" title="Специальности" :done="isWizardStepDone('choices')" :color="wizardStepColor('choices')">
               <div class="admissions-foundation-form-grid">
-                <q-input v-model.number="wizardForm.choice.priority" dense outlined type="number" label="Приоритет" />
+                <q-input v-model.number="wizardForm.choice.priority" dense outlined type="number" label="Приоритет" :error="Boolean(fieldError('choice_priority'))" :error-message="fieldError('choice_priority')" />
                 <q-select v-model="wizardForm.choice.base_education_type_id" dense outlined emit-value map-options label="Основание" :options="baseEducationOptions" />
                 <q-select v-model="wizardForm.choice.quota_type_id" dense outlined emit-value map-options label="Квота" :options="quotaOptions" />
                 <q-select v-model="wizardForm.choice.status_id" dense outlined emit-value map-options label="Статус выбора" :options="choiceStatusOptions" />
@@ -1743,11 +1826,15 @@ onMounted(async () => {
   display: grid;
   gap: 0;
   align-items: start;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .admissions-foundation-main,
 .admissions-foundation-side {
   min-width: 0;
+  max-width: 100%;
 }
 
 .admissions-foundation-main {
@@ -1942,6 +2029,14 @@ onMounted(async () => {
 .admissions-foundation-stepper {
   max-width: 1100px;
   margin: 0 auto;
+}
+
+.admissions-foundation-stepper :deep(.q-stepper__tab) {
+  min-width: 0;
+}
+
+.admissions-foundation-stepper :deep(.q-stepper__dot) {
+  transition: background-color 0.18s ease, color 0.18s ease;
 }
 
 :deep(.admissions-foundation-row--selected) {

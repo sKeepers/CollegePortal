@@ -26,6 +26,7 @@ This document is a navigation and status snapshot. GitHub Issues, Pull Requests 
 
 - `UAT-002.1`: Final portal stabilization.
 - Разрешенные изменения: user-facing validation/localization fixes, Admissions Foundation wizard stabilization, role dashboard cleanup, reusable splitter hardening, existing QR pass readiness on DEV, DEV data cleanup, HTTPS-only DEV entrypoint, dynamic QR TTL and version/build metadata.
+- Дополнительная стабилизация по ручному smoke: демо-студенты и преподаватели получают разные синтетические ФИО, все demo Student/Teacher связаны с `people`, преподаватели создаются как `employees`, посещаемость отдает локальное время без UTC-сдвига, мастер заявления не пропускает очевидно некорректные шаги до финальной кнопки, master-detail workspace не должен уводить правую карточку за край экрана.
 - Явно исключено: новая независимая QR-реализация, новый ФИС/SOAP flow, PROD/UAT changes and merge to `develop`.
 
 ## Completed Tasks
@@ -80,6 +81,7 @@ Live GitHub Issues are the source of truth when accessible. From the local docum
 - UAT-002 QR integration reuses the existing Digital Identity and Access Gate implementation; no BACK-007/new QR API is planned for this correction.
 - DEV HTTPS endpoint for browser/mobile UAT is `https://192.168.34.114:5443`; port `5174` remains HTTP-only and must not be opened as HTTPS.
 - Demo data is documented in [Demo Data](DEMO_DATA.md) and can be recreated without real personal data.
+- После reseed demo data разделы `Люди`, `Студенты`, `Преподаватели` и `Сотрудники` должны показывать согласованный контингент: students/teachers не должны существовать как изолированные записи без Person/Employee-связей.
 
 ## Known Risks
 

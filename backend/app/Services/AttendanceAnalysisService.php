@@ -320,7 +320,7 @@ class AttendanceAnalysisService
             'subject' => $lesson->subject?->name,
             'group' => $lesson->group?->name,
             'classroom' => $lesson->classroom?->number,
-            'starts_at_iso' => $this->lessonStart($lesson, $date)?->toISOString(),
+            'starts_at_iso' => $this->formatDateTime($this->lessonStart($lesson, $date)),
         ];
     }
 
@@ -339,7 +339,7 @@ class AttendanceAnalysisService
 
     private function formatDateTime(?DateTimeInterface $value): ?string
     {
-        return $value ? CarbonImmutable::instance($value)->toISOString() : null;
+        return $value ? CarbonImmutable::instance($value)->format('Y-m-d\TH:i:s') : null;
     }
 
     private function fullName(object $person): string

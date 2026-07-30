@@ -97,7 +97,7 @@ Roadmap фиксирует порядок развития проекта пос
 - [x] RC1: Admissions Foundation release candidate — аудит backend/frontend/API/RBAC/docs, release report `RC1_READY.md`, фиксация очевидных замечаний мастера и duplicate-check.
 - [x] GUI-009: Dashboard & Navigation Layout Hardening — сворачиваемые группы sidebar, устранение blank `/schedule`, splitter People и compact Dashboard widgets без новых бизнес-функций.
 - [x] UAT-002: Portal UX, RBAC and Admissions Stabilization — единый пункт меню приемной комиссии, русские validation/forbidden сообщения, Dashboard без RBAC-noise, существующий QR-пропуск в role-based AppLayout.
-- [ ] UAT-002.1: Final portal stabilization — мастер Admissions Foundation с понятной inline-валидацией, ролевые Dashboard без лишних demo-блоков, reusable splitter, единые version/build metadata, HTTPS-only DEV entrypoint, динамический QR 30 секунд и расширенный DEV demo data smoke.
+- [ ] UAT-002.1: Final portal stabilization — мастер Admissions Foundation с понятной inline-валидацией, ролевые Dashboard без лишних demo-блоков, reusable splitter, единые version/build metadata, HTTPS-only DEV entrypoint, динамический QR 30 секунд, согласованные demo Person/Student/Teacher/Employee и расширенный DEV demo data smoke.
 - Следующий рекомендуемый этап после UAT-002.1: TEST-001 — regression suite полного workspace приемной комиссии, включая registered read-only и duplicate-check сценарии.
 ### Приемная комиссия
 

@@ -1,4 +1,4 @@
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 function canUseLocalStorage() {
   try {
@@ -21,10 +21,17 @@ export function useResizableWorkspace({
   const workspaceRef = ref(null)
   const detailsWidth = ref(loadWidth())
   const resizing = ref(false)
+  const viewportWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1440)
 
-  const workspaceStyle = computed(() => ({
-    gridTemplateColumns: `minmax(0, 1fr) ${splitterWidth}px minmax(${minDetailsWidth}px, ${detailsWidth.value}px)`,
-  }))
+  const workspaceStyle = computed(() => {
+    if (viewportWidth.value <= mobileBreakpoint) {
+      return {}
+    }
+
+    return {
+      gridTemplateColumns: `minmax(0, 1fr) ${splitterWidth}px minmax(${minDetailsWidth}px, ${detailsWidth.value}px)`,
+    }
+  })
 
   function loadWidth() {
     if (!storageKey || !canUseLocalStorage()) return defaultDetailsWidth
@@ -52,6 +59,19 @@ export function useResizableWorkspace({
     document.body.classList.remove(resizeBodyClass)
   }
 
+  function updateViewportWidth() {
+    if (typeof window === 'undefined') return
+    viewportWidth.value = window.innerWidth
+    if (!workspaceRef.value || viewportWidth.value <= mobileBreakpoint) return
+
+    const rect = workspaceRef.value.getBoundingClientRect()
+    const allowedMaxWidth = Math.max(minDetailsWidth, Math.min(maxDetailsWidth, rect.width - minListWidth - splitterWidth))
+    if (detailsWidth.value > allowedMaxWidth) {
+      detailsWidth.value = allowedMaxWidth
+      saveWidth(detailsWidth.value)
+    }
+  }
+
   function onResize(event) {
     if (!resizing.value || !workspaceRef.value) return
 
@@ -71,7 +91,17 @@ export function useResizableWorkspace({
     window.addEventListener('pointerup', stopResize)
   }
 
-  onBeforeUnmount(stopResize)
+  onMounted(() => {
+    updateViewportWidth()
+    window.addEventListener('resize', updateViewportWidth)
+  })
+
+  onBeforeUnmount(() => {
+    stopResize()
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('resize', updateViewportWidth)
+    }
+  })
 
   return {
     detailsWidth,

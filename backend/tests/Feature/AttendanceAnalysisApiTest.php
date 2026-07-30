@@ -78,6 +78,7 @@ class AttendanceAnalysisApiTest extends TestCase
         $rows = collect($response->json('data'))->keyBy('full_name');
         $this->assertSame('late', $rows->get('Иванов Дмитрий')['status']);
         $this->assertSame(17, $rows->get('Иванов Дмитрий')['late_minutes']);
+        $this->assertSame('2026-09-10T09:17:00', $rows->get('Иванов Дмитрий')['first_entry']);
         $this->assertSame('not_entered', $rows->get('Сидорова Анна')['status']);
         $this->assertSame($missingStudent->id, $rows->get('Сидорова Анна')['entity_id']);
     }
