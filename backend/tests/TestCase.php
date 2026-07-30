@@ -17,6 +17,8 @@ abstract class TestCase extends BaseTestCase
         $user ??= $this->createApiUser($token);
         $user->forceFill([
             'api_token_hash' => Hash::make($token),
+            'api_token_lookup_hash' => hash('sha256', $token),
+            'api_token_expires_at' => now()->addMinutes((int) config('auth.api_token_ttl_minutes', 720)),
             'is_active' => true,
         ])->save();
 
@@ -34,6 +36,8 @@ abstract class TestCase extends BaseTestCase
             'role_id' => $role->id,
             'is_active' => true,
             'api_token_hash' => $token ? Hash::make($token) : null,
+            'api_token_lookup_hash' => $token ? hash('sha256', $token) : null,
+            'api_token_expires_at' => $token ? now()->addMinutes((int) config('auth.api_token_ttl_minutes', 720)) : null,
         ]);
     }
 }

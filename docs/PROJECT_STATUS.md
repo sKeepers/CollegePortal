@@ -27,6 +27,7 @@ This document is a navigation and status snapshot. GitHub Issues, Pull Requests 
 - `UAT-002.1`: Final portal stabilization.
 - Разрешенные изменения: user-facing validation/localization fixes, Admissions Foundation wizard stabilization, role dashboard cleanup, reusable splitter hardening, existing QR pass readiness on DEV, DEV data cleanup, HTTPS-only DEV entrypoint, dynamic QR TTL and version/build metadata.
 - Дополнительная стабилизация по ручному smoke: демо-студенты и преподаватели получают разные синтетические ФИО, все demo Student/Teacher связаны с `people`, преподаватели создаются как `employees`, посещаемость отдает локальное время без UTC-сдвига, мастер заявления не пропускает очевидно некорректные шаги до финальной кнопки, master-detail workspace не должен уводить правую карточку за край экрана.
+- Дополнительный security hardening по `PROJECT_ANALYSIS.md`: API-токены переводятся на индексированный SHA-256 lookup hash, получают TTL, login и authenticated API получают rate limiting. Frontend-auth, шифрование ПДн/backups и TLS/security headers остаются отдельными задачами.
 - Явно исключено: новая независимая QR-реализация, новый ФИС/SOAP flow, PROD/UAT changes and merge to `develop`.
 
 ## Completed Tasks
@@ -77,6 +78,7 @@ Live GitHub Issues are the source of truth when accessible. From the local docum
 - GitHub write access from the current Codex environment is unreliable and may block automatic Issue/PR creation.
 - Documentation status is scattered across root documents, `docs/*`, release notes and task logs.
 - Several project documents reference missing or renamed documentation files.
+- Security review 30.07.2026 выявил production blockers: bearer token в `localStorage`, отсутствие encryption-at-rest для ПДн/backups, необходимость TLS/security headers и PostgreSQL-like CI checks.
 - DEV test users are documented in [Test Users](TEST_USERS.md). They are DEV-only and must not be used in PROD.
 - UAT-002 QR integration reuses the existing Digital Identity and Access Gate implementation; no BACK-007/new QR API is planned for this correction.
 - DEV HTTPS endpoint for browser/mobile UAT is `https://192.168.34.114:5443`; port `5174` remains HTTP-only and must not be opened as HTTPS.
@@ -129,12 +131,15 @@ ADM-001/ADM-002/ADM-003/ADM-004 admissions backlog:
 11. FRONT-003 — Person & Applicant Management UI.
 12. UAT-002 — role-based stabilization of Admissions Foundation, Dashboard, QR menu integration and smoke documentation.
 13. UAT-002.1 — final portal stabilization before broader manual UAT.
-14. Этап 1 — CRUD абитуриентов.
-14. Этап 2 — Документы.
-15. Этап 3 — Конкурс.
-16. Этап 4 — Приказы.
-17. Этап 5 — Экспорт в ФИС.
-18. Этап 6 — Личный кабинет абитуриента.
+14. SEC-001 — API token hardening: indexed lookup hash, token TTL and rate limiting.
+15. SEC-002 — frontend-auth hardening: HttpOnly Secure cookie/Sanctum вместо bearer token в `localStorage`.
+16. SEC-003 — encryption-at-rest, private storage, backup encryption and production TLS/security headers.
+17. Этап 1 — CRUD абитуриентов.
+18. Этап 2 — Документы.
+19. Этап 3 — Конкурс.
+20. Этап 4 — Приказы.
+21. Этап 5 — Экспорт в ФИС.
+22. Этап 6 — Личный кабинет абитуриента.
 
 Documentation governance backlog:
 

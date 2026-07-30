@@ -6,7 +6,6 @@ use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuthenticateApiToken
@@ -19,11 +18,14 @@ class AuthenticateApiToken
             return response()->json(['message' => 'Unauthenticated.'], Response::HTTP_UNAUTHORIZED);
         }
 
+        $lookupHash = hash('sha256', $token);
+
         $user = User::query()
             ->where('is_active', true)
-            ->whereNotNull('api_token_hash')
-            ->get()
-            ->first(fn (User $user) => Hash::check($token, $user->api_token_hash));
+            ->where('api_token_lookup_hash', $lookupHash)
+            ->whereNotNull('api_token_expires_at')
+            ->where('api_token_expires_at', '>', now())
+            ->first();
 
         if ($user === null) {
             return response()->json(['message' => 'Unauthenticated.'], Response::HTTP_UNAUTHORIZED);

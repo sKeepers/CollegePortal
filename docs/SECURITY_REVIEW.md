@@ -76,19 +76,24 @@
 - Используются Form Request Validation во многих модулях.
 - Universal import возвращает структурированные ошибки строк.
 - Расписание проверяет конфликты.
+- После security hardening 30.07.2026 API bearer-токены ищутся по индексированному SHA-256 lookup hash, имеют срок действия и не требуют перебора всех активных пользователей с `Hash::check`.
+- Для `/api/auth/login` добавлен rate limit по IP и email, для authenticated API добавлен базовый rate limit по пользователю.
 
 ### Риски
 
 - Не все контроллеры используют отдельные Request-классы; часть admin/reference/users валидируется в контроллере.
 - Ошибки RuntimeException в импорте нужно держать пользовательскими, без утечки технических деталей.
-- Нужно проверить rate limiting для login и scan endpoints.
+- Frontend пока хранит bearer token в `localStorage`; для production нужно перейти на HttpOnly Secure cookie или Laravel Sanctum/session-based flow с CSRF-защитой.
+- Персональные данные, private files и backup archives требуют отдельной задачи на шифрование, retention и контроль доступа.
+- Нужно отдельно проверить rate limiting для scan endpoints и публичных export/download маршрутов.
 
 ### Рекомендации
 
-1. Добавить rate limiting на `auth/login`.
+1. Перевести frontend-auth с `localStorage` bearer token на HttpOnly Secure cookie/Sanctum или другой session flow без доступа JavaScript к токену.
 2. Добавить rate limiting или anti-repeat policy на `/access/scan` уже есть частично по duplicate window, но нужен серверный rate limit.
 3. Унифицировать error responses.
 4. Для admin endpoints постепенно перенести inline validation в Request classes.
+5. Вынести encryption-at-rest для ПДн, private storage и backup archives в отдельную production-readiness задачу.
 
 ## QR и Digital Identity
 
@@ -128,10 +133,32 @@ Audit уже есть, это сильная сторона. Следующие 
 - проверить `.env` и secret handling;
 - отключить debug;
 - настроить HTTPS;
+- настроить security headers и доверенный TLS-сертификат;
 - ограничить доступ к admin routes;
 - проверить backup encryption;
 - проверить политику персональных данных;
 - согласовать retention для import files, audit logs и access events.
+
+## Выполнено: SEC-001 API token hardening
+
+По результатам `PROJECT_ANALYSIS.md` от 30.07.2026 закрыт первый критический backend-slice без изменения frontend-контракта авторизации:
+
+- добавлены `users.api_token_lookup_hash` и `users.api_token_expires_at`;
+- login сохраняет bcrypt-хэш только как rollback-compatible поле, а request authentication использует индексированный SHA-256 lookup;
+- middleware больше не загружает всех активных пользователей и не выполняет `Hash::check` по каждому запросу;
+- истекшие и legacy bcrypt-only токены отклоняются;
+- logout очищает все token-поля;
+- добавлен `API_TOKEN_TTL_MINUTES`, по умолчанию 720 минут;
+- добавлен throttling для login и authenticated API;
+- добавлены regression tests для login token metadata, TTL, legacy-token rejection и login rate limit.
+
+Оставшиеся блокеры production-security:
+
+- заменить bearer token в `localStorage` на HttpOnly Secure cookie/Sanctum или другой backend-controlled session flow;
+- шифровать чувствительные персональные данные и private backup artifacts;
+- закрыть public storage для персональных файлов там, где требуется private/signed access;
+- настроить TLS, HSTS, CSP и другие security headers;
+- приблизить CI/test database к PostgreSQL production semantics.
 
 ## Выполнено: REFACTOR-003
 

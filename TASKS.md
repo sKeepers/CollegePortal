@@ -57,6 +57,13 @@
 - [x] Ограничить master-detail workspace, чтобы правая карточка не уходила за край экрана.
 - [ ] Проверить на телефоне: `/m/student/pass` и `/access/mobile-scanner` через HTTPS после установки/доверия DEV CA.
 
+## Security hardening после `PROJECT_ANALYSIS.md`
+
+- [x] SEC-001: заменить O(N) bcrypt-поиск bearer-токена на индексированный SHA-256 lookup, добавить TTL токена и rate limiting для login/authenticated API.
+- [ ] SEC-002: убрать хранение bearer-токена из frontend `localStorage`, перейти на HttpOnly Secure cookie/Sanctum или другой backend-controlled session flow.
+- [ ] SEC-003: подготовить encryption-at-rest для ПДн, private storage и backup archives; настроить production TLS, HSTS, CSP и security headers.
+- [ ] SEC-004: приблизить CI/test database checks к PostgreSQL production semantics и добавить проверки миграций на PostgreSQL.
+
 ## Frontend
 
 - [x] Layout

@@ -3,8 +3,12 @@
 namespace App\Providers;
 
 use App\Models\User;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,6 +25,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('auth.login', function (Request $request) {
+            $email = Str::lower((string) $request->input('email'));
+
+            return Limit::perMinute(5)->by($request->ip().'|'.$email);
+        });
+
+        RateLimiter::for('api.authenticated', function (Request $request) {
+            return Limit::perMinute(120)->by((string) ($request->user()?->id ?: $request->ip()));
+        });
+
         Gate::before(function (User $user): ?bool {
             return $user->hasRole('admin') ? true : null;
         });
