@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { routes } from './routes'
 import { useAuthStore } from '../stores/auth'
-import { isRoleScopedRouteAllowed } from '../services/roleNavigation'
+import { isRoleScopedRouteAllowed, primaryRoleCode } from '../services/roleNavigation'
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -29,6 +29,10 @@ router.beforeEach(async (to) => {
 
   if (to.name === 'forbidden') {
     return true
+  }
+
+  if (primaryRoleCode(auth) === 'student' && to.path === '/schedule') {
+    return { path: '/m/student', hash: '#schedule' }
   }
 
   if (!isRoleScopedRouteAllowed(auth, to.path)) {

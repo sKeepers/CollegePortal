@@ -86,6 +86,10 @@ onBeforeUnmount(() => {
           <strong class="my-digital-pass__countdown">Код обновится через {{ qrSecondsLeft }} сек.</strong>
         </div>
         <div class="my-digital-pass__actions">
+          <q-btn outline no-caps :disable="store.loading" @click="loadPass">
+            <RefreshCw :size="16" class="q-mr-xs" />
+            <span>Обновить код</span>
+          </q-btn>
           <q-btn outline no-caps @click="qrDialogVisible = true">
             <Maximize2 :size="16" class="q-mr-xs" />
             <span>Открыть крупно</span>

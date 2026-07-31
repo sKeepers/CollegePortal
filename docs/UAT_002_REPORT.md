@@ -80,6 +80,9 @@ UAT-002.2 проверен на DEV в Compose-контейнерах:
 - `/identity/my-pass` на экранах до 520px выводит QR и обратный отсчет до обновления выше metadata-карточек;
 - student не видит «Журнал» и прямой маршрут `/journal` ведет к forbidden;
 - `/access/mobile-scanner` скрывает desktop-инструменты header на ширине до 520px.
+- Личный QR имеет явную кнопку «Обновить код».
+- Student route `/schedule` перенаправляется в мобильный блок расписания `/m/student#schedule`.
+- Mobile scanner использует compact camera viewport, скрывает вторичные scanner badges на первом экране и ограничивает распознавание до одного кадра в 350ms.
 
 ## Smoke checklist
 

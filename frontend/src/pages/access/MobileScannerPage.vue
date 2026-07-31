@@ -25,8 +25,9 @@ const manualToken = ref('')
 const lastScannedValue = ref('')
 const lastScanAt = ref(0)
 const scanCooldownMs = 2200
+const scanIntervalMs = 350
 const detector = createBarcodeDetector()
-let animationFrame = null
+let scanTimer = null
 let audioContext = null
 
 const resultClass = computed(() => store.lastEvent?.result === 'allowed' ? 'mobile-scanner-result--allowed' : 'mobile-scanner-result--denied')
@@ -91,7 +92,7 @@ async function startCamera(deviceId = selectedDeviceId.value) {
     const constraints = {
       video: deviceId
         ? { deviceId: { exact: deviceId } }
-        : { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        : { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } },
       audio: false,
     }
     stream.value = await navigator.mediaDevices.getUserMedia(constraints)
@@ -113,8 +114,8 @@ async function startCamera(deviceId = selectedDeviceId.value) {
 }
 
 function stopCamera() {
-  if (animationFrame) cancelAnimationFrame(animationFrame)
-  animationFrame = null
+  if (scanTimer) window.clearTimeout(scanTimer)
+  scanTimer = null
   scanning.value = false
   torchEnabled.value = false
   stream.value?.getTracks().forEach((track) => track.stop())
@@ -138,11 +139,9 @@ async function toggleTorch() {
 }
 
 async function scanLoop() {
-  if (!scanning.value || paused.value || !videoRef.value || !canvasRef.value) {
-    animationFrame = requestAnimationFrame(scanLoop)
-    return
-  }
+  if (!scanning.value || paused.value || !videoRef.value || !canvasRef.value) return
 
+  const startedAt = Date.now()
   const video = videoRef.value
   if (video.readyState >= 2 && video.videoWidth && video.videoHeight) {
     let value = ''
@@ -162,7 +161,9 @@ async function scanLoop() {
     if (value) await handleScan(value)
   }
 
-  animationFrame = requestAnimationFrame(scanLoop)
+  if (scanning.value && !paused.value) {
+    scanTimer = window.setTimeout(scanLoop, Math.max(0, scanIntervalMs - (Date.now() - startedAt)))
+  }
 }
 
 async function handleScan(value) {
@@ -192,6 +193,7 @@ async function submitManual() {
 function scanAgain() {
   paused.value = false
   store.warning = ''
+  scanLoop()
 }
 
 onMounted(async () => {
@@ -222,7 +224,7 @@ onBeforeUnmount(stopCamera)
         </div>
 
         <div class="mobile-scanner-controls">
-          <q-btn color="primary" no-caps @click="startCamera()"><Camera :size="17" class="q-mr-xs" /> Запустить камеру</q-btn>
+          <q-btn v-if="!stream" color="primary" no-caps @click="startCamera()"><Camera :size="17" class="q-mr-xs" /> Запустить камеру</q-btn>
           <q-btn outline no-caps :disable="!stream" @click="switchCamera"><FlipHorizontal :size="17" class="q-mr-xs" /> Сменить</q-btn>
           <q-btn outline no-caps :disable="!canTorch" @click="toggleTorch"><Flashlight :size="17" class="q-mr-xs" /> {{ torchEnabled ? 'Выключить' : 'Фонарик' }}</q-btn>
         </div>
