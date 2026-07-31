@@ -4258,7 +4258,7 @@ body {
 
 .mobile-student-pass-preview {
   display: grid;
-  grid-template-columns: 108px minmax(0, 1fr);
+  grid-template-columns: 132px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
   margin: 12px 0;
@@ -4294,6 +4294,14 @@ body {
 
 .mobile-student-pass-preview > span svg:last-child {
   margin-left: auto;
+}
+
+.mobile-student-pass-preview small {
+  grid-column: 2;
+  align-self: start;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .mobile-student-metrics {
