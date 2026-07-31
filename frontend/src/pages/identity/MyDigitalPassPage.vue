@@ -1,6 +1,6 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
-import { Download, Maximize2, RefreshCw } from '@lucide/vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { Maximize2, RefreshCw } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -13,6 +13,7 @@ import { useDigitalPassesStore, entityTypeLabel, formatDateTime, ownerName, stat
 
 const store = useDigitalPassesStore()
 const qrDialogVisible = ref(false)
+let refreshTimer = null
 
 const pass = computed(() => store.selectedIdentity || store.identities[0] || null)
 const passMetrics = computed(() => [
@@ -30,27 +31,21 @@ async function loadPass() {
   }
 }
 
-async function downloadQrPng() {
-  const blob = await store.downloadQrPng(pass.value)
-  if (!blob || !pass.value) return
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `collegeportal-my-qr-${pass.value.id}.png`
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  URL.revokeObjectURL(url)
-}
+onMounted(async () => {
+  await loadPass()
+  refreshTimer = window.setInterval(loadPass, 27_000)
+})
 
-onMounted(loadPass)
+onBeforeUnmount(() => {
+  if (refreshTimer) window.clearInterval(refreshTimer)
+})
 </script>
 
 <template>
   <AppPage>
     <PageHeader
       title="Мой QR-пропуск"
-      subtitle="Личный цифровой пропуск для проходной. QR-код содержит только технический токен и проверяется сервером."
+      subtitle="Личный цифровой пропуск. Код обновляется каждые 30 секунд и принимается проходной один раз."
     />
 
     <AppToolbar>
@@ -86,13 +81,9 @@ onMounted(loadPass)
             <Maximize2 :size="16" class="q-mr-xs" />
             <span>Открыть крупно</span>
           </q-btn>
-          <q-btn outline no-caps @click="downloadQrPng">
-            <Download :size="16" class="q-mr-xs" />
-            <span>Скачать PNG</span>
-          </q-btn>
         </div>
         <p class="my-digital-pass__notice">
-          Не передавайте QR-пропуск другим людям. При отзыве или истечении срока действия проходная отклонит сканирование.
+          Код обновляется автоматически. Скриншот или ранее использованный код проходная отклонит.
         </p>
       </div>
     </WorkspacePanel>

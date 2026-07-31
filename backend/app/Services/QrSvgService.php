@@ -34,13 +34,12 @@ class QrSvgService
 
     public function normalizeScannedToken(string $value): string
     {
-        $token = trim($value, " \t\r\n");
+        return trim($value, " \t\r\n");
+    }
 
-        if (str_starts_with($token, 'CP1:')) {
-            $token = substr($token, 4);
-        }
-
-        return trim($token, " \t\r\n");
+    public function isDynamicPayload(string $value): bool
+    {
+        return str_starts_with($this->normalizeScannedToken($value), self::DYNAMIC_PREFIX.':');
     }
 
     public function dynamicPayload(DigitalIdentity $identity, int $ttlSeconds = self::DYNAMIC_TTL_SECONDS): array
@@ -61,7 +60,7 @@ class QrSvgService
         $token = $this->normalizeScannedToken($value);
 
         if (! str_starts_with($token, self::DYNAMIC_PREFIX.':')) {
-            return DigitalIdentity::query()->where('token', $token)->first();
+            return null;
         }
 
         if (! preg_match('/^'.self::DYNAMIC_PREFIX.':([0-9A-Z]{1,10}):([a-f0-9]{'.self::DYNAMIC_SIGNATURE_LENGTH.'})$/i', $token, $matches)) {

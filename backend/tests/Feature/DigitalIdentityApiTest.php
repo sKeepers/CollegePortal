@@ -94,7 +94,7 @@ class DigitalIdentityApiTest extends TestCase
 
 
 
-    public function test_qr_svg_and_png_are_plain_token_payloads_without_personal_data(): void
+    public function test_qr_svg_and_png_are_dynamic_payloads_without_personal_data(): void
     {
         $student = $this->createStudent();
 
@@ -109,13 +109,13 @@ class DigitalIdentityApiTest extends TestCase
         $svg = $this->get("/api/digital-identities/{$identityId}/qr?format=svg")
             ->assertOk()
             ->assertHeader('Content-Type', 'image/svg+xml; charset=UTF-8')
-            ->assertHeader('X-QR-Content', 'token')
+            ->assertHeader('X-QR-Content', 'dynamic')
             ->getContent();
 
         $png = $this->get("/api/digital-identities/{$identityId}/qr?format=png")
             ->assertOk()
             ->assertHeader('Content-Type', 'image/png')
-            ->assertHeader('X-QR-Content', 'token')
+            ->assertHeader('X-QR-Content', 'dynamic')
             ->getContent();
 
         $this->assertMatchesRegularExpression('/^[\x21-\x7E]+$/', $token);
@@ -187,7 +187,7 @@ class DigitalIdentityApiTest extends TestCase
 
         $this->get("/api/digital-identities/{$ownIdentity->id}/qr")
             ->assertOk()
-            ->assertHeader('X-QR-Content', 'token');
+            ->assertHeader('X-QR-Content', 'dynamic');
 
         $this->get("/api/digital-identities/{$otherIdentity->id}/qr")
             ->assertForbidden();

@@ -1,6 +1,6 @@
 const ROLE_ROUTE_PREFIXES = {
   admission: ['/dashboard', '/admissions/foundation'],
-  student: ['/dashboard', '/schedule', '/journal', '/attendance', '/identity/my-pass', '/m/student'],
+  student: ['/dashboard', '/schedule', '/identity/my-pass', '/m/student'],
   teacher: ['/dashboard', '/schedule', '/journal', '/attendance', '/teaching-load', '/identity/my-pass'],
 }
 

@@ -27,9 +27,10 @@ class AccessGateApiTest extends TestCase
     public function test_scan_active_qr_allows_entry_and_next_scan_exit_after_interval(): void
     {
         $identity = $this->createStudentIdentity();
+        $qr = app(\App\Services\QrSvgService::class);
 
         $this->postJson('/api/access/scan', [
-            'token' => $identity->token,
+            'token' => $qr->dynamicPayload($identity)['payload'],
             'access_point' => 'Главный вход',
             'device_name' => 'USB QR Scanner',
         ])
@@ -38,30 +39,30 @@ class AccessGateApiTest extends TestCase
             ->assertJsonPath('data.direction', AccessEvent::DIRECTION_IN)
             ->assertJsonPath('data.owner.last_name', 'Иванов');
 
-        $this->travel(3)->seconds();
+        $this->travel(31)->seconds();
 
-        $this->postJson('/api/access/scan', ['token' => $identity->token])
+        $this->postJson('/api/access/scan', ['token' => $qr->dynamicPayload($identity)['payload']])
             ->assertOk()
             ->assertJsonPath('data.result', AccessEvent::RESULT_ALLOWED)
             ->assertJsonPath('data.direction', AccessEvent::DIRECTION_OUT);
     }
 
-    public function test_fast_duplicate_scan_is_ignored(): void
+    public function test_dynamic_qr_can_only_be_scanned_once(): void
     {
         $identity = $this->createStudentIdentity();
+        $payload = app(\App\Services\QrSvgService::class)->dynamicPayload($identity)['payload'];
 
-        $firstId = $this->postJson('/api/access/scan', ['token' => $identity->token])
+        $this->postJson('/api/access/scan', ['token' => $payload])
             ->assertOk()
             ->assertJsonPath('data.direction', AccessEvent::DIRECTION_IN)
-            ->json('data.id');
+            ->assertJsonPath('data.result', AccessEvent::RESULT_ALLOWED);
 
-        $this->postJson('/api/access/scan', ['token' => $identity->token])
+        $this->postJson('/api/access/scan', ['token' => $payload])
             ->assertOk()
-            ->assertJsonPath('data.id', $firstId)
-            ->assertJsonPath('data.direction', AccessEvent::DIRECTION_IN)
-            ->assertJsonPath('data.duplicate_ignored', true);
+            ->assertJsonPath('data.result', AccessEvent::RESULT_DENIED)
+            ->assertJsonPath('data.reason', 'QR-код уже использован. Покажите обновленный код.');
 
-        $this->assertSame(1, AccessEvent::count());
+        $this->assertSame(2, AccessEvent::count());
     }
 
     public function test_scan_revoked_qr_creates_denied_event(): void
@@ -71,7 +72,7 @@ class AccessGateApiTest extends TestCase
             'revoked_at' => now(),
         ]);
 
-        $this->postJson('/api/access/scan', ['token' => $identity->token])
+        $this->postJson('/api/access/scan', ['token' => app(\App\Services\QrSvgService::class)->dynamicPayload($identity)['payload']])
             ->assertOk()
             ->assertJsonPath('data.result', AccessEvent::RESULT_DENIED)
             ->assertJsonPath('data.reason', 'Пропуск отозван.')
@@ -96,7 +97,7 @@ class AccessGateApiTest extends TestCase
     public function test_it_lists_access_events(): void
     {
         $identity = $this->createStudentIdentity();
-        $this->postJson('/api/access/scan', ['token' => $identity->token])->assertOk();
+        $this->postJson('/api/access/scan', ['token' => app(\App\Services\QrSvgService::class)->dynamicPayload($identity)['payload']])->assertOk();
 
         $this->getJson('/api/access/events')
             ->assertOk()
@@ -106,26 +107,14 @@ class AccessGateApiTest extends TestCase
 
 
 
-    public function test_scan_accepts_cp1_prefix_and_trimmed_hid_suffixes(): void
+    public function test_static_and_cp1_qr_payloads_are_rejected(): void
     {
         $identity = $this->createStudentIdentity();
 
-        $this->postJson('/api/access/scan', [
-            'token' => " CP1:{$identity->token}\r\n",
-            'access_point' => 'Главный вход',
-            'device_name' => 'USB QR Scanner',
-        ])
+        $this->postJson('/api/access/scan', ['token' => " CP1:{$identity->token}\r\n"])
             ->assertOk()
-            ->assertJsonPath('data.result', AccessEvent::RESULT_ALLOWED)
-            ->assertJsonPath('data.direction', AccessEvent::DIRECTION_IN)
-            ->assertJsonPath('data.owner.last_name', 'Иванов');
-
-        $this->travel(3)->seconds();
-
-        $this->postJson('/api/access/scan', ['token' => "\t{$identity->token}\n"])
-            ->assertOk()
-            ->assertJsonPath('data.result', AccessEvent::RESULT_ALLOWED)
-            ->assertJsonPath('data.direction', AccessEvent::DIRECTION_OUT);
+            ->assertJsonPath('data.result', AccessEvent::RESULT_DENIED)
+            ->assertJsonPath('data.owner', null);
     }
 
     public function test_scan_accepts_short_lived_cp2_payload(): void
@@ -170,7 +159,7 @@ class AccessGateApiTest extends TestCase
         $student = $this->createApiUser(roleCode: 'student');
 
         $this->withApiAuth($security)
-            ->postJson('/api/access/scan', ['token' => $identity->token])
+            ->postJson('/api/access/scan', ['token' => app(\App\Services\QrSvgService::class)->dynamicPayload($identity)['payload']])
             ->assertOk()
             ->assertJsonPath('data.result', AccessEvent::RESULT_ALLOWED);
 

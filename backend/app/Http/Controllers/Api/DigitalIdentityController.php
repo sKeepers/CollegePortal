@@ -91,19 +91,20 @@ class DigitalIdentityController extends Controller
         }
 
         $format = strtolower($request->query('format', 'svg'));
+        $dynamicQr = $qrSvgService->dynamicPayload($digitalIdentity);
 
         if ($format === 'png') {
-            return response($qrSvgService->renderPng($digitalIdentity->token), Response::HTTP_OK, [
+            return response($qrSvgService->renderPng($dynamicQr['payload']), Response::HTTP_OK, [
                 'Content-Type' => 'image/png',
                 'Cache-Control' => 'no-store, private',
-                'X-QR-Content' => 'token',
+                'X-QR-Content' => 'dynamic',
             ]);
         }
 
-        return response($qrSvgService->renderSvg($digitalIdentity->token), Response::HTTP_OK, [
+        return response($qrSvgService->renderSvg($dynamicQr['payload']), Response::HTTP_OK, [
             'Content-Type' => 'image/svg+xml; charset=UTF-8',
             'Cache-Control' => 'no-store, private',
-            'X-QR-Content' => 'token',
+            'X-QR-Content' => 'dynamic',
         ]);
     }
 

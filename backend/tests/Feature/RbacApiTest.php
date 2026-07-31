@@ -70,6 +70,7 @@ class RbacApiTest extends TestCase
 
         $this->withApiAuth($teacher)->getJson('/api/students')->assertForbidden();
         $this->withApiAuth($student)->getJson('/api/frdo-packages')->assertForbidden();
+        $this->withApiAuth($student)->getJson('/api/journal/lessons')->assertForbidden();
         $this->withApiAuth($security)->getJson('/api/attendance')->assertForbidden();
     }
 

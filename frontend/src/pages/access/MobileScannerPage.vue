@@ -207,7 +207,7 @@ onBeforeUnmount(stopCamera)
 </script>
 
 <template>
-  <AppPage>
+  <AppPage class="mobile-scanner-page">
     <PageHeader title="Мобильный сканер" subtitle="Сканирование QR-пропусков камерой телефона. Камера работает локально в браузере." />
 
     <AppErrorBanner :message="cameraError || store.error" />
@@ -257,7 +257,7 @@ onBeforeUnmount(stopCamera)
 
       <AppCard title="Ручной ввод" subtitle="Fallback, если камера недоступна или QR поврежден">
         <q-form class="mobile-scanner-manual" @submit.prevent="submitManual">
-          <q-input v-model="manualToken" outlined label="Token или CP1:<token>" autocomplete="off"><template #prepend><Keyboard :size="20" /></template></q-input>
+          <q-input v-model="manualToken" outlined label="Актуальный QR-код CP2" autocomplete="off"><template #prepend><Keyboard :size="20" /></template></q-input>
           <q-btn color="primary" type="submit" :loading="store.scanning" :disable="!manualToken.trim()">Проверить</q-btn>
         </q-form>
       </AppCard>

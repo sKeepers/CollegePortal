@@ -245,7 +245,7 @@ watch(
 <template>
   <q-layout
     view="hHh Lpr lFf"
-    :class="['cp-app-layout', workspace.workspaceClass]"
+    :class="['cp-app-layout', workspace.workspaceClass, { 'cp-app-layout--scanner': route.path === '/access/mobile-scanner' }]"
     :style="layoutStyle"
   >
     <q-header bordered class="bg-white text-dark">

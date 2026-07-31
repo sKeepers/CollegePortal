@@ -255,7 +255,7 @@ class RoleSeeder extends Seeder
 
     private function studentPermissions(): array
     {
-        return ['dashboard.view', 'schedule.view', 'journal.view', 'attendance.view', 'mobile.student.view', 'mobile.student.pass', 'view_own_data'];
+        return ['dashboard.view', 'schedule.view', 'attendance.view', 'mobile.student.view', 'mobile.student.pass', 'view_own_data'];
     }
 
     private function securityPermissions(): array

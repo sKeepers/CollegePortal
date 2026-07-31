@@ -10,13 +10,21 @@ use App\Models\DigitalIdentity;
 use App\Services\QrSvgService;
 use App\Services\SettingService;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Cache;
 
 class AccessGateController extends Controller
 {
     public function scan(ScanAccessPassRequest $request, QrSvgService $qrSvgService): AccessEventResource
     {
         $validated = $request->validated();
-        $identity = $qrSvgService->resolveScannedIdentity($validated['token']);
+        $token = $qrSvgService->normalizeScannedToken($validated['token']);
+        $identity = $qrSvgService->isDynamicPayload($token)
+            ? $qrSvgService->resolveScannedIdentity($token)
+            : null;
+
+        if ($identity !== null && ! $this->claimDynamicPayload($token)) {
+            return $this->createEvent($validated, $identity, AccessEvent::RESULT_DENIED, 'QR-код уже использован. Покажите обновленный код.');
+        }
 
         if ($identity !== null) {
             $recentEvent = $this->recentEvent($identity);
@@ -27,14 +35,18 @@ class AccessGateController extends Controller
             }
         }
 
-        $direction = $identity ? $this->nextDirection($identity) : AccessEvent::DIRECTION_IN;
         [$result, $reason] = $this->scanResult($identity);
 
+        return $this->createEvent($validated, $identity, $result, $reason);
+    }
+
+    private function createEvent(array $validated, ?DigitalIdentity $identity, string $result, ?string $reason): AccessEventResource
+    {
         $event = AccessEvent::create([
             'digital_identity_id' => $identity?->id,
             'entity_type' => $identity?->entity_type,
             'entity_id' => $identity?->entity_id,
-            'direction' => $direction,
+            'direction' => $identity ? $this->nextDirection($identity) : AccessEvent::DIRECTION_IN,
             'event_time' => now(),
             'access_point' => $validated['access_point'] ?? null,
             'device_name' => $validated['device_name'] ?? null,
@@ -43,6 +55,15 @@ class AccessGateController extends Controller
         ]);
 
         return new AccessEventResource($event->fresh('digitalIdentity'));
+    }
+
+    private function claimDynamicPayload(string $token): bool
+    {
+        return Cache::add(
+            'access:dynamic-qr:'.hash('sha256', $token),
+            true,
+            now()->addSeconds(QrSvgService::DYNAMIC_TTL_SECONDS),
+        );
     }
 
     public function events(): AnonymousResourceCollection

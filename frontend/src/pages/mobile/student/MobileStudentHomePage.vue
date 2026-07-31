@@ -1,10 +1,19 @@
 <script setup>
-import { onMounted } from 'vue'
+import { onBeforeUnmount, onMounted } from 'vue'
 import { Bell, CalendarDays, ChevronRight, IdCard, RefreshCw, Star, UserRound } from '@lucide/vue'
 import { useMobileStudentStore, attendanceLabel, formatLessonTime, lessonTitle } from '../../../stores/mobileStudent'
 
 const store = useMobileStudentStore()
-onMounted(() => store.load())
+let refreshTimer = null
+
+onMounted(async () => {
+  await store.load()
+  refreshTimer = window.setInterval(store.load, 27_000)
+})
+
+onBeforeUnmount(() => {
+  if (refreshTimer) window.clearInterval(refreshTimer)
+})
 </script>
 
 <template>
@@ -24,7 +33,11 @@ onMounted(() => store.load())
 
       <q-banner v-if="!store.hasStudent" class="mobile-student-banner">{{ store.message || 'Текущий пользователь не связан с карточкой студента.' }}</q-banner>
 
-      <RouterLink v-if="store.hasStudent" to="/m/student/pass" class="mobile-student-pass-button">
+      <RouterLink v-if="store.hasActivePass" to="/m/student/pass" class="mobile-student-pass-preview">
+        <div v-html="store.qrSvg" />
+        <span><IdCard :size="18" /> Мой QR-пропуск <ChevronRight :size="18" /></span>
+      </RouterLink>
+      <RouterLink v-else-if="store.hasStudent" to="/m/student/pass" class="mobile-student-pass-button">
         <IdCard :size="22" />
         <span>Мой QR-пропуск</span>
         <ChevronRight :size="20" />
