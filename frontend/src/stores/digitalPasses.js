@@ -36,6 +36,7 @@ export const useDigitalPassesStore = defineStore('digitalPasses', () => {
   const saving = ref(false)
   const error = ref('')
   const qrSvg = ref('')
+  const qrExpiresAt = ref(null)
   const qrValueVisible = ref(false)
 
   const selectedIdentity = computed(() => identities.value.find((identity) => Number(identity.id) === Number(selectedId.value)) || null)
@@ -56,8 +57,8 @@ export const useDigitalPassesStore = defineStore('digitalPasses', () => {
       identities.value = extractRows(identitiesPayload)
       students.value = extractRows(studentsPayload)
       teachers.value = extractRows(teachersPayload)
-      if (selectedId.value && !selectedIdentity.value) { selectedId.value = null; qrSvg.value = '' }
-      if (!identities.value.length) { selectedId.value = null; qrSvg.value = '' }
+      if (selectedId.value && !selectedIdentity.value) { selectedId.value = null; qrSvg.value = ''; qrExpiresAt.value = null }
+      if (!identities.value.length) { selectedId.value = null; qrSvg.value = ''; qrExpiresAt.value = null }
     } catch (err) {
       error.value = err.message || 'Не удалось загрузить цифровые пропуска'
     } finally { loading.value = false }
@@ -100,6 +101,7 @@ export const useDigitalPassesStore = defineStore('digitalPasses', () => {
 
   async function loadQr(identity = selectedIdentity.value) {
     qrSvg.value = ''
+    qrExpiresAt.value = null
     if (!identity?.id) return ''
     const token = api.token()
     const response = await fetch(`${api.baseUrl}/digital-identities/${identity.id}/qr?format=svg`, {
@@ -107,6 +109,7 @@ export const useDigitalPassesStore = defineStore('digitalPasses', () => {
     })
     if (!response.ok) throw new Error('Не удалось загрузить QR-код')
     qrSvg.value = await response.text()
+    qrExpiresAt.value = response.headers.get('X-QR-Expires-At')
     return qrSvg.value
   }
 
@@ -122,5 +125,5 @@ export const useDigitalPassesStore = defineStore('digitalPasses', () => {
 
   async function select(identity) { selectedId.value = identity?.id || null; qrValueVisible.value = false; await loadQr(identity) }
 
-  return { identities, students, teachers, selectedId, selectedIdentity, studentOptions, teacherOptions, ownerOptions, loading, saving, error, qrSvg, qrValueVisible, load, issue, revoke, loadQr, downloadQrPng, select }
+  return { identities, students, teachers, selectedId, selectedIdentity, studentOptions, teacherOptions, ownerOptions, loading, saving, error, qrSvg, qrExpiresAt, qrValueVisible, load, issue, revoke, loadQr, downloadQrPng, select }
 })

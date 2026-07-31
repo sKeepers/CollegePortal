@@ -98,6 +98,7 @@ class DigitalIdentityController extends Controller
                 'Content-Type' => 'image/png',
                 'Cache-Control' => 'no-store, private',
                 'X-QR-Content' => 'dynamic',
+                'X-QR-Expires-At' => $dynamicQr['expires_at']->toIso8601String(),
             ]);
         }
 
@@ -105,6 +106,7 @@ class DigitalIdentityController extends Controller
             'Content-Type' => 'image/svg+xml; charset=UTF-8',
             'Cache-Control' => 'no-store, private',
             'X-QR-Content' => 'dynamic',
+            'X-QR-Expires-At' => $dynamicQr['expires_at']->toIso8601String(),
         ]);
     }
 

@@ -14,6 +14,8 @@ import { useDigitalPassesStore, entityTypeLabel, formatDateTime, ownerName, stat
 const store = useDigitalPassesStore()
 const qrDialogVisible = ref(false)
 let refreshTimer = null
+let clockTimer = null
+const now = ref(Date.now())
 
 const pass = computed(() => store.selectedIdentity || store.identities[0] || null)
 const passMetrics = computed(() => [
@@ -23,6 +25,10 @@ const passMetrics = computed(() => [
   { label: 'Выдан', value: formatDateTime(pass.value?.issued_at) },
   { label: 'Срок действия', value: formatDateTime(pass.value?.expires_at) },
 ])
+const qrSecondsLeft = computed(() => {
+  const expires = new Date(store.qrExpiresAt || '').getTime()
+  return Number.isNaN(expires) ? 0 : Math.max(0, Math.ceil((expires - now.value) / 1000))
+})
 
 async function loadPass() {
   await store.load({ mine: true, includeOwners: false })
@@ -34,15 +40,17 @@ async function loadPass() {
 onMounted(async () => {
   await loadPass()
   refreshTimer = window.setInterval(loadPass, 27_000)
+  clockTimer = window.setInterval(() => { now.value = Date.now() }, 1_000)
 })
 
 onBeforeUnmount(() => {
   if (refreshTimer) window.clearInterval(refreshTimer)
+  if (clockTimer) window.clearInterval(clockTimer)
 })
 </script>
 
 <template>
-  <AppPage>
+  <AppPage class="my-digital-pass-page">
     <PageHeader
       title="Мой QR-пропуск"
       subtitle="Личный цифровой пропуск. Код обновляется каждые 30 секунд и принимается проходной один раз."
@@ -75,6 +83,7 @@ onBeforeUnmount(() => {
       <div class="my-digital-pass">
         <div class="my-digital-pass__qr-shell">
           <div class="my-digital-pass__qr" v-html="store.qrSvg" />
+          <strong class="my-digital-pass__countdown">Код обновится через {{ qrSecondsLeft }} сек.</strong>
         </div>
         <div class="my-digital-pass__actions">
           <q-btn outline no-caps @click="qrDialogVisible = true">
@@ -157,7 +166,32 @@ onBeforeUnmount(() => {
   line-height: 1.55;
 }
 
+.my-digital-pass__countdown {
+  color: #1d4ed8;
+  font-size: 14px;
+}
+
 .my-digital-pass-dialog {
   width: min(680px, 94vw);
+}
+
+@media (max-width: 520px) {
+  .my-digital-pass-page :deep(.page-header),
+  .my-digital-pass-page :deep(.app-toolbar),
+  .my-digital-pass-card :deep(.workspace-panel__metrics) {
+    display: none;
+  }
+
+  .my-digital-pass-card :deep(.workspace-panel__hero) {
+    margin-bottom: 10px;
+  }
+
+  .my-digital-pass__qr-shell {
+    padding: 10px;
+  }
+
+  .my-digital-pass__qr :deep(svg) {
+    width: min(100%, 290px);
+  }
 }
 </style>

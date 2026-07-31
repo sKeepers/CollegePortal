@@ -77,6 +77,7 @@ UAT-002.2 проверен на DEV в Compose-контейнерах:
 
 - student видит QR на первом экране `/m/student`, а код обновляется без перезагрузки страницы;
 - `/identity/my-pass` обновляет QR автоматически;
+- `/identity/my-pass` на экранах до 520px выводит QR и обратный отсчет до обновления выше metadata-карточек;
 - student не видит «Журнал» и прямой маршрут `/journal` ведет к forbidden;
 - `/access/mobile-scanner` скрывает desktop-инструменты header на ширине до 520px.
 
