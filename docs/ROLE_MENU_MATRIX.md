@@ -29,6 +29,10 @@ Legacy route `/admissions` сохраняется, но не является о
 
 Self-доступ к личному QR использует `view_own_data` или `mobile.student.pass`. Административный реестр требует `digitalpasses.manage`.
 
+## Student Workspace
+
+`student` использует мобильный кабинет `/m/student` для личного расписания, оценок, посещаемости и QR-пропуска. Рабочий маршрут `/journal` и permission `journal.view` доступны преподавателям и сотрудникам учебного процесса, но не student.
+
 ## Dashboard
 
 Общий Dashboard должен загружать только те счетчики, на которые у пользователя есть permission:

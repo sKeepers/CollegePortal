@@ -57,19 +57,28 @@ UAT-002 готовит текущий DEV-стенд Admissions Foundation к р
 ## Безопасность QR
 
 - QR содержит технический token, без ФИО, телефона, email, группы, паспорта или других ПДн.
-- Сервер валидирует token через `AccessGateController`.
+- Личные QR-коды используют короткоживущий формат `CP2`, обновляются каждые 30 секунд и принимаются проходной только один раз.
+- Статические token и устаревший формат `CP1` не принимаются проходной.
+- Сервер валидирует QR через `AccessGateController` и хранит отметку об использованном CP2 payload до истечения его TTL.
 - Статусы `active`, `suspended`, `revoked`, `expired` учитываются текущей реализацией.
 - Отзыв выполняется через существующий endpoint `/api/digital-identities/{id}/revoke`.
 - Self-пользователь не получает raw token в JSON и не может запросить QR чужой записи.
 
 ## Проверки
 
-Локальная среда Codex на Windows в текущем запуске не содержит `php`, `node`, `npm` и `docker` в `PATH`, поэтому backend/frontend проверки должны быть выполнены на DEV или в CI:
+UAT-002.2 проверен на DEV в Compose-контейнерах:
 
-- `php artisan test`;
-- `npm run build`;
-- `docker compose config`;
-- smoke ролей на `http://192.168.34.114:5174`.
+- `php artisan db:seed --class=RoleSeeder` применен, чтобы убрать `journal.view` у student-ролей;
+- `php artisan test`: `337 passed (2150 assertions)`;
+- `npm run build`: успешно;
+- `GET /health/live`: `200`.
+
+Остается ручной mobile smoke на телефоне:
+
+- student видит QR на первом экране `/m/student`, а код обновляется без перезагрузки страницы;
+- `/identity/my-pass` обновляет QR автоматически;
+- student не видит «Журнал» и прямой маршрут `/journal` ведет к forbidden;
+- `/access/mobile-scanner` скрывает desktop-инструменты header на ширине до 520px.
 
 ## Smoke checklist
 
