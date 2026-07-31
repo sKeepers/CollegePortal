@@ -5,7 +5,8 @@ const ROLE_ROUTE_PREFIXES = {
 }
 
 function matchesPrefix(path, prefix) {
-  return path === prefix || path.startsWith(`${prefix}/`)
+  const pathname = String(path).split(/[?#]/, 1)[0]
+  return pathname === prefix || pathname.startsWith(`${prefix}/`)
 }
 
 export function primaryRoleCode(auth) {

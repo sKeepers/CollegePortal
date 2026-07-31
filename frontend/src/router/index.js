@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { routes } from './routes'
 import { useAuthStore } from '../stores/auth'
 import { isRoleScopedRouteAllowed, primaryRoleCode } from '../services/roleNavigation'
+import { layoutService } from '../services/layoutService'
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -31,7 +32,11 @@ router.beforeEach(async (to) => {
     return true
   }
 
-  if (primaryRoleCode(auth) === 'student' && to.path === '/schedule') {
+  if (primaryRoleCode(auth) === 'student' && to.path === '/journal') {
+    return { path: '/m/student', hash: '#journal' }
+  }
+
+  if (primaryRoleCode(auth) === 'student' && layoutService.isMobile.value && to.path === '/schedule') {
     return { path: '/m/student', hash: '#schedule' }
   }
 

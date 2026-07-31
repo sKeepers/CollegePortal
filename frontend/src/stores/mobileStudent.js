@@ -4,6 +4,7 @@ import { api } from '../services/api'
 
 function extractData(payload) { return payload?.data || {} }
 function fullName(person) { return [person?.last_name, person?.first_name, person?.middle_name].filter(Boolean).join(' ') }
+function localIsoDate(date = new Date()) { return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-') }
 export function formatMobileDate(value) {
   if (!value) return '—'
   const date = new Date(value)
@@ -32,6 +33,7 @@ export const useMobileStudentStore = defineStore('mobileStudent', () => {
   const qrSvg = ref('')
   const qrExpiresAt = ref(null)
   const qrRefreshSeconds = ref(30)
+  const scheduleDate = ref(localIsoDate())
   const notifications = ref([])
   const message = ref('')
   const loading = ref(false)
@@ -48,11 +50,11 @@ export const useMobileStudentStore = defineStore('mobileStudent', () => {
   })
   const attendanceTotal = computed(() => Object.values(attendanceSummary.value || {}).reduce((sum, value) => sum + Number(value || 0), 0))
 
-  async function load() {
+  async function load(date = scheduleDate.value) {
     loading.value = true
     error.value = ''
     try {
-      const payload = extractData(await api.list('mobile/student'))
+      const payload = extractData(await api.list('mobile/student', { date }))
       student.value = payload.student || null
       todaySchedule.value = payload.today_schedule || []
       nextLesson.value = payload.next_lesson || null
@@ -63,6 +65,7 @@ export const useMobileStudentStore = defineStore('mobileStudent', () => {
       qrSvg.value = payload.qr_svg || ''
       qrExpiresAt.value = payload.qr_expires_at || null
       qrRefreshSeconds.value = Number(payload.qr_refresh_seconds || 30)
+      scheduleDate.value = payload.schedule_date || date
       notifications.value = payload.notifications || []
       message.value = payload.message || ''
     } catch (err) {
@@ -70,6 +73,13 @@ export const useMobileStudentStore = defineStore('mobileStudent', () => {
     } finally {
       loading.value = false
     }
+  }
+
+  async function changeScheduleDate(days) {
+    const [year, month, day] = scheduleDate.value.split('-').map(Number)
+    const date = new Date(year, month - 1, day)
+    date.setDate(date.getDate() + days)
+    await load(localIsoDate(date))
   }
 
   return {
@@ -83,6 +93,7 @@ export const useMobileStudentStore = defineStore('mobileStudent', () => {
     qrSvg,
     qrExpiresAt,
     qrRefreshSeconds,
+    scheduleDate,
     notifications,
     message,
     loading,
@@ -94,5 +105,6 @@ export const useMobileStudentStore = defineStore('mobileStudent', () => {
     gradeAverage,
     attendanceTotal,
     load,
+    changeScheduleDate,
   }
 })

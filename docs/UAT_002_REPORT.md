@@ -83,6 +83,8 @@ UAT-002.2 проверен на DEV в Compose-контейнерах:
 - Личный QR имеет явную кнопку «Обновить код».
 - Student route `/schedule` перенаправляется в мобильный блок расписания `/m/student#schedule`.
 - Mobile scanner использует compact camera viewport, скрывает вторичные scanner badges на первом экране и ограничивает распознавание до одного кадра в 350ms.
+- Desktop student сохраняет полный маршрут `/schedule`; на phone/tablet student получает личное мобильное расписание.
+- `/journal` для student перенаправляется к личной успеваемости `/m/student#journal`, а mobile schedule поддерживает предыдущую и следующую даты.
 
 ## Smoke checklist
 

@@ -67,6 +67,23 @@ class MobileStudentApiTest extends TestCase
         $payload = $this->withApiAuth($user)->getJson('/api/mobile/student')->json('data');
         $this->assertStringContainsString('<svg', $payload['qr_svg']);
         $this->assertStringNotContainsString($identity->token, $payload['qr_svg']);
+
+        ScheduleLesson::create([
+            'group_id' => $group->id,
+            'teacher_id' => $teacher->id,
+            'subject_id' => $subject->id,
+            'classroom_id' => $classroom->id,
+            'lesson_date' => today()->addDay(),
+            'starts_at' => '11:00',
+            'ends_at' => '12:30',
+            'lesson_type' => 'lesson',
+        ]);
+
+        $this->withApiAuth($user)
+            ->getJson('/api/mobile/student?date='.today()->addDay()->toDateString())
+            ->assertOk()
+            ->assertJsonPath('data.schedule_date', today()->addDay()->toDateString())
+            ->assertJsonCount(1, 'data.today_schedule');
     }
 
     public function test_it_returns_placeholder_when_user_is_not_linked_to_student(): void

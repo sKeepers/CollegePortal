@@ -44,18 +44,20 @@ class MobileStudentController extends Controller
             ];
         }
 
-        $today = Carbon::today();
+        $scheduleDate = $this->scheduleDate($request);
         $schedule = ScheduleLesson::query()
             ->with(['group', 'teacher', 'subject', 'classroom'])
             ->where('group_id', $student->group_id)
-            ->whereDate('lesson_date', $today)
+            ->whereDate('lesson_date', $scheduleDate)
             ->orderBy('starts_at')
             ->get();
 
         $now = Carbon::now();
-        $nextLesson = $schedule->first(function (ScheduleLesson $lesson) use ($now): bool {
-            return $lesson->starts_at !== null && Carbon::parse($lesson->lesson_date->toDateString().' '.$lesson->starts_at->format('H:i'))->greaterThanOrEqualTo($now);
-        }) ?? $schedule->first();
+        $nextLesson = $scheduleDate->isToday()
+            ? $schedule->first(function (ScheduleLesson $lesson) use ($now): bool {
+                return $lesson->starts_at !== null && Carbon::parse($lesson->lesson_date->toDateString().' '.$lesson->starts_at->format('H:i'))->greaterThanOrEqualTo($now);
+            }) ?? $schedule->first()
+            : $schedule->first();
 
         $grades = Grade::query()
             ->with(['scheduleLesson.subject', 'scheduleLesson.teacher', 'scheduleLesson.group', 'scheduleLesson.classroom'])
@@ -92,6 +94,7 @@ class MobileStudentController extends Controller
         return [
             'data' => [
                 'student' => new StudentResource($student),
+                'schedule_date' => $scheduleDate->toDateString(),
                 'today_schedule' => ScheduleLessonResource::collection($schedule),
                 'next_lesson' => $nextLesson ? new ScheduleLessonResource($nextLesson) : null,
                 'grades' => GradeResource::collection($grades),
@@ -109,6 +112,25 @@ class MobileStudentController extends Controller
                 'notifications' => $this->mockNotifications(),
             ],
         ];
+    }
+
+    private function scheduleDate(Request $request): Carbon
+    {
+        $value = $request->query('date');
+
+        if ($value === null || $value === '') {
+            return Carbon::today();
+        }
+
+        if (! is_string($value) || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+            abort(422, 'Дата расписания должна быть передана в формате ГГГГ-ММ-ДД.');
+        }
+
+        try {
+            return Carbon::createFromFormat('!Y-m-d', $value);
+        } catch (\Exception) {
+            abort(422, 'Дата расписания некорректна.');
+        }
     }
 
     private function mockNotifications(): array

@@ -4350,6 +4350,19 @@ body {
   margin-bottom: 12px;
 }
 
+.mobile-student-schedule-header {
+  justify-content: space-between;
+}
+
+.mobile-student-schedule-header > div {
+  display: flex;
+  align-items: center;
+}
+
+.mobile-student-schedule-header > div:first-child {
+  gap: 8px;
+}
+
 .mobile-student-card h2 {
   margin: 0;
   font-size: 17px;

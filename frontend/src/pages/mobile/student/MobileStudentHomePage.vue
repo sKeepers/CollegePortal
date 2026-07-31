@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { Bell, CalendarDays, ChevronRight, IdCard, RefreshCw, Star, UserRound } from '@lucide/vue'
-import { useMobileStudentStore, attendanceLabel, formatLessonTime, lessonTitle } from '../../../stores/mobileStudent'
+import { Bell, CalendarDays, ChevronLeft, ChevronRight, IdCard, RefreshCw, Star, UserRound } from '@lucide/vue'
+import { useMobileStudentStore, attendanceLabel, formatLessonTime, formatMobileDate, lessonTitle } from '../../../stores/mobileStudent'
 
 const store = useMobileStudentStore()
 let refreshTimer = null
@@ -60,7 +60,7 @@ onBeforeUnmount(() => {
       </section>
 
       <section class="mobile-student-card" id="schedule">
-        <header><CalendarDays :size="20" /><h2>Сегодня</h2></header>
+        <header class="mobile-student-schedule-header"><div><CalendarDays :size="20" /><h2>{{ formatMobileDate(store.scheduleDate) }}</h2></div><div><q-btn flat round dense aria-label="Предыдущий день" :disable="store.loading" @click="store.changeScheduleDate(-1)"><ChevronLeft :size="20" /></q-btn><q-btn flat round dense aria-label="Следующий день" :disable="store.loading" @click="store.changeScheduleDate(1)"><ChevronRight :size="20" /></q-btn></div></header>
         <div v-if="store.nextLesson" class="mobile-student-next-lesson">
           <span>Ближайшее занятие</span>
           <strong>{{ lessonTitle(store.nextLesson) }}</strong>
@@ -72,7 +72,7 @@ onBeforeUnmount(() => {
             <div><strong>{{ lessonTitle(lesson) }}</strong><span>{{ lesson.teacher?.last_name || 'Преподаватель не указан' }} · {{ lesson.classroom?.number || '—' }}</span></div>
           </article>
         </div>
-        <p v-else class="mobile-student-empty">На сегодня занятий нет.</p>
+        <p v-else class="mobile-student-empty">На выбранную дату занятий нет.</p>
       </section>
 
       <section class="mobile-student-card" id="journal">
