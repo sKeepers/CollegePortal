@@ -1,18 +1,21 @@
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { LogIn } from '@lucide/vue'
+import { Eye, EyeOff, LogIn } from '@lucide/vue'
 import { useAuthStore } from '../../stores/auth'
 
 const router = useRouter()
 const auth = useAuthStore()
+const showPassword = ref(false)
 const form = reactive({
   email: '',
   password: '',
+  savePassword: false,
+  staySignedIn: true,
 })
 
 async function submit() {
-  await auth.login(form)
+  await auth.login({ email: form.email, password: form.password, staySignedIn: form.staySignedIn })
   router.push('/dashboard')
 }
 </script>
@@ -27,13 +30,13 @@ async function submit() {
         </div>
       </q-card-section>
 
-      <q-form class="cp-login-form" autocomplete="off" @submit.prevent="submit">
+      <q-form class="cp-login-form" @submit.prevent="submit">
         <q-card-section class="q-gutter-md">
           <q-input
             v-model="form.email"
             label="Email"
             type="email"
-            autocomplete="off"
+            autocomplete="username"
             outlined
             dense
             required
@@ -41,12 +44,14 @@ async function submit() {
           <q-input
             v-model="form.password"
             label="Пароль"
-            type="password"
-            autocomplete="new-password"
+            :type="showPassword ? 'text' : 'password'"
+            autocomplete="current-password"
             outlined
             dense
             required
-          />
+          ><template #append><q-btn flat round dense :aria-label="showPassword ? 'Скрыть пароль' : 'Показать пароль'" @click="showPassword = !showPassword"><EyeOff v-if="showPassword" :size="18" /><Eye v-else :size="18" /></q-btn></template></q-input>
+          <q-checkbox v-model="form.savePassword" dense label="Разрешить браузеру сохранить пароль" />
+          <q-checkbox v-model="form.staySignedIn" dense label="Не выходить из сайта на этом устройстве" />
 
           <q-banner v-if="auth.error" rounded class="bg-red-1 text-red-9">
             {{ auth.error }}

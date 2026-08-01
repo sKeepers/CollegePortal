@@ -1,4 +1,9 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
+const TOKEN_KEY = 'college_portal_token'
+
+function storedToken() {
+  return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY)
+}
 
 const VALIDATION_RULE_MESSAGES = {
   'validation.exists': 'Выбранное значение не найдено. Обновите справочник и выберите значение из списка.',
@@ -75,7 +80,7 @@ function validationMessages(errors) {
 }
 
 async function request(path, options = {}) {
-  const token = localStorage.getItem('college_portal_token')
+  const token = storedToken()
   const isFormData = options.body instanceof FormData
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -110,16 +115,20 @@ async function request(path, options = {}) {
 export const api = {
   baseUrl: API_BASE_URL,
 
-  setToken(token) {
-    localStorage.setItem('college_portal_token', token)
+  setToken(token, { persistent = true } = {}) {
+    const storage = persistent ? localStorage : sessionStorage
+    const otherStorage = persistent ? sessionStorage : localStorage
+    storage.setItem(TOKEN_KEY, token)
+    otherStorage.removeItem(TOKEN_KEY)
   },
 
   clearToken() {
-    localStorage.removeItem('college_portal_token')
+    localStorage.removeItem(TOKEN_KEY)
+    sessionStorage.removeItem(TOKEN_KEY)
   },
 
   token() {
-    return localStorage.getItem('college_portal_token')
+    return storedToken()
   },
 
   async login(credentials) {
@@ -205,7 +214,7 @@ export const api = {
   },
 
   async postDownload(path, data) {
-    const token = localStorage.getItem('college_portal_token')
+    const token = storedToken()
     const response = await fetch(`${API_BASE_URL}${path}`, {
       method: 'POST',
       headers: {
@@ -226,7 +235,7 @@ export const api = {
   },
 
   async download(path) {
-    const token = localStorage.getItem('college_portal_token')
+    const token = storedToken()
     const response = await fetch(`${API_BASE_URL}${path}`, {
       headers: {
         Accept: 'text/csv',

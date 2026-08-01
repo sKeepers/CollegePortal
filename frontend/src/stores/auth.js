@@ -33,7 +33,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     try {
       const payload = await api.login(credentials)
-      api.setToken(payload.token)
+      api.setToken(payload.token, { persistent: credentials.staySignedIn !== false })
       user.value = payload.user
       initialized.value = true
     } catch (caught) {

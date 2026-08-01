@@ -3,6 +3,7 @@
 ## Project Documentation Map
 
 - [Project Status](PROJECT_STATUS.md)
+- [Active Work / Session Handoff](ACTIVE_WORK.md)
 - [Background Agents](AGENTS.md)
 - [Documentation Report](../REPORT.md)
 - [Roadmap](../ROADMAP.md)
@@ -17,6 +18,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 ## Management Documents
 
 - [Project Status](PROJECT_STATUS.md)
+- [Active Work / Session Handoff](ACTIVE_WORK.md)
 - [Background Agents](AGENTS.md)
 - [Documentation Report](../REPORT.md)
 - [Roadmap](../ROADMAP.md)
@@ -34,6 +36,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [Audit Log](AUDIT_LOG.md)
 - [Path Policy](PATH_POLICY.md)
 - [GitHub Repository](GITHUB_REPOSITORY.md)
+- [GitHub Issue Review 2026-08-01](GITHUB_ISSUE_REVIEW_2026-08-01.md)
 - [Repository Sync](REPOSITORY_SYNC.md)
 - [Role Menu Matrix](ROLE_MENU_MATRIX.md)
 - [Performance Baseline](PERFORMANCE_BASELINE.md)
@@ -82,6 +85,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [adr/ADR-005_СТРАТЕГИЯ_РЕАЛИЗАЦИИ.md](adr/ADR-005_СТРАТЕГИЯ_РЕАЛИЗАЦИИ.md)
 - [adr/ADR-006_ЖИЗНЕННЫЙ_ЦИКЛ_ДОКУМЕНТОВ_ADMISSIONS.md](adr/ADR-006_ЖИЗНЕННЫЙ_ЦИКЛ_ДОКУМЕНТОВ_ADMISSIONS.md)
 - [AGENTS.md](AGENTS.md)
+- [ACTIVE_WORK.md](ACTIVE_WORK.md)
 - [API_ПРИЕМНОЙ_КОМИССИИ.md](API_ПРИЕМНОЙ_КОМИССИИ.md)
 - [APPLICANT_DOCUMENTS.md](APPLICANT_DOCUMENTS.md)
 - [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md)

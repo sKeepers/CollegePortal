@@ -7,6 +7,7 @@ use App\Models\Group;
 use App\Models\ScheduleLesson;
 use App\Models\Subject;
 use App\Models\Teacher;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -185,6 +186,39 @@ class ScheduleLessonApiTest extends TestCase
             ->assertNoContent();
 
         $this->assertDatabaseMissing('schedule_lessons', ['id' => $lesson->id]);
+    }
+
+    public function test_teacher_and_student_only_receive_their_own_schedule_scope(): void
+    {
+        $this->seed(RoleSeeder::class);
+        $first = $this->createContext();
+        $firstLesson = $this->createLesson($first);
+        $second = $this->createContext();
+        $secondLesson = $this->createLesson($second);
+
+        $teacherUser = $this->createApiUser(roleCode: 'teacher');
+        $first['teacher']->forceFill(['user_id' => $teacherUser->id])->save();
+
+        $studentUser = $this->createApiUser(roleCode: 'student');
+        Student::create([
+            'user_id' => $studentUser->id,
+            'group_id' => $second['group']->id,
+            'last_name' => 'Тестовый',
+            'first_name' => 'Студент',
+            'status' => 'active',
+        ]);
+
+        $this->withApiAuth($teacherUser)
+            ->getJson('/api/schedule-lessons')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $firstLesson->id);
+
+        $this->withApiAuth($studentUser)
+            ->getJson('/api/schedule-lessons')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $secondLesson->id);
     }
 
     private function createContext(): array

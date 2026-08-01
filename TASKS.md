@@ -16,6 +16,7 @@
 ## Правила работы
 
 - [x] GITHUB-002: добавить полноценное русскоязычное представление CollegePortal на GitHub
+- [x] HANDOFF-001: создать `docs/ACTIVE_WORK.md` и обязательный session handoff для смены чата/агента.
 
 - После каждой выполненной задачи делать Git checkpoint в `/srv/college-dev`: `git status`, проверка файлов, commit с номером задачи, без `.env`, `vendor`, `node_modules`, `tmp` и logs.
 

@@ -12,6 +12,7 @@ import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import ScheduleDetailsPanel from './ScheduleDetailsPanel.vue'
 import ScheduleFilters from './ScheduleFilters.vue'
 import { usePermissions } from '../../composables/usePermissions'
+import { useAuthStore } from '../../stores/auth'
 import {
   classroomLabel,
   lessonTypeLabels,
@@ -22,6 +23,7 @@ import {
 
 const store = useScheduleStore()
 const permissions = usePermissions()
+const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 const syncingQueryFromUi = ref(false)
@@ -40,6 +42,7 @@ const selectedDate = ref(route.query.date ? String(route.query.date) : todayStri
 const viewOptions = [
   { label: 'День', value: 'day' },
   { label: 'Неделя', value: 'week' },
+  { label: 'Месяц', value: 'month' },
   { label: 'Преподаватель', value: 'teacher' },
   { label: 'Группа', value: 'group' },
   { label: 'Аудитория', value: 'classroom' },
@@ -48,6 +51,11 @@ const viewOptions = [
   { label: 'Редактор недели', value: 'editor' },
   { label: 'Шаблоны', value: 'templates' },
 ]
+const visibleViewOptions = computed(() => {
+  if (auth.hasRole('student')) return viewOptions.filter((option) => ['day', 'week', 'month'].includes(option.value))
+  if (auth.hasRole('teacher')) return viewOptions.filter((option) => ['day', 'week'].includes(option.value))
+  return viewOptions
+})
 
 const dayFormatter = new Intl.DateTimeFormat('ru-RU', {
   weekday: 'short',
@@ -87,10 +95,22 @@ const selectedWeekDays = computed(() => {
     }
   })
 })
+const selectedMonthDays = computed(() => {
+  const date = parseLocalDate(selectedDate.value)
+  const days = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+  return Array.from({ length: days }, (_, index) => {
+    const day = new Date(date.getFullYear(), date.getMonth(), index + 1)
+    return { date: day, value: formatDate(day), label: capitalize(dayFormatter.format(day)) }
+  })
+})
 
 const periodTitle = computed(() => {
   if (activeView.value === 'day') {
     return longDateFormatter.format(parseLocalDate(selectedDate.value))
+  }
+
+  if (activeView.value === 'month') {
+    return new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' }).format(parseLocalDate(selectedDate.value))
   }
 
   const days = selectedWeekDays.value
@@ -104,6 +124,11 @@ const periodLessons = computed(() => {
 
   if (activeView.value === 'week') {
     const values = new Set(selectedWeekDays.value.map((day) => day.value))
+    return store.filteredLessons.filter((lesson) => values.has(lesson.lesson_date))
+  }
+
+  if (activeView.value === 'month') {
+    const values = new Set(selectedMonthDays.value.map((day) => day.value))
     return store.filteredLessons.filter((lesson) => values.has(lesson.lesson_date))
   }
 
@@ -122,6 +147,15 @@ const viewGroups = computed(() => {
 
   if (activeView.value === 'week') {
     return selectedWeekDays.value.map((day) => ({
+      key: day.value,
+      title: day.label,
+      subtitle: day.value,
+      lessons: sortLessons(periodLessons.value.filter((lesson) => lesson.lesson_date === day.value)),
+    }))
+  }
+
+  if (activeView.value === 'month') {
+    return selectedMonthDays.value.map((day) => ({
       key: day.value,
       title: day.label,
       subtitle: day.value,
@@ -181,6 +215,14 @@ const totalClassrooms = computed(() => new Set(periodLessons.value.map((lesson) 
 const weekRange = computed(() => {
   const days = selectedWeekDays.value
   return { date_from: days[0]?.value, date_to: days[6]?.value }
+})
+const periodRange = computed(() => {
+  if (activeView.value !== 'month') return weekRange.value
+
+  const date = parseLocalDate(selectedDate.value)
+  const first = new Date(date.getFullYear(), date.getMonth(), 1)
+  const last = new Date(date.getFullYear(), date.getMonth() + 1, 0)
+  return { date_from: formatDate(first), date_to: formatDate(last) }
 })
 const scheduleInitialLoading = computed(() => store.loading && !store.lessons.length)
 const scheduleBlockingError = computed(() => store.error && !store.loading && !store.lessons.length)
@@ -338,7 +380,7 @@ async function refresh() {
 }
 
 async function loadCurrentPeriod() {
-  await store.load(weekRange.value)
+  await store.load(periodRange.value)
 }
 
 function openCreateDialog(cell = null) {
@@ -382,7 +424,13 @@ async function applyCreate() {
 }
 
 async function changePeriod(days) {
-  selectedDate.value = formatDate(addDays(parseLocalDate(selectedDate.value), days))
+  const date = parseLocalDate(selectedDate.value)
+  if (activeView.value === 'month') {
+    date.setMonth(date.getMonth() + Math.sign(days || 1))
+    selectedDate.value = formatDate(date)
+  } else {
+    selectedDate.value = formatDate(addDays(date, days))
+  }
   await loadCurrentPeriod()
   await syncQuery()
 }
@@ -491,7 +539,8 @@ watch(
       return
     }
 
-    activeView.value = route.query.view ? String(route.query.view) : 'week'
+    const requestedView = route.query.view ? String(route.query.view) : 'week'
+    activeView.value = visibleViewOptions.value.some((option) => option.value === requestedView) ? requestedView : 'week'
     selectedDate.value = route.query.date ? String(route.query.date) : todayString()
     store.selectLessonById(route.query.selected ? String(route.query.selected) : '')
   },
@@ -518,11 +567,11 @@ onMounted(async () => {
         toggle-color="primary"
         color="white"
         text-color="secondary"
-        :options="viewOptions"
+        :options="visibleViewOptions"
       />
 
       <div class="schedule-period">
-        <q-btn flat round dense :disable="store.loading" @click="changePeriod(activeView === 'day' ? -1 : -7)">
+        <q-btn flat round dense :disable="store.loading" @click="changePeriod(activeView === 'day' ? -1 : activeView === 'month' ? -1 : -7)">
           <ChevronLeft :size="17" />
         </q-btn>
         <q-input
@@ -532,7 +581,7 @@ onMounted(async () => {
           type="date"
           class="schedule-period__date"
         />
-        <q-btn flat round dense :disable="store.loading" @click="changePeriod(activeView === 'day' ? 1 : 7)">
+        <q-btn flat round dense :disable="store.loading" @click="changePeriod(activeView === 'day' ? 1 : activeView === 'month' ? 1 : 7)">
           <ChevronRight :size="17" />
         </q-btn>
         <q-btn flat no-caps :disable="store.loading" @click="setToday">Сегодня</q-btn>
