@@ -174,16 +174,11 @@ export const useJournalStore = defineStore('journal', () => {
         date_to: filters.value.date_to,
         mode: filters.value.mode,
       }
-      const [lessonsPayload, groupsPayload, teachersPayload, subjectsPayload] = await Promise.all([
-        api.list('journal/lessons', { ...apiFilters, per_page: 100 }),
-        api.list('groups'),
-        api.list('teachers', { active_only: 1 }),
-        api.list('subjects'),
-      ])
+      const lessonsPayload = await api.list('journal/lessons', { ...apiFilters, per_page: 100 })
       lessons.value = extractRows(lessonsPayload)
-      groups.value = extractRows(groupsPayload)
-      teachers.value = extractRows(teachersPayload)
-      subjects.value = extractRows(subjectsPayload)
+      groups.value = [...new Map(lessons.value.filter((lesson) => lesson.group?.id).map((lesson) => [lesson.group.id, lesson.group])).values()]
+      teachers.value = [...new Map(lessons.value.filter((lesson) => lesson.teacher?.id).map((lesson) => [lesson.teacher.id, lesson.teacher])).values()]
+      subjects.value = [...new Map(lessons.value.filter((lesson) => lesson.subject?.id).map((lesson) => [lesson.subject.id, lesson.subject])).values()]
       if (!selectedLessonId.value && journalLessons.value[0]) selectedLessonId.value = journalLessons.value[0].id
       if (selectedLessonId.value && !journalLessons.value.some((lesson) => Number(lesson.id) === Number(selectedLessonId.value))) selectedLessonId.value = journalLessons.value[0]?.id || null
       await loadJournalData()
