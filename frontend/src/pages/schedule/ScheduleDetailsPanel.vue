@@ -5,8 +5,10 @@ import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
 import { classroomLabel, lessonTypeLabels, lessonTypeTones, teacherName } from '../../stores/schedule'
+import { useAuthStore } from '../../stores/auth'
 
 const props = defineProps({ lesson: { type: Object, default: null }, conflicts: { type: Array, default: () => [] } })
+const auth = useAuthStore()
 
 const lessonTypeText = computed(() => lessonTypeLabels[props.lesson?.lesson_type] || props.lesson?.lesson_type || 'Тип не указан')
 const lessonTypeTone = computed(() => lessonTypeTones[props.lesson?.lesson_type] || 'neutral')
@@ -15,16 +17,16 @@ const classroomText = computed(() => classroomLabel(props.lesson?.classroom) || 
 const groupText = computed(() => props.lesson?.group?.name || 'Группа не указана')
 const subjectText = computed(() => props.lesson?.subject?.name || 'Дисциплина не указана')
 const lessonMetrics = computed(() => [
-  { label: 'Группа', value: groupText.value, to: props.lesson?.group_id ? { path: '/groups', query: { selected: props.lesson.group_id } } : null },
-  { label: 'Преподаватель', value: teacherText.value, to: props.lesson?.teacher_id ? { path: '/teachers', query: { selected: props.lesson.teacher_id } } : null },
-  { label: 'Аудитория', value: classroomText.value, to: props.lesson?.classroom_id ? { path: '/classrooms', query: { selected: props.lesson.classroom_id } } : null },
+  { label: 'Группа', value: groupText.value, to: auth.can('groups.view') && props.lesson?.group_id ? { path: '/groups', query: { selected: props.lesson.group_id } } : null },
+  { label: 'Преподаватель', value: teacherText.value, to: auth.can('teachers.view') && props.lesson?.teacher_id ? { path: '/teachers', query: { selected: props.lesson.teacher_id } } : null },
+  { label: 'Аудитория', value: classroomText.value, to: auth.can('classrooms.view') && props.lesson?.classroom_id ? { path: '/classrooms', query: { selected: props.lesson.classroom_id } } : null },
   { label: 'Время', value: `${props.lesson?.starts_at || '—'}–${props.lesson?.ends_at || '—'}` },
 ])
 const lessonActions = computed(() => [
-  { label: 'Открыть журнал', to: { path: '/journal', query: { lesson: props.lesson?.id } }, disabled: props.lesson?.status === 'cancelled' },
-  { label: 'Группа', to: { path: '/groups', query: { selected: props.lesson?.group_id } }, disabled: !props.lesson?.group_id },
-  { label: 'Преподаватель', to: { path: '/teachers', query: { selected: props.lesson?.teacher_id } }, disabled: !props.lesson?.teacher_id },
-  { label: 'Аудитория', to: { path: '/classrooms', query: { selected: props.lesson?.classroom_id } }, disabled: !props.lesson?.classroom_id },
+  { label: 'Открыть журнал', to: props.lesson?.schedule_entry_id ? { path: '/journal', query: { lesson: props.lesson.schedule_entry_id } } : { path: '/journal', query: { mode: 'week', teacher: props.lesson?.teacher_id, date: props.lesson?.lesson_date } }, disabled: props.lesson?.status === 'cancelled' },
+  ...(auth.can('groups.view') ? [{ label: 'Группа', to: { path: '/groups', query: { selected: props.lesson?.group_id } }, disabled: !props.lesson?.group_id }] : []),
+  ...(auth.can('teachers.view') ? [{ label: 'Преподаватель', to: { path: '/teachers', query: { selected: props.lesson?.teacher_id } }, disabled: !props.lesson?.teacher_id }] : []),
+  ...(auth.can('classrooms.view') ? [{ label: 'Аудитория', to: { path: '/classrooms', query: { selected: props.lesson?.classroom_id } }, disabled: !props.lesson?.classroom_id }] : []),
 ])
 </script>
 
