@@ -1,28 +1,31 @@
-# Active Work
+# Текущая работа
 
-## Purpose
+## Назначение
 
-This file is the operational handoff record for the current CollegePortal session. It is the entrypoint for a new chat, a new agent, or a different engineer after reading `AGENTS.md`.
+Файл фиксирует состояние рабочей сессии CollegePortal. Это точка входа для нового чата, агента или инженера после прочтения `AGENTS.md`.
 
-Update it before ending a session, before changing to a substantially different task, and after each DEV deployment.
+Обновлять перед окончанием сессии, переходом к существенно другой задаче и после каждого развёртывания на DEV.
 
-## Updated
+## Обновлено
 
-- Date: 2026-08-01
-- Local worktree: `C:\!Projects\CollegePortal\.worktrees\uat-002-2-mobile-access`
+- Date: 2026-08-02
+- Local worktree: `C:\!Projects\CollegePortal\.worktrees\sync-001`
 - DEV checkout: `/home/andale/CollegePortal`
 
-## Git State
+## Git-состояние
 
-- Active worktree branch: `feature/uat-002-2-mobile-access`
-- Last deployed DEV checkpoint: `82e07e28bb53040f602d91b473be3b4b4bb80025`
+- Active worktree branch: `sync/sync-001-local`
+- Last deployed DEV checkpoint: `3e1389335`
 - DEV branch: `feature/uat-002-1-final-stabilization`
-- `SYNC-001` reconciled GitHub `SEC-001` with DEV UAT-002.2 and was deployed to DEV.
-- DEV migration `2026_07_30_010000_add_lookup_and_expiration_to_api_tokens` was applied.
-- Reconciliation checks: `341 passed (2173 assertions)` and `npm run build` passed.
-- Grade-detail and device-profile frontend slice was deployed after a successful production build.
+- GitHub branch: `origin/feature/uat-002-1-final-stabilization` at `3e1389335`.
+- Локальная ветка `sync/sync-001-local` указывает на дочерний коммит `a7ba282`, включённый merge-коммитом `3e1389335`.
+- `SYNC-001` объединил GitHub `SEC-001` с DEV UAT-002.2 и был развёрнут на DEV.
+- На DEV применена миграция `2026_07_30_010000_add_lookup_and_expiration_to_api_tokens`.
+- Проверки reconciliation: `341 passed (2173 assertions)` и `npm run build` завершились успешно.
+- На DEV развёрнуты карточка оценок и адаптация профилей устройств после успешной production-сборки.
+- Незакоммиченные изменения на момент обновления: правило русского языка в `AGENTS.md`.
 
-## DEV Access
+## Доступ к DEV
 
 - Browser portal: `https://84.54.208.134:5443`
 - Internal DEV portal: `https://192.168.34.114:5443`
@@ -30,35 +33,42 @@ Update it before ending a session, before changing to a substantially different 
 - Containers: `docker compose -f /home/andale/CollegePortal/docker-compose.yml`
 - Never put passwords, tokens, private keys, or personal data in this file.
 
-## Current Task
+## Текущая задача
 
 `UAT-002.2`: role-based portal stabilization after mobile UAT.
 
-GitHub Issues are accessible read-only through `gh` on DEV. The current review is [GitHub Issue Review 2026-08-01](GITHUB_ISSUE_REVIEW_2026-08-01.md); do not edit Issues without an explicit task.
+GitHub Issues доступны на DEV только для чтения через `gh`. Текущий обзор: [GitHub Issue Review 2026-08-01](GITHUB_ISSUE_REVIEW_2026-08-01.md); не изменять Issues без явной задачи.
 
-Current accepted requirements:
+Принятые требования:
 
-1. Login: password visibility, browser-managed password saving, and persistent/session login choice.
-2. Teacher: scoped journal with attendance and grading, without schedule editor.
-3. Student: personal schedule only, week/month views, personal grade details, and no teacher-only journal workspace.
-4. Access gate: compact, low-load phone scanner.
-5. Responsive role routing for phone, tablet, HD, FullHD, and wider desktop viewports.
+1. Вход: показ пароля, сохранение браузером и выбор постоянной или сессионной авторизации.
+2. Преподаватель: ограниченный собственными занятиями журнал с посещаемостью и оценками, без редактора расписания.
+3. Студент: только личное расписание, режимы недели и месяца, детальные оценки без рабочего пространства журнала преподавателя.
+4. Проходная: компактный сканер для телефона с низкой нагрузкой.
+5. Адаптивная маршрутизация по ролям для телефона, планшета, HD, FullHD и широких desktop-экранов.
 
-## Verified Checkpoints
+## Проверенные checkpoint
 
-- `328572e`: dynamic QR, replay protection, student journal restriction.
-- `c3c2a6d`: student schedule access and mobile date navigation.
-- `88b1f83`: compact mobile scanner workspace.
-- `86108ff`: QR-first personal pass with countdown.
+- `328572e`: динамический QR, защита от повторного использования, ограничение журнала студента.
+- `c3c2a6d`: доступ студента к расписанию и мобильная навигация по датам.
+- `88b1f83`: компактное рабочее пространство мобильного сканера.
+- `86108ff`: личный QR-пропуск с обратным отсчётом.
 
-## Next Actions
+## Следующие действия
 
-1. Add student grade-detail UI and tests.
-2. Complete device-profile adaptation for teacher, student and access gate layouts.
-3. Run manual role smoke with explicit URL, role, account and expected result.
-4. Update GitHub Issues #29, #4 and #24 with sanitized UAT evidence.
+1. Закоммитить правило языка и обновлённый handoff, затем опубликовать его в рабочую GitHub-ветку.
+2. Выполнить ручной teacher UAT: `/journal` и `/teaching-load` под ролью teacher с URL, ролью, учётной записью и ожидаемым результатом.
+3. Спроектировать self-scoped read-only просмотр нагрузки преподавателя: текущий `/teaching-load` возвращает `403`, потому что UI использует административный permission `teachingload.view`.
+4. Проверить legacy `ScheduleLesson` без `schedule_entry_id`: сейчас журнал открывается только с фильтрами даты и преподавателя, а не создаётся автоматически.
+5. После подтверждённых результатов обновить Issues #29, #4 и #24 санитизированными UAT-доказательствами.
 
-## Handoff Checklist
+## Блокеры
+
+- Для роли teacher `/teaching-load` возвращает `403`. Нельзя выдавать преподавателю широкий административный доступ: нужен отдельный self-scoped read-only сценарий.
+- Legacy `ScheduleLesson` без `schedule_entry_id` не может автоматически открыть или создать журнал; текущий fallback открывает отфильтрованный журнал по дате и преподавателю.
+- PROD не изменялся.
+
+## Чек-лист передачи
 
 Before ending a session or opening a new chat:
 
@@ -68,7 +78,7 @@ Before ending a session or opening a new chat:
 4. State whether DEV and PROD were changed.
 5. Offer a new chat when the task is complete, when the context is near its practical limit, or when the next task is independent.
 
-## New Chat Prompt
+## Запрос для нового чата
 
 ```text
 Read AGENTS.md, docs/ACTIVE_WORK.md, TASKS.md, and docs/UAT_002_REPORT.md.
