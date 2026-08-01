@@ -234,3 +234,9 @@ Teacher workspace uses existing `journal.*` permissions with stricter UI behavio
 ## FIS Outbound Permissions
 
 Added permissions: `fis.outbound.view`, `fis.outbound.create`, `fis.outbound.generate`, `fis.outbound.validate`, `fis.outbound.send_test`, `fis.outbound.send_production`, `fis.outbound.status`, `fis.outbound.download`, `fis.settings.manage`. Production send is feature-flagged and not active in FIS-API-001.
+
+## DOCS-ENGINE-001
+
+- Добавляется Document Engine для печатных форм, справки об обучении, журнала документов и публичной проверки.
+- Права: `documents.view`, `documents.create`, `documents.generate`, `documents.issue`, `documents.cancel`, `documents.reprint`, `documents.download_docx`, `documents.download_pdf`, `documents.export`, `documents.templates.view`, `documents.templates.manage`, `documents.templates.publish`, `documents.types.manage`, `documents.verify_private`, `documents.view_sensitive_data`.
+- Admin получает все права; study/deputy получают создание, генерацию, выдачу и скачивание; director получает просмотр и скачивание.

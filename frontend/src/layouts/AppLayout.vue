@@ -88,6 +88,7 @@ const navGroups = [
     items: [
       { label: 'Отчеты', to: '/reports', icon: FileText, permission: 'journal.view' },
       { label: 'Приемная комиссия', to: '/admissions', icon: School, permission: 'admissions.view' },
+      { label: 'Документы', to: '/documents', icon: FileText, permission: 'documents.view' },
     ],
   },
   {

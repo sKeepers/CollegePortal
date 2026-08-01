@@ -154,3 +154,7 @@ Teacher Journal Workspace continues Journal Engine audit coverage and adds expli
 ## FIS Outbound Audit
 
 FIS outbound logs package creation, generation attempts, validation, send preview, test send, status refresh and cancellation. Audit payloads must not include credentials, XML with personal data, passport, SNILS or raw secrets.
+
+## Document Engine
+
+Document Engine пишет audit events через `AuditLogService` для preview, генерации, выдачи, скачивания, повторной печати, отмены, загрузки и публикации шаблонов. В audit не записываются содержимое DOCX/PDF, verification token и полный payload с чувствительными данными.

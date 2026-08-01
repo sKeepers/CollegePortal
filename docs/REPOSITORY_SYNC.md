@@ -38,6 +38,12 @@ The script checks Git availability, verifies remote, prints status, refuses dirt
 
 No other Linux copy with origin `github.com/sKeepers/CollegePortal` was found in the safe scan scope (`/srv`, `/home/andale`, excluding private storage and backups).
 
+## INFRA-ACCESS-001.1 Clarification
+
+The factual CollegePortal DEV repository is currently on `192.168.34.104` / hostname `moodle` at `/srv/college-dev`.
+
+`192.168.34.114` is SSH-reachable but key login for `andale` is not configured yet. Do not treat it as the primary DEV and do not move `/srv/college-dev` there without a separate infrastructure decision.
+
 ## UAT and PROD
 
 UAT (`192.168.34.17`, `/opt/college-portal`) must be updated only by installer/update release flow, not by Git pull. PROD was not contacted or inventoried.
