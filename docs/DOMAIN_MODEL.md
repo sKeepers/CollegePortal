@@ -251,3 +251,7 @@ Dashboard, отчеты, контроль качества данных"]
 ## PERSON-001: центральная сущность Person
 
 Домен Identity получил foundation-сущность `Person`. Academic, Administration, Integrations и Analytics продолжают работать через существующие профили, но могут ссылаться на Person через `person_id`. Это подготовка к единому жизненному циклу: абитуриент -> студент -> выпускник, а также преподаватель/сотрудник/пользователь.
+
+## Access Control domain
+
+ACCESS-001 adds the Access Control domain around `Person`: access points, devices, short-lived pass tokens, events, sessions, rules, operator shifts, denials and access audit events. `Person` is the subject of dynamic QR tokens; `DigitalIdentity` static tokens remain only as a legacy fallback.

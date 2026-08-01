@@ -102,8 +102,9 @@ const navGroups = [
   {
     label: 'Идентификация',
     items: [
-      { label: 'Проходная', to: '/access/gate', icon: DoorOpen, permission: 'gate.scan' },
-      { label: 'Мобильный сканер', to: '/access/mobile-scanner', icon: QrCode, permission: 'gate.scan' },
+      { label: 'Мой QR-пропуск', to: '/access/pass', icon: QrCode },
+      { label: 'Проходная', to: '/access/checkpoint', icon: DoorOpen, permission: 'access.scan' },
+      { label: 'Мобильный сканер', to: '/access/mobile-scanner', icon: QrCode, permission: 'access.scan' },
       { label: 'Отчеты по проходам', to: '/access/reports', icon: FileText, permission: 'gate.reports' },
       { label: 'Тест QR-сканера', to: '/access/scanner-test', icon: QrCode, adminOnly: true },
       { label: 'Цифровые пропуска', to: '/identity/digital-passes', icon: QrCode, permission: 'digitalpasses.manage' },

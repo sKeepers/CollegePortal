@@ -45,3 +45,7 @@ export function teacherName(teacher) {
 export function groupName(group) {
   return group?.name || 'Группа не указана'
 }
+
+export function isPermissionDenied(error) {
+  return Number(error?.status || 0) === 403
+}

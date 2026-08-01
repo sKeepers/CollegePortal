@@ -19,6 +19,8 @@ class RoleSeeder extends Seeder
             ['code' => 'teacher', 'name' => 'Преподаватель', 'description' => 'Работа со своим расписанием, журналом и нагрузкой.'],
             ['code' => 'student', 'name' => 'Студент', 'description' => 'Просмотр личного кабинета, QR, расписания и оценок.'],
             ['code' => 'security', 'name' => 'Сотрудник проходной', 'description' => 'Сканирование QR и отчеты проходной.'],
+            ['code' => 'access_operator', 'name' => 'Оператор проходной', 'description' => 'Сканирование QR без доступа к лишним данным.'],
+            ['code' => 'access_admin', 'name' => 'Администратор проходной', 'description' => 'Управление точками, устройствами и аудитом проходной.'],
             ['code' => 'hr', 'name' => 'Отдел кадров', 'description' => 'Ведение сотрудников, подразделений, должностей и кадровых статусов.'],
             ['code' => 'academic_office', 'name' => 'Учебная часть (legacy)', 'description' => 'Legacy-роль для совместимости.'],
             ['code' => 'curator', 'name' => 'Куратор группы', 'description' => 'Сопровождение закрепленной учебной группы.'],
@@ -45,6 +47,8 @@ class RoleSeeder extends Seeder
         $this->syncPermissions('teacher', $this->ids($this->teacherPermissions()));
         $this->syncPermissions('student', $this->ids($this->studentPermissions()));
         $this->syncPermissions('security', $this->ids($this->securityPermissions()));
+        $this->syncPermissions('access_operator', $this->ids($this->accessOperatorPermissions()));
+        $this->syncPermissions('access_admin', $this->ids($this->accessAdminPermissions()));
         $this->syncPermissions('hr', $this->ids($this->hrPermissions()));
         $this->syncPermissions('curator', $this->ids(array_values(array_unique(array_merge($this->teacherPermissions(), ['students.view', 'groups.view', 'attendance.reports'])))));
     }
@@ -150,7 +154,13 @@ class RoleSeeder extends Seeder
             ['module' => 'FIS', 'code' => 'fis.outbound.status', 'name' => 'ФИС outbound: статус', 'description' => 'Получение статуса обработки исходящего пакета.'],
             ['module' => 'FIS', 'code' => 'fis.outbound.download', 'name' => 'ФИС outbound: скачать XML', 'description' => 'Скачивание XML из private storage.'],
             ['module' => 'FIS', 'code' => 'fis.settings.manage', 'name' => 'ФИС: настройки подключения', 'description' => 'Управление настройками официального подключения ФИС.'],
-            ['module' => 'Identity', 'code' => 'gate.scan', 'name' => 'Проходная: сканирование', 'description' => 'Сканирование QR на проходной.'],
+            ['module' => 'Access Control', 'code' => 'access.view', 'name' => 'Проходная: просмотр', 'description' => 'Просмотр событий и базовой информации проходной.'],
+            ['module' => 'Access Control', 'code' => 'access.scan', 'name' => 'Проходная: сканирование', 'description' => 'Сканирование динамических QR на проходной.'],
+            ['module' => 'Access Control', 'code' => 'access.override', 'name' => 'Проходная: ручное решение', 'description' => 'Ручное разрешение или исправление события с обязательной причиной.'],
+            ['module' => 'Access Control', 'code' => 'access.manage', 'name' => 'Проходная: администрирование', 'description' => 'Управление точками доступа, устройствами и правилами.'],
+            ['module' => 'Access Control', 'code' => 'access.audit', 'name' => 'Проходная: аудит', 'description' => 'Просмотр audit-событий проходной.'],
+            ['module' => 'Access Control', 'code' => 'access.reports', 'name' => 'Проходная: отчеты', 'description' => 'Отчеты и аналитика по проходам.'],
+            ['module' => 'Identity', 'code' => 'gate.scan', 'name' => 'Проходная: сканирование', 'description' => 'Legacy alias: сканирование QR на проходной.'],
             ['module' => 'Identity', 'code' => 'gate.reports', 'name' => 'Проходная: отчеты', 'description' => 'Просмотр событий и отчетов проходной.'],
             ['module' => 'Identity', 'code' => 'digitalpasses.manage', 'name' => 'Цифровые пропуска: управление', 'description' => 'Выпуск, отзыв и просмотр QR-пропусков.'],
 
@@ -238,7 +248,17 @@ class RoleSeeder extends Seeder
 
     private function securityPermissions(): array
     {
-        return ['dashboard.view', 'gate.scan', 'gate.reports', 'digitalpasses.manage', 'attendance.view', 'attendance.reports', 'view_reports'];
+        return ['dashboard.view', 'access.view', 'access.scan', 'access.reports', 'gate.scan', 'gate.reports', 'digitalpasses.manage', 'attendance.view', 'attendance.reports', 'view_reports'];
+    }
+
+    private function accessOperatorPermissions(): array
+    {
+        return ['dashboard.view', 'access.view', 'access.scan', 'access.reports', 'gate.scan', 'gate.reports'];
+    }
+
+    private function accessAdminPermissions(): array
+    {
+        return ['dashboard.view', 'access.view', 'access.scan', 'access.override', 'access.manage', 'access.audit', 'access.reports', 'gate.scan', 'gate.reports', 'digitalpasses.manage', 'attendance.view', 'attendance.reports', 'view_reports'];
     }
 
     private function ids(array $codes)

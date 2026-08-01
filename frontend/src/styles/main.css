@@ -4243,8 +4243,12 @@ body {
 }
 
 .mobile-student-qr svg {
-  width: min(100%, 236px);
+  display: block;
+  width: min(360px, 100%);
+  min-width: min(320px, 100%);
   height: auto;
+  background: #ffffff;
+  shape-rendering: crispEdges;
 }
 
 .mobile-student-qr-card dl {
@@ -4309,7 +4313,8 @@ body {
   }
 
   .mobile-student-qr svg {
-    width: min(100%, 220px);
+    width: min(360px, 100%);
+    min-width: min(320px, 100%);
   }
 
   .mobile-student-hero h1,
@@ -6073,10 +6078,11 @@ body {
 
 .mobile-student-qr svg {
   display: block;
-  width: min(320px, 100%);
-  min-width: min(280px, 100%);
+  width: min(360px, 100%);
+  min-width: min(320px, 100%);
   height: auto;
   background: #ffffff;
+  shape-rendering: crispEdges;
 }
 
 @media (max-width: 1023px) {

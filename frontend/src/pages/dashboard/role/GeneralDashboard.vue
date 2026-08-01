@@ -13,7 +13,7 @@ import RecentActivityWidget from '../widgets/RecentActivityWidget.vue'
 import NotificationsWidget from '../widgets/NotificationsWidget.vue'
 import TasksWidget from '../widgets/TasksWidget.vue'
 import PersonalDashboardLayout from '../../../components/dashboard/PersonalDashboardLayout.vue'
-import { currentDateRu, extractTotal, todayIso } from './dashboardData'
+import { currentDateRu, extractTotal, isPermissionDenied, todayIso } from './dashboardData'
 
 const auth = useAuthStore()
 const settingsStore = useSettingsStore()
@@ -60,24 +60,39 @@ const quickActions = [
   { label: 'Открыть журнал', description: 'Посещаемость и оценки', icon: NotebookTabs, to: '/journal' },
 ]
 
+async function dashboardMetric(permission, request) {
+  if (permission && !auth.can(permission)) {
+    return { skipped: true }
+  }
+
+  try {
+    return { payload: await request() }
+  } catch (err) {
+    if (isPermissionDenied(err)) {
+      return { skipped: true }
+    }
+    return { error: err }
+  }
+}
+
 async function loadDashboard() {
   loading.value = true
   error.value = ''
 
   try {
-    const [studentsResult, groupsResult, teachersResult, lessonsResult] = await Promise.allSettled([
-      api.list('students'),
-      api.list('groups'),
-      api.list('teachers', { active_only: 1 }),
-      api.list('schedule-lessons', { date: todayIso() }),
+    const [studentsResult, groupsResult, teachersResult, lessonsResult] = await Promise.all([
+      dashboardMetric('students.view', () => api.list('students')),
+      dashboardMetric('groups.view', () => api.list('groups')),
+      dashboardMetric('teachers.view', () => api.list('teachers', { active_only: 1 })),
+      dashboardMetric('schedule.view', () => api.list('schedule-lessons', { date: todayIso() })),
     ])
 
-    if (studentsResult.status === 'fulfilled') totals.value.students = extractTotal(studentsResult.value)
-    if (groupsResult.status === 'fulfilled') totals.value.groups = extractTotal(groupsResult.value)
-    if (teachersResult.status === 'fulfilled') totals.value.teachers = extractTotal(teachersResult.value)
-    if (lessonsResult.status === 'fulfilled') totals.value.todayLessons = extractTotal(lessonsResult.value)
+    if (studentsResult.payload) totals.value.students = extractTotal(studentsResult.payload)
+    if (groupsResult.payload) totals.value.groups = extractTotal(groupsResult.payload)
+    if (teachersResult.payload) totals.value.teachers = extractTotal(teachersResult.payload)
+    if (lessonsResult.payload) totals.value.todayLessons = extractTotal(lessonsResult.payload)
 
-    if ([studentsResult, groupsResult, teachersResult].some((result) => result.status === 'rejected')) {
+    if ([studentsResult, groupsResult, teachersResult, lessonsResult].some((result) => result.error)) {
       error.value = 'Часть показателей не удалось загрузить'
     }
   } finally {

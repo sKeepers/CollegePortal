@@ -213,14 +213,23 @@ class JournalService
 
         return Student::query()->where('group_id', $lesson->group_id)->orderBy('last_name')->get()->map(function (Student $student) use ($lessonStart, $lessonEnd): array {
             $events = AccessEvent::query()
-                ->where('entity_type', DigitalIdentity::ENTITY_STUDENT)
-                ->where('entity_id', $student->id)
+                ->where(function ($query) use ($student): void {
+                    if ($student->person_id) {
+                        $query->where('person_id', $student->person_id);
+                    }
+                    $query->orWhere(function ($legacyQuery) use ($student): void {
+                        $legacyQuery->where('entity_type', DigitalIdentity::ENTITY_STUDENT)
+                            ->where('entity_id', $student->id);
+                    });
+                })
                 ->where('result', AccessEvent::RESULT_ALLOWED)
                 ->whereBetween('event_time', [$lessonStart->copy()->subHours(4), $lessonEnd->copy()->addHours(1)])
                 ->orderBy('event_time')
                 ->get();
-            $firstIn = $events->firstWhere('direction', AccessEvent::DIRECTION_IN);
-            $lastOut = $events->where('direction', AccessEvent::DIRECTION_OUT)->last();
+            $entryDirections = [AccessEvent::DIRECTION_ENTRY, 'in'];
+            $exitDirections = [AccessEvent::DIRECTION_EXIT, 'out'];
+            $firstIn = $events->first(fn (AccessEvent $event): bool => in_array($event->direction, $entryDirections, true));
+            $lastOut = $events->filter(fn (AccessEvent $event): bool => in_array($event->direction, $exitDirections, true))->last();
             $status = 'no_data';
             $minutesLate = null;
             if ($firstIn) {

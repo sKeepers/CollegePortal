@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\DigitalIdentity;
+use App\Models\Person;
 use App\Models\Student;
 use App\Models\Teacher;
 use Illuminate\Http\Request;
@@ -17,16 +18,22 @@ class AccessEventResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'person_id' => $this->person_id,
             'digital_identity_id' => $this->digital_identity_id,
             'entity_type' => $this->entity_type,
             'entity_id' => $this->entity_id,
             'direction' => $this->direction,
             'event_time' => $this->event_time?->toISOString(),
-            'access_point' => $this->access_point,
-            'device_name' => $this->device_name,
+            'occurred_at' => ($this->occurred_at ?: $this->event_time)?->toISOString(),
+            'access_point_id' => $this->access_point_id,
+            'device_id' => $this->device_id,
+            'access_point' => $this->accessPoint?->name ?? $this->access_point,
+            'device_name' => $this->device?->name ?? $this->device_name,
             'result' => $this->result,
+            'reason_code' => $this->reason_code,
             'reason' => $this->reason,
-            'owner' => $owner ? $this->ownerPayload($owner) : null,
+            'request_id' => $this->request_id,
+            'owner' => $owner ? $this->ownerPayload($request, $owner) : null,
             'digital_identity' => $this->digitalIdentity ? [
                 'id' => $this->digitalIdentity->id,
                 'status' => $this->digitalIdentity->status,
@@ -40,22 +47,47 @@ class AccessEventResource extends JsonResource
         ];
     }
 
-    private function ownerPayload(Student|Teacher $owner): array
+    private function ownerPayload(Request $request, Person|Student|Teacher $owner): array
     {
+        if ($owner instanceof Person) {
+            $student = $owner->primaryStudent;
+            $teacher = $owner->primaryTeacher;
+            $employee = $owner->primaryEmployee;
+            $category = $student ? 'student' : ($teacher ? 'teacher' : 'employee');
+            $photo = $owner->photo_path ?: ($student?->photo_path ?: $teacher?->photo_path);
+
+            return [
+                'id' => $owner->id,
+                'display_name' => trim("{$owner->last_name} {$owner->first_name} {$owner->middle_name}"),
+                'last_name' => $owner->last_name,
+                'first_name' => $owner->first_name,
+                'middle_name' => $owner->middle_name,
+                'photo_url' => $this->photoUrl($request, $photo),
+                'category' => $category,
+                'entity_label' => match ($category) { 'student' => 'Студент', 'teacher' => 'Преподаватель', default => 'Сотрудник' },
+                'group' => $student?->group ? ['id' => $student->group->id, 'name' => $student->group->name] : null,
+                'department' => $teacher?->department ?: $employee?->primaryDepartment?->name,
+            ];
+        }
+
         return [
             'id' => $owner->id,
+            'display_name' => trim("{$owner->last_name} {$owner->first_name} {$owner->middle_name}"),
             'last_name' => $owner->last_name,
             'first_name' => $owner->first_name,
             'middle_name' => $owner->middle_name,
-            'phone' => $owner->phone,
-            'email' => $owner->email,
-            'photo_url' => $owner->photo_path ? $request->getSchemeAndHttpHost().Storage::disk('public')->url($owner->photo_path) : null,
+            'photo_url' => $this->photoUrl($request, $owner->photo_path),
+            'category' => $owner instanceof Student ? 'student' : 'teacher',
             'group' => $owner instanceof Student && $owner->relationLoaded('group') && $owner->group
                 ? ['id' => $owner->group->id, 'name' => $owner->group->name]
                 : null,
-            'position' => $owner instanceof Teacher ? $owner->position : null,
             'department' => $owner instanceof Teacher ? $owner->department : null,
-            'entity_label' => $this->entity_type === DigitalIdentity::ENTITY_STUDENT ? 'Студент' : 'Преподаватель',
+            'entity_label' => $owner instanceof Student ? 'Студент' : 'Преподаватель',
         ];
+    }
+
+    private function photoUrl(Request $request, ?string $path): ?string
+    {
+        return $path ? $request->getSchemeAndHttpHost().Storage::disk('public')->url($path) : null;
     }
 }

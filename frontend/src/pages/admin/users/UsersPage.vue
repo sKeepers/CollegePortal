@@ -429,7 +429,7 @@ onMounted(async () => {
         <q-card-section class="users-form">
           <AppErrorBanner v-if="formError" :message="formError" />
           <q-input ref="nameInput" v-model="form.name" outlined dense label="Имя *" :error="Boolean(formErrors.name)" :error-message="formErrors.name" bottom-slots />
-          <q-input ref="emailInput" v-model="form.email" outlined dense label="Email *" type="email" :error="Boolean(formErrors.email)" :error-message="formErrors.email" bottom-slots />
+          <q-input ref="emailInput" v-model="form.email" outlined dense label="Email *" type="text" inputmode="email" :error="Boolean(formErrors.email)" :error-message="formErrors.email" bottom-slots />
           <q-input ref="passwordInput" v-model="form.password" outlined dense :label="editingUser ? 'Новый пароль, если нужно' : 'Пароль *'" type="password" :error="Boolean(formErrors.password)" :error-message="formErrors.password" bottom-slots />
           <q-select ref="roleInput" v-model="form.role_id" outlined dense emit-value map-options label="Роль *" :options="store.roleOptions" :error="Boolean(formErrors.role_id)" :error-message="formErrors.role_id" bottom-slots />
           <q-select v-model="form.person_type" outlined dense clearable emit-value map-options label="Тип Person" :options="store.personTypeOptions" :error="Boolean(formErrors.person_type)" :error-message="formErrors.person_type" bottom-slots />

@@ -22,7 +22,7 @@ const lastKeyAt = ref(null)
 const diagnostic = ref({ raw: '', normalized: '', length: 0, first: '—', last: '—', hasCr: false, hasLf: false, hasTab: false, hadEnter: false, intervals: [] })
 const statusPanelClass = computed(() => store.lastEvent?.result === 'allowed' ? 'access-gate-result--allowed' : 'access-gate-result--denied')
 const resultIcon = computed(() => store.lastEvent?.result === 'allowed' ? CheckCircle2 : XCircle)
-const directionIcon = computed(() => store.lastEvent?.direction === 'out' ? LogOut : LogIn)
+const directionIcon = computed(() => store.lastEvent?.direction === 'exit' || store.lastEvent?.direction === 'out' ? LogOut : LogIn)
 
 async function focusScanner() {
   await nextTick()
@@ -75,7 +75,7 @@ async function submitScan(fromTab = false) {
   token.value = ''
   keyTimings.value = []
   lastKeyAt.value = null
-  await store.scan(value, { access_point: accessPoint.value, device_name: deviceName.value })
+  await store.scan(value, { access_point: accessPoint.value, device_name: deviceName.value, device_type: 'hid_scanner' })
   await focusScanner()
 }
 
@@ -158,9 +158,9 @@ onMounted(async () => {
               <div class="access-gate-person__photo"><img v-if="store.lastEvent.owner?.photo_url" :src="store.lastEvent.owner.photo_url" alt="Фото" /><UserRound v-else :size="58" /></div>
               <div class="access-gate-person__info">
                 <h2>{{ ownerName(store.lastEvent) }}</h2>
-                <p>{{ entityTypeLabel(store.lastEvent.entity_type) }}</p>
+                <p>{{ entityTypeLabel(store.lastEvent.entity_type, store.lastEvent) }}</p>
                 <div class="access-gate-person__badges">
-                  <AppStatusBadge :label="directionLabel(store.lastEvent.direction)" :tone="store.lastEvent.direction === 'in' ? 'success' : 'warning'" />
+                  <AppStatusBadge :label="directionLabel(store.lastEvent.direction)" :tone="(store.lastEvent.direction === 'entry' || store.lastEvent.direction === 'in') ? 'success' : 'warning'" />
                   <AppStatusBadge :label="resultLabel(store.lastEvent.result)" :tone="resultTone(store.lastEvent.result)" />
                 </div>
               </div>
@@ -191,7 +191,7 @@ onMounted(async () => {
               <div class="access-gate-event__time">{{ formatEventTime(event.event_time) }}</div>
               <div class="access-gate-event__body">
                 <strong>{{ ownerName(event) }}</strong>
-                <span>{{ entityTypeLabel(event.entity_type) }} · {{ directionLabel(event.direction) }}</span>
+                <span>{{ entityTypeLabel(event.entity_type, event) }} · {{ directionLabel(event.direction) }}</span>
               </div>
               <AppStatusBadge :label="resultLabel(event.result)" :tone="resultTone(event.result)" />
             </article>

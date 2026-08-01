@@ -7,9 +7,11 @@ import PageHeader from '../../components/ui/PageHeader.vue'
 import AppCard from '../../components/ui/AppCard.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
+import { usePermissions } from '../../composables/usePermissions'
 import { directionLabel, entityTypeLabel, formatEventTime, normalizeQrToken, ownerName, resultLabel, resultTone, useAccessGateStore } from '../../stores/accessGate'
 
 const store = useAccessGateStore()
+const { hasPermission } = usePermissions()
 const videoRef = ref(null)
 const canvasRef = ref(null)
 const stream = ref(null)
@@ -25,22 +27,24 @@ const manualToken = ref('')
 const lastScannedValue = ref('')
 const lastScanAt = ref(0)
 const scanCooldownMs = 2200
-const detector = typeof window !== 'undefined' && 'BarcodeDetector' in window
-  ? new window.BarcodeDetector({ formats: ['qr_code'] })
-  : null
+const detector = ref(null)
+const secureContext = computed(() => typeof window !== 'undefined' && Boolean(window.isSecureContext))
 let animationFrame = null
 let audioContext = null
 
 const resultClass = computed(() => store.lastEvent?.result === 'allowed' ? 'mobile-scanner-result--allowed' : 'mobile-scanner-result--denied')
 const resultIcon = computed(() => store.lastEvent?.result === 'allowed' ? CheckCircle2 : XCircle)
-const scannerEngine = computed(() => detector ? 'BarcodeDetector' : 'jsQR fallback')
+const scannerEngine = computed(() => detector.value ? 'BarcodeDetector' : 'jsQR fallback')
 const canTorch = computed(() => torchSupported.value && stream.value)
+const canManualOverride = computed(() => hasPermission('access.override'))
 
 function vibrateAllowed() { navigator.vibrate?.(90) }
 function vibrateDenied() { navigator.vibrate?.([80, 70, 80]) }
 function beep(allowed = true) {
   try {
-    audioContext ||= new AudioContext()
+    const AudioCtor = window.AudioContext || window.webkitAudioContext
+    if (!AudioCtor) return
+    audioContext ||= new AudioCtor()
     const oscillator = audioContext.createOscillator()
     const gain = audioContext.createGain()
     oscillator.frequency.value = allowed ? 880 : 220
@@ -52,6 +56,15 @@ function beep(allowed = true) {
     oscillator.stop(audioContext.currentTime + 0.12)
   } catch {
     // Звук может быть заблокирован браузером до пользовательского действия.
+  }
+}
+
+function initDetector() {
+  if (detector.value || typeof window === 'undefined' || !('BarcodeDetector' in window)) return
+  try {
+    detector.value = new window.BarcodeDetector({ formats: ['qr_code'] })
+  } catch {
+    detector.value = null
   }
 }
 
@@ -67,6 +80,10 @@ async function startCamera(deviceId = selectedDeviceId.value) {
   stopCamera()
 
   try {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error('Браузер не предоставляет доступ к камере. Проверьте HTTPS и разрешения.')
+    }
+    initDetector()
     const constraints = {
       video: deviceId
         ? { deviceId: { exact: deviceId } }
@@ -125,8 +142,8 @@ async function scanLoop() {
   const video = videoRef.value
   if (video.readyState >= 2 && video.videoWidth && video.videoHeight) {
     let value = ''
-    if (detector) {
-      const codes = await detector.detect(video).catch(() => [])
+    if (detector.value) {
+      const codes = await detector.value.detect(video).catch(() => [])
       value = codes[0]?.rawValue || ''
     } else {
       const canvas = canvasRef.value
@@ -153,7 +170,7 @@ async function handleScan(value) {
   lastScanAt.value = now
   paused.value = true
   try {
-    const event = await store.scan(normalized, { access_point: 'Мобильный сканер', device_name: 'Mobile Camera Scanner' })
+    const event = await store.scan(normalized, { access_point: 'Мобильный сканер', device_name: 'Mobile Camera Scanner', device_type: 'mobile_camera' })
     const allowed = event?.result === 'allowed'
     allowed ? vibrateAllowed() : vibrateDenied()
     beep(allowed)
@@ -199,7 +216,7 @@ onBeforeUnmount(stopCamera)
 
         <div class="mobile-scanner-meta">
           <AppStatusBadge :label="scannerEngine" tone="info" />
-          <AppStatusBadge :label="window.isSecureContext ? 'Secure context' : 'Нужен HTTPS'" :tone="window.isSecureContext ? 'success' : 'warning'" />
+          <AppStatusBadge :label="secureContext ? 'Secure context' : 'Нужен HTTPS'" :tone="secureContext ? 'success' : 'warning'" />
           <AppStatusBadge :label="paused ? 'Пауза после скана' : 'Готов к сканированию'" :tone="paused ? 'warning' : 'success'" />
         </div>
       </section>
@@ -211,9 +228,9 @@ onBeforeUnmount(stopCamera)
             <div><strong>{{ resultLabel(store.lastEvent.result) }}</strong><span>{{ store.lastEvent.reason || 'Проход зарегистрирован.' }}</span></div>
           </div>
           <h2>{{ ownerName(store.lastEvent) }}</h2>
-          <p>{{ entityTypeLabel(store.lastEvent.entity_type) }}</p>
+          <p>{{ entityTypeLabel(store.lastEvent.entity_type, store.lastEvent) }}</p>
           <div class="mobile-scanner-result__badges">
-            <AppStatusBadge :label="directionLabel(store.lastEvent.direction)" :tone="store.lastEvent.direction === 'in' ? 'success' : 'warning'" />
+            <AppStatusBadge :label="directionLabel(store.lastEvent.direction)" :tone="(store.lastEvent.direction === 'entry' || store.lastEvent.direction === 'in') ? 'success' : 'warning'" />
             <AppStatusBadge :label="resultLabel(store.lastEvent.result)" :tone="resultTone(store.lastEvent.result)" />
           </div>
           <dl>
@@ -225,7 +242,7 @@ onBeforeUnmount(stopCamera)
         <div v-else class="mobile-scanner-result__empty"><ScanLine :size="48" /><strong>Ожидание QR</strong><span>После распознавания здесь появится результат прохода.</span></div>
       </AppCard>
 
-      <AppCard title="Ручной ввод" subtitle="Fallback, если камера недоступна или QR поврежден">
+      <AppCard v-if="canManualOverride" title="Ручной ввод" subtitle="Fallback с отдельным правом access.override">
         <q-form class="mobile-scanner-manual" @submit.prevent="submitManual">
           <q-input v-model="manualToken" outlined label="Token или CP1:<token>" autocomplete="off"><template #prepend><Keyboard :size="20" /></template></q-input>
           <q-btn color="primary" type="submit" :loading="store.scanning" :disable="!manualToken.trim()">Проверить</q-btn>

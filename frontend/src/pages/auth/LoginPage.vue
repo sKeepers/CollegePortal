@@ -1,5 +1,5 @@
 <script setup>
-import { reactive } from 'vue'
+import { onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { LogIn } from '@lucide/vue'
 import { useAuthStore } from '../../stores/auth'
@@ -7,8 +7,13 @@ import { useAuthStore } from '../../stores/auth'
 const router = useRouter()
 const auth = useAuthStore()
 const form = reactive({
-  email: 'admin@college-portal.local',
-  password: 'password',
+  email: '',
+  password: '',
+})
+
+onMounted(() => {
+  form.email = ''
+  form.password = ''
 })
 
 async function submit() {
@@ -33,7 +38,7 @@ async function submit() {
             v-model="form.email"
             label="Email"
             type="email"
-            autocomplete="username"
+            autocomplete="off"
             outlined
             dense
             required
@@ -42,7 +47,7 @@ async function submit() {
             v-model="form.password"
             label="Пароль"
             type="password"
-            autocomplete="current-password"
+            autocomplete="off"
             outlined
             dense
             required

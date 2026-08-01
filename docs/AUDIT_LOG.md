@@ -154,3 +154,7 @@ Teacher Journal Workspace continues Journal Engine audit coverage and adds expli
 ## FIS Outbound Audit
 
 FIS outbound logs package creation, generation attempts, validation, send preview, test send, status refresh and cancellation. Audit payloads must not include credentials, XML with personal data, passport, SNILS or raw secrets.
+
+## ACCESS-001 audit events
+
+Access Control writes application audit records for scan allowed/denied and override actions. Technical `access_audit_events` store action, request id, person id and reason metadata. Raw QR tokens are never stored in audit payloads.

@@ -50,7 +50,7 @@ class AdminUserController extends Controller
 
         $user = User::create([
             ...$data,
-            'password' => Hash::make($data['password'] ?? 'demo12345'),
+            'password' => Hash::make($data['password']),
             'is_active' => $data['is_active'] ?? true,
         ]);
         $this->syncPrimaryRole($user);

@@ -1,10 +1,27 @@
 <script setup>
-import { onMounted } from 'vue'
+import { onBeforeUnmount, onMounted } from 'vue'
 import { AlertCircle, IdCard, RefreshCw } from '@lucide/vue'
 import { useMobileStudentStore, formatMobileDate, statusLabel } from '../../../stores/mobileStudent'
+import { useAccessPassStore } from '../../../stores/accessPass'
 
 const store = useMobileStudentStore()
-onMounted(() => store.load())
+const passStore = useAccessPassStore()
+let timer = null
+let refreshTimer = null
+
+onMounted(async () => {
+  await store.load()
+  await passStore.issue().catch(() => {})
+  timer = window.setInterval(() => passStore.pulse(), 1000)
+  refreshTimer = window.setInterval(() => {
+    if (passStore.remainingSeconds <= 6) passStore.issue().catch(() => {})
+  }, 1000)
+})
+
+onBeforeUnmount(() => {
+  if (timer) window.clearInterval(timer)
+  if (refreshTimer) window.clearInterval(refreshTimer)
+})
 </script>
 
 <template>
@@ -20,15 +37,17 @@ onMounted(() => store.load())
 
       <q-banner v-if="!store.hasStudent" class="mobile-student-banner">{{ store.message || 'Текущий пользователь не связан с карточкой студента.' }}</q-banner>
 
-      <section v-else-if="store.hasActivePass" class="mobile-student-qr-card">
-        <div class="mobile-student-qr" v-html="store.qrSvg" />
+      <section v-else-if="store.hasActivePass || passStore.qrSvg" class="mobile-student-qr-card">
+        <div class="mobile-student-qr" v-html="passStore.qrSvg || store.qrSvg" />
         <dl>
           <div><dt>ФИО</dt><dd>{{ store.studentName }}</dd></div>
           <div><dt>Группа</dt><dd>{{ store.groupName }}</dd></div>
           <div><dt>Статус</dt><dd>{{ statusLabel(store.digitalIdentity?.status) }}</dd></div>
-          <div><dt>Действует до</dt><dd>{{ formatMobileDate(store.digitalIdentity?.expires_at) }}</dd></div>
+          <div><dt>Действует до</dt><dd>{{ passStore.expiresAt ? formatMobileDate(passStore.expiresAt) : formatMobileDate(store.digitalIdentity?.expires_at) }}</dd></div>
+          <div><dt>Обновление</dt><dd>{{ passStore.remainingSeconds }} сек.</dd></div>
         </dl>
-        <p>QR-код содержит только технический токен пропуска. Персональные данные в QR не записываются.</p>
+        <p>QR-код содержит только короткоживущий технический токен. Персональные данные в QR не записываются.</p>
+        <q-btn outline color="primary" no-caps :loading="passStore.loading" @click="passStore.issue"><RefreshCw :size="16" class="q-mr-xs" /> Обновить QR</q-btn>
       </section>
 
       <section v-else class="mobile-student-card mobile-student-no-pass">
