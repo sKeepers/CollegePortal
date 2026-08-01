@@ -36,7 +36,9 @@ const draggedLesson = ref(null)
 const createForm = ref({})
 const templateForm = ref({})
 
-const activeView = ref(route.query.view ? String(route.query.view) : 'week')
+function defaultView() { return auth.hasRole('student') ? 'day' : 'week' }
+
+const activeView = ref(route.query.view ? String(route.query.view) : defaultView())
 const selectedDate = ref(route.query.date ? String(route.query.date) : todayString())
 
 const viewOptions = [
@@ -540,7 +542,7 @@ watch(
     }
 
     const requestedView = route.query.view ? String(route.query.view) : 'week'
-    activeView.value = visibleViewOptions.value.some((option) => option.value === requestedView) ? requestedView : 'week'
+    activeView.value = visibleViewOptions.value.some((option) => option.value === requestedView) ? requestedView : defaultView()
     selectedDate.value = route.query.date ? String(route.query.date) : todayString()
     store.selectLessonById(route.query.selected ? String(route.query.selected) : '')
   },
@@ -589,6 +591,7 @@ onMounted(async () => {
     </div>
 
     <ScheduleFilters
+      v-if="!auth.hasRole('student')"
       :model-value="store.filters"
       :academic-year-options="store.academicYearOptions"
       :group-options="store.groupOptions"
@@ -637,7 +640,7 @@ onMounted(async () => {
       </template>
     </q-banner>
 
-    <div class="schedule-summary">
+    <div v-if="!auth.hasRole('student')" class="schedule-summary">
       <div>
         <CalendarDays :size="18" />
         <span>Занятий</span>

@@ -32,6 +32,10 @@ router.beforeEach(async (to) => {
     return true
   }
 
+  if (primaryRoleCode(auth) === 'student' && layoutService.isMobile.value && to.path === '/dashboard') {
+    return { path: '/m/student' }
+  }
+
   if (primaryRoleCode(auth) === 'student' && to.path === '/journal') {
     return { path: '/m/student', hash: '#journal' }
   }

@@ -1,9 +1,11 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { Bell, CalendarDays, ChevronLeft, ChevronRight, IdCard, RefreshCw, Star, UserRound } from '@lucide/vue'
 import { useMobileStudentStore, attendanceLabel, formatLessonTime, formatMobileDate, lessonTitle } from '../../../stores/mobileStudent'
 
 const store = useMobileStudentStore()
+const route = useRoute()
 let refreshTimer = null
 let clockTimer = null
 const now = ref(Date.now())
@@ -14,11 +16,20 @@ const qrSecondsLeft = computed(() => {
   return Number.isNaN(expires) ? 0 : Math.max(0, Math.ceil((expires - now.value) / 1000))
 })
 
+function scrollToSection() {
+  const id = route.hash.slice(1)
+  if (!id) return
+  nextTick(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+}
+
 onMounted(async () => {
   await store.load()
   refreshTimer = window.setInterval(store.load, 27_000)
   clockTimer = window.setInterval(() => { now.value = Date.now() }, 1_000)
+  scrollToSection()
 })
+
+watch(() => route.hash, scrollToSection)
 
 onBeforeUnmount(() => {
   if (refreshTimer) window.clearInterval(refreshTimer)
