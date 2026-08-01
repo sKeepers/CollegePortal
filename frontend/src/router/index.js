@@ -40,6 +40,10 @@ router.beforeEach(async (to) => {
     return { path: '/m/student', hash: '#schedule' }
   }
 
+  if (layoutService.isMobile.value && auth.hasRole(['admin', 'security']) && to.path === '/access/gate') {
+    return { path: '/access/mobile-scanner' }
+  }
+
   if (!isRoleScopedRouteAllowed(auth, to.path)) {
     return { name: 'forbidden' }
   }
