@@ -1,11 +1,12 @@
 <script setup>
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { CalendarDays, Home, IdCard, ListChecks } from '@lucide/vue'
 import EnvironmentBadge from '../components/system/EnvironmentBadge.vue'
 import { getCurrentEnvironment } from '../services/environmentService'
 
 const route = useRoute()
+const router = useRouter()
 const environment = getCurrentEnvironment()
 const navItems = computed(() => [
   { label: 'Главная', to: '/m/student', icon: Home, active: route.path === '/m/student' && !route.hash },
@@ -13,6 +14,14 @@ const navItems = computed(() => [
   { label: 'Журнал', to: { path: '/m/student', hash: '#journal' }, icon: ListChecks, active: route.hash === '#journal' },
   { label: 'QR', to: '/m/student/pass', icon: IdCard, active: route.path === '/m/student/pass' },
 ])
+
+async function navigate(item) {
+  await router.push(item.to)
+  const id = typeof item.to === 'object' ? item.to.hash?.slice(1) : ''
+  await nextTick()
+  if (id) document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  if (item.to === '/m/student') window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 </script>
 
 <template>
@@ -38,10 +47,10 @@ const navItems = computed(() => [
 
     <q-footer class="mobile-student-bottom-nav">
       <nav>
-        <RouterLink v-for="item in navItems" :key="item.label" :to="item.to" :class="['mobile-student-nav-item', { 'mobile-student-nav-item--active': item.active }]">
+        <button v-for="item in navItems" :key="item.label" type="button" :class="['mobile-student-nav-item', { 'mobile-student-nav-item--active': item.active }]" @click="navigate(item)">
           <component :is="item.icon" :size="20" />
           <span>{{ item.label }}</span>
-        </RouterLink>
+        </button>
       </nav>
     </q-footer>
   </q-layout>

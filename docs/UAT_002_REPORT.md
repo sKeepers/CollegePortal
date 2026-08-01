@@ -87,6 +87,9 @@ UAT-002.2 проверен на DEV в Compose-контейнерах:
 - `/journal` для student перенаправляется к личной успеваемости `/m/student#journal`, а mobile schedule поддерживает предыдущую и следующую даты.
 - Нажатие на оценку student открывает личную карточку с дисциплиной, датой, преподавателем, типом и комментарием оценки.
 - Responsive foundation определяет `phone`, `tablet`, `desktop-hd`, `desktop-fullhd` и `desktop-ultrawide`; phone/tablet автоматически используют personal student schedule и mobile access scanner.
+- Mobile student при открытии `/` или `/dashboard` сразу получает personal cabinet; нижнее меню явно прокручивает к главной, расписанию или оценкам.
+- Desktop student использует отдельный `/student` для успеваемости, а `/schedule` по умолчанию открывает представление `День` без staff filters и resource summaries.
+- Mobile schedule показывает день недели, а посещаемость отображает дату и минуты опоздания.
 
 ## Smoke checklist
 

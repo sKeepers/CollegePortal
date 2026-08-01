@@ -11,6 +11,12 @@ export function formatMobileDate(value) {
   if (Number.isNaN(date.getTime())) return String(value)
   return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
+export function formatMobileScheduleDate(value) {
+  if (!value) return '—'
+  const date = new Date(`${value}T12:00:00`)
+  if (Number.isNaN(date.getTime())) return String(value)
+  return date.toLocaleDateString('ru-RU', { weekday: 'long', day: '2-digit', month: 'long' })
+}
 export function formatLessonTime(lesson) { return [lesson?.starts_at, lesson?.ends_at].filter(Boolean).join('–') || '—' }
 export function lessonTitle(lesson) { return lesson?.subject?.name || 'Занятие' }
 export function statusLabel(status) {

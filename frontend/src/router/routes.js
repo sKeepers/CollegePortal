@@ -44,6 +44,7 @@ const HrEmployeesPage = () => import('../pages/hr/HrEmployeesPage.vue')
 const HrCalendarPage = () => import('../pages/hr/HrCalendarPage.vue')
 const MobileStudentHomePage = () => import('../pages/mobile/student/MobileStudentHomePage.vue')
 const MobileStudentPassPage = () => import('../pages/mobile/student/MobileStudentPassPage.vue')
+const StudentCabinetPage = () => import('../pages/student/StudentCabinetPage.vue')
 
 export const routes = [
   {
@@ -129,6 +130,12 @@ export const routes = [
         name: 'students',
         component: StudentsPage,
         meta: { title: 'Студенты', permission: 'students.view' },
+      },
+      {
+        path: 'student',
+        name: 'student-cabinet',
+        component: StudentCabinetPage,
+        meta: { title: 'Успеваемость', roles: ['student'], permission: 'mobile.student.view' },
       },
       {
         path: 'groups',
