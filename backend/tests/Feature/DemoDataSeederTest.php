@@ -9,6 +9,7 @@ use App\Models\Role;
 use App\Models\Student;
 use App\Models\Teacher;
 use App\Services\AttendanceAnalysisService;
+use Carbon\Carbon;
 use Database\Seeders\DemoDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -19,6 +20,8 @@ class DemoDataSeederTest extends TestCase
 
     public function test_demo_data_links_people_employees_and_realistic_attendance(): void
     {
+        Carbon::setTestNow('2026-07-27 12:00:00');
+
         foreach (['admin', 'teacher', 'student'] as $code) {
             Role::query()->firstOrCreate(['code' => $code], ['name' => $code]);
         }
@@ -49,5 +52,7 @@ class DemoDataSeederTest extends TestCase
         $this->assertGreaterThan(0, $summary['late']);
         $this->assertGreaterThan(0, $summary['absent']);
         $this->assertGreaterThan(0, $summary['on_time']);
+
+        Carbon::setTestNow();
     }
 }
