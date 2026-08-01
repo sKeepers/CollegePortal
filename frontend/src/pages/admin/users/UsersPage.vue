@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { usePermissions } from '../../../composables/usePermissions'
 import { useQuasar } from 'quasar'
-import { Ban, CheckCircle2, Edit, Plus, RefreshCw, ShieldCheck, Trash2, UserRound } from '@lucide/vue'
+import { Ban, CheckCircle2, Edit, KeyRound, Plus, Printer, RefreshCw, ShieldCheck, Trash2, UserRound } from '@lucide/vue'
 import AppPage from '../../../components/ui/AppPage.vue'
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import AppToolbar from '../../../components/ui/AppToolbar.vue'
@@ -21,6 +21,7 @@ const rowsPerPageKey = 'collegePortal.users.rowsPerPage'
 const store = useUsersStore()
 const permissions = usePermissions()
 const canManage = computed(() => permissions.hasPermission('users.manage'))
+const canPrintCredentials = computed(() => permissions.hasPermission('users.credentials.print'))
 const $q = useQuasar()
 const formOpen = ref(false)
 const formError = ref('')
@@ -263,6 +264,30 @@ async function confirmUnblock() {
   $q.notify({ type: 'positive', message: 'Пользователь разблокирован', position: 'top-right' })
 }
 
+function clearCredentialCard() {
+  credentialCard.value = null
+}
+
+function askTemporaryPassword(user = selectedUser.value) {
+  pendingUser.value = user
+  temporaryPasswordDialog.value = true
+}
+
+async function confirmTemporaryPassword() {
+  const result = await store.createTemporaryPassword(pendingUser.value)
+  credentialCard.value = result?.card || null
+  credentialDialog.value = Boolean(credentialCard.value)
+  $q.notify({ type: 'positive', message: 'Временный пароль создан. Покажите карточку пользователю сейчас.', position: 'top-right' })
+}
+
+async function openCredentialCard(user = selectedUser.value) {
+  credentialCard.value = await store.loadCredentialCard(user)
+  credentialDialog.value = Boolean(credentialCard.value)
+}
+
+function printCredentialCard() {
+  window.print()
+}
 function openRolesDialog(user = selectedUser.value) {
   pendingUser.value = user
   rolesForm.role_ids = user?.roles?.length ? user.roles.map((role) => role.id) : (user?.role_id ? [user.role_id] : [])
@@ -412,6 +437,8 @@ onMounted(async () => {
           <div class="users-card-actions">
             <q-btn v-if="canManage" outline color="primary" @click="openEdit(selectedUser)"><Edit :size="16" class="q-mr-xs" /> Редактировать</q-btn>
             <q-btn v-if="canManage" outline color="primary" @click="openRolesDialog(selectedUser)"><ShieldCheck :size="16" class="q-mr-xs" /> Роли</q-btn>
+            <q-btn v-if="canPrintCredentials" outline color="primary" @click="askTemporaryPassword(selectedUser)"><KeyRound :size="16" class="q-mr-xs" /> Создать временный пароль</q-btn>
+            <q-btn v-if="canPrintCredentials" outline color="primary" @click="openCredentialCard(selectedUser)"><Printer :size="16" class="q-mr-xs" /> Распечатать карточку входа</q-btn>
             <q-btn v-if="canManage && selectedUser.is_active" outline color="warning" @click="askBlock(selectedUser)"><Ban :size="16" class="q-mr-xs" /> Заблокировать</q-btn>
             <q-btn v-else-if="canManage" outline color="positive" @click="askUnblock(selectedUser)"><CheckCircle2 :size="16" class="q-mr-xs" /> Разблокировать</q-btn>
             <q-btn v-if="openPerson(selectedUser)" flat color="primary" :to="openPerson(selectedUser)">Открыть связанную карточку</q-btn>
@@ -461,9 +488,39 @@ onMounted(async () => {
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="credentialDialog" @hide="clearCredentialCard">
+      <q-card class="users-credential-dialog">
+        <q-card-section>
+          <div class="text-h6">Карточка входа</div>
+          <p class="users-dialog-subtitle">Временный пароль показывается только в текущей операции.</p>
+        </q-card-section>
+        <q-card-section v-if="credentialCard" class="users-credential-card">
+          <div class="users-credential-card__brand">
+            <strong>{{ credentialCard.organization }}</strong>
+            <span>Карточка учетной записи</span>
+          </div>
+          <dl class="users-credential-card__fields">
+            <dt>ФИО</dt><dd>{{ credentialCard.full_name }}</dd>
+            <dt>Роль</dt><dd>{{ credentialCard.role }}</dd>
+            <dt>Логин</dt><dd>{{ credentialCard.login }}</dd>
+            <dt v-if="credentialCard.temporary_password">Временный пароль</dt><dd v-if="credentialCard.temporary_password" class="users-credential-card__secret">{{ credentialCard.temporary_password }}</dd>
+            <dt>Адрес портала</dt><dd>{{ credentialCard.portal_url }}</dd>
+            <dt>Дата выдачи</dt><dd>{{ formatDate(credentialCard.issued_at) }}</dd>
+            <dt>Кем выдана</dt><dd>{{ credentialCard.issued_by || '—' }}</dd>
+          </dl>
+          <div class="users-credential-card__qr" v-html="credentialCard.login_qr_svg" />
+          <p class="users-credential-card__instruction">{{ credentialCard.instruction }}</p>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Закрыть" v-close-popup />
+          <q-btn color="primary" label="Печать" @click="printCredentialCard" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
     <AppConfirmDialog v-model="deleteDialog" title="Удалить пользователя" :message="`Удалить учетную запись ${pendingUser?.name || ''}?`" confirm-label="Удалить" @confirm="confirmDelete" />
     <AppConfirmDialog v-model="blockDialog" title="Заблокировать пользователя" :message="`Заблокировать ${pendingUser?.name || ''}? Пользователь не сможет войти в систему.`" confirm-label="Заблокировать" tone="warning" @confirm="confirmBlock" />
     <AppConfirmDialog v-model="unblockDialog" title="Разблокировать пользователя" :message="`Разблокировать ${pendingUser?.name || ''}?`" confirm-label="Разблокировать" tone="success" @confirm="confirmUnblock" />
+    <AppConfirmDialog v-model="temporaryPasswordDialog" title="Создать временный пароль" :message="`Создать новый временный пароль для ${pendingUser?.name || ''}? Старые сессии пользователя будут отозваны.`" confirm-label="Создать пароль" tone="warning" @confirm="confirmTemporaryPassword" />
   </AppPage>
 </template>
 
@@ -557,6 +614,80 @@ onMounted(async () => {
   overflow-wrap: anywhere;
 }
 
+.users-credential-dialog {
+  width: min(680px, calc(100vw - 32px));
+}
+
+.users-credential-card {
+  display: grid;
+  gap: 16px;
+  color: #0f172a;
+}
+
+.users-credential-card__brand {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.users-credential-card__brand strong {
+  font-size: 20px;
+}
+
+.users-credential-card__brand span,
+.users-credential-card__instruction {
+  color: #475569;
+}
+
+.users-credential-card__fields {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 8px 12px;
+  margin: 0;
+}
+
+.users-credential-card__fields dt {
+  color: #64748b;
+}
+
+.users-credential-card__fields dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.users-credential-card__secret {
+  font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.users-credential-card__qr :deep(svg) {
+  width: 128px;
+  height: 128px;
+  display: block;
+  border: 8px solid #fff;
+  background: #fff;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .users-credential-dialog,
+  .users-credential-dialog * {
+    visibility: visible;
+  }
+
+  .users-credential-dialog {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    box-shadow: none;
+  }
+}
 .users-dialog {
   width: min(640px, calc(100vw - 32px));
 }

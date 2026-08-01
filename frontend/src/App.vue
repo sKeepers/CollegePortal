@@ -46,8 +46,8 @@ const educationProgramImportSummary = ref(null)
 const applicantApplicationImportFile = ref(null)
 const applicantApplicationImportSummary = ref(null)
 const loginForm = reactive({
-  email: 'admin@college-portal.local',
-  password: 'password',
+  email: '',
+  password: '',
 })
 
 const state = reactive({
@@ -1965,8 +1965,8 @@ onMounted(async () => {
           <h1>Учебный портал</h1>
         </div>
 
-        <label>Email <input v-model="loginForm.email" autocomplete="username" type="email" required /></label>
-        <label>Пароль <input v-model="loginForm.password" autocomplete="current-password" type="password" required /></label>
+        <label>Email <input v-model="loginForm.email" autocomplete="off" type="email" required /></label>
+        <label>Пароль <input v-model="loginForm.password" autocomplete="off" type="password" required /></label>
 
         <button type="submit" :disabled="loading">Войти</button>
         <button class="public-link-button" type="button" @click="openApplicantSection">Абитуриенту</button>

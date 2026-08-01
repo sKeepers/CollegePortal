@@ -159,6 +159,39 @@ export const useUsersStore = defineStore('users', () => {
   }
 
 
+  async function createTemporaryPassword(user) {
+    if (!user?.id) return null
+    saving.value = true
+    error.value = ''
+
+    try {
+      const payload = await api.post(`admin/users/${user.id}/temporary-password`, {})
+      await load()
+      selectedId.value = payload?.data?.user?.id || user.id
+      return payload?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось создать временный пароль'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function loadCredentialCard(user) {
+    if (!user?.id) return null
+    saving.value = true
+    error.value = ''
+
+    try {
+      const payload = await api.post(`admin/users/${user.id}/credential-card`, {})
+      return payload?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось подготовить карточку входа'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
   async function assignRoles(user, roleIds, primaryRoleId = null) {
     if (!user?.id || !roleIds?.length) return null
     saving.value = true

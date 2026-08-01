@@ -33,15 +33,20 @@ export const useAuthStore = defineStore('auth', () => {
 
     try {
       const payload = await api.login(credentials)
-      api.setToken(payload.token)
-      user.value = payload.user
-      initialized.value = true
+      acceptSession(payload)
     } catch (caught) {
       error.value = caught.message
       throw caught
     } finally {
       loading.value = false
     }
+  }
+
+  function acceptSession(payload) {
+    api.setToken(payload.token)
+    user.value = payload.user
+    initialized.value = true
+    error.value = ''
   }
 
   async function restore() {
@@ -94,6 +99,7 @@ export const useAuthStore = defineStore('auth', () => {
     can,
     hasRole,
     login,
+    acceptSession,
     restore,
     logout,
   }
