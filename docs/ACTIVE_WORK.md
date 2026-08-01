@@ -17,13 +17,13 @@
 - Active worktree branch: `sync/sync-001-local`
 - Last deployed DEV checkpoint: `3e1389335`
 - DEV branch: `feature/uat-002-1-final-stabilization`
-- GitHub branch: `origin/feature/uat-002-1-final-stabilization` at `3e1389335`.
-- Локальная ветка `sync/sync-001-local` указывает на дочерний коммит `a7ba282`, включённый merge-коммитом `3e1389335`.
+- GitHub branch: `origin/feature/uat-002-1-final-stabilization` at `b03242e`.
+- Локальная ветка `sync/sync-001-local` содержит documentation-коммиты поверх `3e1389335`; эти документы не требуют развёртывания на DEV.
 - `SYNC-001` объединил GitHub `SEC-001` с DEV UAT-002.2 и был развёрнут на DEV.
 - На DEV применена миграция `2026_07_30_010000_add_lookup_and_expiration_to_api_tokens`.
 - Проверки reconciliation: `341 passed (2173 assertions)` и `npm run build` завершились успешно.
 - На DEV развёрнуты карточка оценок и адаптация профилей устройств после успешной production-сборки.
-- Незакоммиченные изменения на момент обновления: правило русского языка в `AGENTS.md`.
+- Незакоммиченные изменения на момент обновления: отсутствуют.
 
 ## Доступ к DEV
 
@@ -61,6 +61,7 @@ GitHub Issues доступны на DEV только для чтения чер�
 3. Спроектировать self-scoped read-only просмотр нагрузки преподавателя: текущий `/teaching-load` возвращает `403`, потому что UI использует административный permission `teachingload.view`.
 4. Проверить legacy `ScheduleLesson` без `schedule_entry_id`: сейчас журнал открывается только с фильтрами даты и преподавателя, а не создаётся автоматически.
 5. После подтверждённых результатов обновить Issues #29, #4 и #24 санитизированными UAT-доказательствами.
+6. Сценарий ручного teacher UAT зафиксирован в [UAT-002 Report](UAT_002_REPORT.md).
 
 ## Блокеры
 
