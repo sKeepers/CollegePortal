@@ -53,9 +53,10 @@ const viewOptions = [
   { label: 'Редактор недели', value: 'editor' },
   { label: 'Шаблоны', value: 'templates' },
 ]
+const isStudent = computed(() => auth.hasRole('student'))
 const visibleViewOptions = computed(() => {
   if (auth.hasRole('student')) return viewOptions.filter((option) => ['day', 'week', 'month'].includes(option.value))
-  if (auth.hasRole('teacher')) return viewOptions.filter((option) => ['day', 'week'].includes(option.value))
+  if (auth.hasRole('teacher')) return viewOptions.filter((option) => ['day', 'week', 'month'].includes(option.value))
   return viewOptions
 })
 
@@ -591,7 +592,7 @@ onMounted(async () => {
     </div>
 
     <ScheduleFilters
-      v-if="!auth.hasRole('student')"
+      v-if="!isStudent"
       :model-value="store.filters"
       :academic-year-options="store.academicYearOptions"
       :group-options="store.groupOptions"
@@ -640,7 +641,7 @@ onMounted(async () => {
       </template>
     </q-banner>
 
-    <div v-if="!auth.hasRole('student')" class="schedule-summary">
+    <div v-if="!isStudent" class="schedule-summary">
       <div>
         <CalendarDays :size="18" />
         <span>Занятий</span>
