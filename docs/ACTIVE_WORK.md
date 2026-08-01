@@ -36,6 +36,8 @@ Do not discard, overwrite, or deploy the uncommitted changes without reviewing `
 
 `UAT-002.2`: role-based portal stabilization after mobile UAT.
 
+GitHub Issues are accessible read-only through `gh` on DEV. The current review is [GitHub Issue Review 2026-08-01](GITHUB_ISSUE_REVIEW_2026-08-01.md); do not edit Issues without an explicit task.
+
 Current accepted requirements:
 
 1. Login: password visibility, browser-managed password saving, and persistent/session login choice.

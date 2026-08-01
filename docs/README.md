@@ -36,6 +36,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [Audit Log](AUDIT_LOG.md)
 - [Path Policy](PATH_POLICY.md)
 - [GitHub Repository](GITHUB_REPOSITORY.md)
+- [GitHub Issue Review 2026-08-01](GITHUB_ISSUE_REVIEW_2026-08-01.md)
 - [Repository Sync](REPOSITORY_SYNC.md)
 - [Role Menu Matrix](ROLE_MENU_MATRIX.md)
 - [Performance Baseline](PERFORMANCE_BASELINE.md)
