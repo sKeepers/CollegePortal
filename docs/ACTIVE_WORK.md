@@ -15,14 +15,11 @@ Update it before ending a session, before changing to a substantially different 
 ## Git State
 
 - Active worktree branch: `feature/uat-002-2-mobile-access`
-- Last deployed DEV checkpoint: `c3c2a6def45ee9adf82d0d459355e77826d5659c`
+- Last deployed DEV checkpoint: `cf9b8c1cf6d71662c955b3a57ca332fbcee21c5b`
 - DEV branch: `feature/uat-002-1-final-stabilization`
-- Local application changes not committed or deployed:
-  - password visibility and session persistence controls on login;
-  - scope-safe teacher journal reference options;
-  - ownership scope and role-specific views for schedule.
-
-Do not discard, overwrite, or deploy the uncommitted changes without reviewing `git diff` and completing their tests.
+- `SYNC-001` reconciled GitHub `SEC-001` with DEV UAT-002.2 and was deployed to DEV.
+- DEV migration `2026_07_30_010000_add_lookup_and_expiration_to_api_tokens` was applied.
+- Reconciliation checks: `341 passed (2173 assertions)` and `npm run build` passed.
 
 ## DEV Access
 
@@ -55,12 +52,10 @@ Current accepted requirements:
 
 ## Next Actions
 
-1. Review and complete the current local diff.
-2. Add backend tests for teacher/student schedule ownership scope.
-3. Add student grade-detail UI and tests.
-4. Run `php artisan test` and `npm run build` in DEV containers.
-5. Create a task checkpoint, apply it to DEV only after approval, and update this file with the new DEV HEAD.
-6. Run manual UAT with explicit URL, role, account, and expected result.
+1. Add student grade-detail UI and tests.
+2. Complete device-profile adaptation for teacher, student and access gate layouts.
+3. Run manual role smoke with explicit URL, role, account and expected result.
+4. Update GitHub Issues #29, #4 and #24 with sanitized UAT evidence.
 
 ## Handoff Checklist
 
