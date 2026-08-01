@@ -46,9 +46,17 @@ function updateSize() {
 }
 
 const breakpoint = computed(() => resolveBreakpoint(width.value))
-const isMobile = computed(() => ['xs', 'sm'].includes(breakpoint.value))
-const isTablet = computed(() => breakpoint.value === 'md')
-const isDesktop = computed(() => ['lg', 'xl', 'xxl'].includes(breakpoint.value))
+const deviceProfile = computed(() => {
+  if (width.value < 600) return 'phone'
+  if (width.value < 1200) return 'tablet'
+  if (width.value < 1920) return 'desktop-hd'
+  if (width.value < 2560) return 'desktop-fullhd'
+  return 'desktop-ultrawide'
+})
+const isPhone = computed(() => deviceProfile.value === 'phone')
+const isTablet = computed(() => deviceProfile.value === 'tablet')
+const isMobile = computed(() => isPhone.value || isTablet.value)
+const isDesktop = computed(() => !isMobile.value)
 const isUltrawide = computed(() => width.value >= 2560)
 
 export function useLayoutService() {
@@ -65,6 +73,8 @@ export function useLayoutService() {
     width,
     height,
     breakpoint,
+    deviceProfile,
+    isPhone,
     isMobile,
     isTablet,
     isDesktop,
@@ -76,6 +86,8 @@ export const layoutService = {
   width,
   height,
   breakpoint,
+  deviceProfile,
+  isPhone,
   isMobile,
   isTablet,
   isDesktop,

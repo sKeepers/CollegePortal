@@ -46,9 +46,12 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const settings = ref(loadSettings())
 
   const breakpoint = computed(() => layoutService.breakpoint.value)
+  const deviceProfile = computed(() => layoutService.deviceProfile.value)
   const viewportWidth = computed(() => layoutService.width.value)
   const viewportHeight = computed(() => layoutService.height.value)
   const isMobile = computed(() => layoutService.isMobile.value)
+  const isPhone = computed(() => layoutService.isPhone.value)
+  const isTablet = computed(() => layoutService.isTablet.value)
   const isUltrawide = computed(() => layoutService.isUltrawide.value)
 
   const sidebarWidth = computed(() => {
@@ -73,10 +76,13 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
   const workspaceClass = computed(() => [
     `workspace-bp-${breakpoint.value}`,
+    `workspace-device-${deviceProfile.value}`,
     `workspace-density-${settings.value.density}`,
     `workspace-mode-${settings.value.workspaceMode}`,
     {
       'workspace-mobile': isMobile.value,
+      'workspace-phone': isPhone.value,
+      'workspace-tablet': isTablet.value,
       'workspace-ultrawide': isUltrawide.value,
       'workspace-menu-collapsed': settings.value.menuCollapsed,
       'workspace-right-panel-hidden': !rightPanelVisible.value,
@@ -116,9 +122,12 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   return {
     settings,
     breakpoint,
+    deviceProfile,
     viewportWidth,
     viewportHeight,
     isMobile,
+    isPhone,
+    isTablet,
     isUltrawide,
     sidebarWidth,
     rightPanelVisible,

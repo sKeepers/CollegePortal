@@ -4447,6 +4447,40 @@ body {
   text-align: center;
 }
 
+.workspace-device-desktop-hd { --cp-page-max-width: 1320px; }
+.workspace-device-desktop-fullhd { --cp-page-max-width: 1480px; }
+.workspace-device-desktop-ultrawide { --cp-page-max-width: 1680px; }
+
+@media (min-width: 600px) and (max-width: 1199px) {
+  .workspace-tablet .cp-page { padding: 14px; }
+  .workspace-tablet .dashboard-grid,
+  .workspace-tablet .personal-dashboard__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .workspace-tablet .personal-dashboard__widget--full { grid-column: 1 / -1; }
+}
+
+.mobile-student-grade-grid button {
+  display: grid;
+  gap: 5px;
+  border: 0;
+  border-radius: 14px;
+  padding: 10px;
+  background: #f8fafc;
+  cursor: pointer;
+  font: inherit;
+  text-align: center;
+}
+
+.mobile-student-grade-grid button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.mobile-student-grade-dialog { width: min(420px, 92vw); }
+.mobile-student-grade-dialog__details { display: grid; gap: 12px; }
+.mobile-student-grade-dialog__details div { display: grid; gap: 3px; }
+.mobile-student-grade-dialog__details span { color: #64748b; font-size: 12px; font-weight: 800; }
+.mobile-student-grade-dialog__details strong { color: #0f172a; overflow-wrap: anywhere; }
+
 .mobile-student-grade-grid strong {
   color: #047857;
   font-size: 24px;

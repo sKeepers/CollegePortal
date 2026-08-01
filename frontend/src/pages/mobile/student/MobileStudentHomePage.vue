@@ -7,6 +7,7 @@ const store = useMobileStudentStore()
 let refreshTimer = null
 let clockTimer = null
 const now = ref(Date.now())
+const selectedGrade = ref(null)
 
 const qrSecondsLeft = computed(() => {
   const expires = new Date(store.qrExpiresAt || '').getTime()
@@ -78,7 +79,7 @@ onBeforeUnmount(() => {
       <section class="mobile-student-card" id="journal">
         <header><Star :size="20" /><h2>Оценки</h2></header>
         <div v-if="store.grades.length" class="mobile-student-grade-grid">
-          <article v-for="grade in store.grades.slice(0, 6)" :key="grade.id"><strong>{{ grade.grade }}</strong><span>{{ grade.schedule_lesson?.subject?.name || 'Дисциплина' }}</span></article>
+          <button v-for="grade in store.grades.slice(0, 6)" :key="grade.id" type="button" @click="selectedGrade = grade"><strong>{{ grade.grade }}</strong><span>{{ grade.schedule_lesson?.subject?.name || 'Дисциплина' }}</span></button>
         </div>
         <p v-else class="mobile-student-empty">Оценок пока нет.</p>
       </section>
@@ -102,5 +103,19 @@ onBeforeUnmount(() => {
         </div>
       </section>
     </template>
+
+    <q-dialog v-model="selectedGrade">
+      <q-card class="mobile-student-grade-dialog">
+        <q-card-section><div class="text-h6">Оценка {{ selectedGrade?.grade || '—' }}</div></q-card-section>
+        <q-card-section class="mobile-student-grade-dialog__details">
+          <div><span>Дисциплина</span><strong>{{ selectedGrade?.schedule_lesson?.subject?.name || 'Не указана' }}</strong></div>
+          <div><span>Дата занятия</span><strong>{{ formatMobileDate(selectedGrade?.schedule_lesson?.lesson_date) }}</strong></div>
+          <div><span>Преподаватель</span><strong>{{ selectedGrade?.schedule_lesson?.teacher?.full_name || [selectedGrade?.schedule_lesson?.teacher?.last_name, selectedGrade?.schedule_lesson?.teacher?.first_name, selectedGrade?.schedule_lesson?.teacher?.middle_name].filter(Boolean).join(' ') || 'Не указан' }}</strong></div>
+          <div><span>Тип оценки</span><strong>{{ selectedGrade?.grade_type?.name || selectedGrade?.grade_type || 'Не указан' }}</strong></div>
+          <div v-if="selectedGrade?.comment"><span>Комментарий</span><strong>{{ selectedGrade.comment }}</strong></div>
+        </q-card-section>
+        <q-card-actions align="right"><q-btn flat label="Закрыть" v-close-popup /></q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>

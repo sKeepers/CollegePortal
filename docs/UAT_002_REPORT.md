@@ -85,6 +85,8 @@ UAT-002.2 проверен на DEV в Compose-контейнерах:
 - Mobile scanner использует compact camera viewport, скрывает вторичные scanner badges на первом экране и ограничивает распознавание до одного кадра в 350ms.
 - Desktop student сохраняет полный маршрут `/schedule`; на phone/tablet student получает личное мобильное расписание.
 - `/journal` для student перенаправляется к личной успеваемости `/m/student#journal`, а mobile schedule поддерживает предыдущую и следующую даты.
+- Нажатие на оценку student открывает личную карточку с дисциплиной, датой, преподавателем, типом и комментарием оценки.
+- Responsive foundation определяет `phone`, `tablet`, `desktop-hd`, `desktop-fullhd` и `desktop-ultrawide`; phone/tablet автоматически используют personal student schedule и mobile access scanner.
 
 ## Smoke checklist
 
