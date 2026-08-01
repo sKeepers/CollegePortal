@@ -4,6 +4,7 @@
 
 - [Documentation Index](docs/README.md)
 - [Project Status](docs/PROJECT_STATUS.md)
+- [Active Work / Session Handoff](docs/ACTIVE_WORK.md)
 - [Background Agents](docs/AGENTS.md)
 - [Roadmap](ROADMAP.md)
 - [Tasks](TASKS.md)
@@ -93,3 +94,11 @@ C:\!Projects\CollegePortal\.worktrees\<branch>
 ## Background Agent Convention
 
 The named background agents Hubble, Mencius, Boole, Erdos, Bohr and Pasteur are documented in [docs/AGENTS.md](docs/AGENTS.md). These names identify Codex background-agent instances in the CollegePortal workflow. Their documented roles are a project convention, not built-in Codex system specializations, and any actual run is governed by the prompt assigned to that agent.
+
+## Session Handoff
+
+Before ending a session, changing to an independent task, or when context is nearing its practical limit, update [Active Work](docs/ACTIVE_WORK.md).
+
+The handoff must include the active branch, local and DEV HEAD, uncommitted changes, verified checks, blockers, exact next actions, and whether DEV/PROD changed. Run `git status --short`, `git diff --check`, and `git log --oneline -10` before writing the handoff.
+
+After completing a large context-intensive task, offer the user a clean new chat for the next independent task. The agent cannot programmatically detect the model context limit or create a chat, so this is a mandatory proactive workflow step rather than a runtime automation.
