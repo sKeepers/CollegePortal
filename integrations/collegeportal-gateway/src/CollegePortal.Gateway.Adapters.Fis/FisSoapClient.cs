@@ -1,1 +1,91 @@
-using System; using System.IO; using System.Net; using System.Text; using System.Xml; namespace CollegePortal.Gateway { public class FisSoapClient { private readonly GatewayConfig _config; public FisSoapClient(GatewayConfig config){ _config=config; } public GatewayPayload ZkspdCheck(){ var start=DateTime.UtcNow; try{ var request=(HttpWebRequest)WebRequest.Create(_config.FisTestEndpoint); request.Method="GET"; request.Timeout=_config.ConnectTimeoutSeconds*1000; using(var response=(HttpWebResponse)request.GetResponse()){ return GatewayPayload.Ok("zkspd_reachable",(int)(DateTime.UtcNow-start).TotalMilliseconds,"HTTP "+(int)response.StatusCode); }} catch(Exception ex){ return GatewayPayload.Fail("zkspd_unreachable",(int)(DateTime.UtcNow-start).TotalMilliseconds,ex.GetType().Name); }} public GatewayPayload CallReadOnly(string methodName,string innerXml){ var action="http://tempuri.org/IImportService/"+methodName; var envelope="<?xml version="1.0" encoding="utf-8"?>"+"<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>"+"<"+methodName+" xmlns="http://tempuri.org/">"+(innerXml??"")+"</"+methodName+">"+"</s:Body></s:Envelope>"; var bytes=Encoding.UTF8.GetBytes(envelope); var start=DateTime.UtcNow; try{ var request=(HttpWebRequest)WebRequest.Create(_config.FisTestEndpoint); request.Method="POST"; request.ContentType="text/xml; charset=utf-8"; request.Headers.Add("SOAPAction","""+action+"""); request.Timeout=_config.RequestTimeoutSeconds*1000; request.ContentLength=bytes.Length; using(var stream=request.GetRequestStream()) stream.Write(bytes,0,bytes.Length); using(var response=(HttpWebResponse)request.GetResponse()) using(var reader=new StreamReader(response.GetResponseStream(),Encoding.UTF8)){ var text=reader.ReadToEnd(); return GatewayPayload.Ok("soap_ok",(int)(DateTime.UtcNow-start).TotalMilliseconds,SummarizeSoap(text)); }} catch(WebException ex){ return GatewayPayload.Fail("soap_fault",(int)(DateTime.UtcNow-start).TotalMilliseconds,ex.Status+": "+ex.GetType().Name); } catch(Exception ex){ return GatewayPayload.Fail("soap_error",(int)(DateTime.UtcNow-start).TotalMilliseconds,ex.GetType().Name); }} private static string SummarizeSoap(string xml){ try{ var doc=new XmlDocument(); doc.LoadXml(xml); return doc.DocumentElement==null?"empty":doc.DocumentElement.Name; } catch { return "non_xml_response"; }}} public class GatewayPayload{ public bool Ok; public string Code; public int LatencyMs; public string Message; public static GatewayPayload Ok(string code,int latency,string message){return new GatewayPayload{Ok=true,Code=code,LatencyMs=latency,Message=message};} public static GatewayPayload Fail(string code,int latency,string message){return new GatewayPayload{Ok=false,Code=code,LatencyMs=latency,Message=message};}}}
+using System;
+using System.Net.Sockets;
+
+namespace CollegePortal.Gateway
+{
+    public class FisSoapClient
+    {
+        private const string AllowedTestHost = "10.0.3.1";
+        private const int AllowedTestPort = 8383;
+        private const string AllowedTestPath = "/api/import/importservice.svc";
+        private readonly GatewayConfig _config;
+
+        public FisSoapClient(GatewayConfig config)
+        {
+            _config = config;
+        }
+
+        public GatewayPayload ZkspdCheck()
+        {
+            var started = DateTime.UtcNow;
+            Uri endpoint;
+            if (!Uri.TryCreate(_config.FisTestEndpoint, UriKind.Absolute, out endpoint)
+                || endpoint.Scheme != Uri.UriSchemeHttp
+                || !string.Equals(endpoint.Host, AllowedTestHost, StringComparison.OrdinalIgnoreCase)
+                || endpoint.Port != AllowedTestPort
+                || !string.Equals(endpoint.AbsolutePath, AllowedTestPath, StringComparison.OrdinalIgnoreCase))
+            {
+                return GatewayPayload.Fail("test_endpoint_not_allowed", 0, "Configured endpoint is outside the fixed FIS TEST allowlist.");
+            }
+
+            using (var client = new TcpClient())
+            {
+                try
+                {
+                    var pending = client.BeginConnect(endpoint.Host, endpoint.Port, null, null);
+                    var connected = pending.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(_config.ConnectTimeoutSeconds));
+                    if (!connected)
+                    {
+                        return GatewayPayload.Fail("fis_test_tcp_timeout", Elapsed(started), "TCP connection timed out.");
+                    }
+
+                    client.EndConnect(pending);
+                    return GatewayPayload.Success("fis_test_tcp_reachable", Elapsed(started), "FIS TEST TCP endpoint is reachable.");
+                }
+                catch (SocketException exception)
+                {
+                    return GatewayPayload.Fail("fis_test_tcp_unreachable", Elapsed(started), exception.SocketErrorCode.ToString());
+                }
+                catch (Exception exception)
+                {
+                    return GatewayPayload.Fail("fis_test_tcp_unreachable", Elapsed(started), exception.GetType().Name);
+                }
+            }
+        }
+
+        private static int Elapsed(DateTime started)
+        {
+            return (int)(DateTime.UtcNow - started).TotalMilliseconds;
+        }
+    }
+
+    public class GatewayPayload
+    {
+        public bool Ok;
+        public string Code;
+        public int LatencyMs;
+        public string Message;
+
+        public static GatewayPayload Success(string code, int latency, string message)
+        {
+            return new GatewayPayload
+            {
+                Ok = true,
+                Code = code,
+                LatencyMs = latency,
+                Message = message
+            };
+        }
+
+        public static GatewayPayload Fail(string code, int latency, string message)
+        {
+            return new GatewayPayload
+            {
+                Ok = false,
+                Code = code,
+                LatencyMs = latency,
+                Message = message
+            };
+        }
+    }
+}

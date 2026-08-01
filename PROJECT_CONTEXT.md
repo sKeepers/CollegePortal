@@ -1198,3 +1198,11 @@ REPO-SYNC-001 merged PR #8 into develop, synchronized Linux DEV and documented r
 ## INTEGRATION-HUB-001
 
 CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a modular Windows service architecture for protected integrations. FIS remains the only implemented adapter; future FRDO/Moodle/LDAP/MAX/Telegram/Email adapters are planned. Windows repo path is `C:\!Projects\CollegePortal`; ViPNet installation remains a separate task.
+
+## EPIC-001 / GIA-001
+
+Linux DEV has an evidence-only FIS diagnostics foundation: Portal/Gateway TCP and public endpoint probes, explicit Windows-service uncertainty, direct TEST TCP evidence, private contract inventory, manifest SHA verification and strict SOAP/auth/read-only stop-gates. Gateway ZKSPD diagnostics are TCP-only and restricted to fixed TEST host `10.0.3.1:8383`; production remains hard-disabled.
+
+Snapshot 14.07.2026: Portal is available; Gateway host responds to ICMP, but TCP `192.168.34.223:8099` returns `tcp_refused`; remote evidence cannot determine Windows-service state. Direct DEV to `10.0.3.1:8383` times out. Private registry contains one XSD with SHA-256 `7158ae7d523d3b08784a29ed0cdb4ace025695e30526285ebabb3d93c093f840` and matching manifest; WSDL/DISCO are absent.
+
+No SOAP operation, binding, action or authentication method is claimed. First read-only call was not attempted. GIA-002 starts only after Gateway recovery, approved WSDL/DISCO bundle verification, authentication confirmation and one separately permitted TEST read-only call.

@@ -18,6 +18,7 @@ const ExamsPage = () => import('../pages/exams/ExamsPage.vue')
 const GraduationPage = () => import('../pages/graduation/GraduationPage.vue')
 const FrdoPage = () => import('../pages/frdo/FrdoPage.vue')
 const FisPage = () => import('../pages/fis/FisPage.vue')
+const FisDiagnosticsPage = () => import('../pages/fis/FisDiagnosticsPage.vue')
 const ReportsPage = () => import('../pages/reports/ReportsPage.vue')
 const AttendancePage = () => import('../pages/attendance/AttendancePage.vue')
 const AdmissionsPage = () => import('../pages/admissions/AdmissionsPage.vue')
@@ -199,6 +200,12 @@ export const routes = [
         name: 'fis',
         component: FisPage,
         meta: { title: 'ФИС', permission: 'fis.view' },
+      },
+      {
+        path: 'fis/diagnostics',
+        name: 'fis-diagnostics',
+        component: FisDiagnosticsPage,
+        meta: { title: 'Диагностика ФИС', permission: 'fis.outbound.view' },
       },
       {
         path: 'reports',

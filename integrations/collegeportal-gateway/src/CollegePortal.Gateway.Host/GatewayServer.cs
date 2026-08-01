@@ -60,7 +60,7 @@ namespace CollegePortal.Gateway
             }
             GatewayPayload payload = null;
             var status = 200;
-            if (path == "/health" && ctx.Request.HttpMethod == "GET") payload = GatewayPayload.Ok("healthy", 0, "CollegePortal Gateway is running.");
+            if (path == "/health" && ctx.Request.HttpMethod == "GET") payload = GatewayPayload.Success("healthy", 0, "CollegePortal Gateway is running.");
             else if (path == "/version" && ctx.Request.HttpMethod == "GET") { Write(ctx, 200, VersionJson()); return; }
             else if (path == "/capabilities" && ctx.Request.HttpMethod == "GET") { Write(ctx, 200, CapabilitiesJson()); return; }
             else if (path == "/adapters" && ctx.Request.HttpMethod == "GET") { Write(ctx, 200, AdaptersJson()); return; }
@@ -90,7 +90,7 @@ namespace CollegePortal.Gateway
             var json = "{\"gateway_version\":\"" + Json(_config.ServiceVersion) + "\",\"fis_health\":" + Payload(_adapters["fis"].HealthCheck(), _config.ServiceVersion) + ",\"production_enabled\":false}";
             Directory.CreateDirectory(Path.GetDirectoryName(_config.DiagnosticsPath));
             File.WriteAllText(_config.DiagnosticsPath, json, Encoding.UTF8);
-            return GatewayPayload.Ok("diagnostics_completed", 0, "Diagnostics collected with secrets redacted.");
+            return GatewayPayload.Success("diagnostics_completed", 0, "Diagnostics collected with secrets redacted.");
         }
         private string LatestDiagnosticsJson()
         {

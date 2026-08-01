@@ -72,6 +72,45 @@ jobs:
       - name: Build
         run: npm run build
 
+  gateway:
+    name: Gateway build
+    runs-on: windows-2022
+    defaults:
+      run:
+        working-directory: integrations/collegeportal-gateway
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build .NET Framework 4.8 Gateway
+        shell: cmd
+        run: build.cmd
+
+      - name: Verify executable
+        shell: pwsh
+        run: if (-not (Test-Path 'bin/CollegePortal.Gateway.exe')) { throw 'Gateway executable was not produced.' }
+
+      - name: Verify FIS safety stop-gates
+        shell: pwsh
+        run: |
+          $adapter = Get-Content 'src/CollegePortal.Gateway.Adapters.Fis/FisIntegrationAdapter.cs' -Raw
+          $client = Get-Content 'src/CollegePortal.Gateway.Adapters.Fis/FisSoapClient.cs' -Raw
+          if ($adapter -notmatch 'official_wsdl_missing') {
+            throw 'FIS read-only operations must remain disabled without the official WSDL.'
+          }
+          if ($adapter -notmatch 'production_disabled') {
+            throw 'FIS production stop-gate is missing.'
+          }
+          if ($client -match 'tempuri\.org' -or $client -match 'HttpWebRequest' -or $client -match 'GetResponse\(') {
+            throw 'Gateway contains a guessed SOAP contract or an HTTP request before contract approval.'
+          }
+          if ($client -notmatch 'AllowedTestHost = "10\.0\.3\.1"' -or $client -notmatch 'AllowedTestPort = 8383') {
+            throw 'Gateway FIS TEST endpoint allowlist is missing.'
+          }
+
   secret-scan:
     name: Secret scan
     runs-on: ubuntu-24.04
