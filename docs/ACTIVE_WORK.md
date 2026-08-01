@@ -15,11 +15,12 @@ Update it before ending a session, before changing to a substantially different 
 ## Git State
 
 - Active worktree branch: `feature/uat-002-2-mobile-access`
-- Last deployed DEV checkpoint: `cf9b8c1cf6d71662c955b3a57ca332fbcee21c5b`
+- Last deployed DEV checkpoint: `82e07e28bb53040f602d91b473be3b4b4bb80025`
 - DEV branch: `feature/uat-002-1-final-stabilization`
 - `SYNC-001` reconciled GitHub `SEC-001` with DEV UAT-002.2 and was deployed to DEV.
 - DEV migration `2026_07_30_010000_add_lookup_and_expiration_to_api_tokens` was applied.
 - Reconciliation checks: `341 passed (2173 assertions)` and `npm run build` passed.
+- Grade-detail and device-profile frontend slice was deployed after a successful production build.
 
 ## DEV Access
 
