@@ -193,8 +193,23 @@ class ScheduleLessonApiTest extends TestCase
         $this->seed(RoleSeeder::class);
         $first = $this->createContext();
         $firstLesson = $this->createLesson($first);
-        $second = $this->createContext();
-        $secondLesson = $this->createLesson($second);
+        $secondGroup = Group::create([
+            'name' => 'M-102',
+            'specialty' => 'Instrumental Performance',
+            'course' => 1,
+            'year_start' => 2026,
+        ]);
+        $secondTeacher = Teacher::create(['last_name' => 'Второй', 'first_name' => 'Преподаватель']);
+        $secondLesson = ScheduleLesson::create([
+            'group_id' => $secondGroup->id,
+            'teacher_id' => $secondTeacher->id,
+            'subject_id' => $first['subject']->id,
+            'classroom_id' => $first['classroom']->id,
+            'lesson_date' => '2026-09-03',
+            'starts_at' => '11:00',
+            'ends_at' => '12:30',
+            'lesson_type' => 'lesson',
+        ]);
 
         $teacherUser = $this->createApiUser(roleCode: 'teacher');
         $first['teacher']->forceFill(['user_id' => $teacherUser->id])->save();
@@ -202,7 +217,7 @@ class ScheduleLessonApiTest extends TestCase
         $studentUser = $this->createApiUser(roleCode: 'student');
         Student::create([
             'user_id' => $studentUser->id,
-            'group_id' => $second['group']->id,
+            'group_id' => $secondGroup->id,
             'last_name' => 'Тестовый',
             'first_name' => 'Студент',
             'status' => 'active',
