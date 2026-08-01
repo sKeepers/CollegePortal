@@ -17,7 +17,7 @@
 - Active worktree branch: `sync/sync-001-local`
 - Last deployed DEV checkpoint: `3e1389335`
 - DEV branch: `feature/uat-002-1-final-stabilization`
-- GitHub branch: `origin/feature/uat-002-1-final-stabilization` at `b03242e`.
+- GitHub branch: `origin/feature/uat-002-1-final-stabilization` содержит документационные коммиты после `3e1389335`.
 - Локальная ветка `sync/sync-001-local` содержит documentation-коммиты поверх `3e1389335`; эти документы не требуют развёртывания на DEV.
 - `SYNC-001` объединил GitHub `SEC-001` с DEV UAT-002.2 и был развёрнут на DEV.
 - На DEV применена миграция `2026_07_30_010000_add_lookup_and_expiration_to_api_tokens`.
