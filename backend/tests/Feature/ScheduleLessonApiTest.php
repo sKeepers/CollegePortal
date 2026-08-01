@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Classroom;
 use App\Models\Group;
 use App\Models\ScheduleLesson;
+use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Teacher;
 use Database\Seeders\RoleSeeder;

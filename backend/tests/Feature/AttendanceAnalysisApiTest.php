@@ -22,10 +22,10 @@ class AttendanceAnalysisApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->withApiAuth();
         $now = CarbonImmutable::parse('2026-09-10 12:00:00');
         CarbonImmutable::setTestNow($now);
         Carbon::setTestNow($now);
+        $this->withApiAuth();
     }
 
     protected function tearDown(): void
