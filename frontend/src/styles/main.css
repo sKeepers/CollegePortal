@@ -4528,7 +4528,25 @@ body {
   font-size: 11px;
   font-weight: 900;
   text-decoration: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
 }
+
+.student-cabinet-hero { display: flex; justify-content: space-between; gap: 16px; border-radius: 14px; padding: 22px; background: #172033; color: #fff; }
+.student-cabinet-hero span, .student-cabinet-hero p { color: #cbd5e1; margin: 0; }
+.student-cabinet-hero h2 { margin: 6px 0; }
+.student-cabinet-hero > div:last-child { display: grid; align-content: center; text-align: right; }
+.student-cabinet-hero strong { font-size: 34px; }
+.student-cabinet-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+.student-cabinet-grades { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.student-cabinet-grades button { display: grid; gap: 3px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; background: #f8fafc; cursor: pointer; text-align: left; }
+.student-cabinet-grades button:hover, .student-cabinet-grades button:focus-visible { border-color: #2563eb; outline: none; }
+.student-cabinet-grades strong { color: #047857; font-size: 24px; }.student-cabinet-grades span, .student-cabinet-grades small, .student-cabinet-attendance span { color: #64748b; }
+.student-cabinet-attendance { display: grid; gap: 9px; }.student-cabinet-attendance div { display: grid; gap: 2px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
+.student-cabinet-next { display: flex; gap: 10px; align-items: start; }.student-cabinet-next div { display: grid; gap: 3px; }.student-cabinet-next span { color: #64748b; }
+.student-cabinet-grade-dialog { width: min(440px, 92vw); }.student-cabinet-grade-dialog__details { display: grid; gap: 12px; }.student-cabinet-grade-dialog__details div { display: grid; gap: 3px; }.student-cabinet-grade-dialog__details span { color: #64748b; font-size: 12px; font-weight: 800; }.student-cabinet-grade-dialog__details strong { overflow-wrap: anywhere; }
+@media (max-width: 1199px) { .student-cabinet-grid { grid-template-columns: 1fr; } }
 
 .mobile-student-nav-item--active {
   background: #eff6ff;

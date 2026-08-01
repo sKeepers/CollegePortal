@@ -69,7 +69,7 @@ const navGroups = [
     label: 'Учебный процесс',
     items: [
       { label: 'Расписание', to: '/schedule', icon: CalendarDays, permission: 'schedule.view' },
-      { label: 'Успеваемость', to: '/m/student#journal', icon: ClipboardList, roles: ['student'] },
+      { label: 'Успеваемость', to: '/student', icon: ClipboardList, roles: ['student'], permission: 'mobile.student.view' },
       { label: 'Журнал', to: '/journal', icon: ClipboardList, permission: 'journal.view' },
       { label: 'Посещаемость', to: '/attendance', icon: ClipboardList, permission: 'attendance.reports' },
       { label: 'Учебные планы', to: '/curricula', icon: BookOpen, permission: 'curricula.view' },
