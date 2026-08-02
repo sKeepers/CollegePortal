@@ -4,9 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\Classroom;
 use App\Models\Curriculum;
+use App\Models\Department;
 use App\Models\EducationProgram;
+use App\Models\Employee;
 use App\Models\Group;
 use App\Models\ImportJob;
+use App\Models\Position;
 use App\Models\ScheduleLesson;
 use App\Models\Specialty;
 use App\Models\Subject;
@@ -15,6 +18,8 @@ use App\Models\TeachingLoad;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use Tests\TestCase;
 
 class UniversalImportApiTest extends TestCase
@@ -51,6 +56,77 @@ class UniversalImportApiTest extends TestCase
         $content = $response->getContent();
         $this->assertStringContainsString('Фамилия;Имя;Отчество;Группа', $content);
         $this->assertStringContainsString('Иванов;Дмитрий;Сергеевич;ИСП-101', $content);
+    }
+
+    public function test_it_downloads_employee_excel_template_with_russian_headers_and_example(): void
+    {
+        $response = $this->get('/api/admin/import/templates/employees.xlsx')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        $path = storage_path('framework/testing/employees-template.xlsx');
+        File::ensureDirectoryExists(dirname($path));
+        file_put_contents($path, $response->getContent());
+        $rows = IOFactory::load($path)->getActiveSheet()->toArray();
+
+        $this->assertSame(['Табельный номер', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон', 'Подразделение', 'Должность', 'Дата приема', 'Статус', 'Занятость', 'Ставка', 'Преподаватель'], $rows[0]);
+        $this->assertSame('Примерова', $rows[1][1]);
+        $this->assertSame('employee@example.test', $rows[1][4]);
+    }
+
+    public function test_it_imports_employee_xlsx_with_generated_number_and_references(): void
+    {
+        Department::create(['code' => 'study', 'name' => 'Учебная часть']);
+        Position::create(['code' => 'methodist', 'name' => 'Методист']);
+        $file = $this->xlsxFile('employees.xlsx', [
+            ['Табельный номер', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон', 'Подразделение', 'Должность', 'Дата приема', 'Статус', 'Занятость', 'Ставка', 'Преподаватель'],
+            ['', 'Тестова', 'Анна', 'Игоревна', 'employee-import@example.test', '+70000000001', 'study', 'methodist', '01.09.2026', 'Активен', 'Полная занятость', '0,5', 'Да'],
+        ]);
+
+        $jobId = $this->post('/api/admin/import/preview', ['data_type' => 'employees', 'file' => $file])
+            ->assertCreated()
+            ->assertJsonPath('data.mapping.employment_type', 'Занятость')
+            ->assertJsonPath('data.mapping.is_teacher', 'Преподаватель')
+            ->json('data.id');
+
+        $this->postJson("/api/admin/import/{$jobId}/validate", [
+            'mode' => 'skip_duplicates',
+            'mapping' => $this->employeeTemplateMapping(),
+        ])->assertOk()->assertJsonPath('data.status', 'validated');
+
+        $this->postJson("/api/admin/import/{$jobId}/confirm", [
+            'mode' => 'skip_duplicates',
+            'mapping' => $this->employeeTemplateMapping(),
+        ])->assertOk()->assertJsonPath('data.created_count', 1)->assertJsonPath('data.error_count', 0);
+
+        $employee = Employee::where('employee_number', 'EMP-000001')->firstOrFail();
+        $this->assertSame('2026-09-01', $employee->hired_at->toDateString());
+        $this->assertSame('0.50', $employee->workload_rate);
+        $this->assertTrue($employee->is_teacher);
+        $this->assertDatabaseHas('teachers', ['person_id' => $employee->person_id, 'is_active' => true]);
+    }
+
+    public function test_it_rejects_ambiguous_employee_department_match(): void
+    {
+        Department::create(['code' => 'office-1', 'name' => 'Общий отдел']);
+        Department::create(['code' => 'office-2', 'name' => 'Общий отдел']);
+        $file = $this->xlsxFile('ambiguous-employees.xlsx', [
+            ['Табельный номер', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон', 'Подразделение', 'Должность', 'Дата приема', 'Статус', 'Занятость', 'Ставка', 'Преподаватель'],
+            ['', 'Тестова', 'Анна', '', 'ambiguous-import@example.test', '', 'Общий отдел', '', '01.09.2026', 'Активен', 'Полная занятость', '1', 'Нет'],
+        ]);
+
+        $jobId = $this->post('/api/admin/import/preview', ['data_type' => 'employees', 'file' => $file])
+            ->assertCreated()
+            ->json('data.id');
+
+        $this->postJson("/api/admin/import/{$jobId}/validate", [
+            'mode' => 'skip_duplicates',
+            'mapping' => $this->employeeTemplateMapping(),
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'validation_failed')
+            ->assertJsonPath('data.validation_errors.0.column', 'Подразделение')
+            ->assertJsonPath('data.validation_errors.0.reason', 'Подразделение сопоставляется неоднозначно: используйте уникальный код.');
     }
 
 
@@ -319,5 +395,35 @@ class UniversalImportApiTest extends TestCase
         file_put_contents($path, $content);
 
         return new UploadedFile($path, $name, 'text/csv', null, true);
+    }
+
+    private function xlsxFile(string $name, array $rows): UploadedFile
+    {
+        $path = storage_path('framework/testing/'.$name);
+        File::ensureDirectoryExists(dirname($path));
+        $spreadsheet = new Spreadsheet();
+        $spreadsheet->getActiveSheet()->fromArray($rows);
+        IOFactory::createWriter($spreadsheet, 'Xlsx')->save($path);
+
+        return new UploadedFile($path, $name, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true);
+    }
+
+    private function employeeTemplateMapping(): array
+    {
+        return [
+            'employee_number' => 'Табельный номер',
+            'last_name' => 'Фамилия',
+            'first_name' => 'Имя',
+            'middle_name' => 'Отчество',
+            'email' => 'Email',
+            'phone' => 'Телефон',
+            'department' => 'Подразделение',
+            'position' => 'Должность',
+            'hired_at' => 'Дата приема',
+            'status' => 'Статус',
+            'employment_type' => 'Занятость',
+            'workload_rate' => 'Ставка',
+            'is_teacher' => 'Преподаватель',
+        ];
     }
 }

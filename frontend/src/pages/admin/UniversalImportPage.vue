@@ -65,17 +65,18 @@ function syncMappingFromJob() {
 }
 async function handleDownloadTemplate() {
   if (!canManage.value) return
-  const blob = await store.downloadTemplate(dataType.value)
+  const format = selectedTypeConfig.value?.template?.format || 'csv'
+  const blob = await store.downloadTemplate(dataType.value, format)
   if (!blob) return
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = selectedTypeConfig.value?.template?.filename || `collegeportal_${dataType.value}_template.csv`
+  link.download = selectedTypeConfig.value?.template?.filename || `collegeportal_${dataType.value}_template.${format}`
   document.body.appendChild(link)
   link.click()
   link.remove()
   URL.revokeObjectURL(url)
-  $q.notify({ type: 'positive', message: 'Шаблон CSV скачан', position: 'top-right' })
+  $q.notify({ type: 'positive', message: format === 'xlsx' ? 'Шаблон Excel скачан' : 'Шаблон CSV скачан', position: 'top-right' })
 }
 
 
@@ -177,7 +178,7 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
             <q-select v-model="dataType" outlined dense emit-value map-options label="Тип данных" :options="store.typeOptions" />
             <q-select v-model="mode" outlined dense emit-value map-options label="Режим" :options="store.modeOptions" option-value="value" option-label="label" />
             <q-file v-if="canManage" v-model="file" outlined dense accept=".csv,.txt,.xlsx" label="CSV или XLSX"><template #prepend><Upload :size="16" /></template></q-file>
-            <q-btn v-if="canManage" outline color="primary" :loading="store.saving" @click="handleDownloadTemplate"><Download :size="16" class="q-mr-xs" /> Шаблон CSV</q-btn>
+            <q-btn v-if="canManage" outline color="primary" :loading="store.saving" @click="handleDownloadTemplate"><Download :size="16" class="q-mr-xs" /> {{ selectedTypeConfig?.template?.format === 'xlsx' ? 'Шаблон Excel' : 'Шаблон CSV' }}</q-btn>
             <q-btn v-if="canManage" color="primary" :disable="!canPreview" :loading="store.saving" @click="handlePreview"><FileSpreadsheet :size="16" class="q-mr-xs" /> Предпросмотр</q-btn>
           </div>
           <q-banner rounded class="universal-import-hint">Поддерживаются студенты, группы, преподаватели, дисциплины, аудитории и абитуриенты. Импорт выполняется только после подтверждения.</q-banner>

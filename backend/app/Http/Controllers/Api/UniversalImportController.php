@@ -41,6 +41,21 @@ class UniversalImportController extends Controller
         ]);
     }
 
+    public function xlsxTemplate(string $dataType): Response|JsonResponse
+    {
+        try {
+            $template = $this->importService->templateXlsx($dataType);
+        } catch (RuntimeException $exception) {
+            return response()->json(['message' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        AuditLogService::log('import', 'export_template', ['type' => 'import_template', 'id' => null], null, ['data_type' => $dataType, 'filename' => $template['filename']], request());
+        return response($template['content'], Response::HTTP_OK, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="'.$template['filename'].'"',
+        ]);
+    }
+
     public function history(Request $request): AnonymousResourceCollection
     {
         $jobs = ImportJob::query()

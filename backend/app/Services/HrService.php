@@ -46,6 +46,7 @@ class HrService
         if (! empty($data['person_id'])) { return Person::findOrFail($data['person_id']); }
         $personData = [
             'last_name' => $data['last_name'] ?? '', 'first_name' => $data['first_name'] ?? '', 'middle_name' => $data['middle_name'] ?? null,
+            'birth_date' => $data['birth_date'] ?? null,
             'email' => $data['email'] ?? null, 'phone' => $data['phone'] ?? null, 'snils' => $data['snils'] ?? null, 'status' => 'active',
         ];
         $duplicates = $this->personService->findPossibleDuplicates($personData);

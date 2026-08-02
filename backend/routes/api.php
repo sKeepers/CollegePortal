@@ -293,6 +293,7 @@ Route::middleware(['api.token', 'throttle:api.authenticated'])->group(function (
         Route::get('admin/import/config', [UniversalImportController::class, 'config']);
         Route::get('admin/import/history', [UniversalImportController::class, 'history']);
         Route::get('admin/import/templates/{dataType}.csv', [UniversalImportController::class, 'template']);
+        Route::get('admin/import/templates/{dataType}.xlsx', [UniversalImportController::class, 'xlsxTemplate']);
         Route::post('admin/import/fis-admissions/analyze', [FisAdmissionsImportController::class, 'analyze']);
         Route::post('admin/import/fis-admissions/dry-run', [FisAdmissionsImportController::class, 'dryRun']);
         Route::post('admin/import/fis-admissions/apply', [FisAdmissionsImportController::class, 'apply']);

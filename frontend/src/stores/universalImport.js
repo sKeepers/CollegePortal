@@ -92,12 +92,12 @@ export const useUniversalImportStore = defineStore('universalImport', () => {
     }
   }
 
-  async function downloadTemplate(dataType) {
+  async function downloadTemplate(dataType, format = 'csv') {
     if (!dataType) return null
     saving.value = true
     error.value = ''
     try {
-      return await api.download(`/admin/import/templates/${dataType}.csv`)
+      return await api.download(`/admin/import/templates/${dataType}.${format}`)
     } catch (err) {
       error.value = err.message || 'Не удалось скачать шаблон'
       throw err

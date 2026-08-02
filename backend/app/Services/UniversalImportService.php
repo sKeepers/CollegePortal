@@ -16,12 +16,11 @@ use App\Services\Import\SubjectImportHandler;
 use App\Services\Import\TeacherImportHandler;
 use App\Services\Import\TeachingLoadImportHandler;
 use Illuminate\Http\UploadedFile;
-use App\Services\PersonService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use RuntimeException;
-use SimpleXMLElement;
-use ZipArchive;
 
 class UniversalImportService
 {
@@ -32,7 +31,7 @@ class UniversalImportService
     /** @var array<string, ImportHandlerInterface> */
     private array $handlers = [];
 
-    public function __construct(AutoCodeService $autoCodeService, ScheduleLessonService $scheduleLessonService, PersonService $personService)
+    public function __construct(AutoCodeService $autoCodeService, ScheduleLessonService $scheduleLessonService, HrService $hrService)
     {
         foreach ([
             new StudentImportHandler(),
@@ -44,7 +43,7 @@ class UniversalImportService
             new CurriculumImportHandler($autoCodeService),
             new TeachingLoadImportHandler(),
             new ScheduleImportHandler($scheduleLessonService),
-            new EmployeeImportHandler($personService),
+            new EmployeeImportHandler($hrService),
         ] as $handler) {
             $this->handlers[$handler->type()] = $handler;
         }
@@ -67,6 +66,21 @@ class UniversalImportService
     {
         $handler = $this->handler($dataType);
         return ['filename' => "collegeportal_{$dataType}_template.csv", 'content' => $this->csvContent([$handler->templateHeaders(), $handler->templateExample()])];
+    }
+
+    public function templateXlsx(string $dataType): array
+    {
+        $handler = $this->handler($dataType);
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->fromArray([$handler->templateHeaders(), $handler->templateExample()]);
+        $sheet->getStyle('1:1')->getFont()->setBold(true);
+        $sheet->freezePane('A2');
+        foreach (range('A', $sheet->getHighestColumn()) as $column) { $sheet->getColumnDimension($column)->setAutoSize(true); }
+        $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+        ob_start();
+        $writer->save('php://output');
+        return ['filename' => "collegeportal_{$dataType}_template.xlsx", 'content' => ob_get_clean() ?: ''];
     }
 
     public function createPreview(UploadedFile $file, string $dataType, ?User $user): ImportJob
@@ -134,7 +148,7 @@ class UniversalImportService
                 'key_fields' => $handler->keyFields(),
                 'key_field_labels' => array_values(array_map(fn ($field) => $labels[$field] ?? $field, $handler->keyFields())),
                 'required_fields' => collect($fields)->filter(fn ($field) => $field['required'])->map(fn ($field, $key) => ['value' => $key, 'label' => $field['label']])->values()->all(),
-                'template' => ['format' => 'csv', 'filename' => "collegeportal_{$handler->type()}_template.csv", 'headers' => $handler->templateHeaders(), 'example' => array_combine($handler->templateHeaders(), $handler->templateExample())],
+                'template' => ['format' => $handler->type() === 'employees' ? 'xlsx' : 'csv', 'filename' => "collegeportal_{$handler->type()}_template.".($handler->type() === 'employees' ? 'xlsx' : 'csv'), 'headers' => $handler->templateHeaders(), 'example' => array_combine($handler->templateHeaders(), $handler->templateExample())],
                 'fields' => collect($fields)->map(fn ($field, $key) => ['value' => $key, 'label' => $field['label'], 'required' => $field['required'], 'example' => $this->fieldExample($handler, $key)])->values()->all(),
             ];
         })->values()->all();
@@ -175,25 +189,10 @@ class UniversalImportService
 
     private function parseXlsx(string $path): array
     {
-        if (!class_exists(ZipArchive::class)) { throw new RuntimeException('На сервере недоступно чтение XLSX. Используйте CSV или включите ZipArchive.'); }
-        $zip = new ZipArchive();
-        if ($zip->open($path) !== true) { throw new RuntimeException('Не удалось открыть XLSX файл.'); }
-        $sharedStrings = $this->readSharedStrings($zip);
-        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
-        $zip->close();
-        if ($sheetXml === false) { throw new RuntimeException('В XLSX не найден первый лист.'); }
-        $sheet = new SimpleXMLElement($sheetXml);
-        $rawRows = [];
-        foreach ($sheet->sheetData->row as $rowNode) {
-            $row = [];
-            foreach ($rowNode->c as $cell) { $row[$this->columnIndexFromCellRef((string) $cell['r'])] = $this->xlsxCellValue($cell, $sharedStrings); }
-            if ($row !== []) { ksort($row); $rawRows[] = $row; }
-        }
+        try { $rawRows = IOFactory::load($path)->getActiveSheet()->toArray(null, true, true, false); }
+        catch (\Throwable) { throw new RuntimeException('Не удалось открыть XLSX файл.'); }
         if ($rawRows === []) { return ['headers' => [], 'rows' => []]; }
-        $max = max(array_map(fn ($row) => max(array_keys($row)), $rawRows));
-        $headers = [];
-        for ($i = 0; $i <= $max; $i++) { $headers[] = trim((string) ($rawRows[0][$i] ?? '')); }
-        $headers = $this->normalizeHeaders($headers);
+        $headers = $this->normalizeHeaders($rawRows[0]);
         $rows = [];
         foreach (array_slice($rawRows, 1) as $rawRow) {
             $assoc = [];
@@ -203,30 +202,6 @@ class UniversalImportService
         return ['headers' => $headers, 'rows' => $rows];
     }
 
-    private function readSharedStrings(ZipArchive $zip): array
-    {
-        $xml = $zip->getFromName('xl/sharedStrings.xml');
-        if ($xml === false) { return []; }
-        $strings = [];
-        $shared = new SimpleXMLElement($xml);
-        foreach ($shared->si as $item) {
-            $text = '';
-            if (isset($item->t)) { $text = (string) $item->t; }
-            elseif (isset($item->r)) { foreach ($item->r as $run) { $text .= (string) $run->t; } }
-            $strings[] = $text;
-        }
-        return $strings;
-    }
-
-    private function xlsxCellValue(SimpleXMLElement $cell, array $sharedStrings): string
-    {
-        $type = (string) $cell['t'];
-        if ($type === 's') { return (string) ($sharedStrings[(int) $cell->v] ?? ''); }
-        if ($type === 'inlineStr') { return (string) ($cell->is->t ?? ''); }
-        return (string) ($cell->v ?? '');
-    }
-
-    private function columnIndexFromCellRef(string $ref): int { $letters = preg_replace('/[^A-Z]/', '', strtoupper($ref)); $index = 0; foreach (str_split($letters) as $letter) { $index = $index * 26 + (ord($letter) - 64); } return max(0, $index - 1); }
     private function detectDelimiter(string $sample): string { $delimiters = [';' => substr_count($sample, ';'), ',' => substr_count($sample, ','), "\t" => substr_count($sample, "\t")]; arsort($delimiters); return array_key_first($delimiters) ?: ';'; }
     private function normalizeHeaders(array $headers): array { return array_values(array_map(fn ($header) => trim((string) preg_replace('/^\xEF\xBB\xBF/', '', (string) $header)), $headers)); }
     private function normalizeKey(string $value): string { return mb_strtolower(trim(str_replace([' ', '-', '_'], '', $value))); }

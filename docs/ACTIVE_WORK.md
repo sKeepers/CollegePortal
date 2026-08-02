@@ -8,7 +8,7 @@
 
 ## Обновлено
 
-- Date: 2026-08-02
+- Date: 2026-08-03
 - Local worktree: `C:\!Projects\CollegePortal\.worktrees\sync-001`
 - DEV checkout: `/home/andale/CollegePortal`
 
@@ -18,7 +18,7 @@
 - Last deployed DEV checkpoint: `9f2596dfd`
 - DEV branch: `feature/uat-002-1-final-stabilization`
 - GitHub branch: `origin/feature/uat-002-1-final-stabilization` развёрнута на DEV до `9f2596dfd`.
-- Локальный HEAD: `53fb213` на ветке `sync/sync-001-local`; последний известный DEV HEAD: `9f2596dfd`.
+- Локальный HEAD: `1e0355c` на ветке `sync/sync-001-local`; последний известный DEV HEAD: `9f2596dfd`.
 - `SYNC-001` объединил GitHub `SEC-001` с DEV UAT-002.2 и был развёрнут на DEV.
 - На DEV применена миграция `2026_07_30_010000_add_lookup_and_expiration_to_api_tokens`.
 - Проверки после развёртывания: `php artisan test` — `347 passed (2215 assertions)`; `npm run build` завершилась успешно; health endpoint вернул `200`.
@@ -41,7 +41,7 @@
 - Проверки: `PostgresBackupServiceTest` и `DatabaseBackupApiTest` — `4 passed (17 assertions)`; `npm run build` завершилась успешно; health endpoint вернул `200`.
 - Создан и проверен первый архив через сервис: `manual-20260802-192823-92922147-fd1d-49d4-9c7d-7449a91ddbbc.dump`, 397065 bytes. Восстановление действующей DEV-базы намеренно не запускалось.
 - Исправлены права DEV runtime storage: `storage` и `storage/app/private/postgresql-backups` принадлежат `www-data`; создание второго архива от имени web-процесса подтверждено (`manual-20260802-195519-21088212-5f81-48ca-9172-a0f3f99a3eb1.dump`, 396791 bytes).
-- В worktree есть незакоммиченные изменения задачи без commit/deploy: protected `GET /api/journal/edit-requests/history` для статусов pending/approved/rejected, связанных audit-изменений занятия/посещаемости/оценок, административной истории на `JournalPage`, единого представления версии в `SystemInfoPanel` и `AdminDashboard`, а также расширенного `JournalEngineApiTest`.
+- В worktree есть незакоммиченные изменения без commit/deploy: XLSX-шаблон и импорт сотрудников в Universal Import, безопасное сопоставление подразделения/должности, автогенерация табельного номера через `HrService`, UI-ярлык Excel, документация и тесты `UniversalImportApiTest`.
 - DEV и PROD в этой задаче не изменялись.
 
 ## Доступ к DEV
@@ -54,7 +54,7 @@
 
 ## Текущая задача
 
-Реализована локально, без commit/deploy, история запросов редактирования журнала и унифицировано представление версии в интерфейсе.
+Реализован локально, без commit/deploy, XLSX-шаблон и полный поток `preview -> validation -> confirm` для сотрудников в Universal Import.
 
 GitHub Issues доступны на DEV только для чтения через `gh`. Текущий обзор: [GitHub Issue Review 2026-08-01](GITHUB_ISSUE_REVIEW_2026-08-01.md); не изменять Issues без явной задачи.
 
@@ -75,17 +75,14 @@ GitHub Issues доступны на DEV только для чтения чер�
 
 ## Следующие действия
 
-1. Выполнить `php artisan test tests/Feature/JournalEngineApiTest.php` и `npm run build` в окружении с PHP, Docker или установленными frontend dependencies.
-2. Вручную проверить под пользователем с `journal.reopen` фильтрацию истории, раскрытие old/new значений и мобильную вёрстку `JournalPage`.
-3. Проверить вручную под пользователем с `settings.manage`: создание снимка, список metadata, обязательное `RESTORE`, создание аварийного снимка и audit-записи.
+1. В окружении с PHP и зависимостями выполнить `php artisan test tests/Feature/UniversalImportApiTest.php` из `backend`.
+2. В окружении с frontend dependencies выполнить `npm run build` из `frontend`.
+3. Вручную под пользователем с `import.manage` скачать шаблон «Сотрудники», проверить XLSX, выполнить загрузку тестовой строки и убедиться, что пустой табельный номер сгенерирован.
 
 ## Блокеры
 
-- Автоматизированные проверки завершены. Браузерный UAT под teacher требует интерактивной сессии с учётной записью и не заменяется API-тестами.
-- Рабочие профили очищены намеренно; до ручного UAT необходимо создать новые связанные записи преподавателя и студента.
-- ФИС-выгрузка не должна применяться до устранения обхода checksum СНИЛС и отсутствия переноса паспортных реквизитов.
-- PROD не изменялся.
 - В текущем Windows worktree отсутствуют команды `php` и `docker`, а в `frontend` нет локального `vite`; поэтому новые автоматизированные проверки и production-сборка здесь не выполнены.
+- DEV и PROD в этой задаче не изменялись.
 
 ## Чек-лист передачи
 

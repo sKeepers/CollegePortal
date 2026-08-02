@@ -4,15 +4,14 @@ namespace App\Services\Import;
 
 use App\Models\Department;
 use App\Models\Employee;
-use App\Models\Person;
 use App\Models\Position;
-use App\Services\PersonService;
+use App\Services\HrService;
 use Illuminate\Database\Eloquent\Model;
 use RuntimeException;
 
 class EmployeeImportHandler extends AbstractImportHandler
 {
-    public function __construct(private readonly PersonService $personService)
+    public function __construct(private readonly HrService $hrService)
     {
     }
 
@@ -24,7 +23,7 @@ class EmployeeImportHandler extends AbstractImportHandler
     public function fields(): array
     {
         return [
-            'employee_number' => ['label' => 'Табельный номер', 'required' => true, 'aliases' => ['табельный номер', 'employee_number', 'номер сотрудника']],
+            'employee_number' => ['label' => 'Табельный номер', 'required' => false, 'aliases' => ['табельный номер', 'employee_number', 'номер сотрудника']],
             'last_name' => ['label' => 'Фамилия', 'required' => true, 'aliases' => ['фамилия', 'last_name']],
             'first_name' => ['label' => 'Имя', 'required' => true, 'aliases' => ['имя', 'first_name']],
             'middle_name' => ['label' => 'Отчество', 'required' => false, 'aliases' => ['отчество', 'middle_name']],
@@ -34,23 +33,23 @@ class EmployeeImportHandler extends AbstractImportHandler
             'snils' => ['label' => 'СНИЛС', 'required' => false, 'aliases' => ['снилс', 'snils']],
             'department' => ['label' => 'Подразделение', 'required' => false, 'aliases' => ['подразделение', 'отдел', 'department']],
             'position' => ['label' => 'Должность', 'required' => false, 'aliases' => ['должность', 'position']],
-            'employment_type' => ['label' => 'Тип занятости', 'required' => false, 'aliases' => ['тип занятости', 'employment_type']],
+            'employment_type' => ['label' => 'Занятость', 'required' => false, 'aliases' => ['занятость', 'тип занятости', 'employment_type']],
             'workload_rate' => ['label' => 'Ставка', 'required' => false, 'aliases' => ['ставка', 'rate', 'workload_rate']],
             'status' => ['label' => 'Статус', 'required' => false, 'aliases' => ['статус', 'status']],
             'hired_at' => ['label' => 'Дата приема', 'required' => true, 'aliases' => ['дата приема', 'hired_at', 'принят']],
             'dismissed_at' => ['label' => 'Дата увольнения', 'required' => false, 'aliases' => ['дата увольнения', 'dismissed_at', 'уволен']],
-            'is_teacher' => ['label' => 'Является преподавателем', 'required' => false, 'aliases' => ['преподаватель', 'is_teacher']],
+            'is_teacher' => ['label' => 'Преподаватель', 'required' => false, 'aliases' => ['преподаватель', 'является преподавателем', 'is_teacher']],
         ];
     }
 
     public function templateHeaders(): array
     {
-        return ['Табельный номер','Фамилия','Имя','Отчество','Дата рождения','Телефон','Email','СНИЛС','Подразделение','Должность','Тип занятости','Ставка','Статус','Дата приема','Дата увольнения','Является преподавателем'];
+        return ['Табельный номер', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон', 'Подразделение', 'Должность', 'Дата приема', 'Статус', 'Занятость', 'Ставка', 'Преподаватель'];
     }
 
     public function templateExample(): array
     {
-        return ['EMP-0001','Иванова','Мария','Петровна','15.03.1985','+79990000001','ivanova@example.test','123-456-789 00','Учебная часть','Методист','full_time','1','active','01.09.2026','','нет'];
+        return ['', 'Примерова', 'Александра', 'Сергеевна', 'employee@example.test', '+70000000000', 'Учебная часть', 'Методист', '01.09.2026', 'Активен', 'Полная занятость', '1', 'Да'];
     }
 
     public function prepare(array $data): array
@@ -68,7 +67,7 @@ class EmployeeImportHandler extends AbstractImportHandler
     public function rules(): array
     {
         return [
-            'employee_number' => ['required','string','max:100'],
+            'employee_number' => ['nullable','string','max:100'],
             'last_name' => ['required','string','max:255'],
             'first_name' => ['required','string','max:255'],
             'middle_name' => ['nullable','string','max:255'],
@@ -89,14 +88,14 @@ class EmployeeImportHandler extends AbstractImportHandler
 
     public function findExisting(array $data): ?Model
     {
-        return Employee::where('employee_number', $data['employee_number'])->first();
+        return empty($data['employee_number']) ? null : Employee::where('employee_number', $data['employee_number'])->first();
     }
 
     public function businessValidationErrors(array $data): array
     {
         $errors = [];
-        if (!empty($data['department']) && !$this->departmentId($data['department'])) { $errors['department'] = ['Подразделение не найдено.']; }
-        if (!empty($data['position']) && !$this->positionId($data['position'])) { $errors['position'] = ['Должность не найдена.']; }
+        if ($error = $this->referenceError(Department::class, $data['department'] ?? null, 'Подразделение')) { $errors['department'] = [$error]; }
+        if ($error = $this->referenceError(Position::class, $data['position'] ?? null, 'Должность')) { $errors['position'] = [$error]; }
         return $errors;
     }
 
@@ -107,21 +106,19 @@ class EmployeeImportHandler extends AbstractImportHandler
         if ($existing && $mode === self::MODE_SKIP_DUPLICATES) { return 'skipped'; }
         if ($existing && $mode === self::MODE_CREATE) { throw new RuntimeException('Дубликат по табельному номеру.'); }
 
-        $person = $existing?->person ?: $this->resolvePerson($data);
-        $payload = $this->employeePayload($data, $person->id);
-
         if ($existing) {
-            $existing->update($payload);
+            $this->hrService->updateEmployee($existing, $this->employeeData($data));
             return 'updated';
         }
 
-        Employee::create($payload);
+        $this->hrService->createEmployee($this->employeeData($data));
         return 'created';
     }
 
-    private function resolvePerson(array $data): Person
+    private function employeeData(array $data): array
     {
-        $personData = [
+        return [
+            'employee_number' => $data['employee_number'] ?: null,
             'last_name' => $data['last_name'],
             'first_name' => $data['first_name'],
             'middle_name' => $data['middle_name'] ?? null,
@@ -129,32 +126,28 @@ class EmployeeImportHandler extends AbstractImportHandler
             'phone' => $data['phone'] ?? null,
             'email' => $data['email'] ?? null,
             'snils' => $data['snils'] ?? null,
-            'status' => $data['status'] === 'dismissed' ? 'inactive' : 'active',
-        ];
-        $duplicates = $this->personService->findPossibleDuplicates($personData);
-        if ($duplicates->count() > 1) { throw new RuntimeException('Найдено несколько возможных Person. Уточните СНИЛС, email или телефон.'); }
-        if ($duplicates->count() === 1) { return $duplicates->first(); }
-        return $this->personService->createPerson($personData);
-    }
-
-    private function employeePayload(array $data, int $personId): array
-    {
-        return [
-            'person_id' => $personId,
-            'employee_number' => $data['employee_number'],
             'status' => $data['status'] ?: 'active',
             'employment_type' => $data['employment_type'] ?: 'full_time',
             'hired_at' => $data['hired_at'],
             'dismissed_at' => $data['dismissed_at'] ?: null,
-            'primary_department_id' => $this->departmentId($data['department'] ?? null),
-            'primary_position_id' => $this->positionId($data['position'] ?? null),
+            'primary_department_id' => $this->referenceId(Department::class, $data['department'] ?? null),
+            'primary_position_id' => $this->referenceId(Position::class, $data['position'] ?? null),
             'workload_rate' => $data['workload_rate'] ?: 1,
             'is_teacher' => (bool) ($data['is_teacher'] ?? false),
         ];
     }
 
-    private function departmentId(?string $name): ?int { return $name ? Department::where('name', $name)->orWhere('code', $name)->value('id') : null; }
-    private function positionId(?string $name): ?int { return $name ? Position::where('name', $name)->orWhere('code', $name)->value('id') : null; }
+    private function referenceId(string $model, ?string $value): ?int
+    {
+        return $value ? $model::query()->where('name', $value)->orWhere('code', $value)->value('id') : null;
+    }
+
+    private function referenceError(string $model, ?string $value, string $label): ?string
+    {
+        if (!$value) { return null; }
+        $count = $model::query()->where('name', $value)->orWhere('code', $value)->count();
+        return $count === 0 ? "{$label} не найдено." : ($count > 1 ? "{$label} сопоставляется неоднозначно: используйте уникальный код." : null);
+    }
 
     private function normalizeStatus(?string $value): string
     {
