@@ -339,7 +339,7 @@ export const routes = [
         path: 'admin/data-management',
         name: 'admin-data-management',
         component: DataManagementPage,
-        meta: { title: 'Управление данными', permission: 'import.manage' },
+        meta: { title: 'Управление данными', permissionsAny: ['import.manage', 'settings.manage'] },
       },
       {
         path: 'admin/uat',

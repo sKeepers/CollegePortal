@@ -12,6 +12,7 @@ RUN apt-get update \
         libpng-dev \
         libjpeg-dev \
         libfreetype6-dev \
+        postgresql-client \
     && docker-php-ext-configure \
         gd --with-freetype --with-jpeg \
     && docker-php-ext-install \

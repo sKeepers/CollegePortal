@@ -36,6 +36,7 @@ use App\Http\Controllers\Api\DigitalIdentityController;
 use App\Http\Controllers\Api\DemoDataController;
 use App\Http\Controllers\Api\DashboardAnalyticsController;
 use App\Http\Controllers\Api\DashboardLayoutController;
+use App\Http\Controllers\Api\DatabaseBackupController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\ExamController;
 use App\Http\Controllers\Api\FrdoPackageController;
@@ -278,6 +279,12 @@ Route::middleware(['api.token', 'throttle:api.authenticated'])->group(function (
         Route::post('admin/users/{user}/block', [AdminUserController::class, 'block']);
         Route::post('admin/users/{user}/unblock', [AdminUserController::class, 'unblock']);
         Route::apiResource('admin/users', AdminUserController::class);
+    });
+
+    Route::middleware('permission:settings.manage')->group(function (): void {
+        Route::get('admin/database-backups', [DatabaseBackupController::class, 'index']);
+        Route::post('admin/database-backups', [DatabaseBackupController::class, 'store']);
+        Route::post('admin/database-backups/{snapshot}/restore', [DatabaseBackupController::class, 'restore']);
     });
 
     Route::middleware('permission:manage_dictionaries')->group(function (): void {

@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { Database, Download, RefreshCw, Trash2, Upload } from '@lucide/vue'
+import { Database, Download, HardDriveRestore, RefreshCw, Trash2, Upload } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -11,14 +11,20 @@ import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import { useDemoDataStore } from '../../stores/demoData'
+import { useDatabaseBackupsStore } from '../../stores/databaseBackups'
 import { usePermissions } from '../../composables/usePermissions'
 
 const store = useDemoDataStore()
+const backups = useDatabaseBackupsStore()
 const permissions = usePermissions()
 const canManage = computed(() => permissions.hasPermission('import.manage'))
+const canManageBackups = computed(() => permissions.hasPermission('settings.manage'))
 const $q = useQuasar()
 const importFile = ref(null)
 const clearDialog = ref(false)
+const restoreDialog = ref(false)
+const restoreConfirmation = ref('')
+const selectedSnapshot = ref(null)
 const summaryLabels = {
   students: 'Студенты',
   groups: 'Группы',
@@ -33,7 +39,12 @@ async function createDemoData() { if (!canManage.value) return; const payload = 
 async function clearDemoData() { if (!canManage.value) return; const payload = await store.clearDemoData(); notify(payload?.message || 'Демо-данные очищены') }
 async function importData(file) { if (!canManage.value || !file) return; const payload = await store.importData(file); importFile.value = null; notify(payload?.message || 'Файл принят') }
 async function exportData() { if (!canManage.value) return; await store.exportData(); notify('Экспорт данных подготовлен') }
-onMounted(store.load)
+async function createBackup() { if (!canManageBackups.value) return; const payload = await backups.create(); notify(payload?.message || 'Архив создан') }
+function openRestore(snapshot) { selectedSnapshot.value = snapshot; restoreConfirmation.value = ''; restoreDialog.value = true }
+async function restoreBackup() { if (!canManageBackups.value || restoreConfirmation.value !== 'RESTORE' || !selectedSnapshot.value) return; const payload = await backups.restore(selectedSnapshot.value.id, restoreConfirmation.value); restoreDialog.value = false; notify(payload?.message || 'База данных восстановлена') }
+function formatSize(size) { if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} КБ`; return `${(size / 1024 / 1024).toFixed(1)} МБ` }
+function formatDate(value) { return new Intl.DateTimeFormat('ru-RU', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date(value)) }
+onMounted(() => { store.load(); if (canManageBackups.value) backups.load() })
 </script>
 
 <template>
@@ -47,6 +58,7 @@ onMounted(store.load)
       </template>
     </AppToolbar>
     <AppErrorBanner :message="store.error" />
+    <AppErrorBanner :message="backups.error" />
 
     <div class="data-management-layout">
       <section class="data-management-main">
@@ -76,6 +88,31 @@ onMounted(store.load)
       </aside>
     </div>
 
+    <AppCard v-if="canManageBackups" class="q-mt-md" title="Полные архивы PostgreSQL" subtitle="Архивы хранятся только в защищенном хранилище backend. Восстановление заменяет содержимое базы и сначала создает аварийный архив.">
+      <div class="data-management-actions q-mb-md">
+        <q-btn color="primary" :loading="backups.loading" @click="createBackup"><Database :size="16" class="q-mr-xs" /> Создать полный архив</q-btn>
+        <q-btn flat :disable="backups.loading" @click="backups.load"><RefreshCw :size="16" class="q-mr-xs" /> Обновить список</q-btn>
+      </div>
+      <q-markup-table flat bordered dense>
+        <thead><tr><th class="text-left">Имя</th><th class="text-left">Создан</th><th class="text-right">Размер</th><th class="text-right">Действие</th></tr></thead>
+        <tbody>
+          <tr v-for="snapshot in backups.snapshots" :key="snapshot.id">
+            <td>{{ snapshot.name }} <AppStatusBadge v-if="snapshot.type === 'emergency'" label="аварийный" tone="warning" class="q-ml-sm" /></td>
+            <td>{{ formatDate(snapshot.created_at) }}</td><td class="text-right">{{ formatSize(snapshot.size) }}</td>
+            <td class="text-right"><q-btn color="negative" flat dense :disable="backups.loading" @click="openRestore(snapshot)"><HardDriveRestore :size="16" class="q-mr-xs" /> Восстановить</q-btn></td>
+          </tr>
+          <tr v-if="!backups.loading && !backups.snapshots.length"><td colspan="4" class="text-center text-grey-7">Архивов пока нет.</td></tr>
+        </tbody>
+      </q-markup-table>
+    </AppCard>
+
     <AppConfirmDialog v-model="clearDialog" title="Очистить рабочие данные DEV?" message="Будут удалены студенты, преподаватели, расписание, журналы, оценки, посещаемость, приемные и кадровые данные. Системные настройки, справочники, роли и учетные записи сохранятся. В production операция запрещена." confirm-label="Очистить" tone="negative" @confirm="clearDemoData" />
+    <q-dialog v-model="restoreDialog" persistent>
+      <q-card style="width: 520px; max-width: 95vw">
+        <q-card-section><div class="text-h6">Восстановить базу данных?</div><p class="q-mb-none text-negative">Текущая база будет заменена архивом {{ selectedSnapshot?.name }}. Перед запуском будет создан аварийный полный архив.</p></q-card-section>
+        <q-card-section><q-input v-model="restoreConfirmation" outlined label="Введите RESTORE для подтверждения" autocomplete="off" /></q-card-section>
+        <q-card-actions align="right"><q-btn flat label="Отмена" :disable="backups.loading" @click="restoreDialog = false" /><q-btn color="negative" :loading="backups.loading" :disable="restoreConfirmation !== 'RESTORE'" @click="restoreBackup">Восстановить</q-btn></q-card-actions>
+      </q-card>
+    </q-dialog>
   </AppPage>
 </template>
