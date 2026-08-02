@@ -6140,11 +6140,13 @@ body {
 
 .personal-dashboard__grid {
   min-width: 0;
+  grid-auto-rows: 8px;
 }
 
 .personal-dashboard__grid--editing {
   display: grid;
   grid-auto-flow: dense;
+  grid-auto-rows: auto;
   align-items: start;
 }
 

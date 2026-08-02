@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Eye, EyeOff, GripVertical, RotateCcw, Save, SlidersHorizontal, X } from '@lucide/vue'
 import AppErrorBanner from '../ui/AppErrorBanner.vue'
 import { DASHBOARD_LAYOUT_PROFILE, dashboardLayoutService } from '../../services/dashboardLayoutService'
@@ -25,6 +25,9 @@ const savedCustomWidgets = ref(null)
 const activeWidgets = ref([])
 const draftWidgets = ref([])
 const draggedId = ref(null)
+const widgetSpans = ref({})
+const widgetElements = new Map()
+let resizeObserver = null
 const DASHBOARD_LOCAL_LAYOUT_KEY = 'collegePortal.dashboard.layout.v2'
 
 const sizeLabels = {
@@ -280,14 +283,50 @@ function setVisible(widgetId, visible) {
   draftWidgets.value = draftWidgets.value.map((widget) => widget.id === widgetId ? { ...widget, visible } : widget)
 }
 
+function updateWidgetSpan(widgetId, element) {
+  if (editing.value || !element) return
+  const rowHeight = 8
+  const gap = 12
+  const span = Math.max(1, Math.ceil((element.getBoundingClientRect().height + gap) / (rowHeight + gap)))
+  if (widgetSpans.value[widgetId] !== span) widgetSpans.value = { ...widgetSpans.value, [widgetId]: span }
+}
+
+function setWidgetElement(widgetId, element) {
+  const previous = widgetElements.get(widgetId)
+  if (previous && resizeObserver) resizeObserver.unobserve(previous)
+  if (!element) {
+    widgetElements.delete(widgetId)
+    return
+  }
+  widgetElements.set(widgetId, element)
+  resizeObserver?.observe(element)
+  updateWidgetSpan(widgetId, element)
+}
+
+async function refreshWidgetSpans() {
+  await nextTick()
+  widgetElements.forEach((element, widgetId) => updateWidgetSpan(widgetId, element))
+}
+
 watch(() => props.dashboardType, loadLayouts)
 watch(() => props.widgets, () => {
   if (!savedCustomWidgets.value) {
     activeWidgets.value = clone(defaultWidgets.value)
   }
 }, { deep: true })
+watch([visibleWidgets, editing], refreshWidgetSpans, { deep: true })
 
-onMounted(loadLayouts)
+onMounted(async () => {
+  if (typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver((entries) => entries.forEach((entry) => {
+      const widgetId = [...widgetElements.entries()].find(([, element]) => element === entry.target)?.[0]
+      if (widgetId) updateWidgetSpan(widgetId, entry.target)
+    }))
+  }
+  await loadLayouts()
+  await refreshWidgetSpans()
+})
+onBeforeUnmount(() => resizeObserver?.disconnect())
 </script>
 
 <template>
@@ -356,7 +395,9 @@ onMounted(loadLayouts)
       <section
         v-for="widget in visibleWidgets"
         :key="widget.id"
+        :ref="(element) => setWidgetElement(widget.id, element)"
         :class="['personal-dashboard__widget', `personal-dashboard__widget--${widget.size || 'medium'}`]"
+        :style="editing ? null : { gridRowEnd: `span ${widgetSpans[widget.id] || 1}` }"
         :draggable="editing"
         @dragstart="onDragStart(widget.id)"
         @dragover.prevent

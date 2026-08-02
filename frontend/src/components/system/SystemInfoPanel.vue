@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { Info } from '@lucide/vue'
-import { formatVersionDate, getRuntimeEnvironmentInfo, getVersionInfo } from '../../services/versionService'
+import { getRuntimeEnvironmentInfo, getVersionInfo, presentVersionInfo } from '../../services/versionService'
 
 const dialogOpen = ref(false)
 const loading = ref(false)
@@ -20,19 +20,19 @@ const versionInfo = ref({
 
 const environment = computed(() => getRuntimeEnvironmentInfo())
 const environmentLabel = computed(() => environment.value.label)
-const buildDateLabel = computed(() => formatVersionDate(versionInfo.value.buildDate))
+const presentedVersion = computed(() => presentVersionInfo(versionInfo.value))
 
 const rows = computed(() => [
-  { label: 'Название', value: versionInfo.value.name },
-  { label: 'Версия', value: versionInfo.value.version },
-  { label: 'Релиз', value: versionInfo.value.release },
-  { label: 'Build', value: versionInfo.value.build },
-  { label: 'Git commit', value: versionInfo.value.gitCommit || versionInfo.value.build },
-  { label: 'Дата сборки', value: buildDateLabel.value },
-  { label: 'Окружение', value: environmentLabel.value },
-  { label: 'Frontend stack', value: versionInfo.value.frontendStack || 'unknown' },
-  { label: 'Backend stack', value: versionInfo.value.backendStack || 'unknown' },
-  { label: 'API', value: versionInfo.value.apiVersion || 'unknown' },
+  { label: 'Название', value: presentedVersion.value.name },
+  { label: 'Версия', value: presentedVersion.value.version },
+  { label: 'Релиз', value: presentedVersion.value.release },
+  { label: 'Build', value: presentedVersion.value.build },
+  { label: 'Git commit', value: presentedVersion.value.gitCommit || presentedVersion.value.build },
+  { label: 'Дата сборки', value: presentedVersion.value.buildDateLabel },
+  { label: 'Окружение', value: presentedVersion.value.environmentLabel },
+  { label: 'Frontend stack', value: presentedVersion.value.frontendStack || 'unknown' },
+  { label: 'Backend stack', value: presentedVersion.value.backendStack || 'unknown' },
+  { label: 'API', value: presentedVersion.value.apiVersion || 'unknown' },
 ])
 
 async function loadVersion() {

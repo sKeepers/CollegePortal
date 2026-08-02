@@ -58,3 +58,14 @@ export function formatVersionDate(value) {
 
   return new Intl.DateTimeFormat('ru-RU').format(date)
 }
+
+export function presentVersionInfo(value) {
+  const version = { ...DEFAULT_VERSION_INFO, ...(value || {}) }
+  const environment = getRuntimeEnvironmentInfo()
+
+  return {
+    ...version,
+    buildDateLabel: formatVersionDate(version.buildDate),
+    environmentLabel: environment.label,
+  }
+}
