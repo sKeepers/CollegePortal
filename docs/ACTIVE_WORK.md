@@ -15,14 +15,16 @@
 ## Git-состояние
 
 - Active worktree branch: `sync/sync-001-local`
-- Last deployed DEV checkpoint: `10c8becd0`
+- Last deployed DEV checkpoint: `ba59aed4d`
 - DEV branch: `feature/uat-002-1-final-stabilization`
-- GitHub branch: `origin/feature/uat-002-1-final-stabilization` развёрнута на DEV до `10c8becd0`.
-- Локальная ветка `sync/sync-001-local` содержит self-scoped read-only просмотр нагрузки для teacher, тесты и документацию поверх `10c8becd0`.
+- GitHub branch: `origin/feature/uat-002-1-final-stabilization` развёрнута на DEV до `ba59aed4d`.
+- Локальная ветка `sync/sync-001-local` содержит self-scoped read-only просмотр нагрузки и исправление журнала legacy-занятия поверх `ba59aed4d`.
 - `SYNC-001` объединил GitHub `SEC-001` с DEV UAT-002.2 и был развёрнут на DEV.
 - На DEV применена миграция `2026_07_30_010000_add_lookup_and_expiration_to_api_tokens`.
 - Проверки после развёртывания: `php artisan test` — `343 passed (2179 assertions)`; `npm run build` завершилась успешно.
 - На DEV развёрнуты карточка оценок и адаптация профилей устройств после успешной production-сборки.
+- Legacy `ScheduleLesson` теперь открывает конкретный `JournalLesson` через `legacy_schedule_lesson_id`; создание идемпотентно, переносит тему занятия и формирует roster студентов.
+- Проверки исправления: `JournalEngineApiTest` — `10 passed (64 assertions)`; `npm run build` завершилась успешно.
 - Незакоммиченные изменения после создания checkpoint: отсутствуют. На DEV остаются только generated `frontend/public/version.json` после build и локальный `.worktrees/`.
 
 ## Доступ к DEV
@@ -56,8 +58,8 @@ GitHub Issues доступны на DEV только для чтения чер�
 
 ## Следующие действия
 
-1. Выполнить ручной teacher UAT: `/journal` и `/teaching-load` под ролью teacher с URL, ролью, учётной записью и ожидаемым результатом.
-2. Проверить legacy `ScheduleLesson` без `schedule_entry_id`: сейчас журнал открывается только с фильтрами даты и преподавателя, а не создаётся автоматически.
+1. Повторить ручной teacher UAT для legacy-занятия: выбрать его в `/schedule`, нажать `Открыть журнал` и подтвердить открытие карточки занятия с roster студентов.
+2. Выполнить остальные сценарии `/journal` и `/teaching-load` под teacher с URL, ролью, учётной записью и ожидаемым результатом.
 3. После подтверждённых результатов обновить Issues #29, #4 и #24 санитизированными UAT-доказательствами.
 4. Сценарий ручного teacher UAT зафиксирован в [UAT-002 Report](UAT_002_REPORT.md).
 
