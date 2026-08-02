@@ -15,10 +15,10 @@
 ## Git-состояние
 
 - Active worktree branch: `sync/sync-001-local`
-- Last deployed DEV checkpoint: `1d88712d4`
+- Last deployed DEV checkpoint: `9f2596dfd`
 - DEV branch: `feature/uat-002-1-final-stabilization`
-- GitHub branch: `origin/feature/uat-002-1-final-stabilization` развёрнута на DEV до `1d88712d4`.
-- Локальный HEAD: `f72ab81` на ветке `sync/sync-001-local`; последний известный DEV HEAD: `1d88712d4`.
+- GitHub branch: `origin/feature/uat-002-1-final-stabilization` развёрнута на DEV до `9f2596dfd`.
+- Локальный HEAD: `9f2596d` на ветке `sync/sync-001-local`; последний известный DEV HEAD: `9f2596dfd`.
 - `SYNC-001` объединил GitHub `SEC-001` с DEV UAT-002.2 и был развёрнут на DEV.
 - На DEV применена миграция `2026_07_30_010000_add_lookup_and_expiration_to_api_tokens`.
 - Проверки после развёртывания: `php artisan test` — `347 passed (2215 assertions)`; `npm run build` завершилась успешно; health endpoint вернул `200`.
@@ -37,9 +37,10 @@
 - Кадровый контур: подразделения и должности создаются без ручного кода, автоматически получают уникальный code и показывают ошибку сохранения. Сотрудник с `is_teacher` получает профиль `Teacher` для той же `Person`; дополнительные `EmployeeAssignment` поддерживают внутреннее и внешнее совместительство.
 - Пропуск автоматически отзывается при удалении или деактивации `Student`, `Teacher` либо `User`; событие фиксируется в audit.
 - Проверка `Заявления_принятые_20260802203415.xls`: 243 заявления, все СНИЛС проходят checksum. Импорт не выполнялся: текущий обработчик не использует `SnilsService` и не переносит паспорт в foundation documents; UI дополнительно блокирует apply при числе строк, отличном от 149.
-- Незакоммиченные изменения: MVP полного архивирования PostgreSQL. Добавлены защищенный API `/api/admin/database-backups`, `pg_dump`/`pg_restore` через безопасный массив аргументов, аварийный снимок перед restore, audit, UI в `DataManagementPage`, Pinia store и тесты. Изменены `backend/Dockerfile`, `backend/Dockerfile.release`, `backend/routes/api.php`, `frontend/src/pages/admin/DataManagementPage.vue`, `frontend/src/router/routes.js`; добавлены backend service/controller/request/config/tests и frontend store.
-- Проверки task: `git diff --check` пройдена. `php artisan test tests/Unit/PostgresBackupServiceTest.php tests/Feature/DatabaseBackupApiTest.php`, `vendor/bin/pint --test` и `npm run build` не запущены: в worktree отсутствуют `backend/vendor`, `frontend/node_modules`, а `php` отсутствует в `PATH`; `npm run build` остановилась до Vite из-за отсутствующего executable.
-- DEV и PROD не изменялись; коммит и развёртывание не выполнялись.
+- Полное архивирование PostgreSQL развёрнуто: защищенный API `/api/admin/database-backups`, `pg_dump`/`pg_restore` через безопасный массив аргументов, аварийный снимок перед restore, audit, UI в `DataManagementPage` и Pinia store. PostgreSQL client 17 добавлен в backend image.
+- Проверки: `PostgresBackupServiceTest` и `DatabaseBackupApiTest` — `4 passed (17 assertions)`; `npm run build` завершилась успешно; health endpoint вернул `200`.
+- Создан и проверен первый архив через сервис: `manual-20260802-192823-92922147-fd1d-49d4-9c7d-7449a91ddbbc.dump`, 397065 bytes. Восстановление действующей DEV-базы намеренно не запускалось.
+- DEV изменён; PROD не изменялся. В worktree нет незакоммиченных изменений.
 
 ## Доступ к DEV
 
@@ -51,7 +52,7 @@
 
 ## Текущая задача
 
-MVP admin-архивирования и восстановления PostgreSQL (ожидает установку зависимостей и проверку).
+MVP admin-архивирования и восстановления PostgreSQL завершён.
 
 GitHub Issues доступны на DEV только для чтения через `gh`. Текущий обзор: [GitHub Issue Review 2026-08-01](GITHUB_ISSUE_REVIEW_2026-08-01.md); не изменять Issues без явной задачи.
 
@@ -72,16 +73,15 @@ GitHub Issues доступны на DEV только для чтения чер�
 
 ## Следующие действия
 
-1. Установить PHP/Composer-зависимости и frontend dependencies в этом worktree, затем запустить `php artisan test tests/Unit/PostgresBackupServiceTest.php tests/Feature/DatabaseBackupApiTest.php`, `vendor/bin/pint --test` и `npm run build`.
-2. Проверить вручную под пользователем с `settings.manage`: создание снимка, список metadata, обязательное `RESTORE`, создание аварийного снимка и audit-записи.
-3. Перед развёртыванием проверить volume/retention для `storage/app/private/postgresql-backups`, чтобы архивы переживали пересоздание backend container.
+1. Проверить вручную под пользователем с `settings.manage`: создание снимка, список metadata, обязательное `RESTORE`, создание аварийного снимка и audit-записи.
+2. Определить retention policy для `storage/app/private/postgresql-backups` и перенести архивы на отдельное persistent storage перед PROD.
+3. Продолжить доработку ФИС-импорта по ранее зафиксированным блокерам.
 
 ## Блокеры
 
 - Автоматизированные проверки завершены. Браузерный UAT под teacher требует интерактивной сессии с учётной записью и не заменяется API-тестами.
 - Рабочие профили очищены намеренно; до ручного UAT необходимо создать новые связанные записи преподавателя и студента.
 - ФИС-выгрузка не должна применяться до устранения обхода checksum СНИЛС и отсутствия переноса паспортных реквизитов.
-- Автоматические тесты MVP архивирования заблокированы отсутствующими зависимостями в Windows worktree; DEV/PROD намеренно не трогались.
 - PROD не изменялся.
 
 ## Чек-лист передачи
