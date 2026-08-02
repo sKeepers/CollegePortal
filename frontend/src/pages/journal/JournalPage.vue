@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useQuasar } from 'quasar'
 import { useRoute } from 'vue-router'
 import { RefreshCw, Save, UserCheck, UserX, Wand2 } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
@@ -8,6 +9,7 @@ import AppToolbar from '../../components/ui/AppToolbar.vue'
 import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
+import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import JournalFilters from './JournalFilters.vue'
 import JournalLessonPanel from './JournalLessonPanel.vue'
@@ -17,10 +19,12 @@ import { usePermissions } from '../../composables/usePermissions'
 const store = useJournalStore()
 const route = useRoute()
 const { hasPermission } = usePermissions()
+const $q = useQuasar()
 const selectedStudent = ref(null)
 const selectedStudentIds = ref([])
 const attendanceDraft = reactive({})
 const gradeDraft = reactive({})
+const signDialogVisible = ref(false)
 
 const modeOptions = [
   { label: 'Мои занятия', value: 'mine' },
@@ -37,6 +41,7 @@ const isReadOnly = computed(() => store.selectedLesson?.status === 'signed' && !
 const canEdit = computed(() => hasPermission('journal.edit') && !isReadOnly.value)
 const canAttendance = computed(() => hasPermission('journal.attendance') && !isReadOnly.value)
 const canGrades = computed(() => hasPermission('journal.grades') && !isReadOnly.value)
+const canRequestEdit = computed(() => hasPermission('journal.edit') && store.selectedLesson?.status === 'signed')
 
 const tableSubtitle = computed(() => {
   const stats = store.dashboardStats
@@ -124,6 +129,26 @@ async function markAllPresent() {
 async function markSelectedAbsent() {
   selectedStudentIds.value.forEach((id) => { attendanceDraft[id] = { ...attendanceDraft[id], student_id: id, status: 'absent', minutes_late: '', comment: attendanceDraft[id]?.comment || '' } })
   await saveAttendance()
+}
+
+async function completeLesson() {
+  await store.completeLesson()
+  $q.notify({ type: 'positive', message: 'Занятие завершено.', position: 'top-right' })
+}
+
+async function signLesson() {
+  await store.signLesson()
+  $q.notify({ type: 'positive', message: 'Журнал подписан. Для изменений создайте запрос редактирования.', position: 'top-right' })
+}
+
+async function requestEdit(reason) {
+  await store.requestEdit(reason)
+  $q.notify({ type: 'positive', message: 'Запрос редактирования отправлен администратору.', position: 'top-right' })
+}
+
+async function reviewEditRequest(id, approved) {
+  await store.reviewEditRequest(id, approved)
+  $q.notify({ type: 'positive', message: approved ? 'Редактирование разрешено.' : 'Запрос отклонен.', position: 'top-right' })
 }
 
 async function loadSuggestion() { await store.loadAttendanceSuggestion() }
@@ -280,16 +305,21 @@ onMounted(async () => {
           :can-edit="canEdit"
           :can-files="hasPermission('journal.files') && !isReadOnly"
           :can-reopen="hasPermission('journal.reopen') && store.selectedLesson?.status === 'signed'"
+          :can-request-edit="canRequestEdit"
+          :can-review-edit-requests="hasPermission('journal.reopen')"
           @save="store.saveLesson"
-          @complete="store.completeLesson"
-          @sign="store.signLesson"
+          @complete="completeLesson"
+          @sign="signDialogVisible = true"
           @reopen="store.reopenLesson"
+          @request-edit="requestEdit"
+          @review-edit-request="reviewEditRequest"
           @mark-all-present="markAllPresent"
           @upload-file="store.uploadLessonFile"
           @delete-file="store.deleteLessonFile"
         />
       </aside>
     </div>
+    <AppConfirmDialog v-model="signDialogVisible" title="Подписать журнал?" message="После подписи редактирование будет заблокировано. Для исправления потребуется запрос редактирования и одобрение администратора." confirm-label="Подписать" tone="positive" @confirm="signLesson" />
   </AppPage>
 </template>
 

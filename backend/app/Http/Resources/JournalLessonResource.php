@@ -33,6 +33,18 @@ class JournalLessonResource extends JsonResource
             'reopened_at' => $this->reopened_at?->toISOString(),
             'reopened_by' => $this->reopened_by,
             'reopen_reason' => $this->reopen_reason,
+            'edit_requests' => $this->whenLoaded('editRequests', fn () => $this->editRequests
+                ->filter(fn ($request) => $request->requested_by === auth()->id() || request()->user()?->hasPermission('journal.reopen'))
+                ->values()
+                ->map(fn ($request) => [
+                    'id' => $request->id,
+                    'reason' => $request->reason,
+                    'status' => $request->status,
+                    'requested_by' => $request->requested_by,
+                    'requested_by_name' => $request->requestedBy?->name,
+                    'review_comment' => $request->review_comment,
+                    'reviewed_at' => $request->reviewed_at?->toISOString(),
+                ])),
             'group' => new GroupResource($this->whenLoaded('group')),
             'subject' => new SubjectResource($this->whenLoaded('subject')),
             'teacher' => new TeacherResource($this->whenLoaded('teacher')),

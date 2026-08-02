@@ -450,6 +450,8 @@ Route::middleware(['api.token', 'throttle:api.authenticated'])->group(function (
         Route::post('journal/lessons/{lesson}/complete', [JournalLessonController::class, 'complete'])->middleware('permission:journal.complete');
         Route::post('journal/lessons/{lesson}/sign', [JournalLessonController::class, 'sign'])->middleware('permission:journal.sign');
         Route::post('journal/lessons/{lesson}/reopen', [JournalLessonController::class, 'reopen'])->middleware('permission:journal.reopen');
+        Route::post('journal/lessons/{lesson}/edit-requests', [JournalLessonController::class, 'requestEdit'])->middleware('permission:journal.edit');
+        Route::post('journal/edit-requests/{journalEditRequest}/review', [JournalLessonController::class, 'reviewEditRequest'])->middleware('permission:journal.reopen');
         Route::put('journal/lessons/{lesson}/attendance', [JournalLessonController::class, 'attendance'])->middleware('permission:journal.attendance');
         Route::put('journal/lessons/{lesson}/grades', [JournalLessonController::class, 'grades'])->middleware('permission:journal.grades');
         Route::get('journal/lessons/{lesson}/attendance-suggestion', [JournalLessonController::class, 'attendanceSuggestion']);

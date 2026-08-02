@@ -8,6 +8,7 @@ use App\Models\JournalAttendance;
 use App\Models\JournalGrade;
 use App\Models\JournalLesson;
 use App\Models\JournalLessonFile;
+use App\Models\JournalEditRequest;
 use App\Models\ScheduleEntry;
 use App\Models\ScheduleLesson;
 use App\Models\Student;
@@ -91,7 +92,7 @@ class JournalService
     {
         return $lesson->load([
             'group', 'subject', 'teacher', 'lessonType', 'signedBy', 'reopenedBy', 'scheduleEntry.group', 'scheduleEntry.subject', 'scheduleEntry.teacher', 'scheduleEntry.classroom', 'scheduleEntry.lessonType',
-            'attendance.student.group', 'grades.student.group', 'grades.gradeType', 'files',
+            'attendance.student.group', 'grades.student.group', 'grades.gradeType', 'files', 'editRequests.requestedBy', 'editRequests.reviewedBy',
         ]);
     }
 
@@ -233,6 +234,51 @@ class JournalService
         AuditLogService::log('journal', 'reopen', $lesson, $old, $lesson->getAttributes(), request(), $user);
 
         return $this->loadLesson($lesson->refresh());
+    }
+
+    public function requestEdit(JournalLesson $lesson, User $user, string $reason): JournalLesson
+    {
+        if (! $lesson->isSigned()) {
+            throw ValidationException::withMessages(['journal_lesson_id' => ['Запрос редактирования доступен только для подписанного журнала.']]);
+        }
+
+        JournalEditRequest::query()->firstOrCreate(
+            ['journal_lesson_id' => $lesson->id, 'requested_by' => $user->id, 'status' => JournalEditRequest::STATUS_PENDING],
+            ['reason' => $reason],
+        );
+        AuditLogService::log('journal', 'edit_requested', $lesson, null, ['reason' => $reason], request(), $user);
+
+        return $this->loadLesson($lesson->refresh());
+    }
+
+    public function reviewEditRequest(JournalEditRequest $editRequest, User $user, bool $approved, ?string $comment): JournalLesson
+    {
+        if ($editRequest->status !== JournalEditRequest::STATUS_PENDING) {
+            throw ValidationException::withMessages(['edit_request' => ['Запрос уже рассмотрен.']]);
+        }
+
+        return DB::transaction(function () use ($editRequest, $user, $approved, $comment): JournalLesson {
+            $lesson = $editRequest->journalLesson()->lockForUpdate()->firstOrFail();
+            $editRequest->update([
+                'status' => $approved ? JournalEditRequest::STATUS_APPROVED : JournalEditRequest::STATUS_REJECTED,
+                'reviewed_by' => $user->id,
+                'reviewed_at' => now(),
+                'review_comment' => $comment,
+            ]);
+
+            if ($approved) {
+                $lesson->update([
+                    'status' => JournalLesson::STATUS_REOPENED,
+                    'reopened_at' => now(),
+                    'reopened_by' => $user->id,
+                    'reopen_reason' => $editRequest->reason,
+                ]);
+            }
+
+            AuditLogService::log('journal', $approved ? 'edit_request_approved' : 'edit_request_rejected', $lesson, null, ['edit_request_id' => $editRequest->id, 'comment' => $comment], request(), $user);
+
+            return $this->loadLesson($lesson->refresh());
+        });
     }
 
     public function attendanceSuggestion(JournalLesson $lesson): array

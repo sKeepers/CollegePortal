@@ -61,6 +61,12 @@ function fullName(person) {
   return [person?.last_name, person?.first_name, person?.middle_name].filter(Boolean).join(' ')
 }
 
+function compareStudents(left, right) {
+  return [left?.last_name, left?.first_name, left?.middle_name]
+    .join('\u0000')
+    .localeCompare([right?.last_name, right?.first_name, right?.middle_name].join('\u0000'), 'ru', { sensitivity: 'base' })
+}
+
 function classroomLabel(classroom) {
   return [classroom?.number, classroom?.building ? `корп. ${classroom.building}` : ''].filter(Boolean).join(' · ')
 }
@@ -106,7 +112,7 @@ export const useJournalStore = defineStore('journal', () => {
 
   const lessonStudents = computed(() => selectedAttendance.value
     .slice()
-    .sort((left, right) => fullName(left.student).localeCompare(fullName(right.student), 'ru'))
+    .sort((left, right) => compareStudents(left.student, right.student))
     .map((entry, index) => {
       const grade = selectedGrades.value.find((item) => Number(item.student_id) === Number(entry.student_id))
       return {
@@ -324,6 +330,17 @@ export const useJournalStore = defineStore('journal', () => {
     await loadJournalData()
   }
 
+  async function requestEdit(reason) {
+    if (!selectedLesson.value?.id) return
+    const payload = await api.post(`journal/lessons/${selectedLesson.value.id}/edit-requests`, { reason })
+    replaceLesson(payload.data)
+  }
+
+  async function reviewEditRequest(id, approved) {
+    const payload = await api.post(`journal/edit-requests/${id}/review`, { approved })
+    replaceLesson(payload.data)
+  }
+
   async function openFromLegacySchedule(scheduleLessonId) {
     if (!scheduleLessonId) return
     const payload = await api.post(`journal/from-legacy-schedule/${scheduleLessonId}/open`)
@@ -343,7 +360,7 @@ export const useJournalStore = defineStore('journal', () => {
     attendance, grades, files, attendanceSuggestion, selectedLessonId, selectedLesson, selectedAttendance,
     selectedGrades, selectedFiles, lessonStudents, dashboardStats, groupOptions, teacherOptions, subjectOptions,
     academicYearOptions, loading, detailsLoading, saving, error, load, loadJournalData, setFilters, resetFilters,
-    selectLesson, saveLesson, completeLesson, signLesson, reopenLesson, saveAttendanceRows, saveGradeRows,
+    selectLesson, saveLesson, completeLesson, signLesson, reopenLesson, requestEdit, reviewEditRequest, saveAttendanceRows, saveGradeRows,
     markAllPresent, markSelectedAbsent, loadAttendanceSuggestion, applyAttendanceSuggestion, uploadLessonFile,
     deleteLessonFile, openFromSchedule, openFromLegacySchedule, lessonLabel, fullName, classroomLabel, attendanceMark,
   }

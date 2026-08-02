@@ -15,11 +15,14 @@ const props = defineProps({
   canEdit: { type: Boolean, default: true },
   canFiles: { type: Boolean, default: true },
   canReopen: { type: Boolean, default: false },
+  canRequestEdit: { type: Boolean, default: false },
+  canReviewEditRequests: { type: Boolean, default: false },
 })
-const emit = defineEmits(['save', 'complete', 'sign', 'reopen', 'mark-all-present', 'upload-file', 'delete-file'])
+const emit = defineEmits(['save', 'complete', 'sign', 'reopen', 'request-edit', 'review-edit-request', 'mark-all-present', 'upload-file', 'delete-file'])
 const auth = useAuthStore()
 const form = reactive({ topic: '', homework: '', homework_due_at: '', teacher_comment: '' })
 const reopenReason = ref('')
+const editRequestReason = ref('')
 const fileInput = ref(null)
 
 watch(() => props.lesson, (lesson) => {
@@ -28,6 +31,7 @@ watch(() => props.lesson, (lesson) => {
   form.homework_due_at = lesson?.homework_due_at ? String(lesson.homework_due_at).slice(0, 16) : ''
   form.teacher_comment = lesson?.teacher_comment || ''
   reopenReason.value = ''
+  editRequestReason.value = ''
 }, { immediate: true })
 
 const lessonTypeText = computed(() => props.lesson?.lesson_type?.name || lessonTypeLabels[props.lesson?.lesson_type] || props.lesson?.lesson_type || 'Тип не указан')
@@ -67,6 +71,9 @@ function upload(event) {
 function fileUrl(file) { return `${api.baseUrl}/journal/lessons/${props.lesson.id}/files/${file.id}/download` }
 function reopen() {
   if (reopenReason.value.trim()) emit('reopen', reopenReason.value.trim())
+}
+function requestEdit() {
+  if (editRequestReason.value.trim()) emit('request-edit', editRequestReason.value.trim())
 }
 </script>
 
@@ -128,6 +135,22 @@ function reopen() {
         <q-input v-model="reopenReason" dense outlined autogrow label="Причина исправления подписанного журнала" />
         <q-btn color="warning" label="Переоткрыть" :disable="!reopenReason.trim()" @click="reopen" />
       </section>
+
+      <section v-if="canRequestEdit" class="journal-lesson__section journal-request-edit">
+        <h3>Запрос редактирования</h3>
+        <p>После одобрения администратором журнал будет переоткрыт для редактирования.</p>
+        <q-input v-model="editRequestReason" dense outlined autogrow label="Причина исправления" />
+        <q-btn color="warning" label="Запросить редактирование" :disable="!editRequestReason.trim()" @click="requestEdit" />
+      </section>
+
+      <section v-if="canReviewEditRequests && lesson.edit_requests?.some((item) => item.status === 'pending')" class="journal-lesson__section journal-reopen">
+        <h3>Запросы редактирования</h3>
+        <div v-for="request in lesson.edit_requests.filter((item) => item.status === 'pending')" :key="request.id" class="journal-edit-request">
+          <strong>{{ request.requested_by_name || 'Преподаватель' }}</strong>
+          <span>{{ request.reason }}</span>
+          <div><q-btn dense color="positive" label="Одобрить" @click="emit('review-edit-request', request.id, true)" /><q-btn dense flat color="negative" label="Отклонить" @click="emit('review-edit-request', request.id, false)" /></div>
+        </div>
+      </section>
     </div>
   </WorkspacePanel>
 </template>
@@ -148,4 +171,8 @@ function reopen() {
 .journal-file-input { display: none; }
 .journal-muted { color: #64748b; font-size: 13px; }
 .journal-reopen { border: 1px dashed #f59e0b; border-radius: 8px; padding: 10px; background: #fffbeb; }
+.journal-request-edit { border: 1px dashed #f59e0b; border-radius: 8px; padding: 10px; background: #fffbeb; }
+.journal-request-edit p { margin: 0; color: #64748b; font-size: 13px; }
+.journal-edit-request { display: grid; gap: 6px; border-top: 1px solid #fde68a; padding-top: 8px; }
+.journal-edit-request div { display: flex; gap: 8px; }
 </style>

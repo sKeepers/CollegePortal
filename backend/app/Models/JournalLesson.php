@@ -48,6 +48,7 @@ class JournalLesson extends Model
     public function attendance(): HasMany { return $this->hasMany(JournalAttendance::class); }
     public function grades(): HasMany { return $this->hasMany(JournalGrade::class); }
     public function files(): HasMany { return $this->hasMany(JournalLessonFile::class); }
+    public function editRequests(): HasMany { return $this->hasMany(JournalEditRequest::class); }
 
     public function isSigned(): bool
     {

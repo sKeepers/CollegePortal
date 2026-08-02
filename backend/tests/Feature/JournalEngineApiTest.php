@@ -6,6 +6,7 @@ use App\Models\AccessEvent;
 use App\Models\Classroom;
 use App\Models\Group;
 use App\Models\JournalLesson;
+use App\Models\JournalEditRequest;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\ScheduleEntry;
@@ -177,6 +178,30 @@ class JournalEngineApiTest extends TestCase
             ->assertJsonPath('data.status', 'reopened');
         $this->withApiAuth($admin)->putJson("/api/journal/lessons/{$lessonId}", ['topic' => 'Исправлено учебной частью'])->assertOk();
         $this->assertDatabaseHas('audit_logs', ['module' => 'journal', 'action' => 'reopen']);
+    }
+
+    public function test_teacher_can_request_and_admin_can_approve_edit_for_signed_lesson(): void
+    {
+        [$entry, , , $teacher] = $this->journalFixture();
+        $teacherUser = User::factory()->create(['is_active' => true]);
+        $teacher->update(['user_id' => $teacherUser->id]);
+        $teacherUser->update(['role_id' => $this->roleWithPermissions('teacher', ['journal.view', 'journal.edit'])->id]);
+        $admin = $this->createApiUser(roleCode: 'admin');
+        $lessonId = $this->withApiAuth($admin)->postJson("/api/journal/from-schedule/{$entry->id}/open")->json('data.id');
+        $this->withApiAuth($admin)->putJson("/api/journal/lessons/{$lessonId}", ['topic' => 'Подписанная тема'])->assertOk();
+        $this->withApiAuth($admin)->postJson("/api/journal/lessons/{$lessonId}/sign")->assertOk();
+
+        $this->withApiAuth($teacherUser)->postJson("/api/journal/lessons/{$lessonId}/edit-requests", ['reason' => 'Исправить тему занятия'])
+            ->assertOk()
+            ->assertJsonPath('data.edit_requests.0.status', JournalEditRequest::STATUS_PENDING);
+        $requestId = JournalEditRequest::query()->value('id');
+
+        $this->withApiAuth($admin)->postJson("/api/journal/edit-requests/{$requestId}/review", ['approved' => true])
+            ->assertOk()
+            ->assertJsonPath('data.status', JournalLesson::STATUS_REOPENED);
+
+        $this->assertDatabaseHas('journal_edit_requests', ['id' => $requestId, 'status' => JournalEditRequest::STATUS_APPROVED]);
+        $this->assertDatabaseHas('audit_logs', ['module' => 'journal', 'action' => 'edit_request_approved']);
     }
 
     public function test_private_files_and_csv_export(): void

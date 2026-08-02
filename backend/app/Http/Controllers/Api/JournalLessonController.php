@@ -7,6 +7,7 @@ use App\Http\Resources\JournalLessonFileResource;
 use App\Http\Resources\JournalLessonResource;
 use App\Models\JournalLesson;
 use App\Models\JournalLessonFile;
+use App\Models\JournalEditRequest;
 use App\Models\ScheduleEntry;
 use App\Models\ScheduleLesson;
 use App\Models\Student;
@@ -106,6 +107,25 @@ class JournalLessonController extends Controller
         ]);
 
         return new JournalLessonResource($this->journalService->reopen($lesson, $request->user(), $data['reason']));
+    }
+
+    public function requestEdit(Request $request, JournalLesson $lesson): JournalLessonResource
+    {
+        $this->authorizeLesson($request->user(), $lesson, false);
+        $data = $request->validate(['reason' => ['required', 'string', 'max:1000']]);
+
+        return new JournalLessonResource($this->journalService->requestEdit($lesson, $request->user(), $data['reason']));
+    }
+
+    public function reviewEditRequest(Request $request, JournalEditRequest $journalEditRequest): JournalLessonResource
+    {
+        abort_unless($request->user()->hasPermission('journal.reopen'), 403);
+        $data = $request->validate([
+            'approved' => ['required', 'boolean'],
+            'comment' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        return new JournalLessonResource($this->journalService->reviewEditRequest($journalEditRequest, $request->user(), $data['approved'], $data['comment'] ?? null));
     }
 
     public function attendance(Request $request, JournalLesson $lesson): JournalLessonResource
