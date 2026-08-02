@@ -23,7 +23,7 @@ const lessonMetrics = computed(() => [
   { label: 'Время', value: `${props.lesson?.starts_at || '—'}–${props.lesson?.ends_at || '—'}` },
 ])
 const lessonActions = computed(() => [
-  { label: 'Открыть журнал', to: props.lesson?.schedule_entry_id ? { path: '/journal', query: { lesson: props.lesson.schedule_entry_id } } : { path: '/journal', query: { mode: 'week', teacher: props.lesson?.teacher_id, date: props.lesson?.lesson_date } }, disabled: props.lesson?.status === 'cancelled' },
+  { label: 'Открыть журнал', to: props.lesson?.schedule_entry_id ? { path: '/journal', query: { lesson: props.lesson.schedule_entry_id } } : { path: '/journal', query: { legacyLesson: props.lesson?.id } }, disabled: props.lesson?.status === 'cancelled' },
   ...(auth.can('groups.view') ? [{ label: 'Группа', to: { path: '/groups', query: { selected: props.lesson?.group_id } }, disabled: !props.lesson?.group_id }] : []),
   ...(auth.can('teachers.view') ? [{ label: 'Преподаватель', to: { path: '/teachers', query: { selected: props.lesson?.teacher_id } }, disabled: !props.lesson?.teacher_id }] : []),
   ...(auth.can('classrooms.view') ? [{ label: 'Аудитория', to: { path: '/classrooms', query: { selected: props.lesson?.classroom_id } }, disabled: !props.lesson?.classroom_id }] : []),

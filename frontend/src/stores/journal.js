@@ -322,6 +322,16 @@ export const useJournalStore = defineStore('journal', () => {
     await loadJournalData()
   }
 
+  async function openFromLegacySchedule(scheduleLessonId) {
+    if (!scheduleLessonId) return
+    const payload = await api.post(`journal/from-legacy-schedule/${scheduleLessonId}/open`)
+    const opened = payload.data
+    const exists = lessons.value.some((lesson) => Number(lesson.id) === Number(opened.id))
+    lessons.value = exists ? lessons.value.map((lesson) => Number(lesson.id) === Number(opened.id) ? opened : lesson) : [opened, ...lessons.value]
+    selectedLessonId.value = opened.id
+    await loadJournalData()
+  }
+
   function lessonLabel(lesson) {
     return [lesson?.lesson_date, lesson?.starts_at, lesson?.subject?.name].filter(Boolean).join(' · ')
   }
@@ -333,6 +343,6 @@ export const useJournalStore = defineStore('journal', () => {
     academicYearOptions, loading, detailsLoading, saving, error, load, loadJournalData, setFilters, resetFilters,
     selectLesson, saveLesson, completeLesson, signLesson, reopenLesson, saveAttendanceRows, saveGradeRows,
     markAllPresent, markSelectedAbsent, loadAttendanceSuggestion, applyAttendanceSuggestion, uploadLessonFile,
-    deleteLessonFile, openFromSchedule, lessonLabel, fullName, classroomLabel, attendanceMark,
+    deleteLessonFile, openFromSchedule, openFromLegacySchedule, lessonLabel, fullName, classroomLabel, attendanceMark,
   }
 })

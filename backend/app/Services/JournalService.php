@@ -9,6 +9,7 @@ use App\Models\JournalGrade;
 use App\Models\JournalLesson;
 use App\Models\JournalLessonFile;
 use App\Models\ScheduleEntry;
+use App\Models\ScheduleLesson;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -50,6 +51,34 @@ class JournalService
 
             if ($lesson->wasRecentlyCreated) {
                 AuditLogService::log('journal', 'open_from_schedule', $lesson, null, $lesson->toArray(), request(), $user);
+            }
+
+            $this->ensureAttendanceRoster($lesson, $user);
+
+            return $this->loadLesson($lesson->refresh());
+        });
+    }
+
+    public function openFromLegacySchedule(ScheduleLesson $scheduleLesson, User $user): JournalLesson
+    {
+        return DB::transaction(function () use ($scheduleLesson, $user): JournalLesson {
+            $lesson = JournalLesson::query()->firstOrCreate(
+                ['legacy_schedule_lesson_id' => $scheduleLesson->id],
+                [
+                    'group_id' => $scheduleLesson->group_id,
+                    'subject_id' => $scheduleLesson->subject_id,
+                    'teacher_id' => $scheduleLesson->teacher_id,
+                    'lesson_date' => $scheduleLesson->lesson_date,
+                    'starts_at' => $this->timeValue($scheduleLesson->starts_at),
+                    'ends_at' => $this->timeValue($scheduleLesson->ends_at),
+                    'topic' => $scheduleLesson->topic,
+                    'status' => JournalLesson::STATUS_IN_PROGRESS,
+                    'opened_at' => now(),
+                ],
+            );
+
+            if ($lesson->wasRecentlyCreated) {
+                AuditLogService::log('journal', 'open_from_legacy_schedule', $lesson, null, $lesson->toArray(), request(), $user);
             }
 
             $this->ensureAttendanceRoster($lesson, $user);

@@ -8,6 +8,7 @@ use App\Http\Resources\JournalLessonResource;
 use App\Models\JournalLesson;
 use App\Models\JournalLessonFile;
 use App\Models\ScheduleEntry;
+use App\Models\ScheduleLesson;
 use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
@@ -54,6 +55,14 @@ class JournalLessonController extends Controller
     {
         $this->authorizeScheduleEntry($request->user(), $scheduleEntry, true);
         $lesson = $this->journalService->openFromSchedule($scheduleEntry, $request->user());
+
+        return new JournalLessonResource($lesson);
+    }
+
+    public function openFromLegacySchedule(Request $request, ScheduleLesson $scheduleLesson): JournalLessonResource
+    {
+        $this->authorizeLegacyScheduleLesson($request->user(), $scheduleLesson, true);
+        $lesson = $this->journalService->openFromLegacySchedule($scheduleLesson, $request->user());
 
         return new JournalLessonResource($lesson);
     }
@@ -320,6 +329,21 @@ class JournalLessonController extends Controller
         }
         $teacherId = Teacher::query()->where('user_id', $user->id)->value('id');
         if ($teacherId && (int) $entry->teacher_id === (int) $teacherId) {
+            return;
+        }
+        abort(403);
+    }
+
+    private function authorizeLegacyScheduleLesson(User $user, ScheduleLesson $lesson, bool $write): void
+    {
+        if ($write && ! $user->hasPermission('journal.edit')) {
+            abort(403);
+        }
+        if ($user->hasRole('admin') || $user->hasPermission('journal.view_all')) {
+            return;
+        }
+        $teacherId = Teacher::query()->where('user_id', $user->id)->value('id');
+        if ($teacherId && (int) $lesson->teacher_id === (int) $teacherId) {
             return;
         }
         abort(403);

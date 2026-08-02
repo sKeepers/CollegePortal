@@ -128,6 +128,7 @@ onMounted(async () => {
   if (Object.keys(queryFilters).length) store.setFilters(queryFilters)
   await store.load()
   if (route.query.lesson) await store.openFromSchedule(route.query.lesson)
+  if (route.query.legacyLesson) await store.openFromLegacySchedule(route.query.legacyLesson)
   resetDrafts()
 })
 </script>

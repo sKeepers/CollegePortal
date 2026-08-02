@@ -9,6 +9,7 @@ use App\Models\JournalLesson;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\ScheduleEntry;
+use App\Models\ScheduleLesson;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Teacher;
@@ -53,6 +54,35 @@ class JournalEngineApiTest extends TestCase
         $this->assertDatabaseCount('journal_lessons', 1);
         $this->assertDatabaseCount('journal_attendance', 2);
         $this->assertDatabaseHas('audit_logs', ['module' => 'journal', 'action' => 'open_from_schedule']);
+    }
+
+    public function test_open_from_legacy_schedule_is_idempotent_and_creates_student_roster(): void
+    {
+        [, $group, $subject, $teacher, $classroom] = $this->journalFixture();
+        $scheduleLesson = ScheduleLesson::create([
+            'group_id' => $group->id,
+            'subject_id' => $subject->id,
+            'teacher_id' => $teacher->id,
+            'classroom_id' => $classroom->id,
+            'lesson_date' => '2026-07-12',
+            'starts_at' => '09:00:00',
+            'ends_at' => '10:30:00',
+            'topic' => 'Гаммы и интервалы',
+        ]);
+        $admin = $this->createApiUser(roleCode: 'admin');
+
+        $first = $this->withApiAuth($admin)->postJson("/api/journal/from-legacy-schedule/{$scheduleLesson->id}/open")
+            ->assertCreated()
+            ->assertJsonPath('data.legacy_schedule_lesson_id', $scheduleLesson->id)
+            ->assertJsonPath('data.topic', 'Гаммы и интервалы')
+            ->assertJsonCount(2, 'data.attendance');
+
+        $this->withApiAuth($admin)->postJson("/api/journal/from-legacy-schedule/{$scheduleLesson->id}/open")
+            ->assertOk()
+            ->assertJsonPath('data.id', $first->json('data.id'));
+
+        $this->assertDatabaseCount('journal_lessons', 1);
+        $this->assertDatabaseHas('audit_logs', ['module' => 'journal', 'action' => 'open_from_legacy_schedule']);
     }
 
     public function test_it_saves_topic_homework_attendance_and_grades(): void
