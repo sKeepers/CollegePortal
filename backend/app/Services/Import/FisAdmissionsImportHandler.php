@@ -7,6 +7,7 @@ use App\Models\EducationProgram;
 use App\Models\ImportJob;
 use App\Models\Person;
 use App\Services\ApplicantApplicationDocumentService;
+use App\Services\Admissions\SnilsService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -50,7 +51,7 @@ class FisAdmissionsImportHandler
         'recommended' => 'Рекомендован к зачислению',
     ];
 
-    public function __construct(private readonly ApplicantApplicationDocumentService $documentService)
+    public function __construct(private readonly ApplicantApplicationDocumentService $documentService, private readonly SnilsService $snils)
     {
     }
 
@@ -210,6 +211,9 @@ class FisAdmissionsImportHandler
             $summary['competition_distribution'][$row['competition_name'] ?: 'Без конкурса'] = ($summary['competition_distribution'][$row['competition_name'] ?: 'Без конкурса'] ?? 0) + 1;
 
             $program = $this->resolveProgram($row['competition_name'], $programs);
+            if ($row['snils_error'] !== null) {
+                $summary['errors'][] = $this->rowIssue($rowNumber, 'СНИЛС', $row['snils_error'], $row['snils_raw']);
+            }
             if ($program) {
                 $summary['exact_matched_competitions_map'][$row['competition_name']] = $program->name;
             } else {
@@ -339,7 +343,7 @@ class FisAdmissionsImportHandler
             'birth_date' => $this->date($this->raw($row, 'birth_date')),
             'place_birth' => $this->value($row, 'place_birth'),
             'address' => trim(implode(', ', array_filter([$this->value($row, 'region'), $this->value($row, 'settlement_type'), $this->value($row, 'address')]))),
-            'snils' => $this->digits($this->value($row, 'snils')),
+            ...$this->normalizedSnils($this->value($row, 'snils')),
             'email' => mb_strtolower($this->value($row, 'email')),
             'certificate_average_score' => $this->decimal($this->value($row, 'average_score')),
             'achievement_score' => $this->decimal($this->value($row, 'achievement_score')),
@@ -353,7 +357,10 @@ class FisAdmissionsImportHandler
     private function findPersonCandidates(array $row)
     {
         if ($row['snils']) {
-            $bySnils = Person::query()->where('snils', $row['snils'])->get();
+            $bySnils = Person::query()->where('snils_hash', $this->snils->hash($row['snils']))->get();
+            if ($bySnils->isEmpty()) {
+                $bySnils = Person::query()->where('snils', $row['snils'])->get();
+            }
             if ($bySnils->isNotEmpty()) {
                 return $bySnils;
             }
@@ -417,6 +424,7 @@ class FisAdmissionsImportHandler
             'citizenship' => $row['citizenship'],
             'email' => $row['email'] ?: null,
             'snils' => $row['snils'] ?: null,
+            'snils_hash' => $this->snils->hash($row['snils']),
             'place_birth' => $row['place_birth'] ?: null,
             'address' => $row['address'] ?: null,
             'status' => 'active',
@@ -633,6 +641,20 @@ class FisAdmissionsImportHandler
     private function digits(string $value): string
     {
         return preg_replace('/\D+/', '', $value) ?? '';
+    }
+
+    private function normalizedSnils(string $value): array
+    {
+        try {
+            $snils = $this->snils->normalize($value);
+            if ($snils === null) {
+                return ['snils' => '', 'snils_raw' => $value, 'snils_error' => 'Укажите СНИЛС.'];
+            }
+
+            return ['snils' => $snils, 'snils_raw' => $value, 'snils_error' => null];
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            return ['snils' => '', 'snils_raw' => $value, 'snils_error' => $exception->errors()['snils'][0] ?? 'СНИЛС указан некорректно.'];
+        }
     }
 
     private function normalizeHeader(mixed $value): string

@@ -7,17 +7,20 @@ use App\Http\Requests\StoreStudentRequest;
 use App\Http\Requests\UpdateStudentRequest;
 use App\Http\Resources\StudentResource;
 use App\Models\Student;
+use App\Models\Person;
+use App\Services\Admissions\SnilsService;
 use App\Services\StudentCsvService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StudentController extends Controller
 {
-    public function __construct(private readonly StudentCsvService $studentCsvService)
+    public function __construct(private readonly StudentCsvService $studentCsvService, private readonly SnilsService $snils)
     {
     }
 
@@ -46,7 +49,29 @@ class StudentController extends Controller
 
     public function store(StoreStudentRequest $request): JsonResponse
     {
-        $student = Student::create($request->validated());
+        $student = DB::transaction(function () use ($request): Student {
+            $data = $request->validated();
+            $normalizedSnils = $this->snils->normalize($data['snils']);
+            $hash = $this->snils->hash($normalizedSnils);
+            unset($data['snils']);
+
+            $person = Person::query()->firstOrCreate(
+                ['snils_hash' => $hash],
+                [
+                    'last_name' => $data['last_name'],
+                    'first_name' => $data['first_name'],
+                    'middle_name' => $data['middle_name'] ?? null,
+                    'birth_date' => $data['birth_date'] ?? null,
+                    'phone' => $data['phone'] ?? null,
+                    'email' => $data['email'] ?? null,
+                    'snils' => $normalizedSnils,
+                    'snils_hash' => $hash,
+                    'status' => 'active',
+                ],
+            );
+
+            return Student::create([...$data, 'person_id' => $person->id]);
+        });
 
         return (new StudentResource($student->load('group')))
             ->response()

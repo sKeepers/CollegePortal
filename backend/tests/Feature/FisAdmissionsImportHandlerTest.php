@@ -25,7 +25,7 @@ class FisAdmissionsImportHandlerTest extends TestCase
         $this->withApiAuth();
         $this->createPrograms();
         $path = $this->fixture('xls', [
-            ['1005', 'Принято', '01.07.2026', '01.07.2026', 'Зайцева Зоя Ивановна', '53.02.04 Вокальное искусство', '', '', '', '', 'Россия', 'Женский', '05.05.2008', '', '', '', '', '444-444-444 44', 'z@example.test', '4,90', '1', '5', 'Да', 'Нет'],
+            ['1005', 'Принято', '01.07.2026', '01.07.2026', 'Зайцева Зоя Ивановна', '53.02.04 Вокальное искусство', '', '', '', '', 'Россия', 'Женский', '05.05.2008', '', '', '', '', '112-233-445 95', 'z@example.test', '4,90', '1', '5', 'Да', 'Нет'],
         ]);
         $upload = new UploadedFile($path, 'fis-admissions.xls', 'application/vnd.ms-excel', null, true);
 
@@ -43,7 +43,7 @@ class FisAdmissionsImportHandlerTest extends TestCase
     {
         $this->createPrograms();
         $path = $this->fixture('xls', [
-            ['1001', 'Принято', '01.07.2026', '01.07.2026', 'Иванов Иван Иванович', '53.02.03 Инструментальное исполнительство', '1234 567890', 'ОВД', '01.01.2020', '123-456', 'Россия', 'Мужской', '01.02.2008', 'Ставрополь', 'Ставропольский край', 'город', 'ул. Учебная, 1', '123-456-789 01', 'ivanov@example.test', '4,75', '2', '101', 'Да', 'Нет'],
+            ['1001', 'Принято', '01.07.2026', '01.07.2026', 'Иванов Иван Иванович', '53.02.03 Инструментальное исполнительство', '1234 567890', 'ОВД', '01.01.2020', '123-456', 'Россия', 'Мужской', '01.02.2008', 'Ставрополь', 'Ставропольский край', 'город', 'ул. Учебная, 1', '112-233-445 95', 'ivanov@example.test', '4,75', '2', '101', 'Да', 'Нет'],
         ]);
 
         $summary = app(FisAdmissionsImportHandler::class)->dryRunPath($path);
@@ -61,8 +61,8 @@ class FisAdmissionsImportHandlerTest extends TestCase
     {
         $this->createPrograms();
         $path = $this->fixture('xlsx', [
-            ['1001', 'Принято', '01.07.2026', '01.07.2026', 'Иванов Иван Иванович', '53.02.03 Инструментальное исполнительство', '', '', '', '', 'Россия', 'Мужской', '01.02.2008', '', '', '', '', '123-456-789 01', 'ivanov@example.test', '4,75', '2', '101', 'Да', 'Нет'],
-            ['1002', 'Принято', '01.07.2026', '01.07.2026', 'Иванов Иван Иванович', '53.02.04 Вокальное искусство', '', '', '', '', 'Россия', 'Мужской', '01.02.2008', '', '', '', '', '123-456-789 01', 'ivanov@example.test', '4,80', '3', '102', 'Да', 'Да'],
+            ['1001', 'Принято', '01.07.2026', '01.07.2026', 'Иванов Иван Иванович', '53.02.03 Инструментальное исполнительство', '', '', '', '', 'Россия', 'Мужской', '01.02.2008', '', '', '', '', '112-233-445 95', 'ivanov@example.test', '4,75', '2', '101', 'Да', 'Нет'],
+            ['1002', 'Принято', '01.07.2026', '01.07.2026', 'Иванов Иван Иванович', '53.02.04 Вокальное искусство', '', '', '', '', 'Россия', 'Мужской', '01.02.2008', '', '', '', '', '112-233-445 95', 'ivanov@example.test', '4,80', '3', '102', 'Да', 'Да'],
         ]);
         $job = ImportJob::create(['data_type' => 'applicants', 'source' => FisAdmissionsImportHandler::SOURCE, 'mode' => 'apply', 'status' => 'uploaded', 'stored_path' => 'unused', 'file_hash' => hash_file('sha256', $path)]);
 
@@ -83,7 +83,7 @@ class FisAdmissionsImportHandlerTest extends TestCase
     {
         $this->createPrograms();
         $path = $this->fixture('xls', [
-            ['1003', 'Принято', '01.07.2026', '01.07.2026', 'Петров Петр Петрович', 'Неизвестный конкурс', '', '', '', '', 'Россия', 'Мужской', '01.02.2008', '', '', '', '', '222-222-222 22', '', '4,50', '0', '1', 'Да', 'Нет'],
+            ['1003', 'Принято', '01.07.2026', '01.07.2026', 'Петров Петр Петрович', 'Неизвестный конкурс', '', '', '', '', 'Россия', 'Мужской', '01.02.2008', '', '', '', '', '112-233-445 95', '', '4,50', '0', '1', 'Да', 'Нет'],
         ]);
         $job = ImportJob::create(['data_type' => 'applicants', 'source' => FisAdmissionsImportHandler::SOURCE, 'mode' => 'apply', 'status' => 'uploaded', 'stored_path' => 'unused']);
 
@@ -96,15 +96,28 @@ class FisAdmissionsImportHandlerTest extends TestCase
     public function test_ambiguous_person_duplicate_blocks_apply(): void
     {
         $this->createPrograms();
-        Person::create(['last_name' => 'Сидоров', 'first_name' => 'Сидор', 'middle_name' => 'Сидорович', 'birth_date' => '2008-03-04', 'snils' => '33333333333', 'status' => 'active']);
-        Person::create(['last_name' => 'Сидоров', 'first_name' => 'Сидор', 'middle_name' => 'Сидорович', 'birth_date' => '2008-03-04', 'snils' => '33333333333', 'status' => 'active']);
+        Person::create(['last_name' => 'Сидоров', 'first_name' => 'Сидор', 'middle_name' => 'Сидорович', 'birth_date' => '2008-03-04', 'snils' => '112-233-445 95', 'status' => 'active']);
+        Person::create(['last_name' => 'Сидоров', 'first_name' => 'Сидор', 'middle_name' => 'Сидорович', 'birth_date' => '2008-03-04', 'snils' => '112-233-445 95', 'status' => 'active']);
         $path = $this->fixture('xls', [
-            ['1004', 'Принято', '01.07.2026', '01.07.2026', 'Сидоров Сидор Сидорович', '53.02.03 Инструментальное исполнительство', '', '', '', '', 'Россия', 'Мужской', '04.03.2008', '', '', '', '', '333-333-333 33', '', '4,50', '0', '1', 'Да', 'Нет'],
+            ['1004', 'Принято', '01.07.2026', '01.07.2026', 'Сидоров Сидор Сидорович', '53.02.03 Инструментальное исполнительство', '', '', '', '', 'Россия', 'Мужской', '04.03.2008', '', '', '', '', '112-233-445 95', '', '4,50', '0', '1', 'Да', 'Нет'],
         ]);
         $job = ImportJob::create(['data_type' => 'applicants', 'source' => FisAdmissionsImportHandler::SOURCE, 'mode' => 'apply', 'status' => 'uploaded', 'stored_path' => 'unused']);
 
         $summary = app(FisAdmissionsImportHandler::class)->dryRunPath($path);
         $this->assertSame(1, $summary['ambiguous_duplicates']);
+        $this->expectException(\RuntimeException::class);
+        app(FisAdmissionsImportHandler::class)->applyPath($path, $job);
+    }
+
+    public function test_invalid_snils_blocks_apply_before_data_changes(): void
+    {
+        $this->createPrograms();
+        $path = $this->fixture('xls', [
+            ['1006', 'Принято', '01.07.2026', '01.07.2026', 'Иванов Иван Иванович', '53.02.03 Инструментальное исполнительство', '', '', '', '', 'Россия', 'Мужской', '01.02.2008', '', '', '', '', '112-233-445 96', '', '4,50', '0', '1', 'Да', 'Нет'],
+        ]);
+        $job = ImportJob::create(['data_type' => 'applicants', 'source' => FisAdmissionsImportHandler::SOURCE, 'mode' => 'apply', 'status' => 'uploaded', 'stored_path' => 'unused']);
+
+        $this->assertSame(1, app(FisAdmissionsImportHandler::class)->dryRunPath($path)['critical_errors']);
         $this->expectException(\RuntimeException::class);
         app(FisAdmissionsImportHandler::class)->applyPath($path, $job);
     }

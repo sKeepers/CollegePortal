@@ -23,6 +23,7 @@ class StoreStudentRequest extends FormRequest
             'birth_date' => ['nullable', 'date'],
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
+            'snils' => ['required', 'string', 'max:32'],
             'status' => ['required', Rule::in(['active', 'academic_leave', 'graduated', 'expelled'])],
             'course' => ['nullable', 'integer', 'min:1', 'max:6'],
             'education_form' => ['nullable', 'string', 'max:80'],

@@ -55,6 +55,7 @@ class UniversalImportApiTest extends TestCase
 
         $content = $response->getContent();
         $this->assertStringContainsString('Фамилия;Имя;Отчество;Группа', $content);
+        $this->assertStringContainsString('Email;СНИЛС;Статус', $content);
         $this->assertStringContainsString('Иванов;Дмитрий;Сергеевич;ИСП-101', $content);
     }
 

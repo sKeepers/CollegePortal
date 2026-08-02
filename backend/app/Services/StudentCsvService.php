@@ -3,10 +3,13 @@
 namespace App\Services;
 
 use App\Models\Group;
+use App\Models\Person;
 use App\Models\Student;
+use App\Services\Admissions\SnilsService;
 use DateTimeImmutable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use RuntimeException;
 use SplFileObject;
@@ -14,6 +17,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StudentCsvService
 {
+    public function __construct(private readonly SnilsService $snils)
+    {
+    }
+
     private const HEADERS = [
         'id',
         'group_id',
@@ -24,6 +31,7 @@ class StudentCsvService
         'birth_date',
         'phone',
         'email',
+        'snils',
         'status',
         'enrollment_date',
     ];
@@ -37,7 +45,7 @@ class StudentCsvService
             fputcsv($output, self::HEADERS, ';');
 
             Student::query()
-                ->with('group')
+                ->with(['group', 'person'])
                 ->orderBy('last_name')
                 ->orderBy('first_name')
                 ->chunk(200, function ($students) use ($output): void {
@@ -52,6 +60,7 @@ class StudentCsvService
                             $student->birth_date?->toDateString(),
                             $student->phone,
                             $student->email,
+                            $student->person?->snils,
                             $student->status,
                             $student->enrollment_date?->toDateString(),
                         ], ';');
@@ -110,7 +119,28 @@ class StudentCsvService
                 $student->update($validated);
                 $updated++;
             } else {
-                Student::create($validated);
+                try {
+                    DB::transaction(function () use ($validated): void {
+                        $normalizedSnils = $this->snils->normalize($validated['snils'] ?? null);
+                        $hash = $this->snils->hash($normalizedSnils);
+                        $person = Person::query()->firstOrCreate(['snils_hash' => $hash], [
+                            'last_name' => $validated['last_name'],
+                            'first_name' => $validated['first_name'],
+                            'middle_name' => $validated['middle_name'] ?? null,
+                            'birth_date' => $validated['birth_date'] ?? null,
+                            'phone' => $validated['phone'] ?? null,
+                            'email' => $validated['email'] ?? null,
+                            'snils' => $normalizedSnils,
+                            'snils_hash' => $hash,
+                            'status' => 'active',
+                        ]);
+                        unset($validated['snils']);
+                        Student::create([...$validated, 'person_id' => $person->id]);
+                    });
+                } catch (\Illuminate\Validation\ValidationException $exception) {
+                    $errors[] = ['line' => $line, 'messages' => $exception->errors()['snils'] ?? [$exception->getMessage()]];
+                    continue;
+                }
                 $created++;
             }
         }
@@ -205,6 +235,7 @@ class StudentCsvService
             'birth_date' => ['nullable', 'date'],
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
+            'snils' => ['required_without:id', 'nullable', 'string', 'max:32'],
             'status' => ['required', Rule::in(['active', 'academic_leave', 'graduated', 'expelled'])],
             'enrollment_date' => ['nullable', 'date'],
         ];
@@ -219,6 +250,7 @@ class StudentCsvService
             'first_name.required' => 'Не указано имя.',
             'birth_date.date' => 'Дата рождения должна быть в формате 2026-09-01 или 01.09.2026.',
             'email.email' => 'Email указан некорректно.',
+            'snils.required_without' => 'Для нового студента укажите СНИЛС.',
             'status.in' => 'Статус должен быть active, academic_leave, graduated или expelled.',
             'enrollment_date.date' => 'Дата зачисления должна быть в формате 2026-09-01 или 01.09.2026.',
         ];

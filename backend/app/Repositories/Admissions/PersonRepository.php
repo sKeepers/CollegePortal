@@ -81,7 +81,8 @@ class PersonRepository
             'email' => $this->normalizeEmail($data['email'] ?? null),
             'address' => $this->blankToNull($data['address'] ?? null),
             'photo_path' => $this->blankToNull($data['photo_path'] ?? null),
-            'snils' => $this->normalizeDigits($data['snils'] ?? null),
+            'snils' => $this->blankToNull($data['snils'] ?? null),
+            'snils_hash' => $this->blankToNull($data['snils_hash'] ?? null),
             'inn' => $this->normalizeDigits($data['inn'] ?? null),
             'status' => $this->blankToNull($data['status'] ?? null) ?: 'active',
         ];

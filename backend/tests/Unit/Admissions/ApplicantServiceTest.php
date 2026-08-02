@@ -24,7 +24,8 @@ class ApplicantServiceTest extends TestCase
             'first_name' => 'Абитуриент',
             'birth_date' => '2007-01-10',
             'email' => 'applicant@example.test',
-            'snils' => '12345678901',
+            'snils' => '112-233-445 95',
+            'snils_hash' => hash('sha256', '11223344595'),
             'status' => 'active',
         ]);
 
@@ -33,7 +34,7 @@ class ApplicantServiceTest extends TestCase
             'first_name' => 'Абитуриент',
             'birth_date' => '2007-01-10',
             'email' => 'APPLICANT@example.test',
-            'snils' => '123-456-789 01',
+            'snils' => '11223344595',
         ]);
 
         $this->assertSame($person->id, $applicant->person_id);
@@ -50,6 +51,7 @@ class ApplicantServiceTest extends TestCase
             'birth_date' => '2008-03-14',
             'phone' => '+7 (900) 100-20-30',
             'email' => 'new-applicant@example.test',
+            'snils' => '112-233-445 95',
         ]);
 
         $person = $applicant->person;
@@ -86,6 +88,7 @@ class ApplicantServiceTest extends TestCase
             'first_name' => 'Абитуриент',
             'birth_date' => '2007-05-05',
             'phone' => '+7 900 111-22-33',
+            'snils' => '112-233-445 95',
         ]);
     }
 
@@ -98,6 +101,7 @@ class ApplicantServiceTest extends TestCase
             'first_name' => 'Профиль',
             'birth_date' => '2006-11-01',
             'email' => 'one-profile@example.test',
+            'snils' => '112-233-445 95',
         ]);
 
         $second = $service->createFoundation([
@@ -105,6 +109,7 @@ class ApplicantServiceTest extends TestCase
             'first_name' => 'Профиль',
             'birth_date' => '2006-11-01',
             'email' => 'one-profile@example.test',
+            'snils' => '112-233-445 95',
         ]);
 
         $this->assertSame($first->id, $second->id);

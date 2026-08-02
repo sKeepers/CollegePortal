@@ -57,9 +57,9 @@ class StudentCsvApiTest extends TestCase
         ]);
 
         $csv = implode("\n", [
-            'id;group_id;group;last_name;first_name;middle_name;birth_date;phone;email;status;enrollment_date',
-            "{$existing->id};{$group->id};;Иванов;Дмитрий;Сергеевич;;;ivanov@example.test;academic_leave;2026-09-01",
-            ";{$group->id};;Соколова;Анна;Павловна;;;sokolova@example.test;active;2026-09-01",
+            'id;group_id;group;last_name;first_name;middle_name;birth_date;phone;email;snils;status;enrollment_date',
+            "{$existing->id};{$group->id};;Иванов;Дмитрий;Сергеевич;;;ivanov@example.test;;academic_leave;2026-09-01",
+            ";{$group->id};;Соколова;Анна;Павловна;;;sokolova@example.test;112-233-445 95;active;2026-09-01",
         ]);
 
         $file = UploadedFile::fake()->createWithContent('students.csv', $csv);
@@ -90,9 +90,9 @@ class StudentCsvApiTest extends TestCase
     {
         $group = $this->createGroup('ИСП-101');
         $csv = implode("\n", [
-            'id;group_id;group;last_name;first_name;middle_name;birth_date;phone;email;status;enrollment_date',
-            ";;;Анохин;Дмитрий;Алексеевич;;79990000002;student@example.test;active;01.09.2026",
-            ";;;Борисова;Софья;Владимировна;;79990000003;student2@example.test;active;02.09.2026",
+            'id;group_id;group;last_name;first_name;middle_name;birth_date;phone;email;snils;status;enrollment_date',
+            ";;;Анохин;Дмитрий;Алексеевич;;79990000002;student@example.test;112-233-445 95;active;01.09.2026",
+            ";;;Борисова;Софья;Владимировна;;79990000003;student2@example.test;901-144-044 41;active;02.09.2026",
         ]);
 
         $file = UploadedFile::fake()->createWithContent('students.csv', $csv);

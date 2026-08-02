@@ -6,6 +6,8 @@
 # Dependencies
 node_modules/
 vendor/
+**/bin/
+**/obj/
 
 # Laravel runtime
 storage/logs/

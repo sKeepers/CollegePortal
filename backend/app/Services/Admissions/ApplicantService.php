@@ -23,6 +23,7 @@ class ApplicantService
     public function __construct(
         private readonly ApplicantRepository $applicants,
         private readonly PersonRepository $people,
+        private readonly SnilsService $snils,
     ) {
     }
 
@@ -140,9 +141,22 @@ class ApplicantService
                 throw ValidationException::withMessages(['person_id' => 'Выбранная личная карточка не найдена.']);
             }
 
+            if (blank($person->snils)) {
+                throw ValidationException::withMessages(['person_id' => 'Для абитуриента требуется личная карточка с СНИЛС.']);
+            }
+
             return $this->ensurePersonUuid($person);
         }
 
+        $normalizedSnils = $this->snils->normalize($personData['snils'] ?? null);
+        $hash = $this->snils->hash($normalizedSnils);
+        $bySnils = Person::query()->where('snils_hash', $hash)->first();
+        if ($bySnils) {
+            return $this->ensurePersonUuid($bySnils);
+        }
+
+        $personData['snils'] = $normalizedSnils;
+        $personData['snils_hash'] = $hash;
         $matches = $this->people->findPossibleMatches($personData);
 
         if ($matches->count() > 1) {

@@ -27,7 +27,7 @@ class StoreApplicantRequest extends FormRequest
             'person.email' => ['nullable', 'email', 'max:255'],
             'person.address' => ['nullable', 'string', 'max:2000'],
             'person.photo_path' => ['nullable', 'string', 'max:255'],
-            'person.snils' => ['nullable', 'string', 'max:32'],
+            'person.snils' => ['required_without:person_id', 'nullable', 'string', 'max:32'],
             'person.inn' => ['nullable', 'string', 'max:32'],
             'source_id' => ['nullable', 'integer', 'exists:reference_items,id'],
             'source_code' => ['nullable', 'string', 'max:100'],

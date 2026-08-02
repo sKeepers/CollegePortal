@@ -15,6 +15,7 @@ use App\Services\Import\StudentImportHandler;
 use App\Services\Import\SubjectImportHandler;
 use App\Services\Import\TeacherImportHandler;
 use App\Services\Import\TeachingLoadImportHandler;
+use App\Services\Admissions\SnilsService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -31,10 +32,10 @@ class UniversalImportService
     /** @var array<string, ImportHandlerInterface> */
     private array $handlers = [];
 
-    public function __construct(AutoCodeService $autoCodeService, ScheduleLessonService $scheduleLessonService, HrService $hrService)
+    public function __construct(AutoCodeService $autoCodeService, ScheduleLessonService $scheduleLessonService, HrService $hrService, SnilsService $snils)
     {
         foreach ([
-            new StudentImportHandler(),
+            new StudentImportHandler($snils),
             new GroupImportHandler(),
             new TeacherImportHandler(),
             new SubjectImportHandler($autoCodeService),

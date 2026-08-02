@@ -69,6 +69,7 @@ class PersonApplicantManagementApiTest extends TestCase
                     'first_name' => 'Новый',
                     'birth_date' => '2007-04-05',
                     'email' => 'foundation-new@example.test',
+                    'snils' => '112-233-445 95',
                 ],
                 'source_code' => 'manual',
                 'status_code' => 'active',
@@ -91,6 +92,7 @@ class PersonApplicantManagementApiTest extends TestCase
             'uuid' => (string) Str::uuid(),
             'last_name' => 'Связанный',
             'first_name' => 'Абитуриент',
+            'snils' => '112-233-445 95',
             'status' => 'active',
         ]);
 
@@ -119,6 +121,17 @@ class PersonApplicantManagementApiTest extends TestCase
         $this->assertNotNull(Applicant::query()->find($applicantId)?->archived_at);
         $this->assertTrue(AuditLog::query()->where('action', 'applicant_updated')->exists());
         $this->assertTrue(AuditLog::query()->where('action', 'applicant_archived')->exists());
+    }
+
+    public function test_admission_user_cannot_create_applicant_for_person_without_snils(): void
+    {
+        $user = $this->createApiUser(roleCode: 'admission');
+        $person = Person::query()->create(['uuid' => (string) Str::uuid(), 'last_name' => 'Без', 'first_name' => 'Снилс', 'status' => 'active']);
+
+        $this->withApiAuth($user)
+            ->postJson('/api/admissions/applicants', ['person_id' => $person->id, 'source_code' => 'manual', 'status_code' => 'active'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('person_id');
     }
 
     public function test_duplicate_check_finds_matches_by_snils_email_phone_passport_and_full_name_birth_date(): void
@@ -187,6 +200,7 @@ class PersonApplicantManagementApiTest extends TestCase
                     'last_name' => 'Новый',
                     'first_name' => 'Кандидат',
                     'phone' => '+7 900 555-01-01',
+                    'snils' => '112-233-445 95',
                 ],
                 'source_code' => 'manual',
                 'status_code' => 'active',
