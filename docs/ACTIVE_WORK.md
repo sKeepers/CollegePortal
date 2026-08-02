@@ -15,15 +15,15 @@
 ## Git-состояние
 
 - Active worktree branch: `sync/sync-001-local`
-- Last deployed DEV checkpoint: `3e1389335`
+- Last deployed DEV checkpoint: `10c8becd0`
 - DEV branch: `feature/uat-002-1-final-stabilization`
-- GitHub branch: `origin/feature/uat-002-1-final-stabilization` содержит изменения после `3e1389335`, ожидающие развёртывания на DEV.
-- Локальная ветка `sync/sync-001-local` содержит self-scoped read-only просмотр нагрузки для teacher, тесты и документацию поверх `3e1389335`.
+- GitHub branch: `origin/feature/uat-002-1-final-stabilization` развёрнута на DEV до `10c8becd0`.
+- Локальная ветка `sync/sync-001-local` содержит self-scoped read-only просмотр нагрузки для teacher, тесты и документацию поверх `10c8becd0`.
 - `SYNC-001` объединил GitHub `SEC-001` с DEV UAT-002.2 и был развёрнут на DEV.
 - На DEV применена миграция `2026_07_30_010000_add_lookup_and_expiration_to_api_tokens`.
-- Проверки reconciliation: `341 passed (2173 assertions)` и `npm run build` завершились успешно.
+- Проверки после развёртывания: `php artisan test` — `343 passed (2179 assertions)`; `npm run build` завершилась успешно.
 - На DEV развёрнуты карточка оценок и адаптация профилей устройств после успешной production-сборки.
-- Незакоммиченные изменения после создания checkpoint: отсутствуют.
+- Незакоммиченные изменения после создания checkpoint: отсутствуют. На DEV остаются только generated `frontend/public/version.json` после build и локальный `.worktrees/`.
 
 ## Доступ к DEV
 
@@ -56,17 +56,14 @@ GitHub Issues доступны на DEV только для чтения чер�
 
 ## Следующие действия
 
-1. Закоммитить и опубликовать self-scoped нагрузку преподавателя.
-2. На DEV выполнить `php artisan db:seed --class=RoleSeeder`, чтобы удалить широкий `teachingload.view` и `teaching_load.view_coverage` у teacher-роли.
-3. Выполнить ручной teacher UAT: `/journal` и `/teaching-load` под ролью teacher с URL, ролью, учётной записью и ожидаемым результатом.
-4. Проверить legacy `ScheduleLesson` без `schedule_entry_id`: сейчас журнал открывается только с фильтрами даты и преподавателя, а не создаётся автоматически.
-5. После подтверждённых результатов обновить Issues #29, #4 и #24 санитизированными UAT-доказательствами.
-6. Сценарий ручного teacher UAT зафиксирован в [UAT-002 Report](UAT_002_REPORT.md).
+1. Выполнить ручной teacher UAT: `/journal` и `/teaching-load` под ролью teacher с URL, ролью, учётной записью и ожидаемым результатом.
+2. Проверить legacy `ScheduleLesson` без `schedule_entry_id`: сейчас журнал открывается только с фильтрами даты и преподавателя, а не создаётся автоматически.
+3. После подтверждённых результатов обновить Issues #29, #4 и #24 санитизированными UAT-доказательствами.
+4. Сценарий ручного teacher UAT зафиксирован в [UAT-002 Report](UAT_002_REPORT.md).
 
 ## Блокеры
 
-- Из текущей среды нет SSH-доступа к DEV (`192.168.34.114:22` завершает соединение по timeout), поэтому код не развёрнут и ручной UAT не выполнен.
-- Локальные `php artisan test` и `npm run build` недоступны: отсутствуют PHP, Docker и `frontend/node_modules`; синтаксис изменённых JS-модулей проверен `node --check`.
+- Автоматизированные проверки завершены. Браузерный UAT под teacher требует интерактивной сессии с учётной записью и не заменяется API-тестами.
 - Legacy `ScheduleLesson` без `schedule_entry_id` не может автоматически открыть или создать журнал; текущий fallback открывает отфильтрованный журнал по дате и преподавателю.
 - PROD не изменялся.
 
