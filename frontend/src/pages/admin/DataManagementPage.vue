@@ -38,7 +38,7 @@ onMounted(store.load)
 
 <template>
   <AppPage>
-    <PageHeader title="Управление данными" subtitle="Демо-данные, импорт и экспорт для подготовки UAT. Очистка запрещена в production." />
+    <PageHeader title="Управление данными" subtitle="Рабочие данные, импорт и экспорт для подготовки UAT. Очистка запрещена в production." />
     <AppToolbar>
       <span>Состояние тестового набора данных</span>
       <template #actions>
@@ -53,7 +53,7 @@ onMounted(store.load)
         <AppCard title="Действия" subtitle="Создание и очистка демо-данных используются только в DEV/TEST перед пользовательской проверкой.">
           <div class="data-management-actions">
             <q-btn v-if="canManage" color="primary" :loading="store.loading" @click="createDemoData"><Database :size="16" class="q-mr-xs" /> Создать демо-данные</q-btn>
-            <q-btn v-if="canManage" color="negative" outline :disable="store.isProduction || store.loading" @click="clearDialog = true"><Trash2 :size="16" class="q-mr-xs" /> Очистить демо-данные</q-btn>
+            <q-btn v-if="canManage" color="negative" outline :disable="store.isProduction || store.loading" @click="clearDialog = true"><Trash2 :size="16" class="q-mr-xs" /> Очистить рабочие данные DEV</q-btn>
             <q-file v-if="canManage" v-model="importFile" dense outlined accept=".csv,text/csv" label="Импорт данных" style="max-width: 260px" @update:model-value="importData"><template #prepend><Upload :size="16" /></template></q-file>
             <q-btn v-if="canManage" color="primary" outline :disable="store.loading" @click="exportData"><Download :size="16" class="q-mr-xs" /> Экспорт данных</q-btn>
           </div>
@@ -76,6 +76,6 @@ onMounted(store.load)
       </aside>
     </div>
 
-    <AppConfirmDialog v-model="clearDialog" title="Очистить демо-данные?" message="Будут удалены только известные тестовые записи DemoDataSeeder. Связанные записи будут пропущены, чтобы не повредить учебные планы, нагрузку и экзамены. В production операция запрещена." confirm-label="Очистить" tone="negative" @confirm="clearDemoData" />
+    <AppConfirmDialog v-model="clearDialog" title="Очистить рабочие данные DEV?" message="Будут удалены студенты, преподаватели, расписание, журналы, оценки, посещаемость, приемные и кадровые данные. Системные настройки, справочники, роли и учетные записи сохранятся. В production операция запрещена." confirm-label="Очистить" tone="negative" @confirm="clearDemoData" />
   </AppPage>
 </template>

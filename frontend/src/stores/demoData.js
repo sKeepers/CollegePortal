@@ -49,10 +49,10 @@ export const useDemoDataStore = defineStore('demoData', () => {
     loading.value = true
     error.value = ''
     try {
-      const payload = await api.create('admin/demo-data/clear', {})
+      const payload = await api.create('admin/demo-data/reset', {})
       lastClearResult.value = payload?.data || null
       summary.value = payload?.data?.summary || summary.value
-      lastMessage.value = payload?.message || 'Демо-данные очищены'
+      lastMessage.value = payload?.message || 'Рабочие данные DEV очищены'
       return payload
     } catch (err) {
       error.value = err.message || 'Не удалось очистить демо-данные'

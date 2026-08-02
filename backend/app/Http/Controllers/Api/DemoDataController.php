@@ -132,6 +132,42 @@ class DemoDataController extends Controller
         ]);
     }
 
+    public function reset(Request $request): JsonResponse
+    {
+        abort_if(app()->environment('production'), Response::HTTP_FORBIDDEN, 'Сброс данных запрещен в production.');
+        abort_unless(DB::getDriverName() === 'pgsql', Response::HTTP_UNPROCESSABLE_ENTITY, 'Полный сброс поддерживается только на PostgreSQL DEV-стенде.');
+
+        $protectedTables = [
+            'migrations', 'users', 'roles', 'permissions', 'permission_role', 'role_user', 'settings',
+            'reference_catalogs', 'reference_items', 'cache', 'cache_locks', 'jobs', 'job_batches',
+            'failed_jobs', 'password_reset_tokens', 'sessions',
+        ];
+
+        $summary = DB::transaction(function () use ($protectedTables): array {
+            // Users are retained so the active administrator session and system access survive the reset.
+            User::query()->whereNotNull('person_id')->update(['person_id' => null, 'person_type' => null]);
+            $tables = collect(DB::select("select tablename from pg_tables where schemaname = 'public'"))
+                ->map(fn (object $row) => $row->tablename)
+                ->filter(fn (string $table) => ! in_array($table, $protectedTables, true))
+                ->filter(fn (string $table) => preg_match('/^[a-z_]+$/', $table))
+                ->values();
+
+            if ($tables->isNotEmpty()) {
+                $quoted = $tables->map(fn (string $table) => '"'.$table.'"')->implode(', ');
+                DB::statement("TRUNCATE TABLE {$quoted} RESTART IDENTITY CASCADE");
+            }
+
+            return $this->summary();
+        });
+
+        AuditLogService::log('demo_data', 'reset_development_data', ['type' => 'development_data', 'id' => null], null, $summary, $request, $request->user());
+
+        return response()->json([
+            'message' => 'Рабочие данные DEV очищены. Системные настройки, справочники и учетные записи сохранены.',
+            'data' => $summary,
+        ]);
+    }
+
     public function export(): StreamedResponse
     {
         $filename = 'demo-data-summary-'.now()->format('Ymd-His').'.csv';

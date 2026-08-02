@@ -296,6 +296,7 @@ Route::middleware(['api.token', 'throttle:api.authenticated'])->group(function (
         Route::get('admin/demo-data', [DemoDataController::class, 'status']);
         Route::post('admin/demo-data/create', [DemoDataController::class, 'create']);
         Route::post('admin/demo-data/clear', [DemoDataController::class, 'clear']);
+        Route::post('admin/demo-data/reset', [DemoDataController::class, 'reset']);
         Route::post('admin/demo-data/import', [DemoDataController::class, 'import']);
         Route::get('admin/demo-data/export', [DemoDataController::class, 'export']);
         Route::post('person-photos/{type}/{id}', [PersonPhotoController::class, 'store']);
