@@ -284,6 +284,7 @@ class JournalLessonController extends Controller
     private function applyMode(Builder $query, string $mode): void
     {
         match ($mode) {
+            'mine' => null,
             'today' => $query->whereDate('lesson_date', today()),
             'tomorrow' => $query->whereDate('lesson_date', today()->addDay()),
             'week' => $query->whereBetween('lesson_date', [today()->startOfWeek(), today()->endOfWeek()]),

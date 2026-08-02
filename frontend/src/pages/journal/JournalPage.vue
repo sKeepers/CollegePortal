@@ -23,7 +23,7 @@ const attendanceDraft = reactive({})
 const gradeDraft = reactive({})
 
 const modeOptions = [
-  { label: 'Мои занятия', value: 'today' },
+  { label: 'Мои занятия', value: 'mine' },
   { label: 'Завтра', value: 'tomorrow' },
   { label: 'Текущая неделя', value: 'week' },
   { label: 'Завершенные', value: 'completed' },
@@ -69,6 +69,15 @@ function statusTone(status) {
   return {
     draft: 'neutral', in_progress: 'info', planned: 'neutral', opened: 'info', completed: 'warning', signed: 'success', reopened: 'warning', cancelled: 'danger',
   }[status] || 'neutral'
+}
+
+function suggestionLabel(suggestion) {
+  return {
+    probably_present: 'Вероятно присутствовал',
+    probably_late: 'Вероятно опоздал',
+    probably_absent: 'Вероятно отсутствовал',
+    no_data: 'Нет событий проходной',
+  }[suggestion] || 'Нет данных'
 }
 
 function resetDrafts() {
@@ -207,6 +216,12 @@ onMounted(async () => {
               <strong>Предварительный расчет по проходной</strong>
               <span>Ничего не изменится до подтверждения.</span>
             </div>
+            <div class="journal-suggestion__rows">
+              <div v-for="suggestion in store.attendanceSuggestion" :key="suggestion.student_id" class="journal-suggestion__row">
+                <strong>{{ suggestion.student_name }}</strong>
+                <span>{{ suggestionLabel(suggestion.suggestion) }}<template v-if="suggestion.minutes_late">: {{ suggestion.minutes_late }} мин.</template></span>
+              </div>
+            </div>
             <q-btn color="positive" :disable="!canAttendance" @click="applySuggestion">Применить предложения</q-btn>
           </div>
 
@@ -293,7 +308,11 @@ onMounted(async () => {
 .journal-student-toolbar span, .journal-suggestion span { color: #64748b; font-size: 13px; }
 .journal-student-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 .journal-suggestion { background: #f8fafc; border: 1px dashed #94a3b8; border-radius: 8px; padding: 10px; }
-.journal-student-scroll { max-height: 460px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
+.journal-suggestion { align-items: start; flex-wrap: wrap; }
+.journal-suggestion__rows { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px 12px; width: 100%; }
+.journal-suggestion__row { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+.journal-suggestion__row span { text-align: right; }
+.journal-student-scroll { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
 .journal-student-table { width: 100%; border-collapse: collapse; min-width: 980px; }
 .journal-student-table th, .journal-student-table td { padding: 8px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
 .journal-student-table th { background: #f8fafc; text-align: left; font-size: 12px; color: #475569; position: sticky; top: 0; z-index: 1; }

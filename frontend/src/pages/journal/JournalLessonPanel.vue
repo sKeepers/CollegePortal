@@ -4,6 +4,7 @@ import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
 import { api } from '../../services/api'
+import { useAuthStore } from '../../stores/auth'
 import { lessonTypeLabels, lessonTypeTones, teacherName } from '../../stores/schedule'
 
 const props = defineProps({
@@ -16,6 +17,7 @@ const props = defineProps({
   canReopen: { type: Boolean, default: false },
 })
 const emit = defineEmits(['save', 'complete', 'sign', 'reopen', 'mark-all-present', 'upload-file', 'delete-file'])
+const auth = useAuthStore()
 const form = reactive({ topic: '', homework: '', homework_due_at: '', teacher_comment: '' })
 const reopenReason = ref('')
 const fileInput = ref(null)
@@ -45,9 +47,9 @@ const lessonMetrics = computed(() => [
 ])
 
 const lessonActions = computed(() => [
-  { label: props.student?.id ? 'Открыть студента' : 'Студенты группы', to: props.student?.id ? { path: '/students', query: { group: props.lesson?.group_id, selected: props.student.id } } : { path: '/students', query: { group: props.lesson?.group_id } }, disabled: !props.lesson?.group_id },
-  { label: 'Группа', to: { path: '/groups', query: { selected: props.lesson?.group_id } }, disabled: !props.lesson?.group_id },
-  { label: 'Расписание', to: { path: '/schedule', query: { date: props.lesson?.lesson_date, teacher: props.lesson?.teacher_id } } },
+  ...(auth.can('students.view') ? [{ label: props.student?.id ? 'Открыть студента' : 'Студенты группы', to: props.student?.id ? { path: '/students', query: { group: props.lesson?.group_id, selected: props.student.id } } : { path: '/students', query: { group: props.lesson?.group_id } }, disabled: !props.lesson?.group_id }] : []),
+  ...(auth.can('groups.view') ? [{ label: 'Группа', to: { path: '/groups', query: { selected: props.lesson?.group_id } }, disabled: !props.lesson?.group_id }] : []),
+  ...(auth.can('schedule.view') ? [{ label: 'Расписание', to: { path: '/schedule', query: { date: props.lesson?.lesson_date } } }] : []),
 ])
 
 function statusLabel(status) {

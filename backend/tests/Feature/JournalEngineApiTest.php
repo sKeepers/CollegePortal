@@ -224,6 +224,11 @@ class JournalEngineApiTest extends TestCase
         $this->assertSame([$ownLessonId], collect($teacherResponse->json('data'))->pluck('id')->all());
         $this->assertNotContains($otherLessonId, collect($teacherResponse->json('data'))->pluck('id')->all());
 
+        $this->withApiAuth($teacherUser)->getJson('/api/journal/lessons?mode=mine')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $ownLessonId);
+
         $teacherControlResponse = $this->withApiAuth($teacherUser)->getJson('/api/journal/lessons?mode=control')
             ->assertOk()
             ->assertJsonCount(1, 'data');

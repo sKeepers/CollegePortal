@@ -14,7 +14,7 @@ const initialFilters = {
   date: '',
   date_from: '',
   date_to: '',
-  mode: 'today',
+  mode: 'mine',
 }
 
 function extractRows(payload) {
@@ -28,7 +28,9 @@ function canUseLocalStorage() {
 function loadStoredFilters() {
   if (!canUseLocalStorage()) return { ...initialFilters }
   try {
-    return { ...initialFilters, ...JSON.parse(window.localStorage.getItem(JOURNAL_FILTERS_KEY) || '{}') }
+    const filters = { ...initialFilters, ...JSON.parse(window.localStorage.getItem(JOURNAL_FILTERS_KEY) || '{}') }
+    if (filters.mode === 'today') filters.mode = 'mine'
+    return filters
   } catch {
     return { ...initialFilters }
   }
