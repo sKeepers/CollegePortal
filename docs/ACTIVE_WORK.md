@@ -40,6 +40,7 @@
 - Полное архивирование PostgreSQL развёрнуто: защищенный API `/api/admin/database-backups`, `pg_dump`/`pg_restore` через безопасный массив аргументов, аварийный снимок перед restore, audit, UI в `DataManagementPage` и Pinia store. PostgreSQL client 17 добавлен в backend image.
 - Проверки: `PostgresBackupServiceTest` и `DatabaseBackupApiTest` — `4 passed (17 assertions)`; `npm run build` завершилась успешно; health endpoint вернул `200`.
 - Создан и проверен первый архив через сервис: `manual-20260802-192823-92922147-fd1d-49d4-9c7d-7449a91ddbbc.dump`, 397065 bytes. Восстановление действующей DEV-базы намеренно не запускалось.
+- Исправлены права DEV runtime storage: `storage` и `storage/app/private/postgresql-backups` принадлежат `www-data`; создание второго архива от имени web-процесса подтверждено (`manual-20260802-195519-21088212-5f81-48ca-9172-a0f3f99a3eb1.dump`, 396791 bytes).
 - DEV изменён; PROD не изменялся. В worktree нет незакоммиченных изменений.
 
 ## Доступ к DEV
