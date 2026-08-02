@@ -56,7 +56,7 @@ class DepartmentController extends Controller
             'head_employee_id' => ['nullable', 'exists:employees,id'],
             'is_active' => ['boolean'],
         ]);
-        $data['code'] = $data['code'] ?: $department?->code ?: $this->generatedCode($data['name']);
+        $data['code'] = ($data['code'] ?? null) ?: $department?->code ?: $this->generatedCode($data['name']);
 
         return $data;
     }

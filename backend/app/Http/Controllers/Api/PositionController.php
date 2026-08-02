@@ -55,7 +55,7 @@ class PositionController extends Controller
             'is_teaching_position' => ['boolean'],
             'is_active' => ['boolean'],
         ]);
-        $data['code'] = $data['code'] ?: $position?->code ?: $this->generatedCode($data['name']);
+        $data['code'] = ($data['code'] ?? null) ?: $position?->code ?: $this->generatedCode($data['name']);
 
         return $data;
     }
