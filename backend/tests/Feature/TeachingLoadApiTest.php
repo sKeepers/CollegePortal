@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Group;
+use App\Models\Permission;
 use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\TeachingLoad;
@@ -91,6 +92,52 @@ class TeachingLoadApiTest extends TestCase
         $response->assertOk()->assertJsonPath('data.created', 1)->assertJsonPath('data.itemsCreated', 1);
         $this->assertDatabaseHas('teaching_loads', ['academic_year' => '2027/2028', 'teacher_id' => $teacher->id]);
         $this->assertDatabaseHas('teaching_load_items', ['subject_id' => $subject->id, 'group_id' => $group->id, 'semester' => 2, 'hours_total' => 108]);
+    }
+
+    public function test_teacher_can_only_view_own_teaching_loads(): void
+    {
+        $teacherUser = $this->createTeacherUser();
+        $teacher = Teacher::create([
+            'user_id' => $teacherUser->id,
+            'last_name' => 'Петрова',
+            'first_name' => 'Анна',
+            'is_active' => true,
+        ]);
+        $otherTeacher = $this->createTeacher();
+        $ownLoad = TeachingLoad::create(['academic_year' => '2026/2027', 'teacher_id' => $teacher->id, 'status' => 'active']);
+        $assignedLoad = TeachingLoad::create(['academic_year' => '2026/2027', 'teacher_id' => $otherTeacher->id, 'status' => 'active']);
+        $otherLoad = TeachingLoad::create(['academic_year' => '2026/2027', 'teacher_id' => $otherTeacher->id, 'status' => 'active']);
+        $subject = Subject::create(['name' => 'Гармония', 'code' => 'OP.02']);
+        $group = Group::create(['name' => 'ИСП-102', 'specialty' => 'Инструментальное исполнительство', 'course' => 1, 'year_start' => 2026]);
+        $assignedLoad->items()->create(['subject_id' => $subject->id, 'group_id' => $group->id, 'teacher_id' => $teacher->id, 'semester' => 1, 'hours_total' => 36, 'load_type' => 'Аудиторная']);
+
+        $response = $this->withApiAuth($teacherUser)->getJson('/api/teaching-loads');
+
+        $response->assertOk()->assertJsonCount(2, 'data');
+        $this->assertEqualsCanonicalizing([$ownLoad->id, $assignedLoad->id], collect($response->json('data'))->pluck('id')->all());
+        $this->assertNotContains($otherLoad->id, collect($response->json('data'))->pluck('id')->all());
+        $this->withApiAuth($teacherUser)->postJson('/api/teaching-loads', ['academic_year' => '2026/2027', 'teacher_id' => $teacher->id])->assertForbidden();
+    }
+
+    public function test_self_scope_without_teacher_profile_is_forbidden(): void
+    {
+        $user = $this->createTeacherUser();
+
+        $this->withApiAuth($user)->getJson('/api/teaching-loads')->assertForbidden();
+    }
+
+    private function createTeacherUser(): \App\Models\User
+    {
+        $user = $this->createApiUser(roleCode: 'teacher');
+        $permission = Permission::create([
+            'module' => 'Legacy',
+            'code' => 'view_own_data',
+            'name' => 'Просмотр личных данных',
+            'active' => true,
+        ]);
+        $user->role->permissions()->attach($permission);
+
+        return $user;
     }
 
     private function createTeacher(): Teacher

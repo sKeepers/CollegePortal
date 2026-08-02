@@ -73,7 +73,7 @@ const navGroups = [
       { label: 'Журнал', to: '/journal', icon: ClipboardList, permission: 'journal.view' },
       { label: 'Посещаемость', to: '/attendance', icon: ClipboardList, permission: 'attendance.reports' },
       { label: 'Учебные планы', to: '/curricula', icon: BookOpen, permission: 'curricula.view' },
-      { label: 'Нагрузка', to: '/teaching-load', icon: ClipboardList, permission: 'teachingload.view' },
+      { label: 'Нагрузка', to: '/teaching-load', icon: ClipboardList, permissionsAny: ['teachingload.view', 'view_own_data'] },
       { label: 'Экзамены и ГИА', to: '/exams', icon: ClipboardList, permission: 'exams.view' },
       { label: 'Выпускники и дипломы', to: '/graduation', icon: GraduationCap, permission: 'graduation.view' },
       { label: 'ФРДО', to: '/frdo', icon: FileText, permission: 'frdo.view' },

@@ -55,10 +55,12 @@ export const useTeachingLoadStore = defineStore('teachingLoad', () => {
   const groupOptions = computed(() => groups.value.map((group) => ({ label: group.curriculum_id ? `${group.name} · учебный план` : group.name, value: group.id, curriculum_id: group.curriculum_id })))
   const subjectOptions = computed(() => subjects.value.map((subject) => ({ label: [subject.code, subject.name].filter(Boolean).join(' · '), value: subject.id })))
 
-  async function load() {
+  async function load({ includeReferenceData = true } = {}) {
     loading.value = true; error.value = ''
     try {
-      const [loadsPayload, teachersPayload, groupsPayload, subjectsPayload] = await Promise.all([api.list('teaching-loads'), api.list('teachers'), api.list('groups'), api.list('subjects')])
+      const requests = [api.list('teaching-loads')]
+      if (includeReferenceData) requests.push(api.list('teachers'), api.list('groups'), api.list('subjects'))
+      const [loadsPayload, teachersPayload = { data: [] }, groupsPayload = { data: [] }, subjectsPayload = { data: [] }] = await Promise.all(requests)
       loads.value = extractRows(loadsPayload)
       teachers.value = extractRows(teachersPayload)
       groups.value = extractRows(groupsPayload)
@@ -96,8 +98,8 @@ export const useTeachingLoadStore = defineStore('teachingLoad', () => {
   async function exportCsv() { const blob = await api.download('/teaching-loads/export'); const url = window.URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'teaching-loads.csv'; link.click(); window.URL.revokeObjectURL(url) }
   function setFilters(next) { filters.value = { ...filters.value, ...next } }
   function resetFilters() { filters.value = { ...initialFilters } }
-  function select(load) { selectedId.value = load?.id || null; if (selectedId.value) loadCoverage(selectedId.value) }
-  function selectById(id) { selectedId.value = id || null; if (selectedId.value) loadCoverage(selectedId.value) }
+  function select(load, { includeCoverage = true } = {}) { selectedId.value = load?.id || null; if (selectedId.value && includeCoverage) loadCoverage(selectedId.value) }
+  function selectById(id, { includeCoverage = true } = {}) { selectedId.value = id || null; if (selectedId.value && includeCoverage) loadCoverage(selectedId.value) }
 
   return { loads, filteredLoads, teachers, groups, subjects, filters, selectedId, selectedLoad, selectedItems, selectedHours, loading, saving, error, importSummary, generationPreview, coverage, academicYearOptions, semesterOptions, teacherOptions, groupOptions, subjectOptions, load, loadCoverage, generatePreview, generateApply, save, remove, addItem, assignTeacher, bulkAssignTeacher, removeItem, importCsv, exportCsv, setFilters, resetFilters, select, selectById }
 })

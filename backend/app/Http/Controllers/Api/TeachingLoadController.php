@@ -81,7 +81,7 @@ class TeachingLoadController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $loads = TeachingLoad::query()
+        $query = TeachingLoad::query()
             ->with(['teacher', 'curriculum', 'group', 'items.subject', 'items.group', 'items.teacher', 'items.curriculumSubject', 'items.workloadType'])
             ->withCount('items')
             ->when($request->string('academic_year')->toString(), fn ($query, string $year) => $query->where('academic_year', $year))
@@ -92,8 +92,19 @@ class TeachingLoadController extends Controller
             ->when($request->integer('assignment_teacher_id'), fn ($query, int $id) => $query->whereHas('items', fn ($itemQuery) => $itemQuery->where('teacher_id', $id)))
             ->when($request->string('assignment_status')->toString(), fn ($query, string $status) => $query->whereHas('items', fn ($itemQuery) => $itemQuery->where('assignment_status', $status)))
             ->orderByDesc('academic_year')
-            ->orderBy('teacher_id')
-            ->paginate(50);
+            ->orderBy('teacher_id');
+
+        if (! $request->user()->hasPermission('teachingload.view')) {
+            $teacherId = $request->user()->teacher()->value('id');
+
+            abort_unless($teacherId, Response::HTTP_FORBIDDEN, 'У вас нет доступа к этому действию.');
+
+            $query->where(fn ($loadQuery) => $loadQuery
+                ->where('teacher_id', $teacherId)
+                ->orWhereHas('items', fn ($itemQuery) => $itemQuery->where('teacher_id', $teacherId)));
+        }
+
+        $loads = $query->paginate(50);
 
         return TeachingLoadResource::collection($loads);
     }

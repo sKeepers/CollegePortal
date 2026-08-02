@@ -183,7 +183,7 @@ export const routes = [
         path: 'teaching-load',
         name: 'teaching-load',
         component: TeachingLoadPage,
-        meta: { title: 'Нагрузка преподавателей', permission: 'teachingload.view' },
+        meta: { title: 'Нагрузка преподавателей', permissionsAny: ['teachingload.view', 'view_own_data'] },
       },
       {
         path: 'exams',

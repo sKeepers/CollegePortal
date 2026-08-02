@@ -40,6 +40,10 @@ class EnsurePermission
             return array_values(array_unique(array_filter(['digitalpasses.manage', 'view_own_data', $permission])));
         }
 
+        if ($path === 'api/teaching-loads' && in_array($method, ['GET', 'HEAD'], true)) {
+            return array_values(array_unique(array_filter(['teachingload.view', 'view_own_data', $permission])));
+        }
+
         return array_values(array_unique(array_filter([$mapped, $permission])));
     }
 

@@ -15,12 +15,15 @@ import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
 import { usePermissions } from '../../composables/usePermissions'
+import { useAuthStore } from '../../stores/auth'
 import { TABLE_ROWS_PER_PAGE_OPTIONS, createTablePagination, persistTablePagination } from '../../services/tableSettings'
 import { useReferenceOptionsStore } from '../../stores/referenceOptions'
 import { ASSIGNMENT_STATUS_OPTIONS, LOAD_STATUS_OPTIONS, assignmentLabel, assignmentTone, statusLabel, statusTone, teacherName, useTeachingLoadStore } from '../../stores/teachingLoad'
 
 const store = useTeachingLoadStore()
 const permissions = usePermissions()
+const auth = useAuthStore()
+const isOwnView = computed(() => auth.hasRole('teacher') && !permissions.hasPermission('teachingload.view'))
 const canCreate = computed(() => permissions.hasPermission('teachingload.edit'))
 const canUpdate = computed(() => permissions.hasPermission('teachingload.edit'))
 const canDelete = computed(() => permissions.hasPermission('teachingload.edit'))
@@ -77,7 +80,7 @@ const teachingLoadMetrics = computed(() => [
   { label: 'Превышение', value: store.coverage?.overassigned_hours ?? 0 },
 ])
 const teachingLoadActions = computed(() => [
-  { label: 'Преподаватель', to: { path: '/teachers', query: { selected: store.selectedLoad?.teacher_id } } },
+  ...(!isOwnView.value ? [{ label: 'Преподаватель', to: { path: '/teachers', query: { selected: store.selectedLoad?.teacher_id } } }] : []),
   { label: 'Расписание', to: { path: '/schedule', query: { group: store.selectedLoad?.group_id, teacher: store.selectedLoad?.teacher_id } } },
   { label: 'Журнал', to: { path: '/journal', query: { group: store.selectedLoad?.group_id, teacher: store.selectedLoad?.teacher_id } } },
 ])
@@ -92,7 +95,7 @@ function rowClass(row) { return Number(row.id) === Number(store.selectedId) ? 't
 function updatePagination(p) { tablePagination.value = p; persistTablePagination(rowsKey, p) }
 function routeSelectedId() { return route.query.selected ? String(route.query.selected) : '' }
 async function syncQuery(selectedId = routeSelectedId()) { const query = { ...route.query }; selectedId ? query.selected = selectedId : delete query.selected; syncingQuery.value = true; await router.replace({ path: '/teaching-load', query }); syncingQuery.value = false }
-async function selectLoad(load) { store.select(load); await syncQuery(load?.id || '') }
+async function selectLoad(load) { store.select(load, { includeCoverage: !isOwnView.value }); await syncQuery(load?.id || '') }
 function openCreateForm() { if (!canCreate.value) return; editingLoad.value = null; Object.assign(loadForm, { academic_year: '2026/2027', teacher_id: '', status: 'draft', description: '' }); formVisible.value = true }
 function openEditForm(load) { if (!canUpdate.value) return; editingLoad.value = load; Object.assign(loadForm, { academic_year: load.academic_year, teacher_id: load.teacher_id, status: load.status || 'draft', description: load.description || '' }); formVisible.value = true }
 async function saveLoad() { if (!canUpdate.value) return; const isEdit = Boolean(editingLoad.value?.id); await store.save(loadForm, editingLoad.value?.id || null); formVisible.value = false; notify(isEdit ? 'Нагрузка обновлена' : 'Нагрузка создана') }
@@ -111,29 +114,29 @@ async function applyFilters() { store.setFilters({ ...store.filters }); await sy
 async function resetFilters() { store.resetFilters(); await syncQuery('') }
 async function handleImport(file) { if (!canImport.value || !file) return; await store.importCsv(file); importFile.value = null; notify('Импорт нагрузки завершен') }
 async function exportCsv() { if (!canExport.value) return; await store.exportCsv(); notify('Экспорт нагрузки подготовлен') }
-watch(() => route.query.selected, () => { if (!syncingQuery.value) store.selectById(routeSelectedId()) })
-onMounted(async () => { await referenceOptions.loadCatalog('teaching_load_types'); store.selectById(routeSelectedId()); await store.load(); if (!store.selectedLoad && store.filteredLoads[0]) await selectLoad(store.filteredLoads[0]) })
+watch(() => route.query.selected, () => { if (!syncingQuery.value) store.selectById(routeSelectedId(), { includeCoverage: !isOwnView.value }) })
+onMounted(async () => { if (!isOwnView.value) await referenceOptions.loadCatalog('teaching_load_types'); store.selectById(routeSelectedId(), { includeCoverage: !isOwnView.value }); await store.load({ includeReferenceData: !isOwnView.value }); if (!store.selectedLoad && store.filteredLoads[0]) await selectLoad(store.filteredLoads[0]) })
 </script>
 
 <template>
   <AppPage>
-    <PageHeader title="Нагрузка преподавателей" subtitle="Формирование из учебного плана, распределение часов и назначение преподавателей.">
+    <PageHeader title="Нагрузка преподавателей" :subtitle="isOwnView ? 'Ваша учебная нагрузка.' : 'Формирование из учебного плана, распределение часов и назначение преподавателей.'">
       <template #actions>
         <q-btn v-if="canGenerate" color="secondary" @click="openGenerateDialog"><Wand2 :size="16" class="q-mr-xs" /> Сформировать из учебного плана</q-btn>
         <q-btn v-if="canCreate" color="primary" @click="openCreateForm"><Plus :size="16" class="q-mr-xs" /> Новая нагрузка</q-btn>
       </template>
     </PageHeader>
 
-    <AppToolbar><span>{{ tableSubtitle }}</span><template #actions><AppLoading v-if="store.loading" label="Загрузка нагрузки..." /><q-btn flat :disable="store.loading" @click="store.load"><RefreshCw :size="16" class="q-mr-xs" /> Обновить</q-btn><q-file v-if="canImport" v-model="importFile" dense outlined accept=".csv,text/csv" label="Импорт" style="max-width: 180px" @update:model-value="handleImport"><template #prepend><Upload :size="16" /></template></q-file><q-btn color="primary" @click="exportCsv"><Download :size="16" class="q-mr-xs" /> Экспорт</q-btn></template></AppToolbar>
+    <AppToolbar><span>{{ tableSubtitle }}</span><template #actions><AppLoading v-if="store.loading" label="Загрузка нагрузки..." /><q-btn flat :disable="store.loading" @click="store.load({ includeReferenceData: !isOwnView })"><RefreshCw :size="16" class="q-mr-xs" /> Обновить</q-btn><q-file v-if="canImport" v-model="importFile" dense outlined accept=".csv,text/csv" label="Импорт" style="max-width: 180px" @update:model-value="handleImport"><template #prepend><Upload :size="16" /></template></q-file><q-btn v-if="canExport" color="primary" @click="exportCsv"><Download :size="16" class="q-mr-xs" /> Экспорт</q-btn></template></AppToolbar>
     <AppErrorBanner :message="store.error" />
 
     <AppFilterBar>
       <q-select v-model="store.filters.academic_year" dense outlined clearable emit-value map-options label="Учебный год" :options="store.academicYearOptions" />
-      <q-select v-model="store.filters.group_id" dense outlined clearable emit-value map-options label="Группа" :options="store.groupOptions" />
+      <q-select v-if="!isOwnView" v-model="store.filters.group_id" dense outlined clearable emit-value map-options label="Группа" :options="store.groupOptions" />
       <q-select v-model="store.filters.semester" dense outlined clearable emit-value map-options label="Семестр" :options="store.semesterOptions" />
-      <q-select v-model="store.filters.subject_id" dense outlined clearable emit-value map-options label="Дисциплина" :options="store.subjectOptions" />
-      <q-select v-model="store.filters.assignment_teacher_id" dense outlined clearable emit-value map-options label="Преподаватель" :options="store.teacherOptions" />
-      <q-select v-model="store.filters.assignment_status" dense outlined clearable emit-value map-options label="Распределение" :options="ASSIGNMENT_STATUS_OPTIONS" />
+      <q-select v-if="!isOwnView" v-model="store.filters.subject_id" dense outlined clearable emit-value map-options label="Дисциплина" :options="store.subjectOptions" />
+      <q-select v-if="!isOwnView" v-model="store.filters.assignment_teacher_id" dense outlined clearable emit-value map-options label="Преподаватель" :options="store.teacherOptions" />
+      <q-select v-if="!isOwnView" v-model="store.filters.assignment_status" dense outlined clearable emit-value map-options label="Распределение" :options="ASSIGNMENT_STATUS_OPTIONS" />
       <template #actions><q-btn color="primary" @click="applyFilters">Применить</q-btn><q-btn flat @click="resetFilters">Сбросить</q-btn></template>
     </AppFilterBar>
 
