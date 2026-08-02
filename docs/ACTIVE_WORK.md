@@ -15,13 +15,13 @@
 ## Git-состояние
 
 - Active worktree branch: `sync/sync-001-local`
-- Last deployed DEV checkpoint: `3f4b237ef`
+- Last deployed DEV checkpoint: `228a27b5f`
 - DEV branch: `feature/uat-002-1-final-stabilization`
-- GitHub branch: `origin/feature/uat-002-1-final-stabilization` развёрнута на DEV до `3f4b237ef`.
-- Локальная ветка `sync/sync-001-local` содержит self-scoped read-only просмотр нагрузки, улучшения журнала и сквозной workflow запроса редактирования поверх `3f4b237ef`.
+- GitHub branch: `origin/feature/uat-002-1-final-stabilization` развёрнута на DEV до `228a27b5f`.
+- Локальная ветка `sync/sync-001-local` содержит dashboard/system-info improvements и безопасный reset рабочих данных поверх `228a27b5f`.
 - `SYNC-001` объединил GitHub `SEC-001` с DEV UAT-002.2 и был развёрнут на DEV.
 - На DEV применена миграция `2026_07_30_010000_add_lookup_and_expiration_to_api_tokens`.
-- Проверки после развёртывания: `php artisan test` — `345 passed (2204 assertions)`; `npm run build` завершилась успешно.
+- Проверки после развёртывания: `php artisan test` — `345 passed (2204 assertions)`; `npm run build` завершилась успешно; health endpoint вернул `200`.
 - На DEV развёрнуты карточка оценок и адаптация профилей устройств после успешной production-сборки.
 - Legacy `ScheduleLesson` теперь открывает конкретный `JournalLesson` через `legacy_schedule_lesson_id`; создание идемпотентно, переносит тему занятия и формирует roster студентов.
 - Проверки исправления: `JournalEngineApiTest` — `10 passed (64 assertions)`; `npm run build` завершилась успешно.
@@ -30,7 +30,10 @@
 - Подписанный журнал показывает подтверждение перед подписью. Преподаватель может направить запрос редактирования, а пользователь с `journal.reopen` одобряет или отклоняет его; одобрение переоткрывает журнал и фиксируется в audit.
 - Миграция DEV `2026_08_02_010000_create_journal_edit_requests_table` применена. `JournalEngineApiTest`: `11 passed (75 assertions)`.
 - Pending запросы отображаются в журнале администратора и на admin dashboard. Обе точки открывают конкретный журнал для одобрения или отклонения, а после решения запрос исчезает из обоих списков. `JournalEngineApiTest`: `11 passed (81 assertions)`.
-- Незакоммиченные изменения после создания checkpoint: отсутствуют. На DEV остаются только generated `frontend/public/version.json` после build и локальный `.worktrees/`.
+- Dashboard использует единое представление версии для widget и `О системе`; masonry grid пересчитывает spans через `ResizeObserver`, устраняя пустоты между карточками.
+- `POST admin/demo-data/reset` очищает рабочие данные DEV через `TRUNCATE ... RESTART IDENTITY CASCADE`, сохраняя пользователей, роли, permissions, settings и справочники. Устаревшая кнопка `Очистить демо-данные` заменена на `Очистить рабочие данные DEV`.
+- Reset выполнен на DEV: сохранены 12 пользователей, 11 ролей, 156 permissions и 26 settings; `Student`, `Teacher`, `ScheduleLesson`, `JournalLesson` и `JournalEditRequest` имеют по 0 записей.
+- Незакоммиченные изменения в worktree: отсутствуют. На DEV остаются только generated `frontend/public/version.json` после build и локальный `.worktrees/`.
 
 ## Доступ к DEV
 
@@ -63,15 +66,16 @@ GitHub Issues доступны на DEV только для чтения чер�
 
 ## Следующие действия
 
-1. Повторить сквозной UAT запроса редактирования: teacher отправляет запрос; admin видит его на `/dashboard` и `/journal`, открывает занятие и принимает решение.
-2. Подтвердить, что после одобрения журнал переоткрыт, а pending запись исчезла с dashboard и из журнала администратора.
-3. После подтверждённых результатов обновить Issues #29, #4 и #24 санитизированными UAT-доказательствами.
-4. Сценарий ручного teacher UAT зафиксирован в [UAT-002 Report](UAT_002_REPORT.md).
+1. Создать на DEV новые рабочие записи для UAT: преподавателя, студента, группу, дисциплину, нагрузку и занятие расписания; выдать существующей учётной записи преподавательскую роль и связать её с профилем.
+2. Повторить сквозной UAT запроса редактирования: teacher отправляет запрос; admin видит его на `/dashboard` и `/journal`, открывает занятие и принимает решение.
+3. Подтвердить, что после одобрения журнал переоткрыт, а pending запись исчезла с dashboard и из журнала администратора.
+4. После подтверждённых результатов обновить Issues #29, #4 и #24 санитизированными UAT-доказательствами.
+5. Сценарий ручного teacher UAT зафиксирован в [UAT-002 Report](UAT_002_REPORT.md).
 
 ## Блокеры
 
 - Автоматизированные проверки завершены. Браузерный UAT под teacher требует интерактивной сессии с учётной записью и не заменяется API-тестами.
-- Legacy `ScheduleLesson` без `schedule_entry_id` не может автоматически открыть или создать журнал; текущий fallback открывает отфильтрованный журнал по дате и преподавателю.
+- Рабочие профили очищены намеренно; до ручного UAT необходимо создать новые связанные записи преподавателя и студента.
 - PROD не изменялся.
 
 ## Чек-лист передачи
