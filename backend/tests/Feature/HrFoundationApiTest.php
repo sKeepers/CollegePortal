@@ -72,10 +72,10 @@ class HrFoundationApiTest extends TestCase
         $this->withApiAuth($this->createApiUser(roleCode: 'hr'));
 
         $this->postJson('/api/departments', ['name' => 'Администрация'])
-            ->assertOk()
+            ->assertCreated()
             ->assertJsonPath('data.name', 'Администрация');
         $this->postJson('/api/positions', ['name' => 'Директор'])
-            ->assertOk()
+            ->assertCreated()
             ->assertJsonPath('data.name', 'Директор');
 
         $this->assertDatabaseHas('departments', ['name' => 'Администрация']);
