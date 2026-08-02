@@ -15,10 +15,10 @@
 ## Git-состояние
 
 - Active worktree branch: `sync/sync-001-local`
-- Last deployed DEV checkpoint: `9f2596dfd`
+- Last deployed DEV checkpoint: `22c4883de`
 - DEV branch: `feature/uat-002-1-final-stabilization`
-- GitHub branch: `origin/feature/uat-002-1-final-stabilization` развёрнута на DEV до `9f2596dfd`.
-- Локальный HEAD: `67a379d` на ветке `sync/sync-001-local`; последний известный DEV HEAD: `9f2596dfd`.
+- GitHub branch: `origin/feature/uat-002-1-final-stabilization` развёрнута на DEV до `22c4883de`.
+- Локальный HEAD: `22c4883` на ветке `sync/sync-001-local`; последний известный DEV HEAD: `22c4883de`.
 - `SYNC-001` объединил GitHub `SEC-001` с DEV UAT-002.2 и был развёрнут на DEV.
 - На DEV применена миграция `2026_07_30_010000_add_lookup_and_expiration_to_api_tokens`.
 - Проверки после развёртывания: `php artisan test` — `347 passed (2215 assertions)`; `npm run build` завершилась успешно; health endpoint вернул `200`.
@@ -41,8 +41,10 @@
 - Проверки: `PostgresBackupServiceTest` и `DatabaseBackupApiTest` — `4 passed (17 assertions)`; `npm run build` завершилась успешно; health endpoint вернул `200`.
 - Создан и проверен первый архив через сервис: `manual-20260802-192823-92922147-fd1d-49d4-9c7d-7449a91ddbbc.dump`, 397065 bytes. Восстановление действующей DEV-базы намеренно не запускалось.
 - Исправлены права DEV runtime storage: `storage` и `storage/app/private/postgresql-backups` принадлежат `www-data`; создание второго архива от имени web-процесса подтверждено (`manual-20260802-195519-21088212-5f81-48ca-9172-a0f3f99a3eb1.dump`, 396791 bytes).
-- В worktree есть незакоммиченные изменения без commit/deploy: XLSX-шаблон и импорт сотрудников, а также обязательный валидный СНИЛС для новых Student и foundation-абитуриентов.
-- DEV и PROD в этой задаче не изменялись.
+- XLSX-шаблон и поток `preview -> validation -> confirm` сотрудников развёрнуты в Universal Import; пустой табельный номер генерируется автоматически. `UniversalImportApiTest` и `HrFoundationApiTest`: `18 passed (117 assertions)`; frontend build завершился успешно.
+- Новые студенты и foundation-абитуриенты требуют валидный СНИЛС; Student API/CSV/Universal Import создают или переиспользуют Person по `snils_hash`; ФИС apply блокируется при пустом или некорректном СНИЛС. DEV tests: `31 passed (145 assertions)`.
+- В ветке переноса добавлены `**/bin/` и `**/obj/` в `.gitignore`. В root worktree остаются пользовательский `docs/UAT_002_REPORT.md` и локальный .NET build artifact `obj/`; не удалять без отдельного решения.
+- DEV изменён; PROD не изменялся.
 
 ## Доступ к DEV
 
@@ -54,7 +56,7 @@
 
 ## Текущая задача
 
-Реализован локально, без commit/deploy, обязательный валидный СНИЛС для новых Student и foundation-абитуриентов. Student API, CSV и Universal Import нормализуют СНИЛС через `SnilsService`, ищут или создают Person по `snils_hash` и сохраняют `person_id`; обновления найденных импортом студентов не требуют СНИЛС. FIS dry-run/apply блокирует отсутствующий или некорректный СНИЛС до записи данных.
+Завершение UAT-002.2 и подготовка проекта к переносу на другой компьютер.
 
 GitHub Issues доступны на DEV только для чтения через `gh`. Текущий обзор: [GitHub Issue Review 2026-08-01](GITHUB_ISSUE_REVIEW_2026-08-01.md); не изменять Issues без явной задачи.
 
@@ -75,14 +77,13 @@ GitHub Issues доступны на DEV только для чтения чер�
 
 ## Следующие действия
 
-1. В окружении с PHP и зависимостями выполнить `php artisan test tests/Feature/StudentApiTest.php tests/Feature/StudentCsvApiTest.php tests/Feature/UniversalImportApiTest.php tests/Feature/Admissions/PersonApplicantManagementApiTest.php tests/Feature/FisAdmissionsImportHandlerTest.php tests/Unit/Admissions/ApplicantServiceTest.php` из `backend`.
-2. Проверить вручную создание студента с корректным и некорректным СНИЛС, CSV/Universal Import и foundation-абитуриента с новым Person и существующим Person без СНИЛС.
-3. Не выполнять commit или deploy без отдельного указания пользователя.
+1. Выполнить ручной `dry-run` ФИС-выгрузки, проверить сопоставление конкурсов и только после отдельного подтверждения применять импорт.
+2. Выполнить ручные проверки XLSX-импорта сотрудников, СНИЛС на формах студентов/абитуриентов, истории редактирования журналов и resize-line.
+3. На новом компьютере клонировать GitHub ветку `feature/uat-002-1-final-stabilization`, не перенося build artifacts; private database archives и secrets переносить отдельно и защищенно.
 
 ## Блокеры
 
-- В текущем Windows worktree отсутствует команда `php`; поэтому новые автоматизированные проверки не выполнены. `git diff --check` выполнен успешно.
-- DEV и PROD в этой задаче не изменялись.
+- ФИС-выгрузка не должна применяться без ручной проверки dry-run и подтверждения сопоставления конкурсов.
 
 ## Чек-лист передачи
 
