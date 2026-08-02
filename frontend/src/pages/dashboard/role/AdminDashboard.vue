@@ -35,6 +35,7 @@ const loading = ref(false)
 const error = ref('')
 const analytics = ref(null)
 const frontendVersion = ref(null)
+const pendingEditRequests = ref([])
 
 const roleLabel = computed(() => auth.user?.role?.code === 'director' ? 'директора' : 'администратора')
 const currentDate = computed(currentDateRu)
@@ -52,6 +53,7 @@ const dashboardWidgets = [
   { id: 'system', title: 'Система', defaultSize: 'medium' },
   { id: 'audit', title: 'Последние действия', defaultSize: 'medium' },
   { id: 'access', title: 'Проходная', defaultSize: 'small' },
+  { id: 'journal-edit-requests', title: 'Запросы редактирования журналов', defaultSize: 'medium' },
 ]
 const payload = computed(() => analytics.value?.data || {})
 const kpi = computed(() => payload.value.kpi || {})
@@ -172,7 +174,13 @@ async function loadDashboard() {
   error.value = ''
 
   try {
-    analytics.value = await api.list('dashboard/analytics/executive')
+    const editRequests = auth.can('journal.reopen') ? api.list('journal/edit-requests/pending') : Promise.resolve({ data: [] })
+    const [analyticsPayload, editRequestsPayload] = await Promise.all([
+      api.list('dashboard/analytics/executive'),
+      editRequests,
+    ])
+    analytics.value = analyticsPayload
+    pendingEditRequests.value = Array.isArray(editRequestsPayload?.data) ? editRequestsPayload.data : []
   } catch (err) {
     error.value = err.message || 'Не удалось загрузить аналитический Dashboard'
   } finally {
@@ -342,6 +350,18 @@ onMounted(() => {
           </div>
           <AppStatusBadge label="Контроль доступа" tone="info" />
         </section>
+      </template>
+
+      <template #journal-edit-requests>
+        <AppCard title="Запросы редактирования журналов" subtitle="Требуют решения администратора">
+          <div v-if="pendingEditRequests.length" class="dashboard-role-list">
+            <button v-for="request in pendingEditRequests" :key="request.id" type="button" class="executive-attention__item" @click="$router.push({ path: '/journal', query: { journalLesson: request.journal_lesson_id } })">
+              <span><strong>{{ request.lesson.subject }} · {{ request.lesson.group }}</strong><small>{{ request.requested_by_name || request.lesson.teacher }}: {{ request.reason }}</small></span>
+              <AppStatusBadge label="Ожидает" tone="warning" />
+            </button>
+          </div>
+          <p v-else class="dashboard-role-empty">Новых запросов нет.</p>
+        </AppCard>
       </template>
     </PersonalDashboardLayout>
   </AppPage>

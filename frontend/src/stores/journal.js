@@ -86,6 +86,7 @@ export const useJournalStore = defineStore('journal', () => {
   const grades = ref([])
   const files = ref([])
   const attendanceSuggestion = ref([])
+  const pendingEditRequests = ref([])
   const selectedLessonId = ref(null)
   const loading = ref(false)
   const detailsLoading = ref(false)
@@ -339,6 +340,22 @@ export const useJournalStore = defineStore('journal', () => {
   async function reviewEditRequest(id, approved) {
     const payload = await api.post(`journal/edit-requests/${id}/review`, { approved })
     replaceLesson(payload.data)
+    await loadPendingEditRequests()
+  }
+
+  async function loadPendingEditRequests() {
+    const payload = await api.list('journal/edit-requests/pending')
+    pendingEditRequests.value = extractRows(payload)
+  }
+
+  async function openJournalLesson(id) {
+    if (!id) return
+    const payload = await api.get(`journal/lessons/${id}`)
+    const lesson = payload.data
+    const exists = lessons.value.some((item) => Number(item.id) === Number(lesson.id))
+    lessons.value = exists ? lessons.value.map((item) => Number(item.id) === Number(lesson.id) ? lesson : item) : [lesson, ...lessons.value]
+    selectedLessonId.value = lesson.id
+    await loadJournalData()
   }
 
   async function openFromLegacySchedule(scheduleLessonId) {
@@ -357,10 +374,10 @@ export const useJournalStore = defineStore('journal', () => {
 
   return {
     filters, lessons, filteredLessons, journalLessons, groups, teachers, subjects, students, studentRows,
-    attendance, grades, files, attendanceSuggestion, selectedLessonId, selectedLesson, selectedAttendance,
+    attendance, grades, files, attendanceSuggestion, pendingEditRequests, selectedLessonId, selectedLesson, selectedAttendance,
     selectedGrades, selectedFiles, lessonStudents, dashboardStats, groupOptions, teacherOptions, subjectOptions,
     academicYearOptions, loading, detailsLoading, saving, error, load, loadJournalData, setFilters, resetFilters,
-    selectLesson, saveLesson, completeLesson, signLesson, reopenLesson, requestEdit, reviewEditRequest, saveAttendanceRows, saveGradeRows,
+    selectLesson, saveLesson, completeLesson, signLesson, reopenLesson, requestEdit, reviewEditRequest, loadPendingEditRequests, openJournalLesson, saveAttendanceRows, saveGradeRows,
     markAllPresent, markSelectedAbsent, loadAttendanceSuggestion, applyAttendanceSuggestion, uploadLessonFile,
     deleteLessonFile, openFromSchedule, openFromLegacySchedule, lessonLabel, fullName, classroomLabel, attendanceMark,
   }

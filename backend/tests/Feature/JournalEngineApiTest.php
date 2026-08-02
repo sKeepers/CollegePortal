@@ -196,9 +196,19 @@ class JournalEngineApiTest extends TestCase
             ->assertJsonPath('data.edit_requests.0.status', JournalEditRequest::STATUS_PENDING);
         $requestId = JournalEditRequest::query()->value('id');
 
+        $this->withApiAuth($admin)->getJson('/api/journal/edit-requests/pending')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $requestId)
+            ->assertJsonPath('data.0.journal_lesson_id', $lessonId);
+
         $this->withApiAuth($admin)->postJson("/api/journal/edit-requests/{$requestId}/review", ['approved' => true])
             ->assertOk()
             ->assertJsonPath('data.status', JournalLesson::STATUS_REOPENED);
+
+        $this->withApiAuth($admin)->getJson('/api/journal/edit-requests/pending')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
 
         $this->assertDatabaseHas('journal_edit_requests', ['id' => $requestId, 'status' => JournalEditRequest::STATUS_APPROVED]);
         $this->assertDatabaseHas('audit_logs', ['module' => 'journal', 'action' => 'edit_request_approved']);

@@ -128,6 +128,36 @@ class JournalLessonController extends Controller
         return new JournalLessonResource($this->journalService->reviewEditRequest($journalEditRequest, $request->user(), $data['approved'], $data['comment'] ?? null));
     }
 
+    public function pendingEditRequests(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->hasPermission('journal.reopen'), 403);
+
+        $requests = JournalEditRequest::query()
+            ->where('status', JournalEditRequest::STATUS_PENDING)
+            ->with(['journalLesson.group', 'journalLesson.subject', 'journalLesson.teacher', 'requestedBy'])
+            ->latest()
+            ->get()
+            ->map(fn (JournalEditRequest $editRequest) => [
+                'id' => $editRequest->id,
+                'journal_lesson_id' => $editRequest->journal_lesson_id,
+                'reason' => $editRequest->reason,
+                'created_at' => $editRequest->created_at?->toISOString(),
+                'requested_by_name' => $editRequest->requestedBy?->name,
+                'lesson' => [
+                    'subject' => $editRequest->journalLesson?->subject?->name,
+                    'group' => $editRequest->journalLesson?->group?->name,
+                    'teacher' => trim(implode(' ', array_filter([
+                        $editRequest->journalLesson?->teacher?->last_name,
+                        $editRequest->journalLesson?->teacher?->first_name,
+                        $editRequest->journalLesson?->teacher?->middle_name,
+                    ]))),
+                    'lesson_date' => $editRequest->journalLesson?->lesson_date?->toDateString(),
+                ],
+            ]);
+
+        return response()->json(['data' => $requests]);
+    }
+
     public function attendance(Request $request, JournalLesson $lesson): JournalLessonResource
     {
         abort_unless($request->user()->hasPermission('journal.attendance'), 403);

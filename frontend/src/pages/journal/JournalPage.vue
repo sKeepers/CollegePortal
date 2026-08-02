@@ -151,6 +151,10 @@ async function reviewEditRequest(id, approved) {
   $q.notify({ type: 'positive', message: approved ? 'Редактирование разрешено.' : 'Запрос отклонен.', position: 'top-right' })
 }
 
+async function openPendingEditRequest(request) {
+  await store.openJournalLesson(request.journal_lesson_id)
+}
+
 async function loadSuggestion() { await store.loadAttendanceSuggestion() }
 async function applySuggestion() { await store.applyAttendanceSuggestion(); resetDrafts() }
 
@@ -163,6 +167,8 @@ onMounted(async () => {
   await store.load()
   if (route.query.lesson) await store.openFromSchedule(route.query.lesson)
   if (route.query.legacyLesson) await store.openFromLegacySchedule(route.query.legacyLesson)
+  if (hasPermission('journal.reopen')) await store.loadPendingEditRequests()
+  if (route.query.journalLesson) await store.openJournalLesson(route.query.journalLesson)
   resetDrafts()
 })
 </script>
@@ -202,6 +208,14 @@ onMounted(async () => {
     </AppToolbar>
 
     <AppErrorBanner :message="store.error" />
+
+    <section v-if="hasPermission('journal.reopen') && store.pendingEditRequests.length" class="journal-pending-requests">
+      <div><strong>Запросы на редактирование</strong><span>{{ store.pendingEditRequests.length }} ожидают решения</span></div>
+      <button v-for="request in store.pendingEditRequests" :key="request.id" type="button" @click="openPendingEditRequest(request)">
+        <strong>{{ request.lesson.subject || 'Занятие' }} · {{ request.lesson.group || 'Группа' }}</strong>
+        <span>{{ request.requested_by_name || request.lesson.teacher }}: {{ request.reason }}</span>
+      </button>
+    </section>
 
     <div class="journal-layout">
       <div class="journal-main">
@@ -325,6 +339,11 @@ onMounted(async () => {
 
 <style scoped>
 .journal-mode-tabs { margin-bottom: 12px; overflow-x: auto; }
+.journal-pending-requests { display: grid; gap: 8px; margin-bottom: 12px; padding: 12px; border: 1px solid #f59e0b; border-radius: 8px; background: #fffbeb; }
+.journal-pending-requests > div { display: flex; justify-content: space-between; gap: 8px; }
+.journal-pending-requests > div span { color: #92400e; font-size: 13px; }
+.journal-pending-requests button { display: grid; gap: 3px; border: 1px solid #fde68a; border-radius: 6px; padding: 8px; background: #fff; text-align: left; cursor: pointer; }
+.journal-pending-requests button span { color: #64748b; font-size: 13px; }
 .journal-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
 .journal-main { min-width: 0; display: grid; gap: 12px; }
 .journal-side { position: sticky; top: 76px; min-width: 0; }

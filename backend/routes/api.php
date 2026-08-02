@@ -444,6 +444,7 @@ Route::middleware(['api.token', 'throttle:api.authenticated'])->group(function (
         Route::get('journal/export/group.csv', [JournalLessonController::class, 'exportGroup'])->middleware('permission:journal.export');
         Route::get('journal/export/teacher.csv', [JournalLessonController::class, 'exportTeacher'])->middleware('permission:journal.export');
         Route::get('journal/lessons/{lesson}', [JournalLessonController::class, 'show']);
+        Route::get('journal/edit-requests/pending', [JournalLessonController::class, 'pendingEditRequests'])->middleware('permission:journal.reopen');
         Route::post('journal/from-schedule/{scheduleEntry}/open', [JournalLessonController::class, 'openFromSchedule'])->middleware('permission:journal.edit');
         Route::post('journal/from-legacy-schedule/{scheduleLesson}/open', [JournalLessonController::class, 'openFromLegacySchedule'])->middleware('permission:journal.edit');
         Route::put('journal/lessons/{lesson}', [JournalLessonController::class, 'update'])->middleware('permission:journal.edit');
