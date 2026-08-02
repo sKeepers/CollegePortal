@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { Database, Download, HardDriveRestore, RefreshCw, Trash2, Upload } from '@lucide/vue'
+import { Database, Download, RefreshCw, RotateCcw, Trash2, Upload } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -99,7 +99,7 @@ onMounted(() => { store.load(); if (canManageBackups.value) backups.load() })
           <tr v-for="snapshot in backups.snapshots" :key="snapshot.id">
             <td>{{ snapshot.name }} <AppStatusBadge v-if="snapshot.type === 'emergency'" label="аварийный" tone="warning" class="q-ml-sm" /></td>
             <td>{{ formatDate(snapshot.created_at) }}</td><td class="text-right">{{ formatSize(snapshot.size) }}</td>
-            <td class="text-right"><q-btn color="negative" flat dense :disable="backups.loading" @click="openRestore(snapshot)"><HardDriveRestore :size="16" class="q-mr-xs" /> Восстановить</q-btn></td>
+            <td class="text-right"><q-btn color="negative" flat dense :disable="backups.loading" @click="openRestore(snapshot)"><RotateCcw :size="16" class="q-mr-xs" /> Восстановить</q-btn></td>
           </tr>
           <tr v-if="!backups.loading && !backups.snapshots.length"><td colspan="4" class="text-center text-grey-7">Архивов пока нет.</td></tr>
         </tbody>
