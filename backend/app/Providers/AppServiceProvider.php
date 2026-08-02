@@ -3,6 +3,11 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Models\Student;
+use App\Models\Teacher;
+use App\Observers\StudentObserver;
+use App\Observers\TeacherObserver;
+use App\Observers\UserObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -25,6 +30,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Student::observe(StudentObserver::class);
+        Teacher::observe(TeacherObserver::class);
+        User::observe(UserObserver::class);
+
         RateLimiter::for('auth.login', function (Request $request) {
             $email = Str::lower((string) $request->input('email'));
 

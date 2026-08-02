@@ -17,16 +17,15 @@ class HrService
         return DB::transaction(function () use ($data): Employee {
             $person = $this->resolvePerson($data);
             $employee = Employee::create($this->employeePayload($data, $person));
-            if (($data['is_teacher'] ?? false) && ! Teacher::where('person_id', $person->id)->exists()) {
-                // HR marks teacher status only as a relationship hint; Teacher profile is still created explicitly in Teachers module.
-            }
+            $this->syncTeacher($employee, $person);
             return $employee->fresh(['person', 'primaryDepartment', 'primaryPosition', 'assignments.department', 'assignments.position', 'statusPeriods', 'teacher']);
         });
     }
 
     public function updateEmployee(Employee $employee, array $data): Employee
     {
-        $employee->update($this->employeePayload($data, $employee->person));
+        $employee->update($this->employeePayload($data, $employee->person, true));
+        $this->syncTeacher($employee, $employee->person);
         return $employee->fresh(['person', 'primaryDepartment', 'primaryPosition', 'assignments.department', 'assignments.position', 'statusPeriods', 'teacher']);
     }
 
@@ -54,9 +53,9 @@ class HrService
         return $duplicates->first() ?: $this->personService->createPerson($personData);
     }
 
-    private function employeePayload(array $data, Person $person): array
+    private function employeePayload(array $data, Person $person, bool $updating = false): array
     {
-        return [
+        $payload = [
             'person_id' => $person->id,
             'employee_number' => $data['employee_number'],
             'status' => $data['status'] ?? 'active',
@@ -69,5 +68,31 @@ class HrService
             'is_teacher' => (bool) ($data['is_teacher'] ?? false),
             'comment' => $data['comment'] ?? null,
         ];
+
+        if (! $updating) {
+            return $payload;
+        }
+
+        return array_filter($payload, fn (string $key): bool => array_key_exists($key, $data), ARRAY_FILTER_USE_KEY);
+    }
+
+    private function syncTeacher(Employee $employee, Person $person): void
+    {
+        if (! $employee->is_teacher) {
+            return;
+        }
+
+        $teacher = Teacher::firstOrNew(['person_id' => $person->id]);
+        $teacher->fill([
+            'last_name' => $person->last_name,
+            'first_name' => $person->first_name,
+            'middle_name' => $person->middle_name,
+            'phone' => $person->phone,
+            'email' => $person->email,
+            'position' => $employee->primaryPosition?->name,
+            'department' => $employee->primaryDepartment?->name,
+            'is_active' => $employee->status !== 'dismissed',
+        ]);
+        $teacher->save();
     }
 }

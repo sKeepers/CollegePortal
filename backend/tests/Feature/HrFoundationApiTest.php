@@ -58,11 +58,28 @@ class HrFoundationApiTest extends TestCase
             'status' => 'active',
             'employment_type' => 'part_time',
             'hired_at' => '2026-09-02',
+            'is_teacher' => true,
         ])->assertOk()->assertJsonPath('data.full_name', 'Петров Олег');
 
         $this->assertDatabaseHas('employees', ['employee_number' => 'EMP-001', 'person_id' => $person->id]);
         $this->assertDatabaseHas('people', ['email' => 'petrov@example.test']);
+        $this->assertDatabaseHas('teachers', ['person_id' => Employee::where('employee_number', 'EMP-002')->value('person_id'), 'is_active' => true]);
         $this->assertDatabaseHas('audit_logs', ['action' => 'employee_hired', 'module' => 'hr']);
+    }
+
+    public function test_hr_can_create_departments_and_positions_without_manual_codes(): void
+    {
+        $this->withApiAuth($this->createApiUser(roleCode: 'hr'));
+
+        $this->postJson('/api/departments', ['name' => 'Администрация'])
+            ->assertOk()
+            ->assertJsonPath('data.name', 'Администрация');
+        $this->postJson('/api/positions', ['name' => 'Директор'])
+            ->assertOk()
+            ->assertJsonPath('data.name', 'Директор');
+
+        $this->assertDatabaseHas('departments', ['name' => 'Администрация']);
+        $this->assertDatabaseHas('positions', ['name' => 'Директор']);
     }
 
     public function test_assignments_status_periods_and_dismissal_are_tracked(): void

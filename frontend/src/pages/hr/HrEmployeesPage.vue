@@ -191,12 +191,17 @@ function openDictionaryDialog(item = null) {
 }
 
 async function saveDictionary() {
-  if (activeTab.value === 'departments') {
-    await store.saveDepartment(dictionaryForm, editingDictionary.value?.id || null)
-  } else {
-    await store.savePosition(dictionaryForm, editingDictionary.value?.id || null)
+  try {
+    if (activeTab.value === 'departments') {
+      await store.saveDepartment(dictionaryForm, editingDictionary.value?.id || null)
+    } else {
+      await store.savePosition(dictionaryForm, editingDictionary.value?.id || null)
+    }
+    dictionaryDialog.value = false
+    $q.notify({ type: 'positive', message: activeTab.value === 'departments' ? 'Подразделение сохранено' : 'Должность сохранена' })
+  } catch (error) {
+    $q.notify({ type: 'negative', message: store.error || 'Не удалось сохранить запись' })
   }
-  dictionaryDialog.value = false
 }
 
 function confirmRemoveDictionary(item) {
@@ -420,13 +425,12 @@ watch(() => route.path, (path) => {
       <q-card class="hr-dialog hr-dialog--small">
         <q-card-section><div class="text-h6">{{ activeTab === 'departments' ? 'Подразделение' : 'Должность' }}</div></q-card-section>
         <q-card-section class="q-gutter-md">
-          <q-input v-model="dictionaryForm.code" outlined dense label="Код" />
-          <q-input v-model="dictionaryForm.name" outlined dense label="Название" />
+          <q-input v-model="dictionaryForm.code" outlined dense label="Код (заполнится автоматически)" />
+          <q-input v-model="dictionaryForm.name" outlined dense label="Название" :rules="[value => !!value?.trim() || 'Введите название']" />
           <q-input v-if="activeTab === 'positions'" v-model="dictionaryForm.category" outlined dense label="Категория" />
-          <q-input v-model="dictionaryForm.description" outlined dense type="textarea" label="Описание" />
           <q-toggle v-model="dictionaryForm.is_active" label="Активно" />
         </q-card-section>
-        <q-card-actions align="right"><q-btn flat no-caps label="Отмена" v-close-popup /><q-btn color="primary" no-caps label="Сохранить" @click="saveDictionary" /></q-card-actions>
+        <q-card-actions align="right"><q-btn flat no-caps label="Отмена" v-close-popup /><q-btn color="primary" no-caps label="Сохранить" :loading="store.saving" @click="saveDictionary" /></q-card-actions>
       </q-card>
     </q-dialog>
 

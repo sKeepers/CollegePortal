@@ -163,11 +163,15 @@ export const useHrStore = defineStore('hr', () => {
 
   async function saveDepartment(payload, id = null) {
     saving.value = true
+    error.value = ''
     try {
-      const data = { code: payload.code?.trim() || null, name: payload.name?.trim() || '', description: payload.description?.trim() || null, is_active: payload.is_active !== false }
+      const data = { code: payload.code?.trim() || null, name: payload.name?.trim() || '', is_active: payload.is_active !== false }
       const response = id ? await api.update('departments', id, data) : await api.create('departments', data)
       await loadDictionaries()
       return response?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось сохранить подразделение'
+      throw err
     } finally {
       saving.value = false
     }
@@ -181,11 +185,15 @@ export const useHrStore = defineStore('hr', () => {
 
   async function savePosition(payload, id = null) {
     saving.value = true
+    error.value = ''
     try {
-      const data = { code: payload.code?.trim() || null, name: payload.name?.trim() || '', category: payload.category?.trim() || null, description: payload.description?.trim() || null, is_active: payload.is_active !== false }
+      const data = { code: payload.code?.trim() || null, name: payload.name?.trim() || '', category: payload.category?.trim() || null, is_active: payload.is_active !== false }
       const response = id ? await api.update('positions', id, data) : await api.create('positions', data)
       await loadDictionaries()
       return response?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось сохранить должность'
+      throw err
     } finally {
       saving.value = false
     }
