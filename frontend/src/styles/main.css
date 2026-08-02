@@ -1106,6 +1106,11 @@ body {
   overflow: hidden;
 }
 
+.resizable-workspace { gap: 0; }
+.resizable-workspace > :not(.workspace-splitter) { min-width: 0; }
+.resizable-workspace > :first-child { padding-right: 10px; }
+.resizable-workspace > :last-child { max-width: none; padding-left: 10px; }
+
 .students-main,
 .groups-main,
 .teachers-main,
@@ -3087,6 +3092,12 @@ body {
   .journal-side {
     max-width: none;
   }
+}
+
+@media (max-width: 1100px) {
+  .resizable-workspace { grid-template-columns: 1fr !important; gap: 16px; }
+  .resizable-workspace > :first-child,
+  .resizable-workspace > :last-child { padding: 0; }
 }
 
 @media (min-width: 1920px) {

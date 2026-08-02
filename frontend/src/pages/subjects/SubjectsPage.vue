@@ -11,11 +11,13 @@ import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
+import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import SubjectDetailsPanel from './SubjectDetailsPanel.vue'
 import SubjectFilters from './SubjectFilters.vue'
 import SubjectFormPanel from './SubjectFormPanel.vue'
 import { useSubjectsStore } from '../../stores/subjects'
 import { usePermissions } from '../../composables/usePermissions'
+import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import {
   TABLE_ROWS_PER_PAGE_OPTIONS,
   createTablePagination,
@@ -29,6 +31,7 @@ const route = useRoute()
 const router = useRouter()
 const SUBJECTS_ROWS_PER_PAGE_KEY = 'collegePortal.subjects.rowsPerPage'
 const syncingQueryFromUi = ref(false)
+const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.subjects.splitter.v1', resizeBodyClass: 'subjects-splitter-resizing' })
 const canCreate = computed(() => permissions.hasPermission('subjects.create') || permissions.hasPermission('subjects.edit'))
 const canUpdate = computed(() => permissions.hasPermission('subjects.update') || permissions.hasPermission('subjects.edit'))
 const canDelete = computed(() => permissions.hasPermission('subjects.delete') || permissions.hasPermission('subjects.edit'))
@@ -288,6 +291,7 @@ onMounted(async () => {
             <span>Обновить</span>
           </template>
         </q-btn>
+        <q-btn flat @click="resetSplitter">Сбросить размер</q-btn>
         <q-btn v-if="canExport" color="secondary" :disable="store.loading" @click="exportSubjects">
           <template #default>
             <Download :size="16" />
@@ -314,7 +318,7 @@ onMounted(async () => {
       </ul>
     </q-banner>
 
-    <div class="subjects-layout">
+    <div ref="workspaceRef" class="subjects-layout" :style="workspaceStyle">
       <div class="subjects-main">
         <AppTable
           v-if="store.filteredSubjects.length || store.loading"
@@ -382,6 +386,8 @@ onMounted(async () => {
         </AppEmptyState>
       </div>
 
+      <WorkspaceSplitter label="Изменить ширину карточки дисциплины" @resize-start="startResize" @reset="resetSplitter" />
+
       <aside class="subjects-side">
         <SubjectDetailsPanel
           :subject="store.selectedSubject"
@@ -413,3 +419,11 @@ onMounted(async () => {
     />
   </AppPage>
 </template>
+
+<style scoped>
+.subjects-layout { gap: 0; }
+.subjects-main, .subjects-side { min-width: 0; }
+.subjects-main { padding-right: 10px; }
+.subjects-side { max-width: none; padding-left: 10px; }
+@media (max-width: 1100px) { .subjects-layout { grid-template-columns: 1fr !important; gap: 16px; } .subjects-main, .subjects-side { padding: 0; } }
+</style>

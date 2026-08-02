@@ -12,9 +12,11 @@ import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
+import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import { useDigitalPassesStore, ENTITY_OPTIONS, entityTypeLabel, formatDateTime, ownerName, statusLabel, statusTone } from '../../stores/digitalPasses'
 import { useAuthStore } from '../../stores/auth'
 import { usePermissions } from '../../composables/usePermissions'
+import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import { TABLE_ROWS_PER_PAGE_OPTIONS, createTablePagination, persistTablePagination } from '../../services/tableSettings'
 
 const store = useDigitalPassesStore()
@@ -23,6 +25,7 @@ const permissions = usePermissions()
 const canManage = computed(() => permissions.hasPermission('digitalpasses.manage'))
 const $q = useQuasar()
 const rowsPerPageKey = 'collegePortal.digitalPasses.rowsPerPage'
+const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.digitalPasses.splitter.v1', resizeBodyClass: 'digital-passes-splitter-resizing' })
 const issueDialogVisible = ref(false)
 const revokeDialogVisible = ref(false)
 const qrDialogVisible = ref(false)
@@ -94,11 +97,12 @@ onMounted(async () => { await store.load(); if (store.identities[0]) await store
       <span>{{ tableSubtitle }}</span>
       <template #actions>
         <AppLoading v-if="store.loading" label="Загрузка пропусков..." />
+        <q-btn flat @click="resetSplitter">Сбросить размер</q-btn>
         <q-btn flat :disable="store.loading" @click="store.load"><RefreshCw :size="16" class="q-mr-xs" /><span>Обновить</span></q-btn>
       </template>
     </AppToolbar>
     <AppErrorBanner :message="store.error" />
-    <div class="digital-passes-layout">
+    <div ref="workspaceRef" class="digital-passes-layout resizable-workspace" :style="workspaceStyle">
       <div class="digital-passes-main">
         <AppTable v-if="store.identities.length || store.loading" :rows="store.identities" :columns="columns" :loading="store.loading" :pagination="tablePagination" :rows-per-page-options="TABLE_ROWS_PER_PAGE_OPTIONS" :table-row-class-fn="rowClass" @update:pagination="updateTablePagination" @row-click="(_, row) => selectIdentity(row)">
           <template #body-cell-owner="props"><q-td :props="props"><button class="digital-passes-row-link" type="button" @click.stop="selectIdentity(props.row)">{{ ownerName(props.row) }}</button><div class="digital-passes-secondary-cell"><small>{{ tokenPreview(props.row.token) }}</small></div></q-td></template>
@@ -110,6 +114,7 @@ onMounted(async () => { await store.load(); if (store.identities[0]) await store
         </AppTable>
         <AppEmptyState v-else title="Цифровые пропуска не найдены" description="Выпустите первый QR-пропуск для студента или преподавателя."><q-btn v-if="canManage" color="primary" label="Выпустить пропуск" @click="openIssueDialog()" /></AppEmptyState>
       </div>
+      <WorkspaceSplitter label="Изменить ширину карточки пропуска" @resize-start="startResize" @reset="resetSplitter" />
       <aside class="digital-passes-side">
         <AppEmptyState v-if="!store.selectedIdentity" title="Пропуск не выбран" description="Выберите строку в таблице, чтобы открыть QR-код и сведения о владельце." />
         <WorkspacePanel

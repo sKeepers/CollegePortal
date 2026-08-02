@@ -11,11 +11,13 @@ import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
+import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import GroupDetailsPanel from './GroupDetailsPanel.vue'
 import GroupFilters from './GroupFilters.vue'
 import GroupFormPanel from './GroupFormPanel.vue'
 import { useGroupsStore } from '../../stores/groups'
 import { usePermissions } from '../../composables/usePermissions'
+import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import {
   TABLE_ROWS_PER_PAGE_OPTIONS,
   createTablePagination,
@@ -29,6 +31,7 @@ const route = useRoute()
 const router = useRouter()
 const GROUPS_ROWS_PER_PAGE_KEY = 'collegePortal.groups.rowsPerPage'
 const syncingQueryFromUi = ref(false)
+const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.groups.splitter.v1', resizeBodyClass: 'groups-splitter-resizing' })
 const canCreate = computed(() => permissions.hasPermission('groups.create') || permissions.hasPermission('groups.edit'))
 const canUpdate = computed(() => permissions.hasPermission('groups.update') || permissions.hasPermission('groups.edit'))
 const canDelete = computed(() => permissions.hasPermission('groups.delete') || permissions.hasPermission('groups.edit'))
@@ -291,6 +294,7 @@ onMounted(async () => {
             <span>Обновить</span>
           </template>
         </q-btn>
+        <q-btn flat @click="resetSplitter">Сбросить размер</q-btn>
         <q-btn v-if="canExport" color="secondary" :disable="store.loading" @click="exportGroups">
           <template #default>
             <Download :size="16" />
@@ -317,7 +321,7 @@ onMounted(async () => {
       </ul>
     </q-banner>
 
-    <div class="groups-layout">
+    <div ref="workspaceRef" class="groups-layout" :style="workspaceStyle">
       <div class="groups-main">
         <AppTable
           v-if="store.filteredGroups.length || store.loading"
@@ -376,6 +380,8 @@ onMounted(async () => {
         </AppEmptyState>
       </div>
 
+      <WorkspaceSplitter label="Изменить ширину карточки группы" @resize-start="startResize" @reset="resetSplitter" />
+
       <aside class="groups-side">
         <GroupDetailsPanel :group="store.selectedGroup" />
       </aside>
@@ -404,3 +410,11 @@ onMounted(async () => {
     />
   </AppPage>
 </template>
+
+<style scoped>
+.groups-layout { gap: 0; }
+.groups-main, .groups-side { min-width: 0; }
+.groups-main { padding-right: 10px; }
+.groups-side { max-width: none; padding-left: 10px; }
+@media (max-width: 1100px) { .groups-layout { grid-template-columns: 1fr !important; gap: 16px; } .groups-main, .groups-side { padding: 0; } }
+</style>

@@ -11,7 +11,9 @@ import AppLoading from '../../components/ui/AppLoading.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import ScheduleDetailsPanel from './ScheduleDetailsPanel.vue'
 import ScheduleFilters from './ScheduleFilters.vue'
+import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import { usePermissions } from '../../composables/usePermissions'
+import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import { useAuthStore } from '../../stores/auth'
 import {
   classroomLabel,
@@ -35,6 +37,7 @@ const previewMode = ref('create')
 const draggedLesson = ref(null)
 const createForm = ref({})
 const templateForm = ref({})
+const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.schedule.splitter.v1', resizeBodyClass: 'schedule-splitter-resizing' })
 
 function defaultView() { return auth.hasRole('student') ? 'day' : 'week' }
 
@@ -616,6 +619,7 @@ onMounted(async () => {
           </template>
         </q-btn>
         <AppLoading v-if="store.loading" label="Загрузка расписания..." />
+        <q-btn flat @click="resetSplitter">Сбросить размер</q-btn>
         <q-btn flat :disable="store.loading" @click="refresh">
           <template #default>
             <RefreshCw :size="16" />
@@ -661,7 +665,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div class="schedule-layout">
+    <div ref="workspaceRef" class="schedule-layout" :style="workspaceStyle">
       <div class="schedule-main">
         <div v-if="activeView === 'editor'" class="schedule-editor">
           <div class="schedule-editor__scroll">
@@ -793,6 +797,8 @@ onMounted(async () => {
         />
       </div>
 
+      <WorkspaceSplitter label="Изменить ширину карточки занятия" @resize-start="startResize" @reset="resetSplitter" />
+
       <aside class="schedule-side">
         <ScheduleDetailsPanel
           :lesson="store.selectedLesson"
@@ -883,6 +889,11 @@ onMounted(async () => {
 
 
 <style scoped>
+.schedule-layout { gap: 0; }
+.schedule-main, .schedule-side { min-width: 0; }
+.schedule-main { padding-right: 10px; }
+.schedule-side { max-width: none; padding-left: 10px; }
+@media (max-width: 1100px) { .schedule-layout { grid-template-columns: 1fr !important; gap: 16px; } .schedule-main, .schedule-side { padding: 0; } }
 .schedule-engine-list {
   display: grid;
   gap: 12px;

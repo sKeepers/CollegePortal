@@ -14,7 +14,9 @@ import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
+import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import { usePermissions } from '../../composables/usePermissions'
+import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import { TABLE_ROWS_PER_PAGE_OPTIONS, createTablePagination, persistTablePagination } from '../../services/tableSettings'
 import { CONTROL_FORM_OPTIONS, CURRICULUM_STATUS_OPTIONS, statusLabel, statusTone, useCurriculaStore } from '../../stores/curricula'
 
@@ -32,6 +34,7 @@ const route = useRoute()
 const router = useRouter()
 const rowsPerPageKey = 'collegePortal.curricula.rowsPerPage'
 const syncingQuery = ref(false)
+const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.curricula.splitter.v1', resizeBodyClass: 'curricula-splitter-resizing' })
 const formVisible = ref(false)
 const subjectFormVisible = ref(false)
 const deleteDialogVisible = ref(false)
@@ -128,6 +131,7 @@ onMounted(async () => { await store.selectById(routeSelectedId()); await store.l
       <span>{{ tableSubtitle }}</span>
       <template #actions>
         <AppLoading v-if="store.loading" label="Загрузка учебных планов..." />
+        <q-btn flat @click="resetSplitter">Сбросить размер</q-btn>
         <q-btn flat :disable="store.loading" @click="store.load"><RefreshCw :size="16" class="q-mr-xs" /> Обновить</q-btn>
         <q-file v-if="canImport" v-model="importFile" dense outlined accept=".csv,text/csv" label="Импорт" style="max-width: 180px" @update:model-value="handleImport"><template #prepend><Upload :size="16" /></template></q-file>
         <q-btn color="primary" @click="exportCsv"><Download :size="16" class="q-mr-xs" /> Экспорт</q-btn>
@@ -143,7 +147,7 @@ onMounted(async () => { await store.selectById(routeSelectedId()); await store.l
       <template #actions><q-btn color="primary" @click="applyFilters">Применить</q-btn><q-btn flat @click="resetFilters">Сбросить</q-btn></template>
     </AppFilterBar>
 
-    <div class="curricula-workspace">
+    <div ref="workspaceRef" class="curricula-workspace" :style="workspaceStyle">
       <div class="curricula-main">
         <AppTable v-if="store.filteredCurricula.length || store.loading" :rows="store.filteredCurricula" :columns="columns" :loading="store.loading" :pagination="tablePagination" :rows-per-page-options="TABLE_ROWS_PER_PAGE_OPTIONS" :table-row-class-fn="rowClass" @update:pagination="updatePagination" @row-click="(_, row) => selectCurriculum(row)">
           <template #body-cell-name="props"><q-td :props="props"><button class="curricula-row-link" type="button" @click.stop="selectCurriculum(props.row)">{{ props.row.name }}</button><div class="curricula-secondary-cell">{{ specialtyName(props.row) }}</div></q-td></template>
@@ -154,6 +158,8 @@ onMounted(async () => { await store.selectById(routeSelectedId()); await store.l
         </AppTable>
         <AppEmptyState v-else title="Учебные планы не найдены" description="Создайте учебный план или импортируйте CSV." />
       </div>
+
+      <WorkspaceSplitter label="Изменить ширину карточки учебного плана" @resize-start="startResize" @reset="resetSplitter" />
 
       <aside class="curricula-side">
         <AppEmptyState v-if="!store.selectedCurriculum" title="Учебный план не выбран" description="Выберите строку в таблице, чтобы открыть состав плана." />
@@ -185,9 +191,10 @@ onMounted(async () => { await store.selectById(routeSelectedId()); await store.l
 </template>
 
 <style scoped>
-.curricula-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; align-items: start; }
+.curricula-workspace { display: grid; gap: 0; align-items: start; }
 .curricula-main, .curricula-side { min-width: 0; }
-.curricula-side { position: sticky; top: 76px; }
+.curricula-main { padding-right: 10px; }
+.curricula-side { position: sticky; top: 76px; padding-left: 10px; }
 .curricula-row-link { border: 0; padding: 0; background: transparent; color: #0f172a; font-weight: 700; cursor: pointer; text-align: left; }
 .curricula-secondary-cell, .curricula-muted { color: #64748b; font-size: 12px; }
 .curricula-details__list { display: grid; gap: 10px; margin: 0; }
@@ -206,6 +213,5 @@ onMounted(async () => { await store.selectById(routeSelectedId()); await store.l
 .summary-card span { display: block; color: #64748b; font-size: 12px; }
 .summary-card strong { display: block; margin-top: 2px; color: #0f172a; font-size: 18px; }
 :deep(.curricula-row--selected) { background: #f8fafc; }
-@media (max-width: 1439px) { .curricula-workspace { grid-template-columns: minmax(0, 1fr) 380px; } }
-@media (max-width: 1023px) { .curricula-workspace { grid-template-columns: 1fr; } .curricula-side { position: static; } }
+@media (max-width: 1100px) { .curricula-workspace { grid-template-columns: 1fr !important; gap: 16px; } .curricula-main, .curricula-side { padding: 0; } .curricula-side { position: static; } }
 </style>

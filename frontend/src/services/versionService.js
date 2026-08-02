@@ -65,6 +65,7 @@ export function presentVersionInfo(value) {
 
   return {
     ...version,
+    environmentInfo: environment,
     buildDateLabel: formatVersionDate(version.buildDate),
     environmentLabel: environment.label,
   }

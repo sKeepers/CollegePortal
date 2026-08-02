@@ -12,11 +12,13 @@ import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
+import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import AdmissionDetailsPanel from './AdmissionDetailsPanel.vue'
 import AdmissionFilters from './AdmissionFilters.vue'
 import AdmissionFormPanel from './AdmissionFormPanel.vue'
 import { useReferenceOptionsStore } from '../../stores/referenceOptions'
 import { usePermissions } from '../../composables/usePermissions'
+import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import {
   applicantName,
   documentsCompleteness,
@@ -42,6 +44,7 @@ const route = useRoute()
 const router = useRouter()
 const ADMISSIONS_ROWS_PER_PAGE_KEY = 'collegePortal.admissions.rowsPerPage'
 const syncingQueryFromUi = ref(false)
+const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.admissions.splitter.v1', resizeBodyClass: 'admissions-splitter-resizing' })
 const canCreate = computed(() => permissions.hasPermission('admissions.create') || permissions.hasPermission('admissions.edit'))
 const canUpdate = computed(() => permissions.hasPermission('admissions.update') || permissions.hasPermission('admissions.edit'))
 const canDelete = computed(() => permissions.hasPermission('admissions.delete') || permissions.hasPermission('admissions.edit'))
@@ -501,6 +504,7 @@ onMounted(async () => {
       <span>{{ tableSubtitle }}</span>
       <template #actions>
         <AppLoading v-if="store.loading" label="Загрузка заявлений..." />
+        <q-btn flat @click="resetSplitter">Сбросить размер</q-btn>
         <q-file
           v-if="canImport"
           v-model="importFile"
@@ -579,7 +583,7 @@ onMounted(async () => {
       </ul>
     </q-banner>
 
-    <div class="admissions-layout">
+    <div ref="workspaceRef" class="admissions-layout resizable-workspace" :style="workspaceStyle">
       <div class="admissions-main">
         <AppTable
           v-if="store.filteredApplications.length || store.loading"
@@ -656,6 +660,8 @@ onMounted(async () => {
           <q-btn v-if="canCreate" color="primary" label="Новое заявление" @click="openCreateForm" />
         </AppEmptyState>
       </div>
+
+      <WorkspaceSplitter label="Изменить ширину карточки заявления" @resize-start="startResize" @reset="resetSplitter" />
 
       <aside class="admissions-side">
         <AdmissionDetailsPanel

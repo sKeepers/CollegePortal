@@ -11,11 +11,13 @@ import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
+import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import ClassroomDetailsPanel from './ClassroomDetailsPanel.vue'
 import ClassroomFilters from './ClassroomFilters.vue'
 import ClassroomFormPanel from './ClassroomFormPanel.vue'
 import { useClassroomsStore } from '../../stores/classrooms'
 import { usePermissions } from '../../composables/usePermissions'
+import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import {
   TABLE_ROWS_PER_PAGE_OPTIONS,
   createTablePagination,
@@ -29,6 +31,7 @@ const route = useRoute()
 const router = useRouter()
 const CLASSROOMS_ROWS_PER_PAGE_KEY = 'collegePortal.classrooms.rowsPerPage'
 const syncingQueryFromUi = ref(false)
+const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.classrooms.splitter.v1', resizeBodyClass: 'classrooms-splitter-resizing' })
 const canCreate = computed(() => permissions.hasPermission('classrooms.create') || permissions.hasPermission('classrooms.edit'))
 const canUpdate = computed(() => permissions.hasPermission('classrooms.update') || permissions.hasPermission('classrooms.edit'))
 const canDelete = computed(() => permissions.hasPermission('classrooms.delete') || permissions.hasPermission('classrooms.edit'))
@@ -261,6 +264,7 @@ onMounted(async () => {
             <span>Обновить</span>
           </template>
         </q-btn>
+        <q-btn flat @click="resetSplitter">Сбросить размер</q-btn>
         <q-btn v-if="canExport" color="secondary" :disable="store.loading" @click="exportClassrooms">
           <template #default>
             <Download :size="16" />
@@ -287,7 +291,7 @@ onMounted(async () => {
       </ul>
     </q-banner>
 
-    <div class="classrooms-layout">
+    <div ref="workspaceRef" class="classrooms-layout" :style="workspaceStyle">
       <div class="classrooms-main">
         <AppTable
           v-if="store.filteredClassrooms.length || store.loading"
@@ -355,6 +359,8 @@ onMounted(async () => {
         </AppEmptyState>
       </div>
 
+      <WorkspaceSplitter label="Изменить ширину карточки аудитории" @resize-start="startResize" @reset="resetSplitter" />
+
       <aside class="classrooms-side">
         <ClassroomDetailsPanel
           :classroom="store.selectedClassroom"
@@ -384,3 +390,11 @@ onMounted(async () => {
     />
   </AppPage>
 </template>
+
+<style scoped>
+.classrooms-layout { gap: 0; }
+.classrooms-main, .classrooms-side { min-width: 0; }
+.classrooms-main { padding-right: 10px; }
+.classrooms-side { max-width: none; padding-left: 10px; }
+@media (max-width: 1100px) { .classrooms-layout { grid-template-columns: 1fr !important; gap: 16px; } .classrooms-main, .classrooms-side { padding: 0; } }
+</style>

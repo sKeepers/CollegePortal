@@ -13,11 +13,14 @@ import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
+import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
+import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import { ATTENDANCE_REPORT_MODE_OPTIONS, ATTENDANCE_STATUS_OPTIONS, useAttendanceAnalysisStore } from '../../stores/attendanceAnalysis'
 
 const route = useRoute()
 const router = useRouter()
 const store = useAttendanceAnalysisStore()
+const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.attendance.splitter.v1', resizeBodyClass: 'attendance-splitter-resizing' })
 
 const todayColumns = [
   { name: 'full_name', label: 'ФИО', field: 'full_name', align: 'left', sortable: true },
@@ -180,6 +183,7 @@ onMounted(async () => {
       />
       <template #actions>
         <AppLoading v-if="store.loading" label="Анализ посещаемости..." />
+        <q-btn flat @click="resetSplitter">Сбросить размер</q-btn>
         <q-btn v-if="store.reportMode !== 'today'" flat :loading="store.exporting" :disable="store.loading" @click="store.exportHistoryCsv">
           <Download :size="16" class="q-mr-xs" /> Экспорт CSV
         </q-btn>
@@ -211,7 +215,7 @@ onMounted(async () => {
       </AppCard>
     </section>
 
-    <div class="attendance-analysis-workspace">
+    <div ref="workspaceRef" class="attendance-analysis-workspace" :style="workspaceStyle">
       <div class="attendance-analysis-main">
         <AppTable
           v-if="store.rows.length || store.loading"
@@ -244,6 +248,8 @@ onMounted(async () => {
         </AppTable>
         <AppEmptyState v-else title="Нет данных для анализа" description="Добавьте расписание и события проходной, чтобы увидеть сопоставление посещаемости." />
       </div>
+
+      <WorkspaceSplitter label="Изменить ширину карточки посещаемости" @resize-start="startResize" @reset="resetSplitter" />
 
       <aside class="attendance-analysis-side">
         <WorkspacePanel
@@ -367,17 +373,18 @@ onMounted(async () => {
 
 .attendance-analysis-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 400px;
-  gap: 16px;
+  gap: 0;
   align-items: start;
 }
 
 .attendance-analysis-main {
   min-width: 0;
+  padding-right: 10px;
 }
 
 .attendance-analysis-side {
   min-width: 0;
+  padding-left: 10px;
 }
 
 .attendance-analysis-link {
@@ -495,15 +502,11 @@ onMounted(async () => {
   text-align: right;
 }
 
-@media (max-width: 1439px) {
-  .attendance-analysis-workspace {
-    grid-template-columns: minmax(0, 1fr) 380px;
-  }
-}
-
 @media (max-width: 1100px) {
   .attendance-analysis-workspace {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
+    gap: 16px;
   }
+  .attendance-analysis-main, .attendance-analysis-side { padding: 0; }
 }
 </style>

@@ -57,7 +57,7 @@ class HrService
     {
         $payload = [
             'person_id' => $person->id,
-            'employee_number' => $data['employee_number'],
+            'employee_number' => $data['employee_number'] ?? null,
             'status' => $data['status'] ?? 'active',
             'employment_type' => $data['employment_type'] ?? 'full_time',
             'hired_at' => $data['hired_at'] ?? now()->toDateString(),
@@ -70,6 +70,8 @@ class HrService
         ];
 
         if (! $updating) {
+            $payload['employee_number'] ??= $this->nextEmployeeNumber();
+
             return $payload;
         }
 
@@ -94,5 +96,12 @@ class HrService
             'is_active' => $employee->status !== 'dismissed',
         ]);
         $teacher->save();
+    }
+
+    private function nextEmployeeNumber(): string
+    {
+        $next = ((int) Employee::query()->max('id')) + 1;
+
+        return 'EMP-'.str_pad((string) $next, 6, '0', STR_PAD_LEFT);
     }
 }

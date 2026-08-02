@@ -25,6 +25,7 @@ const selectedStudentIds = ref([])
 const attendanceDraft = reactive({})
 const gradeDraft = reactive({})
 const signDialogVisible = ref(false)
+const historyFilters = reactive({ status: '' })
 
 const modeOptions = [
   { label: 'Мои занятия', value: 'mine' },
@@ -76,6 +77,31 @@ function statusTone(status) {
   }[status] || 'neutral'
 }
 
+function requestStatusLabel(status) {
+  return { pending: 'Ожидает решения', approved: 'Одобрен', rejected: 'Отклонен' }[status] || 'Статус не указан'
+}
+
+function auditActionLabel(action) {
+  return {
+    edit_requested: 'Запрос создан', edit_request_approved: 'Запрос одобрен', edit_request_rejected: 'Запрос отклонен',
+    reopen: 'Журнал переоткрыт', update_lesson: 'Изменены сведения занятия', attendance_update: 'Изменена посещаемость', grade_update: 'Изменена оценка',
+  }[action] || action
+}
+
+function changeSummary(change) {
+  const labels = { topic: 'Тема', homework: 'Домашнее задание', teacher_comment: 'Комментарий преподавателя', status: 'Статус', attendance_status: 'Посещаемость', minutes_late: 'Опоздание, мин.', value: 'Оценка', comment: 'Комментарий' }
+  const oldValues = change.old_values || {}
+  const newValues = change.new_values || {}
+  return Object.keys({ ...oldValues, ...newValues })
+    .filter((key) => !['id', 'journal_lesson_id', 'created_at', 'updated_at', 'marked_at', 'marked_by'].includes(key))
+    .map((key) => `${labels[key] || key}: ${oldValues[key] ?? '—'} -> ${newValues[key] ?? '—'}`)
+    .join('; ') || 'Без изменения полей'
+}
+
+function formatDateTime(value) {
+  return value ? new Intl.DateTimeFormat('ru-RU', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)) : '—'
+}
+
 function suggestionLabel(suggestion) {
   return {
     probably_present: 'Вероятно присутствовал',
@@ -110,7 +136,7 @@ function selectStudent(student) { selectedStudent.value = student }
 async function selectLesson(lesson) { selectedStudent.value = null; await store.selectLesson(lesson); resetDrafts() }
 async function applyFilters(filters) { selectedStudent.value = null; store.setFilters(filters); await store.load() }
 async function resetFilters() { selectedStudent.value = null; store.resetFilters(); await store.load() }
-async function refresh() { await store.load(); resetDrafts() }
+async function refresh() { await store.load(); if (hasPermission('journal.reopen')) await store.loadEditRequestHistory(historyFilters); resetDrafts() }
 async function changeMode(mode) { store.setFilters({ mode }); await store.load(); resetDrafts() }
 
 async function saveAttendance() {
@@ -148,12 +174,15 @@ async function requestEdit(reason) {
 
 async function reviewEditRequest(id, approved) {
   await store.reviewEditRequest(id, approved)
+  await store.loadEditRequestHistory(historyFilters)
   $q.notify({ type: 'positive', message: approved ? 'Редактирование разрешено.' : 'Запрос отклонен.', position: 'top-right' })
 }
 
 async function openPendingEditRequest(request) {
   await store.openJournalLesson(request.journal_lesson_id)
 }
+
+async function loadEditRequestHistory() { await store.loadEditRequestHistory(historyFilters) }
 
 async function loadSuggestion() { await store.loadAttendanceSuggestion() }
 async function applySuggestion() { await store.applyAttendanceSuggestion(); resetDrafts() }
@@ -168,6 +197,7 @@ onMounted(async () => {
   if (route.query.lesson) await store.openFromSchedule(route.query.lesson)
   if (route.query.legacyLesson) await store.openFromLegacySchedule(route.query.legacyLesson)
   if (hasPermission('journal.reopen')) await store.loadPendingEditRequests()
+  if (hasPermission('journal.reopen')) await loadEditRequestHistory()
   if (route.query.journalLesson) await store.openJournalLesson(route.query.journalLesson)
   resetDrafts()
 })
@@ -215,6 +245,24 @@ onMounted(async () => {
         <strong>{{ request.lesson.subject || 'Занятие' }} · {{ request.lesson.group || 'Группа' }}</strong>
         <span>{{ request.requested_by_name || request.lesson.teacher }}: {{ request.reason }}</span>
       </button>
+    </section>
+
+    <section v-if="hasPermission('journal.reopen')" class="journal-edit-history" aria-labelledby="journal-edit-history-title">
+      <div class="journal-edit-history__header">
+        <div><strong id="journal-edit-history-title">История запросов на редактирование</strong><span>Запросы, решения и фактические изменения в журнале</span></div>
+        <div class="journal-edit-history__filters">
+          <q-select v-model="historyFilters.status" dense outlined clearable emit-value map-options label="Статус" :options="[{ label: 'Ожидают решения', value: 'pending' }, { label: 'Одобрены', value: 'approved' }, { label: 'Отклонены', value: 'rejected' }]" @update:model-value="loadEditRequestHistory" />
+          <q-btn outline color="primary" @click="loadEditRequestHistory">Показать</q-btn>
+        </div>
+      </div>
+      <AppEmptyState v-if="!store.editRequestHistory.length" title="Запросов пока нет" description="История появится после создания запроса на изменение подписанного журнала." />
+      <div v-else class="journal-edit-history__list">
+        <article v-for="request in store.editRequestHistory" :key="request.id" class="journal-edit-history__item">
+          <div class="journal-edit-history__request"><div><strong>{{ request.lesson.subject || 'Занятие' }} · {{ request.lesson.group || 'Группа' }}</strong><span>{{ request.lesson.lesson_date || 'Дата не указана' }} · {{ request.lesson.teacher || 'Преподаватель не указан' }}</span></div><AppStatusBadge :label="requestStatusLabel(request.status)" :tone="request.status === 'approved' ? 'success' : request.status === 'rejected' ? 'danger' : 'warning'" /></div>
+          <dl><div><dt>Заявитель</dt><dd>{{ request.requested_by_name || 'Не указан' }}</dd></div><div><dt>Причина</dt><dd>{{ request.reason }}</dd></div><div><dt>Создан</dt><dd>{{ formatDateTime(request.created_at) }}</dd></div><div><dt>Рассмотрел</dt><dd>{{ request.reviewed_by_name || '—' }}</dd></div><div><dt>Комментарий</dt><dd>{{ request.review_comment || '—' }}</dd></div><div><dt>Рассмотрен</dt><dd>{{ formatDateTime(request.reviewed_at) }}</dd></div></dl>
+          <div class="journal-edit-history__changes"><strong>Изменения после запроса</strong><p v-if="!request.changes.length">Изменений в аудите пока нет.</p><div v-for="change in request.changes" :key="change.id" class="journal-edit-history__change"><span><strong>{{ auditActionLabel(change.action) }}</strong><template v-if="change.student_name"> · {{ change.student_name }}</template></span><small>{{ formatDateTime(change.created_at) }} · {{ change.user_name || 'Система' }}</small><p>{{ changeSummary(change) }}</p></div></div>
+        </article>
+      </div>
     </section>
 
     <div class="journal-layout">
@@ -344,6 +392,17 @@ onMounted(async () => {
 .journal-pending-requests > div span { color: #92400e; font-size: 13px; }
 .journal-pending-requests button { display: grid; gap: 3px; border: 1px solid #fde68a; border-radius: 6px; padding: 8px; background: #fff; text-align: left; cursor: pointer; }
 .journal-pending-requests button span { color: #64748b; font-size: 13px; }
+.journal-edit-history { display: grid; gap: 12px; margin-bottom: 12px; padding: 12px; border: 1px solid var(--cp-border, #d9dee8); border-radius: 8px; background: #fff; }
+.journal-edit-history__header, .journal-edit-history__request { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+.journal-edit-history__header span, .journal-edit-history__request span { display: block; margin-top: 3px; color: #64748b; font-size: 13px; }
+.journal-edit-history__filters { display: flex; gap: 8px; align-items: center; }
+.journal-edit-history__filters :deep(.q-field) { min-width: 180px; }
+.journal-edit-history__list { display: grid; gap: 10px; }
+.journal-edit-history__item { display: grid; gap: 10px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; }
+.journal-edit-history dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.journal-edit-history dt { color: #64748b; font-size: 12px; }.journal-edit-history dd { margin: 2px 0 0; overflow-wrap: anywhere; }
+.journal-edit-history__changes { display: grid; gap: 6px; }.journal-edit-history__changes > p { margin: 0; color: #64748b; font-size: 13px; }
+.journal-edit-history__change { padding: 8px; border-radius: 6px; background: #f8fafc; }.journal-edit-history__change span { display: block; }.journal-edit-history__change small { color: #64748b; }.journal-edit-history__change p { margin: 4px 0 0; font-size: 13px; overflow-wrap: anywhere; }
 .journal-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
 .journal-main { min-width: 0; display: grid; gap: 12px; }
 .journal-side { position: sticky; top: 76px; min-width: 0; }
@@ -370,4 +429,5 @@ onMounted(async () => {
 .journal-inline-fields { display: grid; grid-template-columns: 72px minmax(140px, 1fr); gap: 6px; }
 .hidden-checkbox { visibility: hidden; width: 0; }
 @media (max-width: 1200px) { .journal-layout { grid-template-columns: 1fr; } .journal-side { position: static; } }
+@media (max-width: 700px) { .journal-edit-history__header, .journal-edit-history__request { display: grid; }.journal-edit-history__filters { flex-wrap: wrap; }.journal-edit-history__filters :deep(.q-field) { min-width: 0; flex: 1 1 180px; }.journal-edit-history dl { grid-template-columns: 1fr; } }
 </style>

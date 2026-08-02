@@ -214,6 +214,52 @@ class JournalEngineApiTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['module' => 'journal', 'action' => 'edit_request_approved']);
     }
 
+    public function test_admin_can_view_edit_request_history_with_actual_journal_changes(): void
+    {
+        [$entry, , , $teacher, , $students] = $this->journalFixture();
+        $teacherUser = User::factory()->create(['is_active' => true, 'name' => 'Преподаватель']);
+        $teacher->update(['user_id' => $teacherUser->id]);
+        $teacherUser->update(['role_id' => $this->roleWithPermissions('teacher', ['journal.view', 'journal.edit'])->id]);
+        $admin = $this->createApiUser(roleCode: 'admin');
+        $lessonId = $this->withApiAuth($admin)->postJson("/api/journal/from-schedule/{$entry->id}/open")->json('data.id');
+        $this->withApiAuth($admin)->putJson("/api/journal/lessons/{$lessonId}", ['topic' => 'Подписанная тема'])->assertOk();
+        $this->withApiAuth($admin)->postJson("/api/journal/lessons/{$lessonId}/sign")->assertOk();
+
+        Carbon::setTestNow(Carbon::parse('2026-07-12 10:00:00'));
+        $this->withApiAuth($teacherUser)->postJson("/api/journal/lessons/{$lessonId}/edit-requests", ['reason' => 'Исправить результаты занятия'])->assertOk();
+        $requestId = JournalEditRequest::query()->value('id');
+
+        Carbon::setTestNow(Carbon::parse('2026-07-12 10:01:00'));
+        $this->withApiAuth($admin)->postJson("/api/journal/edit-requests/{$requestId}/review", ['approved' => true, 'comment' => 'Согласовано'])->assertOk();
+        Carbon::setTestNow(Carbon::parse('2026-07-12 10:02:00'));
+        $this->withApiAuth($admin)->putJson("/api/journal/lessons/{$lessonId}", ['topic' => 'Исправленная тема'])->assertOk();
+        $this->withApiAuth($admin)->putJson("/api/journal/lessons/{$lessonId}/attendance", ['attendance' => [
+            ['student_id' => $students[0]->id, 'status' => 'late', 'minutes_late' => 5],
+        ]])->assertOk();
+        $this->withApiAuth($admin)->putJson("/api/journal/lessons/{$lessonId}/grades", ['grades' => [
+            ['student_id' => $students[0]->id, 'value' => '5'],
+        ]])->assertOk();
+
+        $response = $this->withApiAuth($admin)->getJson('/api/journal/edit-requests/history?status=approved')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $requestId)
+            ->assertJsonPath('data.0.requested_by_name', 'Преподаватель')
+            ->assertJsonPath('data.0.reviewed_by_name', $admin->name)
+            ->assertJsonPath('data.0.review_comment', 'Согласовано')
+            ->assertJsonPath('data.0.lesson.lesson_date', '2026-07-12')
+            ->assertJsonPath('data.0.lesson.subject', 'Фортепиано');
+
+        $changes = collect($response->json('data.0.changes'));
+        $this->assertTrue($changes->contains('action', 'update_lesson'));
+        $this->assertTrue($changes->contains('action', 'attendance_update'));
+        $this->assertTrue($changes->contains('action', 'grade_update'));
+        $this->assertSame('Петров Петр', $changes->firstWhere('action', 'attendance_update')['student_name']);
+        $this->assertSame('Подписанная тема', $changes->firstWhere('action', 'update_lesson')['old_values']['topic']);
+
+        $this->withApiAuth($teacherUser)->getJson('/api/journal/edit-requests/history')->assertForbidden();
+    }
+
     public function test_private_files_and_csv_export(): void
     {
         Storage::fake('local');

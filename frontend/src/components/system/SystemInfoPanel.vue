@@ -1,26 +1,14 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { Info } from '@lucide/vue'
-import { getRuntimeEnvironmentInfo, getVersionInfo, presentVersionInfo } from '../../services/versionService'
+import { getVersionInfo, presentVersionInfo } from '../../services/versionService'
 
 const dialogOpen = ref(false)
 const loading = ref(false)
-const versionInfo = ref({
-  name: 'CollegePortal',
-  version: 'unknown',
-  release: 'unknown',
-  build: 'unknown',
-  gitCommit: 'unknown',
-  buildDate: null,
-  environment: 'development',
-  frontendStack: 'unknown',
-  backendStack: 'unknown',
-  apiVersion: 'unknown',
-})
-
-const environment = computed(() => getRuntimeEnvironmentInfo())
-const environmentLabel = computed(() => environment.value.label)
+const versionInfo = ref(null)
 const presentedVersion = computed(() => presentVersionInfo(versionInfo.value))
+const environment = computed(() => presentedVersion.value.environmentInfo)
+const environmentLabel = computed(() => presentedVersion.value.environmentLabel)
 
 const rows = computed(() => [
   { label: 'Название', value: presentedVersion.value.name },
@@ -60,9 +48,9 @@ onMounted(loadVersion)
         <Info :size="17" />
       </span>
       <span class="system-info-panel__text">
-        <strong>{{ versionInfo.name }}</strong>
-        <span>v{{ versionInfo.version }}</span>
-        <small>Build: {{ versionInfo.build }}</small>
+        <strong>{{ presentedVersion.name }}</strong>
+        <span>v{{ presentedVersion.version }}</span>
+        <small>Build: {{ presentedVersion.build }}</small>
       </span>
       <span
         class="system-info-panel__env"

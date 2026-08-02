@@ -87,6 +87,7 @@ export const useJournalStore = defineStore('journal', () => {
   const files = ref([])
   const attendanceSuggestion = ref([])
   const pendingEditRequests = ref([])
+  const editRequestHistory = ref([])
   const selectedLessonId = ref(null)
   const loading = ref(false)
   const detailsLoading = ref(false)
@@ -348,6 +349,11 @@ export const useJournalStore = defineStore('journal', () => {
     pendingEditRequests.value = extractRows(payload)
   }
 
+  async function loadEditRequestHistory(filters = {}) {
+    const payload = await api.list('journal/edit-requests/history', { per_page: 100, ...filters })
+    editRequestHistory.value = extractRows(payload)
+  }
+
   async function openJournalLesson(id) {
     if (!id) return
     const payload = await api.get(`journal/lessons/${id}`)
@@ -374,10 +380,10 @@ export const useJournalStore = defineStore('journal', () => {
 
   return {
     filters, lessons, filteredLessons, journalLessons, groups, teachers, subjects, students, studentRows,
-    attendance, grades, files, attendanceSuggestion, pendingEditRequests, selectedLessonId, selectedLesson, selectedAttendance,
+    attendance, grades, files, attendanceSuggestion, pendingEditRequests, editRequestHistory, selectedLessonId, selectedLesson, selectedAttendance,
     selectedGrades, selectedFiles, lessonStudents, dashboardStats, groupOptions, teacherOptions, subjectOptions,
     academicYearOptions, loading, detailsLoading, saving, error, load, loadJournalData, setFilters, resetFilters,
-    selectLesson, saveLesson, completeLesson, signLesson, reopenLesson, requestEdit, reviewEditRequest, loadPendingEditRequests, openJournalLesson, saveAttendanceRows, saveGradeRows,
+    selectLesson, saveLesson, completeLesson, signLesson, reopenLesson, requestEdit, reviewEditRequest, loadPendingEditRequests, loadEditRequestHistory, openJournalLesson, saveAttendanceRows, saveGradeRows,
     markAllPresent, markSelectedAbsent, loadAttendanceSuggestion, applyAttendanceSuggestion, uploadLessonFile,
     deleteLessonFile, openFromSchedule, openFromLegacySchedule, lessonLabel, fullName, classroomLabel, attendanceMark,
   }

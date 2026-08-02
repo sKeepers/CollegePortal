@@ -4,7 +4,9 @@ import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import { BriefcaseBusiness, Building2, CalendarDays, FileText, History, IdCard, UserRound } from '@lucide/vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
+import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import AppCard from '../../components/ui/AppCard.vue'
+import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import { useAuthStore } from '../../stores/auth'
 import { useHrStore } from '../../stores/hr'
 
@@ -13,6 +15,7 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const store = useHrStore()
+const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.hrEmployees.splitter.v1', resizeBodyClass: 'hr-employees-splitter-resizing', defaultDetailsWidth: 380 })
 
 const activeTab = ref(route.path.includes('/departments') ? 'departments' : route.path.includes('/positions') ? 'positions' : 'employees')
 const employeeDialog = ref(false)
@@ -269,7 +272,7 @@ watch(() => route.path, (path) => {
 
     <q-banner v-if="store.error" class="bg-red-1 text-negative q-mb-md" rounded>{{ store.error }}</q-banner>
 
-    <div v-if="activeTab === 'employees'" class="hr-layout">
+    <div v-if="activeTab === 'employees'" ref="workspaceRef" class="hr-layout resizable-workspace" :style="workspaceStyle">
       <div class="hr-main">
         <AppCard>
           <div class="hr-filters">
@@ -307,6 +310,8 @@ watch(() => route.path, (path) => {
           </q-table>
         </AppCard>
       </div>
+
+      <WorkspaceSplitter label="Изменить ширину карточки сотрудника" @resize-start="startResize" @reset="resetSplitter" />
 
       <WorkspacePanel
         v-if="selected"
@@ -402,7 +407,7 @@ watch(() => route.path, (path) => {
       <q-card class="hr-dialog">
         <q-card-section><div class="text-h6">{{ editingEmployeeId ? 'Редактировать сотрудника' : 'Новый сотрудник' }}</div></q-card-section>
         <q-card-section class="hr-form-grid">
-          <q-input v-model="employeeForm.employee_number" outlined dense label="Табельный номер" />
+          <q-input v-model="employeeForm.employee_number" outlined dense label="Табельный номер (заполнится автоматически)" />
           <q-input v-model="employeeForm.last_name" outlined dense label="Фамилия" />
           <q-input v-model="employeeForm.first_name" outlined dense label="Имя" />
           <q-input v-model="employeeForm.middle_name" outlined dense label="Отчество" />

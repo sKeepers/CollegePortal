@@ -12,9 +12,12 @@ import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
+import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
+import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import { ACCESS_ENTITY_OPTIONS, ACCESS_RESULT_OPTIONS, useAccessReportsStore } from '../../stores/accessReports'
 
 const store = useAccessReportsStore()
+const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.accessReports.splitter.v1', resizeBodyClass: 'access-reports-splitter-resizing' })
 const columns = [
   { name: 'event_time', label: 'Время', field: 'event_time', align: 'left', sortable: true },
   { name: 'owner', label: 'ФИО', field: 'owner', align: 'left', sortable: true },
@@ -52,6 +55,7 @@ onMounted(() => store.load())
       <span>Событий в отчете: {{ store.events.length }}</span>
       <template #actions>
         <AppLoading v-if="store.loading" label="Загрузка отчета..." />
+        <q-btn flat @click="resetSplitter">Сбросить размер</q-btn>
         <q-btn flat :disable="store.loading" @click="store.load"><RefreshCw :size="16" class="q-mr-xs" /> Обновить</q-btn>
         <q-btn color="primary" :loading="store.exporting" @click="store.exportCsv"><Download :size="16" class="q-mr-xs" /> Экспорт CSV</q-btn>
       </template>
@@ -79,7 +83,7 @@ onMounted(() => store.load())
       <AppCard class="access-report-metric access-report-metric--inside"><span>Сейчас в здании</span><strong>{{ store.summary.inside_now }}</strong></AppCard>
     </section>
 
-    <div class="access-reports-workspace">
+    <div ref="workspaceRef" class="access-reports-workspace resizable-workspace" :style="workspaceStyle">
       <div class="access-reports-main">
         <AppTable v-if="store.events.length || store.loading" :rows="store.events" :columns="columns" :loading="store.loading" :pagination="pagination">
           <template #body-cell-event_time="props"><q-td :props="props">{{ store.formatEventTime(props.row.event_time) }}</q-td></template>
@@ -92,6 +96,7 @@ onMounted(() => store.load())
         </AppTable>
         <AppEmptyState v-else title="События не найдены" description="Измените фильтры или выполните сканирование на проходной." />
       </div>
+      <WorkspaceSplitter label="Изменить ширину панели отчета" @resize-start="startResize" @reset="resetSplitter" />
       <aside class="access-reports-side">
         <WorkspacePanel
           title="Отчет по проходам"

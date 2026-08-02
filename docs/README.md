@@ -45,6 +45,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 
 - [Installation](INSTALLATION.md)
 - [Update](UPDATE.md)
+- [Начальное заполнение базы](PORTAL_DATA_SETUP.md)
 - [Backup Restore](BACKUP_RESTORE.md)
 - [Deployment](DEPLOYMENT.md)
 - [Environments](ENVIRONMENTS.md)

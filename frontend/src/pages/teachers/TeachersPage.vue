@@ -12,11 +12,13 @@ import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
+import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import TeacherDetailsPanel from './TeacherDetailsPanel.vue'
 import TeacherFilters from './TeacherFilters.vue'
 import TeacherFormPanel from './TeacherFormPanel.vue'
 import { useTeachersStore } from '../../stores/teachers'
 import { usePermissions } from '../../composables/usePermissions'
+import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import {
   TABLE_ROWS_PER_PAGE_OPTIONS,
   createTablePagination,
@@ -30,6 +32,7 @@ const route = useRoute()
 const router = useRouter()
 const TEACHERS_ROWS_PER_PAGE_KEY = 'collegePortal.teachers.rowsPerPage'
 const syncingQueryFromUi = ref(false)
+const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.teachers.splitter.v1', resizeBodyClass: 'teachers-splitter-resizing' })
 const canCreate = computed(() => permissions.hasPermission('teachers.create') || permissions.hasPermission('teachers.edit'))
 const canUpdate = computed(() => permissions.hasPermission('teachers.update') || permissions.hasPermission('teachers.edit'))
 const canDelete = computed(() => permissions.hasPermission('teachers.delete') || permissions.hasPermission('teachers.edit'))
@@ -289,6 +292,7 @@ onMounted(async () => {
             <span>Обновить</span>
           </template>
         </q-btn>
+        <q-btn flat @click="resetSplitter">Сбросить размер</q-btn>
         <q-btn v-if="canExport" color="secondary" :disable="store.loading" @click="exportTeachers">
           <template #default>
             <Download :size="16" />
@@ -315,7 +319,7 @@ onMounted(async () => {
       </ul>
     </q-banner>
 
-    <div class="teachers-layout">
+    <div ref="workspaceRef" class="teachers-layout" :style="workspaceStyle">
       <div class="teachers-main">
         <AppTable
           v-if="store.filteredTeachers.length || store.loading"
@@ -386,6 +390,8 @@ onMounted(async () => {
         </AppEmptyState>
       </div>
 
+      <WorkspaceSplitter label="Изменить ширину карточки преподавателя" @resize-start="startResize" @reset="resetSplitter" />
+
       <aside class="teachers-side">
         <TeacherDetailsPanel
           :teacher="store.selectedTeacher"
@@ -416,3 +422,11 @@ onMounted(async () => {
     />
   </AppPage>
 </template>
+
+<style scoped>
+.teachers-layout { gap: 0; }
+.teachers-main, .teachers-side { min-width: 0; }
+.teachers-main { padding-right: 10px; }
+.teachers-side { max-width: none; padding-left: 10px; }
+@media (max-width: 1100px) { .teachers-layout { grid-template-columns: 1fr !important; gap: 16px; } .teachers-main, .teachers-side { padding: 0; } }
+</style>

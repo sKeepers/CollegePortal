@@ -12,12 +12,14 @@ import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
+import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import StudentDetailsPanel from './StudentDetailsPanel.vue'
 import StudentFilters from './StudentFilters.vue'
 import StudentFormPanel from './StudentFormPanel.vue'
 import { useStudentsStore } from '../../stores/students'
 import { useReferenceOptionsStore } from '../../stores/referenceOptions'
 import { usePermissions } from '../../composables/usePermissions'
+import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import {
   TABLE_ROWS_PER_PAGE_OPTIONS,
   createTablePagination,
@@ -32,6 +34,7 @@ const route = useRoute()
 const router = useRouter()
 const STUDENTS_ROWS_PER_PAGE_KEY = 'collegePortal.students.rowsPerPage'
 const syncingQueryFromUi = ref(false)
+const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.students.splitter.v1', resizeBodyClass: 'students-splitter-resizing' })
 const canCreate = computed(() => permissions.hasPermission('students.create') || permissions.hasPermission('students.edit'))
 const canUpdate = computed(() => permissions.hasPermission('students.update') || permissions.hasPermission('students.edit'))
 const canDelete = computed(() => permissions.hasPermission('students.delete') || permissions.hasPermission('students.edit'))
@@ -387,6 +390,7 @@ onMounted(async () => {
             <span>Обновить</span>
           </template>
         </q-btn>
+        <q-btn flat @click="resetSplitter">Сбросить размер</q-btn>
         <q-btn v-if="canExport" color="secondary" :disable="store.loading" @click="exportStudents">
           <template #default>
             <Download :size="16" />
@@ -428,7 +432,7 @@ onMounted(async () => {
       </ul>
     </q-banner>
 
-    <div class="students-layout">
+    <div ref="workspaceRef" class="students-layout" :style="workspaceStyle">
       <div class="students-main">
         <AppTable
           v-if="store.students.length || store.loading"
@@ -491,6 +495,8 @@ onMounted(async () => {
           <q-btn v-if="canCreate" color="primary" label="Новый студент" @click="openCreateForm" />
         </AppEmptyState>
       </div>
+
+      <WorkspaceSplitter label="Изменить ширину карточки студента" @resize-start="startResize" @reset="resetSplitter" />
 
       <aside class="students-side">
         <StudentDetailsPanel
@@ -567,3 +573,11 @@ onMounted(async () => {
     />
   </AppPage>
 </template>
+
+<style scoped>
+.students-layout { gap: 0; }
+.students-main, .students-side { min-width: 0; }
+.students-main { padding-right: 10px; }
+.students-side { max-width: none; padding-left: 10px; }
+@media (max-width: 1100px) { .students-layout { grid-template-columns: 1fr !important; gap: 16px; } .students-main, .students-side { padding: 0; } }
+</style>

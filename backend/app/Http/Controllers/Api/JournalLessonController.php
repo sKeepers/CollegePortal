@@ -8,6 +8,9 @@ use App\Http\Resources\JournalLessonResource;
 use App\Models\JournalLesson;
 use App\Models\JournalLessonFile;
 use App\Models\JournalEditRequest;
+use App\Models\JournalAttendance;
+use App\Models\JournalGrade;
+use App\Models\AuditLog;
 use App\Models\ScheduleEntry;
 use App\Models\ScheduleLesson;
 use App\Models\Student;
@@ -156,6 +159,102 @@ class JournalLessonController extends Controller
             ]);
 
         return response()->json(['data' => $requests]);
+    }
+
+    public function editRequestHistory(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->hasPermission('journal.reopen'), 403);
+        $data = $request->validate([
+            'status' => ['nullable', Rule::in([JournalEditRequest::STATUS_PENDING, JournalEditRequest::STATUS_APPROVED, JournalEditRequest::STATUS_REJECTED])],
+            'group_id' => ['nullable', 'integer', 'exists:groups,id'],
+            'subject_id' => ['nullable', 'integer', 'exists:subjects,id'],
+            'teacher_id' => ['nullable', 'integer', 'exists:teachers,id'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        $requests = JournalEditRequest::query()
+            ->with(['journalLesson.group', 'journalLesson.subject', 'journalLesson.teacher', 'requestedBy', 'reviewedBy'])
+            ->when($data['status'] ?? null, fn (Builder $query, string $status) => $query->where('status', $status))
+            ->when($data['group_id'] ?? null, fn (Builder $query, int $id) => $query->whereHas('journalLesson', fn (Builder $lesson) => $lesson->where('group_id', $id)))
+            ->when($data['subject_id'] ?? null, fn (Builder $query, int $id) => $query->whereHas('journalLesson', fn (Builder $lesson) => $lesson->where('subject_id', $id)))
+            ->when($data['teacher_id'] ?? null, fn (Builder $query, int $id) => $query->whereHas('journalLesson', fn (Builder $lesson) => $lesson->where('teacher_id', $id)))
+            ->when($data['date_from'] ?? null, fn (Builder $query, string $date) => $query->whereHas('journalLesson', fn (Builder $lesson) => $lesson->whereDate('lesson_date', '>=', $date)))
+            ->when($data['date_to'] ?? null, fn (Builder $query, string $date) => $query->whereHas('journalLesson', fn (Builder $lesson) => $lesson->whereDate('lesson_date', '<=', $date)))
+            ->latest()
+            ->paginate($data['per_page'] ?? 50);
+
+        $lessonIds = $requests->getCollection()->pluck('journal_lesson_id')->unique()->values();
+        $attendance = JournalAttendance::query()->whereIn('journal_lesson_id', $lessonIds)->get(['id', 'journal_lesson_id', 'student_id']);
+        $grades = JournalGrade::query()->whereIn('journal_lesson_id', $lessonIds)->get(['id', 'journal_lesson_id', 'student_id']);
+        $attendanceById = $attendance->keyBy('id');
+        $gradesById = $grades->keyBy('id');
+        $studentNames = Student::query()->whereIn('id', $attendance->pluck('student_id')->merge($grades->pluck('student_id'))->unique())
+            ->get(['id', 'last_name', 'first_name', 'middle_name'])
+            ->mapWithKeys(fn (Student $student) => [$student->id => trim(implode(' ', array_filter([$student->last_name, $student->first_name, $student->middle_name])))]);
+
+        $auditLogs = AuditLog::query()
+            ->with('user')
+            ->where('module', 'journal')
+            ->whereIn('action', ['edit_requested', 'edit_request_approved', 'edit_request_rejected', 'reopen', 'update_lesson', 'attendance_update', 'grade_update'])
+            ->where(function (Builder $query) use ($lessonIds, $attendanceById, $gradesById): void {
+                $query->where(fn (Builder $audit) => $audit->where('entity_type', 'JournalLesson')->whereIn('entity_id', $lessonIds))
+                    ->orWhere(fn (Builder $audit) => $audit->where('entity_type', 'JournalAttendance')->whereIn('entity_id', $attendanceById->keys()))
+                    ->orWhere(fn (Builder $audit) => $audit->where('entity_type', 'JournalGrade')->whereIn('entity_id', $gradesById->keys()));
+            })
+            ->oldest('created_at')
+            ->get();
+
+        $requests->getCollection()->transform(function (JournalEditRequest $editRequest) use ($auditLogs, $attendanceById, $gradesById, $studentNames): array {
+            $lesson = $editRequest->journalLesson;
+            $changes = $auditLogs->filter(function (AuditLog $audit) use ($editRequest, $attendanceById, $gradesById): bool {
+                if ($audit->created_at->lt($editRequest->created_at)) {
+                    return false;
+                }
+
+                if ($audit->entity_type === 'JournalLesson') {
+                    return (int) $audit->entity_id === (int) $editRequest->journal_lesson_id;
+                }
+
+                $record = $audit->entity_type === 'JournalAttendance' ? $attendanceById->get($audit->entity_id) : $gradesById->get($audit->entity_id);
+
+                return $record && (int) $record->journal_lesson_id === (int) $editRequest->journal_lesson_id;
+            })->map(function (AuditLog $audit) use ($attendanceById, $gradesById, $studentNames): array {
+                $record = $audit->entity_type === 'JournalAttendance' ? $attendanceById->get($audit->entity_id) : $gradesById->get($audit->entity_id);
+
+                return [
+                    'id' => $audit->id,
+                    'action' => $audit->action,
+                    'created_at' => $audit->created_at?->toISOString(),
+                    'user_name' => $audit->user?->name,
+                    'student_name' => $record ? $studentNames->get($record->student_id) : null,
+                    'old_values' => $audit->old_values,
+                    'new_values' => $audit->new_values,
+                ];
+            })->values();
+
+            return [
+                'id' => $editRequest->id,
+                'status' => $editRequest->status,
+                'reason' => $editRequest->reason,
+                'review_comment' => $editRequest->review_comment,
+                'created_at' => $editRequest->created_at?->toISOString(),
+                'reviewed_at' => $editRequest->reviewed_at?->toISOString(),
+                'requested_by_name' => $editRequest->requestedBy?->name,
+                'reviewed_by_name' => $editRequest->reviewedBy?->name,
+                'lesson' => [
+                    'id' => $lesson?->id,
+                    'subject' => $lesson?->subject?->name,
+                    'group' => $lesson?->group?->name,
+                    'teacher' => trim(implode(' ', array_filter([$lesson?->teacher?->last_name, $lesson?->teacher?->first_name, $lesson?->teacher?->middle_name]))),
+                    'lesson_date' => $lesson?->lesson_date?->toDateString(),
+                ],
+                'changes' => $changes,
+            ];
+        });
+
+        return response()->json($requests);
     }
 
     public function attendance(Request $request, JournalLesson $lesson): JournalLessonResource

@@ -14,7 +14,9 @@ import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
+import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import { usePermissions } from '../../composables/usePermissions'
+import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import { useAuthStore } from '../../stores/auth'
 import { TABLE_ROWS_PER_PAGE_OPTIONS, createTablePagination, persistTablePagination } from '../../services/tableSettings'
 import { useReferenceOptionsStore } from '../../stores/referenceOptions'
@@ -38,6 +40,7 @@ const route = useRoute()
 const router = useRouter()
 const rowsKey = 'collegePortal.teachingLoad.rowsPerPage'
 const syncingQuery = ref(false)
+const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.teachingLoad.splitter.v1', resizeBodyClass: 'teaching-load-splitter-resizing' })
 const formVisible = ref(false)
 const itemFormVisible = ref(false)
 const generateDialogVisible = ref(false)
@@ -127,7 +130,7 @@ onMounted(async () => { if (!isOwnView.value) await referenceOptions.loadCatalog
       </template>
     </PageHeader>
 
-    <AppToolbar><span>{{ tableSubtitle }}</span><template #actions><AppLoading v-if="store.loading" label="Загрузка нагрузки..." /><q-btn flat :disable="store.loading" @click="store.load({ includeReferenceData: !isOwnView })"><RefreshCw :size="16" class="q-mr-xs" /> Обновить</q-btn><q-file v-if="canImport" v-model="importFile" dense outlined accept=".csv,text/csv" label="Импорт" style="max-width: 180px" @update:model-value="handleImport"><template #prepend><Upload :size="16" /></template></q-file><q-btn v-if="canExport" color="primary" @click="exportCsv"><Download :size="16" class="q-mr-xs" /> Экспорт</q-btn></template></AppToolbar>
+    <AppToolbar><span>{{ tableSubtitle }}</span><template #actions><AppLoading v-if="store.loading" label="Загрузка нагрузки..." /><q-btn flat @click="resetSplitter">Сбросить размер</q-btn><q-btn flat :disable="store.loading" @click="store.load({ includeReferenceData: !isOwnView })"><RefreshCw :size="16" class="q-mr-xs" /> Обновить</q-btn><q-file v-if="canImport" v-model="importFile" dense outlined accept=".csv,text/csv" label="Импорт" style="max-width: 180px" @update:model-value="handleImport"><template #prepend><Upload :size="16" /></template></q-file><q-btn v-if="canExport" color="primary" @click="exportCsv"><Download :size="16" class="q-mr-xs" /> Экспорт</q-btn></template></AppToolbar>
     <AppErrorBanner :message="store.error" />
 
     <AppFilterBar>
@@ -140,7 +143,7 @@ onMounted(async () => { if (!isOwnView.value) await referenceOptions.loadCatalog
       <template #actions><q-btn color="primary" @click="applyFilters">Применить</q-btn><q-btn flat @click="resetFilters">Сбросить</q-btn></template>
     </AppFilterBar>
 
-    <div class="teaching-load-workspace">
+    <div ref="workspaceRef" class="teaching-load-workspace" :style="workspaceStyle">
       <div class="teaching-load-main">
         <AppTable v-if="store.filteredLoads.length || store.loading" :rows="store.filteredLoads" :columns="columns" :loading="store.loading" :pagination="tablePagination" :rows-per-page-options="TABLE_ROWS_PER_PAGE_OPTIONS" :table-row-class-fn="rowClass" @update:pagination="updatePagination" @row-click="(_, row) => selectLoad(row)">
           <template #body-cell-teacher="props"><q-td :props="props"><button class="teaching-load-row-link" type="button" @click.stop="selectLoad(props.row)">{{ loadTitle(props.row) }}</button><div class="teaching-load-secondary-cell">{{ props.row.description || props.row.curriculum?.name || '—' }}</div></q-td></template>
@@ -150,6 +153,8 @@ onMounted(async () => { if (!isOwnView.value) await referenceOptions.loadCatalog
         </AppTable>
         <AppEmptyState v-else title="Нагрузка не найдена" description="Создайте нагрузку или сформируйте ее из учебного плана." />
       </div>
+
+      <WorkspaceSplitter label="Изменить ширину карточки нагрузки" @resize-start="startResize" @reset="resetSplitter" />
 
       <aside class="teaching-load-side">
         <AppEmptyState v-if="!store.selectedLoad" title="Нагрузка не выбрана" description="Выберите строку в таблице, чтобы открыть карточку нагрузки." />
@@ -183,9 +188,10 @@ onMounted(async () => { if (!isOwnView.value) await referenceOptions.loadCatalog
 </template>
 
 <style scoped>
-.teaching-load-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 16px; align-items: start; }
+.teaching-load-workspace { display: grid; gap: 0; align-items: start; }
 .teaching-load-main, .teaching-load-side { min-width: 0; }
-.teaching-load-side { position: sticky; top: 76px; }
+.teaching-load-main { padding-right: 10px; }
+.teaching-load-side { position: sticky; top: 76px; padding-left: 10px; }
 .teaching-load-row-link { border: 0; padding: 0; background: transparent; color: #0f172a; font-weight: 700; cursor: pointer; text-align: left; }
 .teaching-load-secondary-cell, .teaching-load-muted { color: #64748b; font-size: 12px; }
 .teaching-load-section-header, .assign-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
@@ -199,6 +205,5 @@ onMounted(async () => { if (!isOwnView.value) await referenceOptions.loadCatalog
 .preview-grid span, .preview-row span, .preview-row em { display: block; color: #64748b; font-size: 12px; }
 .preview-list { display: grid; gap: 8px; max-height: 360px; overflow: auto; }
 :deep(.teaching-load-row--selected) { background: #f8fafc; }
-@media (max-width: 1439px) { .teaching-load-workspace { grid-template-columns: minmax(0, 1fr) 380px; } }
-@media (max-width: 1023px) { .teaching-load-workspace { grid-template-columns: 1fr; } .teaching-load-side { position: static; } }
+@media (max-width: 1100px) { .teaching-load-workspace { grid-template-columns: 1fr !important; gap: 16px; } .teaching-load-main, .teaching-load-side { padding: 0; } .teaching-load-side { position: static; } }
 </style>
