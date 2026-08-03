@@ -20,6 +20,11 @@ function readText(path) {
 }
 
 function gitDirectory() {
+  const configuredGitDir = process.env.VITE_BUILD_GIT_DIR
+  if (configuredGitDir && existsSync(configuredGitDir)) {
+    return configuredGitDir
+  }
+
   const gitPath = resolve(repoPath, '.git')
 
   if (!existsSync(gitPath)) {

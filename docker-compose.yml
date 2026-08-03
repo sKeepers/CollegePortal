@@ -51,8 +51,10 @@ services:
       VITE_APP_VERSION: ${APP_VERSION:-0.8.0-rc2}
       VITE_APP_RELEASE: ${APP_RELEASE:-v0.8.0-rc2}
       VITE_HTTPS_PORT: ${HTTPS_PORT:-5443}
+      VITE_BUILD_GIT_DIR: /repo/.git
     volumes:
       - ./frontend:/app
+      - ./.git:/repo/.git:ro
     ports:
       - "${FRONTEND_BIND:-127.0.0.1}:${FRONTEND_PORT:-5174}:5173"
     command: sh -c "if [ -f package.json ]; then npm install && npm run dev -- --host 0.0.0.0; else tail -f /dev/null; fi"
