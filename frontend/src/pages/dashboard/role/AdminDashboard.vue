@@ -20,7 +20,7 @@ import AppCard from '../../../components/ui/AppCard.vue'
 import AppErrorBanner from '../../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../../components/ui/AppStatusBadge.vue'
 import { api } from '../../../services/api'
-import { getVersionInfo } from '../../../services/versionService'
+import { formatVersionDate, getRuntimeEnvironmentInfo, getVersionInfo } from '../../../services/versionService'
 import { useAuthStore } from '../../../stores/auth'
 import { useSettingsStore } from '../../../stores/settings'
 import StatsWidget from '../widgets/StatsWidget.vue'
@@ -68,11 +68,9 @@ const attendanceStudents = computed(() => attendance.value.students || {})
 const admissions = computed(() => kpi.value.admissions || {})
 const frdo = computed(() => kpi.value.frdo || {})
 const fis = computed(() => kpi.value.fis || {})
-const system = computed(() => kpi.value.system || {})
-const version = computed(() => ({
-  ...(system.value.version || {}),
-  ...(frontendVersion.value || {}),
-}))
+const version = computed(() => frontendVersion.value || {})
+const versionBuildDate = computed(() => formatVersionDate(version.value.buildDate))
+const versionEnvironment = computed(() => getRuntimeEnvironmentInfo().label)
 const attentionItems = computed(() => payload.value.attention || [])
 const charts = computed(() => payload.value.charts || {})
 const latestPackages = computed(() => frdo.value.latest_packages || [])
@@ -329,8 +327,8 @@ onMounted(() => {
             <div><dt>Версия</dt><dd>{{ version.version || 'unknown' }}</dd></div>
             <div><dt>Релиз</dt><dd>{{ version.release || 'unknown' }}</dd></div>
             <div><dt>Build</dt><dd>{{ version.build || 'unknown' }}</dd></div>
-            <div><dt>Дата сборки</dt><dd>{{ version.buildDate || '—' }}</dd></div>
-            <div><dt>Окружение</dt><dd>{{ version.environment || 'development' }}</dd></div>
+            <div><dt>Дата сборки</dt><dd>{{ versionBuildDate }}</dd></div>
+            <div><dt>Окружение</dt><dd>{{ versionEnvironment }}</dd></div>
             <div><dt>Статус</dt><dd><AppStatusBadge label="Работает" tone="success" /></dd></div>
           </dl>
         </AppCard>

@@ -40,10 +40,12 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [Repository Sync](REPOSITORY_SYNC.md)
 - [Role Menu Matrix](ROLE_MENU_MATRIX.md)
 - [Performance Baseline](PERFORMANCE_BASELINE.md)
+- [Проверка внешнего технического анализа](EXTERNAL_ANALYSIS_VALIDATION_2026-08-03.md)
 
 ## Operations
 
 - [Installation](INSTALLATION.md)
+- [Подготовка переноса на другой компьютер](PORTAL_DATA_SETUP.md)
 - [Update](UPDATE.md)
 - [Backup Restore](BACKUP_RESTORE.md)
 - [Deployment](DEPLOYMENT.md)
@@ -108,6 +110,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [DIGITAL_PASSES.md](DIGITAL_PASSES.md)
 - [DOMAIN_MODEL.md](DOMAIN_MODEL.md)
 - [ENVIRONMENTS.md](ENVIRONMENTS.md)
+- [EXTERNAL_ANALYSIS_VALIDATION_2026-08-03.md](EXTERNAL_ANALYSIS_VALIDATION_2026-08-03.md)
 - [EXECUTIVE_DASHBOARD.md](EXECUTIVE_DASHBOARD.md)
 - [FIS_ADMISSIONS_IMPORT.md](FIS_ADMISSIONS_IMPORT.md)
 - [FIS_API_OFFICIAL_SOURCES.md](FIS_API_OFFICIAL_SOURCES.md)
@@ -159,6 +162,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [PERFORMANCE_REVIEW.md](PERFORMANCE_REVIEW.md)
 - [PERSON_MODEL.md](PERSON_MODEL.md)
 - [PERSONAL_DASHBOARD.md](PERSONAL_DASHBOARD.md)
+- [PORTAL_DATA_SETUP.md](PORTAL_DATA_SETUP.md)
 - [PILOT_DATA_IMPORT_PLAN.md](PILOT_DATA_IMPORT_PLAN.md)
 - [PRODUCTION_DEPLOYMENT_READINESS.md](PRODUCTION_DEPLOYMENT_READINESS.md)
 - [PRODUCTION_SECURITY_CHECKLIST.md](PRODUCTION_SECURITY_CHECKLIST.md)

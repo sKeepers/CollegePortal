@@ -57,6 +57,22 @@ class FisAdmissionsImportHandlerTest extends TestCase
         $this->assertSame('[скрыто]', $summary['preview_rows'][0]['address']);
     }
 
+    public function test_apply_endpoint_requires_a_validated_dry_run_job(): void
+    {
+        $this->withApiAuth();
+        $job = ImportJob::create([
+            'data_type' => 'applicants',
+            'source' => FisAdmissionsImportHandler::SOURCE,
+            'mode' => 'analyze',
+            'status' => 'analyzed',
+            'stored_path' => 'unused',
+        ]);
+
+        $this->postJson('/api/admin/import/fis-admissions/apply', ['job_id' => $job->id])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('job_id');
+    }
+
     public function test_apply_is_idempotent_and_links_several_applications_to_one_person(): void
     {
         $this->createPrograms();
@@ -77,6 +93,24 @@ class FisAdmissionsImportHandlerTest extends TestCase
         $this->assertDatabaseCount('people', 1);
         $this->assertDatabaseCount('applicant_applications', 2);
         $this->assertSame(1, ApplicantApplication::query()->distinct('person_id')->count('person_id'));
+    }
+
+    public function test_duplicate_application_number_in_one_file_blocks_dry_run(): void
+    {
+        $this->createPrograms();
+        $path = $this->fixture('xlsx', [
+            ['1006', 'Принято', '01.07.2026', '01.07.2026', 'Иванов Иван Иванович', '53.02.03 Инструментальное исполнительство', '', '', '', '', 'Россия', 'Мужской', '01.02.2008', '', '', '', '', '123-456-789 01', '', '4,75', '2', '101', 'Да', 'Нет'],
+            ['1006', 'Принято', '01.07.2026', '01.07.2026', 'Петров Петр Петрович', '53.02.04 Вокальное искусство', '', '', '', '', 'Россия', 'Мужской', '02.02.2008', '', '', '', '', '234-567-890 12', '', '4,80', '3', '102', 'Да', 'Да'],
+        ]);
+
+        $summary = app(FisAdmissionsImportHandler::class)->dryRunPath($path);
+
+        $this->assertSame(1, $summary['critical_errors']);
+        $this->assertSame(1, $summary['valid_rows']);
+        $this->assertSame(1, $summary['applications']);
+        $this->assertSame(0, ApplicantApplication::query()->count());
+        $this->assertSame(3, $summary['errors'][0]['row']);
+        $this->assertStringContainsString('повторяется в файле', $summary['errors'][0]['reason']);
     }
 
     public function test_unresolved_competition_blocks_apply(): void
