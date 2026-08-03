@@ -1,5 +1,6 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import {
   BookOpen,
@@ -28,6 +29,7 @@ import {
   UserRound,
   UsersRound,
   MessageSquareWarning,
+  Bell,
 } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import { useWorkspaceStore } from '../stores/workspace'
@@ -35,6 +37,7 @@ import { useSettingsStore } from '../stores/settings'
 import { useLayoutService } from '../services/layoutService'
 import { getEnvironmentCssVars } from '../services/environmentService'
 import { isRoleScopedRouteAllowed } from '../services/roleNavigation'
+import { api } from '../services/api'
 import GlobalSearch from '../components/search/GlobalSearch.vue'
 import EnvironmentBadge from '../components/system/EnvironmentBadge.vue'
 import SystemInfoPanel from '../components/system/SystemInfoPanel.vue'
@@ -42,12 +45,16 @@ import UatFeedbackDialog from '../components/uat/UatFeedbackDialog.vue'
 
 const router = useRouter()
 const route = useRoute()
+const $q = useQuasar()
 const auth = useAuthStore()
 const workspace = useWorkspaceStore()
 const settingsStore = useSettingsStore()
 useLayoutService()
 const drawerOpen = ref(true)
 const feedbackOpen = ref(false)
+const adminNotifications = ref([])
+const notificationInitialized = ref(false)
+let notificationTimer = null
 const NAVIGATION_SECTIONS_KEY = 'collegePortal.navigation.sections.v1'
 
 const navGroups = [
@@ -161,6 +168,8 @@ const visibleNavGroups = computed(() =>
 
 const collapsedSections = ref(loadNavigationSections())
 const pageTitle = computed(() => route.meta.title || 'CollegePortal')
+const canReceiveAdminNotifications = computed(() => auth.can('uat.manage') || auth.can('journal.reopen'))
+const unreadNotificationCount = computed(() => adminNotifications.value.length)
 const collegeShortName = computed(() => settingsStore.publicValue('general', 'college_short_name', 'Колледж искусств'))
 const collegeFullName = computed(() => settingsStore.publicValue('general', 'college_full_name', 'Рабочее место колледжа'))
 const logoPath = computed(() => settingsStore.publicValue('branding', 'logo_path', '/brand/logo-skki-bw.jpg'))
@@ -230,8 +239,51 @@ async function logout() {
   router.push('/login')
 }
 
+async function loadAdminNotifications() {
+  if (!canReceiveAdminNotifications.value) {
+    adminNotifications.value = []
+    return
+  }
+
+  const requests = []
+  if (auth.can('uat.manage')) {
+    requests.push(api.list('uat/feedback', { status: 'new', per_page: 10 }).then((payload) => (payload?.data || []).map((item) => ({
+      id: `feedback-${item.id}`,
+      title: 'Новое сообщение о проблеме',
+      description: item.title || 'Требуется проверка',
+      to: { path: '/admin/uat', query: { feedback: item.id } },
+    }))))
+  }
+  if (auth.can('journal.reopen')) {
+    requests.push(api.list('journal/edit-requests/pending').then((payload) => (payload?.data || []).map((item) => ({
+      id: `journal-${item.id}`,
+      title: 'Запрос на редактирование журнала',
+      description: `${item.lesson?.subject || 'Занятие'} · ${item.lesson?.group || 'Группа'}`,
+      to: { path: '/journal', query: { journalLesson: item.journal_lesson_id } },
+    }))))
+  }
+
+  const next = (await Promise.all(requests)).flat()
+  const known = new Set(adminNotifications.value.map((item) => item.id))
+  adminNotifications.value = next
+  if (notificationInitialized.value) {
+    next.filter((item) => !known.has(item.id)).forEach((item) => {
+      $q.notify({ type: 'info', message: item.title, caption: item.description, position: 'top-right', actions: [{ label: 'Открыть', color: 'white', handler: () => router.push(item.to) }] })
+    })
+  }
+  notificationInitialized.value = true
+}
+
 onMounted(() => {
   settingsStore.loadPublic().catch(() => {})
+  loadAdminNotifications().catch(() => {})
+  notificationTimer = window.setInterval(() => {
+    if (!document.hidden) loadAdminNotifications().catch(() => {})
+  }, 30000)
+})
+
+onBeforeUnmount(() => {
+  if (notificationTimer) window.clearInterval(notificationTimer)
 })
 
 watch(
@@ -270,6 +322,19 @@ watch(
           <q-btn flat no-caps color="primary" @click="feedbackOpen = true">
             <MessageSquareWarning :size="16" />
             <span>Сообщить о проблеме</span>
+          </q-btn>
+          <q-btn v-if="canReceiveAdminNotifications" flat round dense aria-label="Уведомления администратора">
+            <q-badge v-if="unreadNotificationCount" floating color="negative">{{ unreadNotificationCount }}</q-badge>
+            <Bell :size="18" />
+            <q-menu anchor="bottom middle" self="top middle" style="min-width: 320px">
+              <q-list separator>
+                <q-item-label header>Уведомления администратора</q-item-label>
+                <q-item v-for="item in adminNotifications" :key="item.id" clickable v-close-popup @click="router.push(item.to)">
+                  <q-item-section><q-item-label>{{ item.title }}</q-item-label><q-item-label caption>{{ item.description }}</q-item-label></q-item-section>
+                </q-item>
+                <q-item v-if="!adminNotifications.length"><q-item-section><q-item-label caption>Новых сообщений нет</q-item-label></q-item-section></q-item>
+              </q-list>
+            </q-menu>
           </q-btn>
           <EnvironmentBadge />
           <GlobalSearch />

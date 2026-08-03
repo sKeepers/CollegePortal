@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\Role;
+use App\Models\Person;
+use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -45,5 +47,27 @@ class UatUserSeeder extends Seeder
                 $user->roles()->sync([$roleId => ['is_primary' => true]]);
             }
         }
+
+        $teacherUser = User::query()->where('email', 'teacher1.uat@college-portal.local')->firstOrFail();
+        $person = Person::query()->firstOrCreate(
+            ['email' => $teacherUser->email],
+            ['last_name' => 'Преподаватель', 'first_name' => 'UAT', 'middle_name' => null, 'status' => 'active']
+        );
+        $teacher = Teacher::query()->updateOrCreate(
+            ['person_id' => $person->id],
+            [
+                'user_id' => $teacherUser->id,
+                'last_name' => $person->last_name,
+                'first_name' => $person->first_name,
+                'middle_name' => $person->middle_name,
+                'email' => $teacherUser->email,
+                'position' => 'Преподаватель',
+                'department' => 'UAT',
+                'is_active' => true,
+            ]
+        );
+
+        $teacherUser->update(['person_type' => 'person', 'person_id' => $person->id]);
+        $teacher->update(['user_id' => $teacherUser->id]);
     }
 }

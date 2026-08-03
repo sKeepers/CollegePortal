@@ -72,8 +72,8 @@ const notifications = computed(() => {
 })
 
 function findTeacher(teachers) {
-  if (auth.user?.person_type === 'teacher' && auth.user?.person_id) {
-    return teachers.find((item) => Number(item.id) === Number(auth.user.person_id)) || null
+  if (auth.user?.person?.type === 'teacher' && auth.user.person.id) {
+    return teachers.find((item) => Number(item.id) === Number(auth.user.person.id)) || { id: auth.user.person.id }
   }
 
   const email = String(auth.user?.email || '').toLowerCase()
@@ -92,10 +92,13 @@ async function loadDashboard() {
     const teachersPayload = auth.can('teachers.view') ? await api.list('teachers', { active_only: 1 }).catch(() => ({ data: [] })) : { data: [] }
     teacher.value = findTeacher(extractRows(teachersPayload))
     const id = teacherId.value
+    if (!id) {
+      return
+    }
     const [lessonsResult, loadsResult, journalResult] = await Promise.allSettled([
-      api.list('journal/lessons', id ? { teacher_id: id, mode: 'today', per_page: 20 } : { mode: 'today', per_page: 20 }),
-      api.list('teaching-loads', id ? { teacher_id: id } : {}),
-      api.list('journal/lessons', id ? { teacher_id: id, mode: 'week', per_page: 50 } : { mode: 'week', per_page: 50 }),
+      api.list('journal/lessons', { teacher_id: id, mode: 'today', per_page: 20 }),
+      api.list('teaching-loads', { teacher_id: id }),
+      api.list('journal/lessons', { teacher_id: id, mode: 'week', per_page: 50 }),
     ])
 
     if (lessonsResult.status === 'fulfilled') todayLessons.value = extractRows(lessonsResult.value)

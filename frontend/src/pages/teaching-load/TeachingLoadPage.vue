@@ -26,6 +26,7 @@ const store = useTeachingLoadStore()
 const permissions = usePermissions()
 const auth = useAuthStore()
 const isOwnView = computed(() => auth.hasRole('teacher') && !permissions.hasPermission('teachingload.view'))
+const profileUnavailable = computed(() => isOwnView.value && auth.user?.person?.type !== 'teacher')
 const canCreate = computed(() => permissions.hasPermission('teachingload.edit'))
 const canUpdate = computed(() => permissions.hasPermission('teachingload.edit'))
 const canDelete = computed(() => permissions.hasPermission('teachingload.edit'))
@@ -75,7 +76,7 @@ const itemColumns = [
 ]
 
 const loadTypeOptions = computed(() => referenceOptions.options('teaching_load_types', { valueField: 'name' }))
-const tableSubtitle = computed(() => `Найдено нагрузок: ${store.filteredLoads.length}`)
+const tableSubtitle = computed(() => profileUnavailable.value ? 'Профиль преподавателя еще не настроен' : `Найдено нагрузок: ${store.filteredLoads.length}`)
 const teachingLoadMetrics = computed(() => [
   { label: 'План', value: store.coverage?.planned_hours ?? store.selectedHours },
   { label: 'Назначено', value: store.coverage?.assigned_hours ?? 0 },
@@ -118,7 +119,7 @@ async function resetFilters() { store.resetFilters(); await syncQuery('') }
 async function handleImport(file) { if (!canImport.value || !file) return; await store.importCsv(file); importFile.value = null; notify('Импорт нагрузки завершен') }
 async function exportCsv() { if (!canExport.value) return; await store.exportCsv(); notify('Экспорт нагрузки подготовлен') }
 watch(() => route.query.selected, () => { if (!syncingQuery.value) store.selectById(routeSelectedId(), { includeCoverage: !isOwnView.value }) })
-onMounted(async () => { if (!isOwnView.value) await referenceOptions.loadCatalog('teaching_load_types'); store.selectById(routeSelectedId(), { includeCoverage: !isOwnView.value }); await store.load({ includeReferenceData: !isOwnView.value }); if (!store.selectedLoad && store.filteredLoads[0]) await selectLoad(store.filteredLoads[0]) })
+onMounted(async () => { if (profileUnavailable.value) return; if (!isOwnView.value) await referenceOptions.loadCatalog('teaching_load_types'); store.selectById(routeSelectedId(), { includeCoverage: !isOwnView.value }); await store.load({ includeReferenceData: !isOwnView.value }); if (!store.selectedLoad && store.filteredLoads[0]) await selectLoad(store.filteredLoads[0]) })
 </script>
 
 <template>
@@ -131,7 +132,7 @@ onMounted(async () => { if (!isOwnView.value) await referenceOptions.loadCatalog
     </PageHeader>
 
     <AppToolbar><span>{{ tableSubtitle }}</span><template #actions><AppLoading v-if="store.loading" label="Загрузка нагрузки..." /><q-btn flat @click="resetSplitter">Сбросить размер</q-btn><q-btn flat :disable="store.loading" @click="store.load({ includeReferenceData: !isOwnView })"><RefreshCw :size="16" class="q-mr-xs" /> Обновить</q-btn><q-file v-if="canImport" v-model="importFile" dense outlined accept=".csv,text/csv" label="Импорт" style="max-width: 180px" @update:model-value="handleImport"><template #prepend><Upload :size="16" /></template></q-file><q-btn v-if="canExport" color="primary" @click="exportCsv"><Download :size="16" class="q-mr-xs" /> Экспорт</q-btn></template></AppToolbar>
-    <AppErrorBanner :message="store.error" />
+    <AppErrorBanner v-if="!profileUnavailable" :message="store.error" />
 
     <AppFilterBar>
       <q-select v-model="store.filters.academic_year" dense outlined clearable emit-value map-options label="Учебный год" :options="store.academicYearOptions" />
@@ -151,7 +152,7 @@ onMounted(async () => { if (!isOwnView.value) await referenceOptions.loadCatalog
           <template #body-cell-coverage="props"><q-td :props="props">{{ loadCoverage(props.row) }}</q-td></template>
           <template #body-cell-actions="props"><q-td :props="props"><q-btn v-if="canUpdate" flat round dense title="Редактировать" @click.stop="openEditForm(props.row)"><Edit3 :size="16" /></q-btn><q-btn v-if="canDelete" flat round dense color="negative" title="Удалить" @click.stop="requestDelete(props.row)"><Trash2 :size="16" /></q-btn></q-td></template>
         </AppTable>
-        <AppEmptyState v-else title="Нагрузка не найдена" description="Создайте нагрузку или сформируйте ее из учебного плана." />
+        <AppEmptyState v-else :title="profileUnavailable ? 'Профиль преподавателя не настроен' : 'Нагрузка не найдена'" :description="profileUnavailable ? 'Обратитесь к администратору, чтобы связать учетную запись с карточкой преподавателя.' : 'Создайте нагрузку или сформируйте ее из учебного плана.'" />
       </div>
 
       <WorkspaceSplitter label="Изменить ширину карточки нагрузки" @resize-start="startResize" @reset="resetSplitter" />
