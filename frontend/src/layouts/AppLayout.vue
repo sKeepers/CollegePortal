@@ -265,21 +265,27 @@ async function loadAdminNotifications() {
   const next = (await Promise.all(requests)).flat()
   const known = new Set(adminNotifications.value.map((item) => item.id))
   adminNotifications.value = next
-  if (notificationInitialized.value) {
-    next.filter((item) => !known.has(item.id)).forEach((item) => {
-      $q.notify({ type: 'info', message: item.title, caption: item.description, position: 'top-right', actions: [{ label: 'Открыть', color: 'white', handler: () => router.push(item.to) }] })
-    })
-  }
+  next.filter((item) => !known.has(item.id)).forEach((item) => {
+    $q.notify({ type: 'info', message: item.title, caption: item.description, position: 'top-right', actions: [{ label: 'Открыть', color: 'white', handler: () => router.push(item.to) }] })
+  })
   notificationInitialized.value = true
 }
 
 onMounted(() => {
   settingsStore.loadPublic().catch(() => {})
-  loadAdminNotifications().catch(() => {})
   notificationTimer = window.setInterval(() => {
     if (!document.hidden) loadAdminNotifications().catch(() => {})
   }, 30000)
 })
+
+watch(
+  () => auth.user?.id,
+  () => {
+    notificationInitialized.value = false
+    loadAdminNotifications().catch(() => {})
+  },
+  { immediate: true },
+)
 
 onBeforeUnmount(() => {
   if (notificationTimer) window.clearInterval(notificationTimer)
