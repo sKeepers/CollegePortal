@@ -12,19 +12,15 @@ frontend/public/version.json
 
 Он попадает в frontend build как статический файл и читается через `frontend/src/services/versionService.js`.
 
-## Текущая схема версии
+## Автоматическая схема версии
 
-Актуальная публичная RC-версия CollegePortal:
+`version.json` формируется перед каждой frontend-сборкой без ручного изменения файла.
 
-```text
-0.8.0-rc2
-```
-
-GitHub release tag:
-
-```text
-v0.8.0-rc2
-```
+- Для commit с Git tag `vX.Y.Z` версия получает `X.Y.Z`, а релиз - `vX.Y.Z`.
+- Для DEV commit без release tag версия получает `dev-<short-git-hash>`, а релиз - `DEV build <short-git-hash>`.
+- `build` и `gitCommit` всегда берутся из текущего Git `HEAD`.
+- `buildDate` формируется в дату сборки.
+- `environment` берется из конфигурации текущего окружения.
 
 Формат:
 
@@ -104,7 +100,8 @@ npm run build
 frontend/scripts/generate-version.mjs
 ```
 
-Он берет значения из переменных окружения:
+Он автоматически получает Git metadata через read-only mount `.git` в frontend-контейнере DEV.
+Переменные окружения используются только как явный override для контролируемой release-сборки:
 
 ```text
 APP_VERSION=0.8.0-rc2
@@ -116,21 +113,7 @@ VITE_BUILD_FULL_COMMIT=<full-hash>
 VITE_BUILD_DATE=YYYY-MM-DD
 ```
 
-Если переменные не заданы, используются безопасные значения актуального RC:
-
-```text
-version=0.8.0-rc2
-release=v0.8.0-rc2
-```
-
-Для точной сборки стенда рекомендуется передавать текущий Git hash:
-
-```bash
-git rev-parse --short HEAD
-git rev-parse HEAD
-```
-
-Для будущего production deployment рекомендуется автоматизировать генерацию `version.json` в deploy-скрипте, чтобы `build` точно соответствовал выкладываемому commit.
+При отсутствии override генератор использует Git tag или текущий hash по правилам выше. Ручное редактирование `frontend/public/version.json` не требуется и будет перезаписано следующей сборкой.
 
 ## Правила будущих версий
 
