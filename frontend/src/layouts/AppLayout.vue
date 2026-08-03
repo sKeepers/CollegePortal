@@ -171,7 +171,6 @@ const pageTitle = computed(() => route.meta.title || 'CollegePortal')
 const canReceiveAdminNotifications = computed(() => auth.can('uat.manage') || auth.can('journal.reopen'))
 const unreadNotificationCount = computed(() => adminNotifications.value.length)
 const collegeShortName = computed(() => settingsStore.publicValue('general', 'college_short_name', 'Колледж искусств'))
-const collegeFullName = computed(() => settingsStore.publicValue('general', 'college_full_name', 'Рабочее место колледжа'))
 const logoPath = computed(() => settingsStore.publicValue('branding', 'logo_path', '/brand/logo-skki-bw.jpg'))
 const layoutStyle = computed(() => ({
   '--cp-sidebar-width': `${workspace.sidebarWidth}px`,
@@ -315,7 +314,7 @@ watch(
 
         <q-toolbar-title>
           <div class="cp-page-title">{{ pageTitle }}</div>
-          <div class="cp-page-subtitle">{{ collegeFullName }}</div>
+          <div class="cp-page-subtitle">{{ collegeShortName }}</div>
         </q-toolbar-title>
 
         <div class="cp-topbar-tools">
