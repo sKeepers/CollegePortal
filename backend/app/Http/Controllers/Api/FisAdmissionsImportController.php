@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
 class FisAdmissionsImportController extends Controller
@@ -68,13 +69,15 @@ class FisAdmissionsImportController extends Controller
     public function apply(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'job_id' => ['required_without:file', 'integer', 'exists:import_jobs,id'],
-            'file' => ['required_without:job_id', 'file', 'mimes:xls,xlsx', 'max:20480'],
+            'job_id' => ['required', 'integer', 'exists:import_jobs,id'],
         ]);
 
-        $job = isset($data['job_id'])
-            ? ImportJob::query()->where('source', FisAdmissionsImportHandler::SOURCE)->findOrFail($data['job_id'])
-            : $this->storeJob($request, 'apply');
+        $job = ImportJob::query()->where('source', FisAdmissionsImportHandler::SOURCE)->findOrFail($data['job_id']);
+        if ($job->status !== 'validated') {
+            throw ValidationException::withMessages([
+                'job_id' => 'Перед apply необходимо выполнить успешный dry-run этого файла ФИС.',
+            ]);
+        }
 
         $summary = $this->handler->applyJob($job);
         $job->update([

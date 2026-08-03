@@ -246,7 +246,17 @@ class FisAdmissionsImportHandler
                 $summary['applications_to_create']++;
             }
             if ($row['external_application_number'] !== '') {
-                $seenApplicationNumbers[$row['external_application_number']] = true;
+                $applicationNumber = $row['external_application_number'];
+                if (isset($seenApplicationNumbers[$applicationNumber])) {
+                    $summary['errors'][] = $this->rowIssue(
+                        $rowNumber,
+                        '№ заявления',
+                        'Номер заявления повторяется в файле; первое вхождение находится в строке '.$seenApplicationNumbers[$applicationNumber].'.',
+                        $applicationNumber,
+                    );
+                } else {
+                    $seenApplicationNumbers[$applicationNumber] = $rowNumber;
+                }
             }
 
             $preview[] = $this->previewRow($rowNumber, $row, (bool) $program, $person, $existingApplication);
