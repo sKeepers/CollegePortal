@@ -16,7 +16,7 @@ http://192.168.34.114:5174/login
 https://192.168.34.114:5443/access/mobile-scanner
 ```
 
-## Пользователи
+## Обычные smoke-пользователи
 
 | Роль | Логин |
 | --- | --- |
@@ -30,6 +30,32 @@ https://192.168.34.114:5443/access/mobile-scanner
 ```text
 test1234
 ```
+
+## UAT-пользователи по ролям
+
+Эти учетные записи предназначены для сквозной проверки сценариев под разными ролями.
+Они отличаются от обычных smoke-пользователей выше.
+
+| Роль | Логин |
+| --- | --- |
+| Администратор UAT | `admin.uat@college-portal.local` |
+| Директор UAT | `director.uat@college-portal.local` |
+| Заместитель директора UAT | `deputy.uat@college-portal.local` |
+| Учебная часть UAT | `study.uat@college-portal.local` |
+| Приемная комиссия UAT | `admission.uat@college-portal.local` |
+| Преподаватель UAT | `teacher1.uat@college-portal.local` |
+| Студент UAT | `student1.uat@college-portal.local` |
+| Сотрудник проходной UAT | `security.uat@college-portal.local` |
+
+Пароль для UAT-пользователей DEV:
+
+```text
+demo12345
+```
+
+Например, для входа как директор UAT используйте логин
+`director.uat@college-portal.local` и пароль из этого раздела. Пароль `test1234`
+для этой учетной записи не подходит.
 
 ## Ограничения
 
