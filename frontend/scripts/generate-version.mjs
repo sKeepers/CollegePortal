@@ -82,10 +82,13 @@ function gitHeadCommit() {
 const detectedCommit = gitValue('git rev-parse HEAD') || gitHeadCommit()
 const fullCommit = process.env.VITE_BUILD_FULL_COMMIT || detectedCommit || 'unknown'
 const commit = process.env.VITE_BUILD_COMMIT || (fullCommit === 'unknown' ? 'unknown' : fullCommit.slice(0, 12))
+const releaseTag = gitValue('git describe --tags --exact-match HEAD') || null
 const buildDate = process.env.VITE_BUILD_DATE || new Date().toISOString().slice(0, 10)
 const environment = process.env.VITE_APP_ENV || process.env.APP_ENV || 'development'
-const version = process.env.VITE_APP_VERSION || process.env.APP_VERSION || '0.8.0-rc2'
-const release = process.env.VITE_APP_RELEASE || process.env.APP_RELEASE || 'v0.8.0-rc2'
+const generatedVersion = releaseTag ? releaseTag.replace(/^v/, '') : `dev-${commit}`
+const generatedRelease = releaseTag || `DEV build ${commit}`
+const version = process.env.VITE_APP_VERSION || process.env.APP_VERSION || generatedVersion
+const release = process.env.VITE_APP_RELEASE || process.env.APP_RELEASE || generatedRelease
 
 const payload = {
   name: 'CollegePortal',

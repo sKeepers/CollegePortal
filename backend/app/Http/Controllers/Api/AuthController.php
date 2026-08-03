@@ -25,11 +25,11 @@ class AuthController extends Controller
             ->first();
 
         if ($user === null || ! Hash::check($credentials['password'], $user->password)) {
-            return response()->json(['message' => 'Invalid credentials.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            return response()->json(['message' => 'Неверный email или пароль.'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         if (! $user->is_active) {
-            return response()->json(['message' => 'User is inactive.'], Response::HTTP_FORBIDDEN);
+            return response()->json(['message' => 'Учетная запись отключена.'], Response::HTTP_FORBIDDEN);
         }
 
         $token = Str::random(80);

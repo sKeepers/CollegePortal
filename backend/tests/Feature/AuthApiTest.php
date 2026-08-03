@@ -54,7 +54,8 @@ class AuthApiTest extends TestCase
             'email' => 'admin@example.test',
             'password' => 'wrong-password',
         ])
-            ->assertUnprocessable();
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Неверный email или пароль.');
     }
 
     public function test_login_is_rate_limited(): void
