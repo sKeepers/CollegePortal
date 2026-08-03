@@ -246,7 +246,7 @@ async function loadAdminNotifications() {
 
   const requests = []
   if (auth.can('uat.manage')) {
-    requests.push(api.list('uat/feedback', { status: 'new', per_page: 10 }).then((payload) => (payload?.data || []).map((item) => ({
+    requests.push(api.list('admin/uat/feedback', { status: 'new', per_page: 10 }).then((payload) => (payload?.data || []).map((item) => ({
       id: `feedback-${item.id}`,
       title: 'Новое сообщение о проблеме',
       description: item.title || 'Требуется проверка',
