@@ -3,13 +3,10 @@
 namespace App\Services;
 
 use App\Models\Group;
-use App\Models\Person;
 use App\Models\Student;
-use App\Services\Admissions\SnilsService;
 use DateTimeImmutable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use RuntimeException;
 use SplFileObject;
@@ -17,10 +14,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StudentCsvService
 {
-    public function __construct(private readonly SnilsService $snils)
-    {
-    }
-
     private const HEADERS = [
         'id',
         'group_id',
@@ -32,8 +25,17 @@ class StudentCsvService
         'phone',
         'email',
         'snils',
+        'address',
+        'passport_series',
+        'passport_number',
+        'passport_issue_date',
+        'passport_issued_by',
         'status',
+        'course',
+        'education_form',
         'enrollment_date',
+        'enrollment_order_number',
+        'enrollment_order_date',
     ];
 
     public function export(): StreamedResponse
@@ -45,7 +47,7 @@ class StudentCsvService
             fputcsv($output, self::HEADERS, ';');
 
             Student::query()
-                ->with(['group', 'person'])
+                ->with('group')
                 ->orderBy('last_name')
                 ->orderBy('first_name')
                 ->chunk(200, function ($students) use ($output): void {
@@ -60,9 +62,18 @@ class StudentCsvService
                             $student->birth_date?->toDateString(),
                             $student->phone,
                             $student->email,
-                            $student->person?->snils,
+                            $student->snils,
+                            $student->address,
+                            $student->passport_series,
+                            $student->passport_number,
+                            $student->passport_issue_date?->toDateString(),
+                            $student->passport_issued_by,
                             $student->status,
+                            $student->course,
+                            $student->education_form,
                             $student->enrollment_date?->toDateString(),
+                            $student->enrollment_order_number,
+                            $student->enrollment_order_date?->toDateString(),
                         ], ';');
                     }
                 });
@@ -111,7 +122,7 @@ class StudentCsvService
             }
 
             $validated = $validator->validated();
-            $student = isset($validated['id']) ? Student::find($validated['id']) : null;
+            $student = isset($validated['id']) ? Student::find($validated['id']) : $this->findExisting($validated);
 
             unset($validated['id'], $validated['group']);
 
@@ -119,28 +130,7 @@ class StudentCsvService
                 $student->update($validated);
                 $updated++;
             } else {
-                try {
-                    DB::transaction(function () use ($validated): void {
-                        $normalizedSnils = $this->snils->normalize($validated['snils'] ?? null);
-                        $hash = $this->snils->hash($normalizedSnils);
-                        $person = Person::query()->firstOrCreate(['snils_hash' => $hash], [
-                            'last_name' => $validated['last_name'],
-                            'first_name' => $validated['first_name'],
-                            'middle_name' => $validated['middle_name'] ?? null,
-                            'birth_date' => $validated['birth_date'] ?? null,
-                            'phone' => $validated['phone'] ?? null,
-                            'email' => $validated['email'] ?? null,
-                            'snils' => $normalizedSnils,
-                            'snils_hash' => $hash,
-                            'status' => 'active',
-                        ]);
-                        unset($validated['snils']);
-                        Student::create([...$validated, 'person_id' => $person->id]);
-                    });
-                } catch (\Illuminate\Validation\ValidationException $exception) {
-                    $errors[] = ['line' => $line, 'messages' => $exception->errors()['snils'] ?? [$exception->getMessage()]];
-                    continue;
-                }
+                Student::create($validated);
                 $created++;
             }
         }
@@ -198,6 +188,9 @@ class StudentCsvService
 
         $payload['birth_date'] = $this->normalizeDate($payload['birth_date'] ?? null);
         $payload['enrollment_date'] = $this->normalizeDate($payload['enrollment_date'] ?? null);
+        $payload['enrollment_order_date'] = $this->normalizeDate($payload['enrollment_order_date'] ?? null);
+        $payload['passport_issue_date'] = $this->normalizeDate($payload['passport_issue_date'] ?? null);
+        $payload['snils'] = isset($payload['snils']) ? preg_replace('/\D+/', '', (string) $payload['snils']) ?: null : null;
 
         if (empty($payload['status'])) {
             $payload['status'] = 'active';
@@ -235,9 +228,18 @@ class StudentCsvService
             'birth_date' => ['nullable', 'date'],
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
-            'snils' => ['required_without:id', 'nullable', 'string', 'max:32'],
+            'snils' => ['nullable', 'string', 'max:32'],
+            'address' => ['nullable', 'string', 'max:2000'],
+            'passport_series' => ['nullable', 'string', 'max:20'],
+            'passport_number' => ['nullable', 'string', 'max:100'],
+            'passport_issue_date' => ['nullable', 'date'],
+            'passport_issued_by' => ['nullable', 'string', 'max:1000'],
             'status' => ['required', Rule::in(['active', 'academic_leave', 'graduated', 'expelled'])],
+            'course' => ['nullable', 'integer', 'min:1', 'max:6'],
+            'education_form' => ['nullable', 'string', 'max:80'],
             'enrollment_date' => ['nullable', 'date'],
+            'enrollment_order_number' => ['nullable', 'string', 'max:100'],
+            'enrollment_order_date' => ['nullable', 'date'],
         ];
     }
 
@@ -250,9 +252,21 @@ class StudentCsvService
             'first_name.required' => 'Не указано имя.',
             'birth_date.date' => 'Дата рождения должна быть в формате 2026-09-01 или 01.09.2026.',
             'email.email' => 'Email указан некорректно.',
-            'snils.required_without' => 'Для нового студента укажите СНИЛС.',
             'status.in' => 'Статус должен быть active, academic_leave, graduated или expelled.',
             'enrollment_date.date' => 'Дата зачисления должна быть в формате 2026-09-01 или 01.09.2026.',
         ];
+    }
+
+    private function findExisting(array $data): ?Student
+    {
+        if (!empty($data['snils']) && ($student = Student::where('snils', $data['snils'])->first())) { return $student; }
+        if (!empty($data['email']) && ($student = Student::where('email', $data['email'])->first())) { return $student; }
+        if (!empty($data['birth_date'])) {
+            return Student::where('last_name', $data['last_name'])
+                ->where('first_name', $data['first_name'])
+                ->where('birth_date', $data['birth_date'])
+                ->first();
+        }
+        return null;
     }
 }

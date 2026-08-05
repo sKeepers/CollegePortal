@@ -61,7 +61,7 @@ class HrService
             'employee_number' => $data['employee_number'] ?? null,
             'status' => $data['status'] ?? 'active',
             'employment_type' => $data['employment_type'] ?? 'full_time',
-            'hired_at' => $data['hired_at'] ?? now()->toDateString(),
+            'hired_at' => $data['hired_at'] ?? null,
             'dismissed_at' => $data['dismissed_at'] ?? null,
             'primary_department_id' => $data['primary_department_id'] ?? null,
             'primary_position_id' => $data['primary_position_id'] ?? null,

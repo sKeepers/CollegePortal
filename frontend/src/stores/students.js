@@ -26,11 +26,19 @@ function cleanPayload(payload) {
     birth_date: payload.birth_date || null,
     phone: payload.phone?.trim() || null,
     email: payload.email?.trim() || null,
+    snils: payload.snils?.replace(/\D/g, '') || null,
+    address: payload.address?.trim() || null,
+    passport_series: payload.passport_series?.trim() || null,
+    passport_number: payload.passport_number?.trim() || null,
+    passport_issue_date: payload.passport_issue_date || null,
+    passport_issued_by: payload.passport_issued_by?.trim() || null,
     status: payload.status || 'active',
     course: payload.course ? Number(payload.course) : null,
     education_form: payload.education_form?.trim() || null,
     funding_form: payload.funding_form?.trim() || null,
     enrollment_date: payload.enrollment_date || null,
+    enrollment_order_number: payload.enrollment_order_number?.trim() || null,
+    enrollment_order_date: payload.enrollment_order_date || null,
   }
 }
 

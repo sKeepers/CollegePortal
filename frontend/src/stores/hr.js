@@ -36,6 +36,7 @@ export const useHrStore = defineStore('hr', () => {
   const employees = ref([])
   const departments = ref([])
   const positions = ref([])
+  const people = ref([])
   const filters = ref({ search: '', status: '', department_id: '', position_id: '', employment_type: '', is_teacher: '', working: '' })
   const pagination = ref(null)
   const selectedId = ref(null)
@@ -105,6 +106,7 @@ export const useHrStore = defineStore('hr', () => {
   const selectedEmployee = computed(() => employees.value.find((item) => Number(item.id) === Number(selectedId.value)) || null)
   const departmentOptions = computed(() => departments.value.map((item) => ({ label: item.name, value: item.id })))
   const positionOptions = computed(() => positions.value.map((item) => ({ label: item.name, value: item.id })))
+  const personOptions = computed(() => people.value.map((item) => ({ label: item.full_name, value: item.id, person: item })))
 
   async function loadEmployees(params = {}) {
     loading.value = true
@@ -125,8 +127,10 @@ export const useHrStore = defineStore('hr', () => {
 
   async function loadDictionaries() {
     const [depPayload, posPayload] = await Promise.all([api.list('departments'), api.list('positions')])
+    const peoplePayload = await api.list('people', { per_page: 100 }).catch(() => ({ data: [] }))
     departments.value = rows(depPayload)
     positions.value = rows(posPayload)
+    people.value = rows(peoplePayload)
   }
 
   async function load() {
@@ -161,17 +165,28 @@ export const useHrStore = defineStore('hr', () => {
     }
   }
 
-  async function saveDepartment(payload, id = null) {
+  async function issueDigitalPass(employee, expiresAt = null) {
+    if (!employee?.id) return null
     saving.value = true
     error.value = ''
     try {
-      const data = { code: payload.code?.trim() || null, name: payload.name?.trim() || '', is_active: payload.is_active !== false }
+      const response = await api.create(`employees/${employee.id}/digital-pass`, { expires_at: expiresAt || null })
+      return response?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось выпустить цифровой пропуск сотрудника'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function saveDepartment(payload, id = null) {
+    saving.value = true
+    try {
+      const data = { code: payload.code?.trim() || null, name: payload.name?.trim() || '', description: payload.description?.trim() || null, is_active: payload.is_active !== false }
       const response = id ? await api.update('departments', id, data) : await api.create('departments', data)
       await loadDictionaries()
       return response?.data || null
-    } catch (err) {
-      error.value = err.message || 'Не удалось сохранить подразделение'
-      throw err
     } finally {
       saving.value = false
     }
@@ -185,15 +200,11 @@ export const useHrStore = defineStore('hr', () => {
 
   async function savePosition(payload, id = null) {
     saving.value = true
-    error.value = ''
     try {
-      const data = { code: payload.code?.trim() || null, name: payload.name?.trim() || '', category: payload.category?.trim() || null, is_active: payload.is_active !== false }
+      const data = { code: payload.code?.trim() || null, name: payload.name?.trim() || '', category: payload.category?.trim() || null, description: payload.description?.trim() || null, is_active: payload.is_active !== false }
       const response = id ? await api.update('positions', id, data) : await api.create('positions', data)
       await loadDictionaries()
       return response?.data || null
-    } catch (err) {
-      error.value = err.message || 'Не удалось сохранить должность'
-      throw err
     } finally {
       saving.value = false
     }
@@ -219,6 +230,7 @@ export const useHrStore = defineStore('hr', () => {
     employees,
     departments,
     positions,
+    people,
     filters,
     pagination,
     selectedId,
@@ -228,11 +240,13 @@ export const useHrStore = defineStore('hr', () => {
     selectedEmployee,
     departmentOptions,
     positionOptions,
+    personOptions,
     load,
     loadEmployees,
     loadDictionaries,
     saveEmployee,
     dismissEmployee,
+    issueDigitalPass,
     saveDepartment,
     removeDepartment,
     savePosition,

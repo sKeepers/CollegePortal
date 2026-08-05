@@ -20,6 +20,8 @@ const VALIDATION_RULE_MESSAGES = {
 const FIELD_LABELS = {
   applicant_id: 'Абитуриент',
   person_id: 'Личная карточка',
+  group_id: 'Группа',
+  hired_at: 'Дата приема',
   education_program_id: 'Образовательная программа',
   source_id: 'Источник',
   status_id: 'Статус',
@@ -41,6 +43,8 @@ const FIELD_LABELS = {
   issued_by: 'Кем выдан',
   subdivision_code: 'Код подразделения',
   address: 'Адрес',
+  enrollment_order_number: 'Приказ о зачислении',
+  enrollment_order_date: 'Дата приказа о зачислении',
   registration_address: 'Адрес регистрации',
   residential_address: 'Адрес проживания',
 }
