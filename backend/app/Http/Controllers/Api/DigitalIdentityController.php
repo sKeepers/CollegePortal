@@ -7,6 +7,7 @@ use App\Http\Requests\IssueDigitalIdentityRequest;
 use App\Http\Resources\DigitalIdentityResource;
 use App\Models\DigitalIdentity;
 use App\Services\DigitalIdentityService;
+use App\Services\AuditLogService;
 use App\Services\QrSvgService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
