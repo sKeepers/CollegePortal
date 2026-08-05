@@ -15,7 +15,7 @@
 ## Git-состояние
 
 - Active worktree branch: `feature/uat-002-1-final-stabilization`
-- Local HEAD: `3dd7bb3` (`FIX: harden FIS import and system metadata`)
+- Local HEAD: `3ae495e` (`FEAT: add account provisioning and work schedules`)
 - Last deployed DEV checkpoint: `b7e11883e` (`FIX: load feedback from admin inbox endpoint`)
 - DEV branch: `feature/uat-002-1-final-stabilization`
 - GitHub branch: `origin/feature/uat-002-1-final-stabilization` развёрнута на DEV до `3f4b237ef`.
@@ -52,6 +52,7 @@
 - 2026-08-03: в форме создания сотрудника на DEV добавлен выбор существующей личной карточки. При выборе ФИО, телефон, email и СНИЛС заполняются из `Person`; при пустом выборе ввод ФИО и контактов создает личную карточку существующей бизнес-логикой `HrService`. Подразделение и должность по-прежнему выбираются только из кадровых справочников, а таблица должностей показывает категорию. DEV build успешен (`458 modules transformed`, `built in 8.14s`), `/health/live` вернул `status=ok`; PROD не изменялся.
 - 2026-08-03: по жалобе UAT исправлена обязательность даты приема на DEV во всех слоях: `EmployeeController` принимает nullable `hired_at`, `HrService` сохраняет `null`, migration `2026_08_03_000000_make_employee_hired_at_nullable` применена (batch 5). DEV-проверки: `HrFoundationApiTest` — `5 passed (35 assertions)`, PHP lint контроллера и сервиса успешен, `/health/live` вернул `status=ok`. PROD не изменялся.
 - 2026-08-03: добавлен график сотрудника с кодами `weekday_0900_1800`, `weekday_0900_1700`, `shift_2_2_0800_2000`, `flexible`; он назначается только в кадровой карточке. Вход frontend изменен на телефон/email/логин. В `/admin/users` добавлено явное создание учётной записи по ID профиля и одноразовая карточка для печати с пятизначным паролем; пароль не хранится в UI после закрытия. Личная self-scoped страница сотрудника с редактированием Person и расчетом статистики по назначенному графику еще не реализована. `node --check src/stores/users.js` успешен, `git diff --check` успешен; DEV/PROD не изменялись.
+- Commit `3ae495e` объединяет цифровые пропуска сотрудников, учетные записи и карточки выдачи, графики сотрудников, настройки HR и связанные доработки импорта/студентов. В commit не включены пользовательский `docs/UAT_002_REPORT.md`, внешний анализ, generated `frontend/public/version.json` и `obj/`. Проверки PHP не выполнялись локально из-за отсутствующего `php`; перед deploy нужно запустить целевые тесты в DEV-контейнере. DEV содержит отдельные незакоммиченные изменения и опережает local HEAD, поэтому deploy не начинать без безопасной синхронизации.
 
 ## Доступ к DEV
 
