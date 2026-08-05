@@ -26,6 +26,7 @@ class UatUserSeeder extends Seeder
             ['name' => 'Заместитель директора UAT', 'email' => 'deputy.uat@college-portal.local', 'username' => 'deputy', 'role' => 'deputy'],
             ['name' => 'Учебная часть UAT', 'email' => 'study.uat@college-portal.local', 'username' => 'study', 'role' => 'study'],
             ['name' => 'Приемная комиссия UAT', 'email' => 'admission.uat@college-portal.local', 'username' => 'admission', 'role' => 'admission'],
+            ['name' => 'Отдел кадров UAT', 'email' => 'hr.uat@college-portal.local', 'username' => 'hr', 'role' => 'hr'],
             ['name' => 'Преподаватель UAT', 'email' => 'teacher1.uat@college-portal.local', 'username' => 'teacher', 'role' => 'teacher'],
             ['name' => 'Студент UAT', 'email' => 'student1.uat@college-portal.local', 'username' => 'student', 'role' => 'student'],
             ['name' => 'Сотрудник проходной UAT', 'email' => 'security.uat@college-portal.local', 'username' => 'security', 'role' => 'security'],
