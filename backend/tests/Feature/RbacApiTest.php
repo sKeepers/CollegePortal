@@ -81,6 +81,7 @@ class RbacApiTest extends TestCase
 
         $this->withApiAuth($hr)->getJson('/api/employees')->assertOk();
         $this->withApiAuth($hr)->getJson('/api/teachers')->assertOk();
+        $this->withApiAuth($hr)->getJson('/api/access/reports/summary')->assertOk();
         $this->withApiAuth($hr)->getJson('/api/people')->assertForbidden();
         $this->withApiAuth($hr)->getJson('/api/admin/import/config')->assertForbidden();
     }
