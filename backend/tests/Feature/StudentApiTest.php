@@ -103,15 +103,27 @@ class StudentApiTest extends TestCase
             'phone' => '+79990000002',
             'email' => 'student@example.test',
             'status' => 'active',
+            'course' => 1,
+            'education_form' => 'Очная',
             'enrollment_date' => '2026-09-01',
+            'enrollment_order_number' => '91',
+            'enrollment_order_date' => '2026-08-15',
+            'address' => 'г. Ставрополь, ул. Примерная, д. 1',
+            'passport_series' => '0701',
+            'passport_number' => '123456',
         ]);
 
         $response
             ->assertCreated()
             ->assertJsonPath('data.last_name', 'Ivanov')
-            ->assertJsonPath('data.group_id', $group->id);
+            ->assertJsonPath('data.group_id', $group->id)
+            ->assertJsonPath('data.course', 1)
+            ->assertJsonPath('data.education_form', 'Очная')
+            ->assertJsonPath('data.enrollment_order_number', '91')
+            ->assertJsonPath('data.address', 'г. Ставрополь, ул. Примерная, д. 1');
 
         $this->assertDatabaseHas('students', ['email' => 'student@example.test']);
+        $this->assertDatabaseHas('students', ['email' => 'student@example.test', 'snils' => null, 'passport_number' => '123456']);
     }
 
     public function test_it_updates_student(): void

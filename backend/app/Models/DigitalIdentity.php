@@ -9,6 +9,7 @@ class DigitalIdentity extends Model
 {
     public const ENTITY_STUDENT = 'student';
     public const ENTITY_TEACHER = 'teacher';
+    public const ENTITY_EMPLOYEE = 'employee';
 
     public const STATUS_ACTIVE = 'active';
     public const STATUS_SUSPENDED = 'suspended';
@@ -45,6 +46,7 @@ class DigitalIdentity extends Model
         return match ($this->entity_type) {
             self::ENTITY_STUDENT => Student::with('group')->find($this->entity_id),
             self::ENTITY_TEACHER => Teacher::find($this->entity_id),
+            self::ENTITY_EMPLOYEE => Employee::with(['person', 'primaryDepartment', 'primaryPosition'])->find($this->entity_id),
             default => null,
         };
     }

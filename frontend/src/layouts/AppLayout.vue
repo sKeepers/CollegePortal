@@ -107,7 +107,7 @@ const navGroups = [
   {
     label: 'Идентификация',
     items: [
-      { label: 'Мой QR-пропуск', to: '/identity/my-pass', icon: QrCode, roles: ['student', 'teacher', 'hr'], permissionsAny: ['mobile.student.pass', 'view_own_data'] },
+      { label: 'Мой QR-пропуск', to: '/identity/my-pass', icon: QrCode, roles: ['student', 'teacher', 'employee', 'hr'], permissionsAny: ['mobile.student.pass', 'view_own_data'] },
       { label: 'Проходная', to: '/access/gate', icon: DoorOpen, roles: ['admin', 'security'], permission: 'gate.scan' },
       { label: 'Мобильный сканер', to: '/access/mobile-scanner', icon: QrCode, roles: ['admin', 'security'], permission: 'gate.scan' },
       { label: 'Отчеты по проходам', to: '/access/reports', icon: FileText, roles: ['admin', 'security'], permission: 'gate.reports' },

@@ -15,6 +15,7 @@ use App\Services\Import\StudentImportHandler;
 use App\Services\Import\SubjectImportHandler;
 use App\Services\Import\TeacherImportHandler;
 use App\Services\Import\TeachingLoadImportHandler;
+use App\Services\Admissions\SnilsService;
 use Illuminate\Http\UploadedFile;
 use App\Services\PersonService;
 use Illuminate\Support\Facades\Storage;
@@ -32,19 +33,19 @@ class UniversalImportService
     /** @var array<string, ImportHandlerInterface> */
     private array $handlers = [];
 
-    public function __construct(AutoCodeService $autoCodeService, ScheduleLessonService $scheduleLessonService, PersonService $personService)
+    public function __construct(AutoCodeService $autoCodeService, ScheduleLessonService $scheduleLessonService, PersonService $personService, AccountProvisioningService $accounts, SnilsService $snils)
     {
         foreach ([
-            new StudentImportHandler(),
+            new StudentImportHandler($snils, $accounts),
             new GroupImportHandler(),
-            new TeacherImportHandler(),
+            new TeacherImportHandler($accounts),
             new SubjectImportHandler($autoCodeService),
             new ClassroomImportHandler(),
             new AdmissionImportHandler(),
             new CurriculumImportHandler($autoCodeService),
             new TeachingLoadImportHandler(),
             new ScheduleImportHandler($scheduleLessonService),
-            new EmployeeImportHandler($personService),
+            new EmployeeImportHandler($personService, $accounts),
         ] as $handler) {
             $this->handlers[$handler->type()] = $handler;
         }

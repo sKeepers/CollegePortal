@@ -6,25 +6,28 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreStudentRequest;
 use App\Http\Requests\UpdateStudentRequest;
 use App\Http\Resources\StudentResource;
+use App\Models\Person;
 use App\Models\Student;
+use App\Services\Admissions\SnilsService;
 use App\Services\StudentCsvService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StudentController extends Controller
 {
-    public function __construct(private readonly StudentCsvService $studentCsvService)
+    public function __construct(private readonly StudentCsvService $studentCsvService, private readonly SnilsService $snils)
     {
     }
 
     public function index(Request $request): AnonymousResourceCollection
     {
         $students = Student::query()
-            ->with('group')
+            ->with('group.educationProgram.specialty')
             ->when($request->integer('group_id'), fn ($query, int $groupId) => $query->where('group_id', $groupId))
             ->when($request->string('status')->toString(), fn ($query, string $status) => $query->where('status', $status))
             ->when($request->string('search')->toString(), function ($query, string $search): void {
@@ -46,23 +49,48 @@ class StudentController extends Controller
 
     public function store(StoreStudentRequest $request): JsonResponse
     {
-        $student = Student::create($request->validated());
+        $student = DB::transaction(function () use ($request): Student {
+            $data = $request->validated();
+            $personId = null;
+            if (filled($data['snils'] ?? null)) {
+                $normalizedSnils = $this->snils->normalize($data['snils']);
+                $hash = $this->snils->hash($normalizedSnils);
+                $person = Person::query()->firstOrCreate(
+                    ['snils_hash' => $hash],
+                    [
+                        'last_name' => $data['last_name'],
+                        'first_name' => $data['first_name'],
+                        'middle_name' => $data['middle_name'] ?? null,
+                        'birth_date' => $data['birth_date'] ?? null,
+                        'phone' => $data['phone'] ?? null,
+                        'email' => $data['email'] ?? null,
+                        'snils' => $normalizedSnils,
+                        'snils_hash' => $hash,
+                        'status' => 'active',
+                    ],
+                );
+                $data['snils'] = $normalizedSnils;
+                $personId = $person->id;
+            }
 
-        return (new StudentResource($student->load('group')))
+            return Student::create([...$data, 'person_id' => $personId]);
+        });
+
+        return (new StudentResource($student->load('group.educationProgram.specialty')))
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
     public function show(Student $student): StudentResource
     {
-        return new StudentResource($student->load('group'));
+        return new StudentResource($student->load('group.educationProgram.specialty'));
     }
 
     public function update(UpdateStudentRequest $request, Student $student): StudentResource
     {
         $student->update($request->validated());
 
-        return new StudentResource($student->load('group'));
+        return new StudentResource($student->load('group.educationProgram.specialty'));
     }
 
     public function destroy(Student $student): Response

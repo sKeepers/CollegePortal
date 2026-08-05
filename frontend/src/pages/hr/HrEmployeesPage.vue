@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
-import { BriefcaseBusiness, Building2, CalendarDays, FileText, History, IdCard, UserRound } from '@lucide/vue'
+import { BadgeCheck, BriefcaseBusiness, Building2, CalendarDays, FileText, History, IdCard, UserRound } from '@lucide/vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
 import AppCard from '../../components/ui/AppCard.vue'
 import { useAuthStore } from '../../stores/auth'
@@ -34,6 +34,7 @@ const employeeForm = reactive({
   employee_number: '',
   status: 'active',
   employment_type: 'full_time',
+  work_schedule_code: 'flexible',
   hired_at: '',
   dismissed_at: '',
   primary_department_id: null,
@@ -44,6 +45,13 @@ const employeeForm = reactive({
 })
 
 const dictionaryForm = reactive({ code: '', name: '', category: '', description: '', is_active: true })
+const positionCategoryOptions = [
+  { label: 'Руководители', value: 'Руководители' },
+  { label: 'Педагогические работники', value: 'Педагогические работники' },
+  { label: 'Административно-управленческий персонал', value: 'Административно-управленческий персонал' },
+  { label: 'Учебно-вспомогательный персонал', value: 'Учебно-вспомогательный персонал' },
+  { label: 'Обслуживающий персонал', value: 'Обслуживающий персонал' },
+]
 const assignmentForm = reactive({ department_id: null, position_id: null, employment_type: 'full_time', rate: 1, started_at: '', ended_at: '', is_primary: true, order_number: '', order_date: '', comment: '' })
 const statusForm = reactive({ status: 'active', date_from: '', date_to: '', reason: '', document_number: '', document_date: '', comment: '' })
 
@@ -67,6 +75,14 @@ const employmentOptions = [
   { label: 'Договор', value: 'contract' },
 ]
 
+const workScheduleOptions = [
+  { label: 'Не указан (гибкий график)', value: null },
+  { label: 'Пн–Пт, 09:00–18:00', value: 'weekday_0900_1800' },
+  { label: 'Пн–Пт, 09:00–17:00', value: 'weekday_0900_1700' },
+  { label: 'Сменный 2/2, 08:00–20:00', value: 'shift_2_2_0800_2000' },
+  { label: 'Гибкий график', value: 'flexible' },
+]
+
 const workingOptions = [
   { label: 'Все', value: '' },
   { label: 'Работают', value: 'active' },
@@ -86,6 +102,7 @@ const employeeColumns = [
 const dictionaryColumns = [
   { name: 'code', label: 'Код', field: 'code', align: 'left' },
   { name: 'name', label: 'Название', field: 'name', align: 'left', sortable: true },
+  { name: 'category', label: 'Категория', field: (row) => row.category || '—', align: 'left' },
   { name: 'description', label: 'Описание', field: 'description', align: 'left' },
   { name: 'is_active', label: 'Активен', field: 'is_active', align: 'left' },
   { name: 'actions', label: '', field: 'actions', align: 'right' },
@@ -95,6 +112,7 @@ const selected = computed(() => store.selectedEmployee)
 const canCreate = computed(() => auth.can('hr.employees.create'))
 const canUpdate = computed(() => auth.can('hr.employees.update'))
 const canDismiss = computed(() => auth.can('hr.employees.dismiss'))
+const canIssueDigitalPass = computed(() => auth.can('hr.employees.digital_pass.issue'))
 const canManageAssignments = computed(() => auth.can('hr.assignments.manage'))
 const canManageStatuses = computed(() => auth.can('hr.statuses.manage'))
 const canManageDepartments = computed(() => auth.can('hr.departments.manage'))
@@ -108,7 +126,7 @@ const metrics = computed(() => selected.value ? [
   { label: 'Назначений', value: selected.value.assignments?.length || 0 },
 ] : [])
 const quickActions = computed(() => selected.value ? [
-  selected.value.person?.id ? { label: 'Личная карточка', to: `/people?person=${selected.value.person.id}` } : null,
+  selected.value.person?.id ? { label: 'Личная карточка', to: `/people?selected=${selected.value.person.id}` } : null,
   selected.value.teacher?.id ? { label: 'Преподаватель', to: `/teachers?teacher=${selected.value.teacher.id}` } : null,
   selected.value.teacher?.id ? { label: 'Расписание', to: `/schedule?teacher_id=${selected.value.teacher.id}` } : null,
   selected.value.teacher?.id ? { label: 'Нагрузка', to: `/teaching-load?teacher_id=${selected.value.teacher.id}` } : null,
@@ -150,6 +168,7 @@ function resetEmployeeForm(employee = null) {
     employee_number: employee?.employee_number || '',
     status: employee?.status || 'active',
     employment_type: employee?.employment_type || 'full_time',
+    work_schedule_code: employee ? employee.work_schedule_code : 'flexible',
     hired_at: employee?.hired_at || '',
     dismissed_at: employee?.dismissed_at || '',
     primary_department_id: employee?.primary_department_id || null,
@@ -181,6 +200,32 @@ function confirmDismiss(employee) {
   }).onOk(async () => {
     await store.dismissEmployee(employee)
     $q.notify({ type: 'positive', message: 'Сотрудник уволен' })
+  })
+}
+
+function selectExistingPerson(personId) {
+  const person = store.people.find((item) => Number(item.id) === Number(personId))
+  if (!person) return
+  Object.assign(employeeForm, {
+    last_name: person.last_name || '',
+    first_name: person.first_name || '',
+    middle_name: person.middle_name || '',
+    email: person.email || '',
+    phone: person.phone || '',
+    snils: person.snils || '',
+  })
+}
+
+function confirmIssueDigitalPass(employee) {
+  $q.dialog({
+    title: 'Выпустить цифровой пропуск?',
+    message: `Для сотрудника ${employee.full_name} будет создан QR-пропуск. При наличии активный пропуск будет отозван.`,
+    cancel: true,
+    persistent: true,
+    ok: { label: 'Выпустить', color: 'primary' },
+  }).onOk(async () => {
+    await store.issueDigitalPass(employee)
+    $q.notify({ type: 'positive', message: 'Цифровой пропуск сотрудника выпущен' })
   })
 }
 
@@ -340,6 +385,7 @@ watch(() => route.path, (path) => {
               <q-btn v-if="canUpdate" outline no-caps color="primary" @click="openEmployeeDialog(selected)">Редактировать</q-btn>
               <q-btn v-if="canManageStatuses" outline no-caps color="orange" @click="openStatusDialog('vacation')">Оформить отпуск</q-btn>
               <q-btn v-if="canManageStatuses" outline no-caps color="deep-orange" @click="openStatusDialog('sick_leave')">Больничный</q-btn>
+              <q-btn v-if="canIssueDigitalPass" outline no-caps color="primary" :loading="store.saving" @click="confirmIssueDigitalPass(selected)"><BadgeCheck :size="16" class="q-mr-xs" />Выпустить пропуск</q-btn>
               <q-btn v-if="canDismiss && selected.status !== 'dismissed'" outline no-caps color="negative" @click="confirmDismiss(selected)">Уволить</q-btn>
             </div>
           </q-tab-panel>
@@ -397,6 +443,7 @@ watch(() => route.path, (path) => {
       <q-card class="hr-dialog">
         <q-card-section><div class="text-h6">{{ editingEmployeeId ? 'Редактировать сотрудника' : 'Новый сотрудник' }}</div></q-card-section>
         <q-card-section class="hr-form-grid">
+          <q-select v-model="employeeForm.person_id" outlined dense clearable emit-value map-options label="Личная карточка (выбрать существующую)" :options="store.personOptions" class="hr-form-wide" @update:model-value="selectExistingPerson" />
           <q-input v-model="employeeForm.employee_number" outlined dense label="Табельный номер" />
           <q-input v-model="employeeForm.last_name" outlined dense label="Фамилия" />
           <q-input v-model="employeeForm.first_name" outlined dense label="Имя" />
@@ -407,8 +454,9 @@ watch(() => route.path, (path) => {
           <q-select v-model="employeeForm.primary_position_id" outlined dense label="Должность" :options="store.positionOptions" emit-value map-options clearable />
           <q-select v-model="employeeForm.status" outlined dense label="Статус" :options="statusOptions" emit-value map-options />
           <q-select v-model="employeeForm.employment_type" outlined dense label="Занятость" :options="employmentOptions" emit-value map-options />
+          <q-select v-model="employeeForm.work_schedule_code" outlined dense label="Рабочий график" :options="workScheduleOptions" emit-value map-options />
           <q-input v-model="employeeForm.workload_rate" outlined dense type="number" step="0.25" label="Ставка" />
-          <q-input v-model="employeeForm.hired_at" outlined dense type="date" label="Дата приема" />
+          <q-input v-model="employeeForm.hired_at" outlined dense type="date" label="Дата приема (необязательно)" />
           <q-toggle v-model="employeeForm.is_teacher" label="Является преподавателем" />
           <q-input v-model="employeeForm.comment" outlined dense type="textarea" label="Комментарий" class="hr-form-wide" />
         </q-card-section>
@@ -422,7 +470,7 @@ watch(() => route.path, (path) => {
         <q-card-section class="q-gutter-md">
           <q-input v-model="dictionaryForm.code" outlined dense label="Код" />
           <q-input v-model="dictionaryForm.name" outlined dense label="Название" />
-          <q-input v-if="activeTab === 'positions'" v-model="dictionaryForm.category" outlined dense label="Категория" />
+          <q-select v-if="activeTab === 'positions'" v-model="dictionaryForm.category" outlined dense clearable emit-value map-options label="Категория" :options="positionCategoryOptions" />
           <q-input v-model="dictionaryForm.description" outlined dense type="textarea" label="Описание" />
           <q-toggle v-model="dictionaryForm.is_active" label="Активно" />
         </q-card-section>

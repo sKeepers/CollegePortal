@@ -33,8 +33,18 @@ const form = reactive({
   birth_date: '',
   phone: '',
   email: '',
+  snils: '',
+  address: '',
+  passport_series: '',
+  passport_number: '',
+  passport_issue_date: '',
+  passport_issued_by: '',
   status: 'active',
+  course: '',
+  education_form: '',
   enrollment_date: '',
+  enrollment_order_number: '',
+  enrollment_order_date: '',
 })
 
 watch(
@@ -49,8 +59,18 @@ watch(
       birth_date: student?.birth_date || '',
       phone: student?.phone || '',
       email: student?.email || '',
+      snils: student?.snils || '',
+      address: student?.address || '',
+      passport_series: student?.passport_series || '',
+      passport_number: student?.passport_number || '',
+      passport_issue_date: student?.passport_issue_date || '',
+      passport_issued_by: student?.passport_issued_by || '',
       status: student?.status || 'active',
+      course: student?.course || student?.group?.course || '',
+      education_form: student?.education_form || '',
       enrollment_date: student?.enrollment_date || '',
+      enrollment_order_number: student?.enrollment_order_number || '',
+      enrollment_order_date: student?.enrollment_order_date || '',
     })
   },
   { immediate: true },
@@ -100,6 +120,10 @@ function submitForm() {
           />
           <q-input v-model="form.enrollment_date" dense outlined type="date" label="Дата зачисления" stack-label />
           <q-input v-model="form.user_id" dense outlined type="number" label="ID пользователя" />
+          <q-input v-model="form.course" dense outlined type="number" min="1" max="6" label="Курс" />
+          <q-select v-model="form.education_form" dense outlined clearable emit-value map-options label="Форма обучения" :options="[{ label: 'Очная', value: 'Очная' }, { label: 'Заочная', value: 'Заочная' }]" />
+          <q-input v-model="form.enrollment_order_number" dense outlined label="Приказ о зачислении" />
+          <q-input v-model="form.enrollment_order_date" dense outlined type="date" label="Дата приказа" stack-label />
         </div>
       </AppFormSection>
 
@@ -107,6 +131,17 @@ function submitForm() {
         <div class="student-form__grid">
           <q-input v-model="form.phone" dense outlined label="Телефон" />
           <q-input v-model="form.email" dense outlined type="email" label="Email" />
+          <q-input v-model="form.snils" dense outlined label="СНИЛС (необязательно)" />
+          <q-input v-model="form.address" dense outlined class="student-form__wide" label="Адрес" />
+        </div>
+      </AppFormSection>
+
+      <AppFormSection title="Паспорт">
+        <div class="student-form__grid">
+          <q-input v-model="form.passport_series" dense outlined label="Серия" />
+          <q-input v-model="form.passport_number" dense outlined label="Номер" />
+          <q-input v-model="form.passport_issue_date" dense outlined type="date" label="Дата выдачи" stack-label />
+          <q-input v-model="form.passport_issued_by" dense outlined label="Кем выдан" />
         </div>
       </AppFormSection>
 

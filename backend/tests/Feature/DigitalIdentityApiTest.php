@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\DigitalIdentity;
+use App\Models\Employee;
 use App\Models\Group;
+use App\Models\Person;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Student;
@@ -69,6 +71,41 @@ class DigitalIdentityApiTest extends TestCase
             'id' => $identityId,
             'status' => DigitalIdentity::STATUS_REVOKED,
         ]);
+    }
+
+    public function test_it_issues_employee_pass_and_qr_has_no_personal_data(): void
+    {
+        $person = Person::create([
+            'last_name' => 'Кузнецов',
+            'first_name' => 'Павел',
+            'phone' => '+79990000004',
+            'email' => 'kuznetsov@example.test',
+            'status' => 'active',
+        ]);
+        $employee = Employee::create([
+            'person_id' => $person->id,
+            'employee_number' => 'EMP-QR-001',
+            'status' => 'active',
+            'employment_type' => 'full_time',
+            'hired_at' => '2026-09-01',
+        ]);
+
+        $identityId = $this->postJson('/api/digital-identities/issue', [
+            'entity_type' => DigitalIdentity::ENTITY_EMPLOYEE,
+            'entity_id' => $employee->id,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.owner.last_name', 'Кузнецов')
+            ->json('data.id');
+
+        $svg = $this->get("/api/digital-identities/{$identityId}/qr")
+            ->assertOk()
+            ->assertHeader('X-QR-Content', 'dynamic')
+            ->getContent();
+
+        foreach (['Кузнецов', 'Павел', 'kuznetsov@example.test', '+79990000004'] as $personalData) {
+            $this->assertStringNotContainsString($personalData, $svg);
+        }
     }
 
     public function test_qr_svg_does_not_expose_personal_data(): void

@@ -24,8 +24,18 @@ class StudentCsvService
         'birth_date',
         'phone',
         'email',
+        'snils',
+        'address',
+        'passport_series',
+        'passport_number',
+        'passport_issue_date',
+        'passport_issued_by',
         'status',
+        'course',
+        'education_form',
         'enrollment_date',
+        'enrollment_order_number',
+        'enrollment_order_date',
     ];
 
     public function export(): StreamedResponse
@@ -52,8 +62,18 @@ class StudentCsvService
                             $student->birth_date?->toDateString(),
                             $student->phone,
                             $student->email,
+                            $student->snils,
+                            $student->address,
+                            $student->passport_series,
+                            $student->passport_number,
+                            $student->passport_issue_date?->toDateString(),
+                            $student->passport_issued_by,
                             $student->status,
+                            $student->course,
+                            $student->education_form,
                             $student->enrollment_date?->toDateString(),
+                            $student->enrollment_order_number,
+                            $student->enrollment_order_date?->toDateString(),
                         ], ';');
                     }
                 });
@@ -102,7 +122,7 @@ class StudentCsvService
             }
 
             $validated = $validator->validated();
-            $student = isset($validated['id']) ? Student::find($validated['id']) : null;
+            $student = isset($validated['id']) ? Student::find($validated['id']) : $this->findExisting($validated);
 
             unset($validated['id'], $validated['group']);
 
@@ -168,6 +188,9 @@ class StudentCsvService
 
         $payload['birth_date'] = $this->normalizeDate($payload['birth_date'] ?? null);
         $payload['enrollment_date'] = $this->normalizeDate($payload['enrollment_date'] ?? null);
+        $payload['enrollment_order_date'] = $this->normalizeDate($payload['enrollment_order_date'] ?? null);
+        $payload['passport_issue_date'] = $this->normalizeDate($payload['passport_issue_date'] ?? null);
+        $payload['snils'] = isset($payload['snils']) ? preg_replace('/\D+/', '', (string) $payload['snils']) ?: null : null;
 
         if (empty($payload['status'])) {
             $payload['status'] = 'active';
@@ -205,8 +228,18 @@ class StudentCsvService
             'birth_date' => ['nullable', 'date'],
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
+            'snils' => ['nullable', 'string', 'max:32'],
+            'address' => ['nullable', 'string', 'max:2000'],
+            'passport_series' => ['nullable', 'string', 'max:20'],
+            'passport_number' => ['nullable', 'string', 'max:100'],
+            'passport_issue_date' => ['nullable', 'date'],
+            'passport_issued_by' => ['nullable', 'string', 'max:1000'],
             'status' => ['required', Rule::in(['active', 'academic_leave', 'graduated', 'expelled'])],
+            'course' => ['nullable', 'integer', 'min:1', 'max:6'],
+            'education_form' => ['nullable', 'string', 'max:80'],
             'enrollment_date' => ['nullable', 'date'],
+            'enrollment_order_number' => ['nullable', 'string', 'max:100'],
+            'enrollment_order_date' => ['nullable', 'date'],
         ];
     }
 
@@ -222,5 +255,18 @@ class StudentCsvService
             'status.in' => 'Статус должен быть active, academic_leave, graduated или expelled.',
             'enrollment_date.date' => 'Дата зачисления должна быть в формате 2026-09-01 или 01.09.2026.',
         ];
+    }
+
+    private function findExisting(array $data): ?Student
+    {
+        if (!empty($data['snils']) && ($student = Student::where('snils', $data['snils'])->first())) { return $student; }
+        if (!empty($data['email']) && ($student = Student::where('email', $data['email'])->first())) { return $student; }
+        if (!empty($data['birth_date'])) {
+            return Student::where('last_name', $data['last_name'])
+                ->where('first_name', $data['first_name'])
+                ->where('birth_date', $data['birth_date'])
+                ->first();
+        }
+        return null;
     }
 }

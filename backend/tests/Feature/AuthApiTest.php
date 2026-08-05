@@ -23,7 +23,7 @@ class AuthApiTest extends TestCase
         ]);
 
         $this->postJson('/api/auth/login', [
-            'email' => 'admin@example.test',
+            'login' => 'admin@example.test',
             'password' => 'password',
         ])
             ->assertOk()
@@ -51,7 +51,7 @@ class AuthApiTest extends TestCase
         ]);
 
         $this->postJson('/api/auth/login', [
-            'email' => 'admin@example.test',
+            'login' => 'admin@example.test',
             'password' => 'wrong-password',
         ])
             ->assertUnprocessable();
@@ -69,7 +69,7 @@ class AuthApiTest extends TestCase
             $this
                 ->withServerVariables(['REMOTE_ADDR' => '203.0.113.77'])
                 ->postJson('/api/auth/login', [
-                    'email' => 'limited@example.test',
+                    'login' => 'limited@example.test',
                     'password' => 'wrong-password',
                 ])
                 ->assertUnprocessable();
@@ -78,7 +78,7 @@ class AuthApiTest extends TestCase
         $this
             ->withServerVariables(['REMOTE_ADDR' => '203.0.113.77'])
             ->postJson('/api/auth/login', [
-                'email' => 'limited@example.test',
+                'login' => 'limited@example.test',
                 'password' => 'wrong-password',
             ])
             ->assertTooManyRequests();
@@ -88,6 +88,21 @@ class AuthApiTest extends TestCase
     {
         $this->getJson('/api/groups')
             ->assertUnauthorized();
+    }
+
+    public function test_user_can_login_by_username_or_linked_person_phone(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'account@example.test',
+            'username' => 'account.login',
+            'password' => Hash::make('password'),
+            'is_active' => true,
+        ]);
+        $person = \App\Models\Person::create(['last_name' => 'Иванов', 'first_name' => 'Иван', 'phone' => '+79990000001']);
+        $user->update(['person_id' => $person->id, 'person_type' => 'person']);
+
+        $this->postJson('/api/auth/login', ['login' => 'account.login', 'password' => 'password'])->assertOk();
+        $this->postJson('/api/auth/login', ['login' => '+79990000001', 'password' => 'password'])->assertOk();
     }
 
     public function test_user_can_get_profile_and_logout(): void

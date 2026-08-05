@@ -9,6 +9,7 @@ use App\Models\CurriculumSubject;
 use App\Models\Department;
 use App\Models\EducationProgram;
 use App\Models\Employee;
+use App\Models\DigitalIdentity;
 use App\Models\Group;
 use App\Models\Person;
 use App\Models\Position;
@@ -44,11 +45,12 @@ class HrFoundationApiTest extends TestCase
             'employee_number' => 'EMP-001',
             'status' => 'active',
             'employment_type' => 'full_time',
+            'work_schedule_code' => 'weekday_0900_1700',
             'hired_at' => '2026-09-01',
             'primary_department_id' => $department->id,
             'primary_position_id' => $position->id,
             'workload_rate' => 1,
-        ])->assertOk()->assertJsonPath('data.person.id', $person->id);
+        ])->assertOk()->assertJsonPath('data.person.id', $person->id)->assertJsonPath('data.work_schedule_code', 'weekday_0900_1700');
 
         $this->postJson('/api/employees', [
             'employee_number' => 'EMP-002',
@@ -60,9 +62,52 @@ class HrFoundationApiTest extends TestCase
             'hired_at' => '2026-09-02',
         ])->assertOk()->assertJsonPath('data.full_name', 'Петров Олег');
 
-        $this->assertDatabaseHas('employees', ['employee_number' => 'EMP-001', 'person_id' => $person->id]);
+        $this->assertDatabaseHas('employees', ['employee_number' => 'EMP-001', 'person_id' => $person->id, 'work_schedule_code' => 'weekday_0900_1700']);
         $this->assertDatabaseHas('people', ['email' => 'petrov@example.test']);
+        $this->assertDatabaseCount('digital_identities', 0);
         $this->assertDatabaseHas('audit_logs', ['action' => 'employee_hired', 'module' => 'hr']);
+    }
+
+    public function test_hr_explicitly_issues_employee_digital_pass_with_a_safe_audit_record(): void
+    {
+        $this->withApiAuth($this->createApiUser(roleCode: 'hr'));
+        $employee = Employee::create([
+            'person_id' => Person::create([
+                'last_name' => 'Соколова',
+                'first_name' => 'Ирина',
+                'phone' => '+79990000003',
+                'email' => 'sokolova@example.test',
+                'status' => 'active',
+            ])->id,
+            'employee_number' => 'EMP-PASS-001',
+            'status' => 'active',
+            'employment_type' => 'full_time',
+            'hired_at' => '2026-09-01',
+        ]);
+
+        $response = $this->postJson("/api/employees/{$employee->id}/digital-pass")
+            ->assertOk()
+            ->assertJsonPath('data.entity_type', DigitalIdentity::ENTITY_EMPLOYEE)
+            ->assertJsonPath('data.entity_id', $employee->id)
+            ->assertJsonPath('data.owner.last_name', 'Соколова');
+
+        $identityId = $response->json('data.id');
+        $this->assertDatabaseHas('digital_identities', [
+            'id' => $identityId,
+            'entity_type' => DigitalIdentity::ENTITY_EMPLOYEE,
+            'entity_id' => $employee->id,
+            'status' => DigitalIdentity::STATUS_ACTIVE,
+        ]);
+
+        $audit = AuditLog::query()->where('action', 'employee_digital_pass_issued')->firstOrFail();
+        $this->assertSame('hr', $audit->module);
+        $this->assertArrayNotHasKey('token', $audit->new_values);
+        $this->assertArrayNotHasKey('phone', $audit->new_values);
+        $this->assertArrayNotHasKey('email', $audit->new_values);
+
+        $this->withApiAuth($this->createApiUser(roleCode: 'teacher'))
+            ->postJson("/api/employees/{$employee->id}/digital-pass")
+            ->assertForbidden();
     }
 
     public function test_assignments_status_periods_and_dismissal_are_tracked(): void
@@ -122,37 +167,38 @@ class HrFoundationApiTest extends TestCase
 
     public function test_hr_permissions_and_universal_employee_import(): void
     {
-        Department::create(['code' => 'study', 'name' => 'Учебная часть']);
-        Position::create(['code' => 'methodist', 'name' => 'Методист']);
+        Department::create(['code' => 'administration', 'name' => 'Администрация']);
         $teacher = $this->createApiUser(roleCode: 'teacher');
         $this->withApiAuth($teacher)->getJson('/api/employees')->assertForbidden();
 
         $this->withApiAuth($this->createApiUser(roleCode: 'hr'));
         $this->getJson('/api/employees')->assertOk();
 
-        $file = UploadedFile::fake()->createWithContent('employees.csv', "Табельный номер;Фамилия;Имя;Email;Подразделение;Должность;Дата приема;Статус\nEMP-CSV-1;Орлова;Вера;orlova@example.test;Учебная часть;Методист;01.09.2026;active\n");
+        $file = UploadedFile::fake()->createWithContent('employees.csv', "Фамилия;Имя;Email;Отделение;Должность;Активен\nОрлова;Вера;orlova@example.test;Администрация;Методист;1\nОрлова;Вера;orlova@example.test;Администрация;Методист;1\n");
         $jobId = $this->post('/api/admin/import/preview', ['data_type' => 'employees', 'file' => $file])
             ->assertCreated()
-            ->assertJsonPath('data.total_rows', 1)
+            ->assertJsonPath('data.total_rows', 2)
             ->json('data.id');
 
         $mapping = [
-            'employee_number' => 'Табельный номер',
             'last_name' => 'Фамилия',
             'first_name' => 'Имя',
             'email' => 'Email',
-            'department' => 'Подразделение',
+            'department' => 'Отделение',
             'position' => 'Должность',
-            'hired_at' => 'Дата приема',
-            'status' => 'Статус',
+            'status' => 'Активен',
         ];
         $this->postJson("/api/admin/import/{$jobId}/confirm", ['mode' => 'skip_duplicates', 'mapping' => $mapping])
             ->assertOk()
             ->assertJsonPath('data.created_count', 1)
+            ->assertJsonPath('data.skipped_count', 1)
             ->assertJsonPath('data.error_count', 0);
 
-        $this->assertDatabaseHas('employees', ['employee_number' => 'EMP-CSV-1']);
+        $employee = Employee::query()->whereHas('person', fn ($query) => $query->where('email', 'orlova@example.test'))->firstOrFail();
         $this->assertDatabaseHas('people', ['email' => 'orlova@example.test']);
+        $this->assertNull($employee->hired_at);
+        $this->assertStringStartsWith('EMP-IMPORT-', $employee->employee_number);
+        $this->assertDatabaseHas('positions', ['name' => 'Методист']);
     }
 
     private function scheduleContext(): array

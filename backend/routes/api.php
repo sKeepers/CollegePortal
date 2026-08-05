@@ -101,6 +101,7 @@ Route::middleware(['api.token', 'throttle:api.authenticated'])->group(function (
         Route::put('employees/{employee}', [EmployeeController::class, 'update'])->middleware('permission:hr.employees.update');
         Route::patch('employees/{employee}', [EmployeeController::class, 'update'])->middleware('permission:hr.employees.update');
         Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->middleware('permission:hr.employees.dismiss');
+        Route::post('employees/{employee}/digital-pass', [EmployeeController::class, 'issueDigitalPass'])->middleware('permission:hr.employees.digital_pass.issue');
         Route::post('employees/{employee}/assignments', [EmployeeController::class, 'storeAssignment'])->middleware('permission:hr.assignments.manage');
         Route::put('employee-assignments/{assignment}', [EmployeeController::class, 'updateAssignment'])->middleware('permission:hr.assignments.manage');
         Route::patch('employee-assignments/{assignment}', [EmployeeController::class, 'updateAssignment'])->middleware('permission:hr.assignments.manage');
@@ -262,6 +263,9 @@ Route::middleware(['api.token', 'throttle:api.authenticated'])->group(function (
     Route::get('admissions/applications/{application}/document-readiness', [AdmissionsDocumentReadinessController::class, 'show'])
         ->whereNumber('application')
         ->middleware('permission:admissions.document.view');
+
+    Route::post('admin/users/provision', [AdminUserController::class, 'provision'])
+        ->middleware('permission:users.manage');
 
     Route::middleware('permission:manage_users')->group(function (): void {
         Route::get('admin/audit', [AuditLogController::class, 'index']);

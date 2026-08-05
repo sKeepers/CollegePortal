@@ -26,7 +26,7 @@ class HrService
 
     public function updateEmployee(Employee $employee, array $data): Employee
     {
-        $employee->update($this->employeePayload($data, $employee->person));
+        $employee->update($this->employeePayload($data + ['work_schedule_code' => $employee->work_schedule_code], $employee->person));
         return $employee->fresh(['person', 'primaryDepartment', 'primaryPosition', 'assignments.department', 'assignments.position', 'statusPeriods', 'teacher']);
     }
 
@@ -61,7 +61,8 @@ class HrService
             'employee_number' => $data['employee_number'],
             'status' => $data['status'] ?? 'active',
             'employment_type' => $data['employment_type'] ?? 'full_time',
-            'hired_at' => $data['hired_at'] ?? now()->toDateString(),
+            'work_schedule_code' => $data['work_schedule_code'] ?? null,
+            'hired_at' => $data['hired_at'] ?? null,
             'dismissed_at' => $data['dismissed_at'] ?? null,
             'primary_department_id' => $data['primary_department_id'] ?? null,
             'primary_position_id' => $data['primary_position_id'] ?? null,

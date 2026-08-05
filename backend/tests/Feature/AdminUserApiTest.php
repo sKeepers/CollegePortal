@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Permission;
 use App\Models\Person;
+use App\Models\Teacher;
+use App\Models\AuditLog;
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\UatUserSeeder;
@@ -179,6 +181,48 @@ class AdminUserApiTest extends TestCase
 
         $this->withApiAuth($user)
             ->getJson('/api/admin/users')
+            ->assertForbidden();
+    }
+
+    public function test_admin_can_provision_profile_and_receive_one_time_credential_card(): void
+    {
+        Role::create(['name' => 'Преподаватель', 'code' => 'teacher']);
+        $teacher = Teacher::create([
+            'last_name' => 'Петрова',
+            'first_name' => 'Анна',
+            'phone' => '+79990000010',
+            'is_active' => true,
+        ]);
+
+        $response = $this->withApiAuth()
+            ->postJson('/api/admin/users/provision', [
+                'profile_type' => 'teacher',
+                'profile_id' => $teacher->id,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.login', '+79990000010')
+            ->assertJsonPath('data.name', 'Петрова Анна')
+            ->assertJsonPath('data.role', 'teacher');
+
+        $password = $response->json('data.password');
+        $this->assertMatchesRegularExpression('/^\d{5}$/', $password);
+
+        $user = User::where('username', '+79990000010')->firstOrFail();
+        $this->assertTrue(Hash::check($password, $user->password));
+        $this->assertSame($user->id, $teacher->refresh()->user_id);
+
+        $audit = AuditLog::query()->where('action', 'provision')->firstOrFail();
+        $this->assertStringNotContainsString($password, json_encode([$audit->old_values, $audit->new_values], JSON_THROW_ON_ERROR));
+    }
+
+    public function test_user_without_users_manage_cannot_provision_account(): void
+    {
+        Role::create(['name' => 'Преподаватель', 'code' => 'teacher']);
+        $teacher = Teacher::create(['last_name' => 'Петрова', 'first_name' => 'Анна', 'is_active' => true]);
+        $user = $this->createApiUser(roleCode: 'academic_office');
+
+        $this->withApiAuth($user)
+            ->postJson('/api/admin/users/provision', ['profile_type' => 'teacher', 'profile_id' => $teacher->id])
             ->assertForbidden();
     }
 

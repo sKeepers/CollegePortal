@@ -41,7 +41,7 @@ const studentSubtitle = computed(() => [
 ])
 const studentMetrics = computed(() => [
   { label: 'Группа', value: props.student?.group?.name || '—', to: props.student?.group_id ? { path: '/groups', query: { selected: props.student.group_id } } : null },
-  { label: 'Курс', value: props.student?.group?.course || '—' },
+  { label: 'Курс', value: props.student?.course || props.student?.group?.course || '—' },
   { label: 'Статус', value: props.statusLabels[props.student?.status] || props.student?.status || '—' },
   { label: 'Средний балл', value: averageGrade.value },
 ])
@@ -116,6 +116,7 @@ function removePhoto() {
               <div><dt>Дата рождения</dt><dd>{{ student.birth_date || '—' }}</dd></div>
               <div><dt>Статус</dt><dd>{{ statusLabels[student.status] || student.status }}</dd></div>
               <div><dt>Дата зачисления</dt><dd>{{ student.enrollment_date || '—' }}</dd></div>
+              <div><dt>Приказ о зачислении</dt><dd>{{ student.enrollment_order_number || '—' }}<template v-if="student.enrollment_order_date"> от {{ student.enrollment_order_date }}</template></dd></div>
             </dl>
           </section>
 
@@ -124,6 +125,7 @@ function removePhoto() {
             <dl class="student-details__list">
               <div><dt>Телефон</dt><dd>{{ student.phone || '—' }}</dd></div>
               <div><dt>Email</dt><dd>{{ student.email || '—' }}</dd></div>
+              <div><dt>Адрес</dt><dd>{{ student.address || '—' }}</dd></div>
             </dl>
           </section>
 
@@ -141,6 +143,8 @@ function removePhoto() {
               </div>
               <div><dt>Программа</dt><dd>{{ programName }}</dd></div>
               <div><dt>Специальность</dt><dd>{{ specialtyName }}</dd></div>
+              <div><dt>Курс</dt><dd>{{ student.course || student.group?.course || '—' }}</dd></div>
+              <div><dt>Форма обучения</dt><dd>{{ student.education_form || '—' }}</dd></div>
             </dl>
           </section>
         </q-tab-panel>
@@ -172,7 +176,15 @@ function removePhoto() {
         </q-tab-panel>
 
         <q-tab-panel name="documents">
-          <section class="student-details__section"><h3>Документы / ФРДО</h3><p class="student-details__muted">Раздел зарезервирован для СНИЛС, гражданства, документа об образовании и будущей выгрузки ФРДО.</p></section>
+          <section class="student-details__section">
+            <h3>Документы / ФРДО</h3>
+            <dl class="student-details__list">
+              <div><dt>СНИЛС</dt><dd>{{ student.snils || '—' }}</dd></div>
+              <div><dt>Паспорт</dt><dd>{{ [student.passport_series, student.passport_number].filter(Boolean).join(' ') || '—' }}</dd></div>
+              <div><dt>Дата выдачи</dt><dd>{{ student.passport_issue_date || '—' }}</dd></div>
+              <div><dt>Кем выдан</dt><dd>{{ student.passport_issued_by || '—' }}</dd></div>
+            </dl>
+          </section>
         </q-tab-panel>
 
         <q-tab-panel name="history">
