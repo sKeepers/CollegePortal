@@ -5,6 +5,7 @@ import { api } from '../services/api'
 export const ENTITY_OPTIONS = [
   { label: 'Студент', value: 'student' },
   { label: 'Преподаватель', value: 'teacher' },
+  { label: 'Сотрудник', value: 'employee' },
 ]
 
 export const STATUS_OPTIONS = [
@@ -31,6 +32,7 @@ export const useDigitalPassesStore = defineStore('digitalPasses', () => {
   const identities = ref([])
   const students = ref([])
   const teachers = ref([])
+  const employees = ref([])
   const selectedId = ref(null)
   const loading = ref(false)
   const saving = ref(false)
@@ -42,21 +44,24 @@ export const useDigitalPassesStore = defineStore('digitalPasses', () => {
   const selectedIdentity = computed(() => identities.value.find((identity) => Number(identity.id) === Number(selectedId.value)) || null)
   const studentOptions = computed(() => students.value.map((student) => ({ label: [fullName(student), student.group?.name].filter(Boolean).join(' · '), value: student.id })))
   const teacherOptions = computed(() => teachers.value.map((teacher) => ({ label: [fullName(teacher), teacher.department, teacher.position].filter(Boolean).join(' · '), value: teacher.id })))
-  const ownerOptions = computed(() => ({ student: studentOptions.value, teacher: teacherOptions.value }))
+  const employeeOptions = computed(() => employees.value.map((employee) => ({ label: [employee.full_name || fullName(employee.person), employee.employee_number, employee.primary_position?.name].filter(Boolean).join(' · '), value: employee.id })))
+  const ownerOptions = computed(() => ({ student: studentOptions.value, teacher: teacherOptions.value, employee: employeeOptions.value }))
 
   async function load(options = {}) {
     loading.value = true
     error.value = ''
     try {
       const identitiesParams = options.mine ? { mine: 1, status: options.status || 'active' } : {}
-      const [identitiesPayload, studentsPayload, teachersPayload] = await Promise.all([
+      const [identitiesPayload, studentsPayload, teachersPayload, employeesPayload] = await Promise.all([
         api.list('digital-identities', identitiesParams),
         options.includeOwners === false ? Promise.resolve({ data: [] }) : api.list('students'),
         options.includeOwners === false ? Promise.resolve({ data: [] }) : api.list('teachers'),
+        options.includeOwners === false ? Promise.resolve({ data: [] }) : api.list('employees'),
       ])
       identities.value = extractRows(identitiesPayload)
       students.value = extractRows(studentsPayload)
       teachers.value = extractRows(teachersPayload)
+      employees.value = extractRows(employeesPayload)
       if (selectedId.value && !selectedIdentity.value) { selectedId.value = null; qrSvg.value = ''; qrExpiresAt.value = null }
       if (!identities.value.length) { selectedId.value = null; qrSvg.value = ''; qrExpiresAt.value = null }
     } catch (err) {
@@ -125,5 +130,5 @@ export const useDigitalPassesStore = defineStore('digitalPasses', () => {
 
   async function select(identity) { selectedId.value = identity?.id || null; qrValueVisible.value = false; await loadQr(identity) }
 
-  return { identities, students, teachers, selectedId, selectedIdentity, studentOptions, teacherOptions, ownerOptions, loading, saving, error, qrSvg, qrExpiresAt, qrValueVisible, load, issue, revoke, loadQr, downloadQrPng, select }
+  return { identities, students, teachers, employees, selectedId, selectedIdentity, studentOptions, teacherOptions, employeeOptions, ownerOptions, loading, saving, error, qrSvg, qrExpiresAt, qrValueVisible, load, issue, revoke, loadQr, downloadQrPng, select }
 })

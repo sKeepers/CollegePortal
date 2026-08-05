@@ -180,6 +180,21 @@ export const useUsersStore = defineStore('users', () => {
     }
   }
 
+  async function provision(profileType, profileId) {
+    saving.value = true
+    error.value = ''
+    try {
+      const response = await api.create('admin/users/provision', { profile_type: profileType, profile_id: Number(profileId) })
+      await load()
+      return response?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось создать учетную запись'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
   function resetFilters() {
     filters.value = { ...initialFilters }
   }
@@ -202,6 +217,7 @@ export const useUsersStore = defineStore('users', () => {
     block,
     unblock,
     assignRoles,
+    provision,
     resetFilters,
   }
 })

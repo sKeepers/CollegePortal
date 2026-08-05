@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ApplicantApplication;
 use App\Models\EducationProgram;
+use App\Models\Employee;
 use App\Models\Group;
 use App\Models\Person;
 use App\Models\Specialty;
@@ -29,25 +30,28 @@ class PersonFoundationTest extends TestCase
         $this->assertTrue($person->teachers()->whereKey($teacher)->exists());
     }
 
-    public function test_people_api_requires_permission_and_returns_profiles(): void
+    public function test_people_api_excludes_students_and_returns_employee_profiles(): void
     {
         $this->seed(RoleSeeder::class);
         $director = $this->createApiUser(roleCode: 'director');
         $teacher = $this->createApiUser(roleCode: 'teacher');
         $group = $this->group();
-        $person = Person::create(['last_name' => 'Петрова', 'first_name' => 'Анна', 'status' => 'active']);
-        Student::create(['person_id' => $person->id, 'group_id' => $group->id, 'last_name' => 'Петрова', 'first_name' => 'Анна', 'status' => 'active']);
+        $studentPerson = Person::create(['last_name' => 'Петрова', 'first_name' => 'Анна', 'status' => 'active']);
+        Student::create(['person_id' => $studentPerson->id, 'group_id' => $group->id, 'last_name' => 'Петрова', 'first_name' => 'Анна', 'status' => 'active']);
+        $employeePerson = Person::create(['last_name' => 'Иванова', 'first_name' => 'Мария', 'status' => 'active']);
+        Employee::create(['person_id' => $employeePerson->id, 'employee_number' => 'EMP-PEOPLE-1', 'status' => 'active', 'employment_type' => 'full_time']);
 
         $this->withApiAuth($director)
             ->getJson('/api/people')
             ->assertOk()
-            ->assertJsonPath('data.0.full_name', 'Петрова Анна');
+            ->assertJsonPath('data.0.full_name', 'Иванова Мария')
+            ->assertJsonPath('data.0.profiles_count.employees', 1);
 
         $this->withApiAuth($director)
-            ->getJson("/api/people/{$person->id}")
+            ->getJson("/api/people/{$employeePerson->id}")
             ->assertOk()
-            ->assertJsonPath('data.full_name', 'Петрова Анна')
-            ->assertJsonCount(1, 'data.students');
+            ->assertJsonPath('data.full_name', 'Иванова Мария')
+            ->assertJsonCount(1, 'data.employees');
 
         $this->withApiAuth($teacher)->getJson('/api/people')->assertForbidden();
     }

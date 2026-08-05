@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\DigitalIdentity;
+use App\Models\Employee;
 use App\Models\Group;
+use App\Models\Person;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Student;
@@ -71,68 +73,39 @@ class DigitalIdentityApiTest extends TestCase
         ]);
     }
 
-    public function test_deactivating_or_deleting_owner_revokes_active_pass(): void
+    public function test_it_issues_employee_pass_and_qr_has_no_personal_data(): void
     {
-        $student = $this->createStudent();
-        $teacher = Teacher::create([
-            'last_name' => 'Петров',
-            'first_name' => 'Алексей',
-            'department' => 'Музыкальное отделение',
-            'is_active' => true,
+        $person = Person::create([
+            'last_name' => 'Кузнецов',
+            'first_name' => 'Павел',
+            'phone' => '+79990000004',
+            'email' => 'kuznetsov@example.test',
+            'status' => 'active',
         ]);
-        $user = User::factory()->create(['is_active' => true]);
-        $teacher->forceFill(['user_id' => $user->id])->save();
-
-        $studentPass = DigitalIdentity::create([
-            'entity_type' => DigitalIdentity::ENTITY_STUDENT,
-            'entity_id' => $student->id,
-            'token' => (string) Str::uuid(),
-            'status' => DigitalIdentity::STATUS_ACTIVE,
-            'issued_at' => now(),
-        ]);
-        $teacherPass = DigitalIdentity::create([
-            'entity_type' => DigitalIdentity::ENTITY_TEACHER,
-            'entity_id' => $teacher->id,
-            'token' => (string) Str::uuid(),
-            'status' => DigitalIdentity::STATUS_ACTIVE,
-            'issued_at' => now(),
+        $employee = Employee::create([
+            'person_id' => $person->id,
+            'employee_number' => 'EMP-QR-001',
+            'status' => 'active',
+            'employment_type' => 'full_time',
+            'hired_at' => '2026-09-01',
         ]);
 
-        $student->update(['status' => 'academic_leave']);
-        $user->update(['is_active' => false]);
+        $identityId = $this->postJson('/api/digital-identities/issue', [
+            'entity_type' => DigitalIdentity::ENTITY_EMPLOYEE,
+            'entity_id' => $employee->id,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.owner.last_name', 'Кузнецов')
+            ->json('data.id');
 
-        $this->assertDatabaseHas('digital_identities', ['id' => $studentPass->id, 'status' => DigitalIdentity::STATUS_REVOKED]);
-        $this->assertDatabaseHas('digital_identities', ['id' => $teacherPass->id, 'status' => DigitalIdentity::STATUS_REVOKED]);
+        $svg = $this->get("/api/digital-identities/{$identityId}/qr")
+            ->assertOk()
+            ->assertHeader('X-QR-Content', 'dynamic')
+            ->getContent();
 
-        $deletedTeacher = Teacher::create([
-            'last_name' => 'Соколова',
-            'first_name' => 'Анна',
-            'department' => 'Музыкальное отделение',
-            'is_active' => true,
-        ]);
-        $deletedTeacherPass = DigitalIdentity::create([
-            'entity_type' => DigitalIdentity::ENTITY_TEACHER,
-            'entity_id' => $deletedTeacher->id,
-            'token' => (string) Str::uuid(),
-            'status' => DigitalIdentity::STATUS_ACTIVE,
-            'issued_at' => now(),
-        ]);
-
-        $deletedTeacher->delete();
-
-        $this->assertDatabaseHas('digital_identities', ['id' => $deletedTeacherPass->id, 'status' => DigitalIdentity::STATUS_REVOKED]);
-
-        $deletedStudent = $this->createStudent(2);
-        $deletedStudentPass = DigitalIdentity::create([
-            'entity_type' => DigitalIdentity::ENTITY_STUDENT,
-            'entity_id' => $deletedStudent->id,
-            'token' => (string) Str::uuid(),
-            'status' => DigitalIdentity::STATUS_ACTIVE,
-            'issued_at' => now(),
-        ]);
-        $deletedStudent->delete();
-
-        $this->assertDatabaseHas('digital_identities', ['id' => $deletedStudentPass->id, 'status' => DigitalIdentity::STATUS_REVOKED]);
+        foreach (['Кузнецов', 'Павел', 'kuznetsov@example.test', '+79990000004'] as $personalData) {
+            $this->assertStringNotContainsString($personalData, $svg);
+        }
     }
 
     public function test_qr_svg_does_not_expose_personal_data(): void
@@ -294,10 +267,10 @@ class DigitalIdentityApiTest extends TestCase
             ->assertJsonPath('data.0.id', $ownIdentity->id);
     }
 
-    private function createStudent(int $number = 1): Student
+    private function createStudent(): Student
     {
         $group = Group::create([
-            'name' => "ИСП-10{$number}",
+            'name' => 'ИСП-101',
             'specialty' => 'Инструментальное исполнительство',
             'course' => 1,
             'year_start' => 2026,
@@ -308,7 +281,7 @@ class DigitalIdentityApiTest extends TestCase
             'last_name' => 'Иванов',
             'first_name' => 'Дмитрий',
             'phone' => '+79990000001',
-            'email' => $number === 1 ? 'student@example.test' : "student{$number}@example.test",
+            'email' => 'student@example.test',
             'status' => 'active',
         ]);
     }

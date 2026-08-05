@@ -48,6 +48,11 @@ class SettingService
                 'digital_pass_default_days' => ['value' => 365, 'type' => 'integer', 'is_public' => false, 'label' => 'Срок QR-пропуска, дней', 'description' => 'Срок действия цифрового пропуска по умолчанию.'],
                 'duplicate_scan_window_seconds' => ['value' => 2, 'type' => 'integer', 'is_public' => true, 'label' => 'Окно защиты от дубля скана, секунд', 'description' => 'Повторный скан одного QR в этом окне не создает новое событие.'],
             ],
+            'hr' => [
+                'weekday_workday_start' => ['value' => '09:00', 'type' => 'time', 'is_public' => false, 'label' => 'Начало графика 5/2', 'description' => 'Время начала для новых назначений графика 5/2. Не изменяет уже назначенный сотруднику код графика.'],
+                'weekday_workday_end' => ['value' => '18:00', 'type' => 'time', 'is_public' => false, 'label' => 'Окончание графика 5/2', 'description' => 'Время окончания для новых назначений графика 5/2.'],
+                'employee_late_threshold_minutes' => ['value' => 10, 'type' => 'integer', 'is_public' => false, 'label' => 'Порог опоздания сотрудника, минут', 'description' => 'Будет применяться к персональной статистике проходов сотрудников после ее включения.'],
+            ],
             'integrations' => [
                 'frdo_mode' => ['value' => 'preparation', 'type' => 'string', 'is_public' => false, 'label' => 'Режим ФРДО', 'description' => 'Пока используется подготовка данных без реальной отправки.'],
                 'fis_mode' => ['value' => 'preparation', 'type' => 'string', 'is_public' => false, 'label' => 'Режим ФИС', 'description' => 'Пока используется подготовка данных без реальной отправки.'],

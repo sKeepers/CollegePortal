@@ -285,7 +285,7 @@ export const routes = [
         path: 'identity/my-pass',
         name: 'identity-my-pass',
         component: MyDigitalPassPage,
-        meta: { title: 'Мой QR-пропуск', roles: ['student', 'teacher', 'hr'], permissionsAny: ['mobile.student.pass', 'view_own_data'] },
+        meta: { title: 'Мой QR-пропуск', roles: ['student', 'teacher', 'employee', 'hr'], permissionsAny: ['mobile.student.pass', 'view_own_data'] },
       },
       {
         path: 'identity/digital-passes',

@@ -59,7 +59,9 @@ const accessHistoryRoute = computed(() => ({
 const ownerRoute = computed(() => {
   const identity = store.selectedIdentity
   if (!identity) return null
-  return identity.entity_type === 'student' ? { path: '/students', query: { selected: identity.entity_id } } : { path: '/teachers', query: { selected: identity.entity_id } }
+  if (identity.entity_type === 'student') return { path: '/students', query: { selected: identity.entity_id } }
+  if (identity.entity_type === 'teacher') return { path: '/teachers', query: { selected: identity.entity_id } }
+  return { path: '/hr/employees', query: { selected: identity.entity_id } }
 })
 function notifySuccess(message) { $q.notify({ type: 'positive', message, position: 'top-right', timeout: 1800 }) }
 function rowClass(row) { return Number(row.id) === Number(store.selectedId) ? 'digital-passes-row--selected' : '' }
@@ -88,7 +90,7 @@ onMounted(async () => { await store.load(); if (store.identities[0]) await store
 
 <template>
   <AppPage>
-    <PageHeader title="Цифровые пропуска" subtitle="Цифровая идентификация студентов и преподавателей. QR-код содержит только технический токен.">
+    <PageHeader title="Цифровые пропуска" subtitle="Цифровая идентификация студентов, преподавателей и сотрудников. QR-код содержит только технический токен.">
       <template #actions>
         <q-btn v-if="canManage" color="primary" @click="openIssueDialog()"><Plus :size="16" class="q-mr-xs" /><span>Выпустить пропуск</span></q-btn>
       </template>
@@ -112,7 +114,7 @@ onMounted(async () => { await store.load(); if (store.identities[0]) await store
           <template #body-cell-expires_at="props"><q-td :props="props">{{ formatDateTime(props.row.expires_at) }}</q-td></template>
           <template #body-cell-actions="props"><q-td :props="props"><div class="digital-passes-row-actions"><q-btn v-if="canManage" flat round dense color="negative" title="Отозвать" :disable="props.row.status === 'revoked' || store.saving" @click.stop="requestRevoke(props.row)"><ShieldX :size="16" /></q-btn></div></q-td></template>
         </AppTable>
-        <AppEmptyState v-else title="Цифровые пропуска не найдены" description="Выпустите первый QR-пропуск для студента или преподавателя."><q-btn v-if="canManage" color="primary" label="Выпустить пропуск" @click="openIssueDialog()" /></AppEmptyState>
+        <AppEmptyState v-else title="Цифровые пропуска не найдены" description="Выпустите первый QR-пропуск для студента, преподавателя или сотрудника."><q-btn v-if="canManage" color="primary" label="Выпустить пропуск" @click="openIssueDialog()" /></AppEmptyState>
       </div>
       <WorkspaceSplitter label="Изменить ширину карточки пропуска" @resize-start="startResize" @reset="resetSplitter" />
       <aside class="digital-passes-side">

@@ -30,6 +30,7 @@ function inputType(setting) {
   if (setting.type === 'email') return 'email'
   if (setting.type === 'url') return 'url'
   if (setting.type === 'color') return 'color'
+  if (setting.type === 'time') return 'time'
   return 'text'
 }
 

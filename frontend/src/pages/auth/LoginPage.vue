@@ -8,14 +8,14 @@ const router = useRouter()
 const auth = useAuthStore()
 const showPassword = ref(false)
 const form = reactive({
-  email: '',
+  login: '',
   password: '',
   savePassword: false,
   staySignedIn: true,
 })
 
 async function submit() {
-  await auth.login({ email: form.email, password: form.password, staySignedIn: form.staySignedIn })
+  await auth.login({ login: form.login, password: form.password, staySignedIn: form.staySignedIn })
   router.push('/dashboard')
 }
 </script>
@@ -33,9 +33,9 @@ async function submit() {
       <q-form class="cp-login-form" @submit.prevent="submit">
         <q-card-section class="q-gutter-md">
           <q-input
-            v-model="form.email"
-            label="Email"
-            type="email"
+            v-model="form.login"
+            label="Телефон, email или логин"
+            type="text"
             autocomplete="username"
             outlined
             dense

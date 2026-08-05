@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\DigitalIdentity;
+use App\Models\Employee;
 use App\Models\Student;
 use App\Models\Teacher;
 use Illuminate\Http\Request;
@@ -26,7 +27,7 @@ class AccessEventResource extends JsonResource
             'device_name' => $this->device_name,
             'result' => $this->result,
             'reason' => $this->reason,
-            'owner' => $owner ? $this->ownerPayload($owner) : null,
+            'owner' => $owner ? $this->ownerPayload($owner, $request) : null,
             'digital_identity' => $this->digitalIdentity ? [
                 'id' => $this->digitalIdentity->id,
                 'status' => $this->digitalIdentity->status,
@@ -40,22 +41,29 @@ class AccessEventResource extends JsonResource
         ];
     }
 
-    private function ownerPayload(Student|Teacher $owner): array
+    private function ownerPayload(Student|Teacher|Employee $owner, Request $request): array
     {
+        $person = $owner instanceof Employee ? $owner->person : $owner;
+
         return [
             'id' => $owner->id,
-            'last_name' => $owner->last_name,
-            'first_name' => $owner->first_name,
-            'middle_name' => $owner->middle_name,
-            'phone' => $owner->phone,
-            'email' => $owner->email,
-            'photo_url' => $owner->photo_path ? $request->getSchemeAndHttpHost().Storage::disk('public')->url($owner->photo_path) : null,
+            'last_name' => $person?->last_name,
+            'first_name' => $person?->first_name,
+            'middle_name' => $person?->middle_name,
+            'phone' => $person?->phone,
+            'email' => $person?->email,
+            'photo_url' => $person?->photo_path ? $request->getSchemeAndHttpHost().Storage::disk('public')->url($person->photo_path) : null,
             'group' => $owner instanceof Student && $owner->relationLoaded('group') && $owner->group
                 ? ['id' => $owner->group->id, 'name' => $owner->group->name]
                 : null,
             'position' => $owner instanceof Teacher ? $owner->position : null,
             'department' => $owner instanceof Teacher ? $owner->department : null,
-            'entity_label' => $this->entity_type === DigitalIdentity::ENTITY_STUDENT ? 'Студент' : 'Преподаватель',
+            'entity_label' => match ($this->entity_type) {
+                DigitalIdentity::ENTITY_STUDENT => 'Студент',
+                DigitalIdentity::ENTITY_TEACHER => 'Преподаватель',
+                DigitalIdentity::ENTITY_EMPLOYEE => 'Сотрудник',
+                default => 'Неизвестно',
+            },
         ];
     }
 }

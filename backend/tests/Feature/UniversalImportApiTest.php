@@ -15,6 +15,8 @@ use App\Models\Specialty;
 use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\TeachingLoad;
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
@@ -197,6 +199,50 @@ class UniversalImportApiTest extends TestCase
             ->assertJsonPath('data.validation_errors.0.row', 2)
             ->assertJsonPath('data.validation_errors.0.column', 'ID группы')
             ->assertJsonPath('data.validation_errors.0.value', null);
+    }
+
+    public function test_it_provisions_requested_student_account_without_password_in_job_result(): void
+    {
+        Role::create(['name' => 'Студент', 'code' => 'student']);
+        $group = Group::create(['name' => 'ИСП-101', 'specialty' => 'Инструментальное исполнительство', 'course' => 1, 'year_start' => 2026]);
+        $file = $this->csvFile('students-auto-account.csv', "Фамилия;Имя;Группа;Телефон;Создать учетную запись\nИванов;Дмитрий;{$group->name};+79990000002;да\n");
+
+        $jobId = $this->post('/api/admin/import/preview', ['data_type' => 'students', 'file' => $file])
+            ->assertCreated()
+            ->json('data.id');
+
+        $response = $this->postJson("/api/admin/import/{$jobId}/confirm", [
+            'mode' => 'create',
+            'mapping' => ['last_name' => 'Фамилия', 'first_name' => 'Имя', 'group_name' => 'Группа', 'phone' => 'Телефон', 'auto_account' => 'Создать учетную запись'],
+        ])->assertOk()->assertJsonPath('data.created_count', 1);
+
+        $student = \App\Models\Student::where('phone', '+79990000002')->firstOrFail();
+        $user = User::where('username', '+79990000002')->firstOrFail();
+        $this->assertSame($user->id, $student->user_id);
+        $this->assertNotNull($user->person_id);
+        $this->assertNotNull($user->password);
+        $this->assertStringNotContainsString('password', json_encode($response->json(), JSON_THROW_ON_ERROR));
+    }
+
+    public function test_student_import_skips_duplicate_without_snils_and_preserves_study_data(): void
+    {
+        $group = Group::create(['name' => 'ИСП-101', 'specialty' => 'Инструментальное исполнительство', 'course' => 1, 'year_start' => 2026]);
+        $file = $this->csvFile('students-dedup.csv', "Фамилия;Имя;Отчество;Группа;Курс;Форма обучения;Дата рождения;Адрес;Приказ о зачислении\nИванов;Дмитрий;Сергеевич;ИСП-101;1;Очная;12.05.2009;г. Ставрополь, ул. Примерная, д. 1;91\nИванов;Дмитрий;Сергеевич;ИСП-101;1;Очная;12.05.2009;г. Ставрополь, ул. Примерная, д. 1;91\n");
+
+        $jobId = $this->post('/api/admin/import/preview', ['data_type' => 'students', 'file' => $file])
+            ->assertCreated()
+            ->json('data.id');
+
+        $this->postJson("/api/admin/import/{$jobId}/confirm", [
+            'mode' => 'skip_duplicates',
+            'mapping' => ['last_name' => 'Фамилия', 'first_name' => 'Имя', 'middle_name' => 'Отчество', 'group_name' => 'Группа', 'course' => 'Курс', 'education_form' => 'Форма обучения', 'birth_date' => 'Дата рождения', 'address' => 'Адрес', 'enrollment_order_number' => 'Приказ о зачислении'],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.created_count', 1)
+            ->assertJsonPath('data.skipped_count', 1)
+            ->assertJsonPath('data.error_count', 0);
+
+        $this->assertDatabaseHas('students', ['group_id' => $group->id, 'course' => 1, 'education_form' => 'Очная', 'enrollment_order_number' => '91']);
     }
 
     public function test_it_updates_existing_group_by_key(): void

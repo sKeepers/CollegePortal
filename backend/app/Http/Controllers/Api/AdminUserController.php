@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\Role;
+use App\Models\Employee;
 use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
 use App\Services\AuditLogService;
+use App\Services\AccountProvisioningService;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,6 +18,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use LogicException;
 use Symfony\Component\HttpFoundation\Response;
 
 class AdminUserController extends Controller
@@ -57,6 +60,38 @@ class AdminUserController extends Controller
         AuditLogService::log('users', 'create', $user, null, $user->fresh()->toArray(), $request);
 
         return new UserResource($user->load(['role.permissions', 'roles.permissions']));
+    }
+
+    public function provision(Request $request, AccountProvisioningService $accounts): JsonResponse
+    {
+        $data = $request->validate([
+            'profile_type' => ['required', Rule::in(['student', 'teacher', 'employee'])],
+            'profile_id' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $profile = match ($data['profile_type']) {
+            'student' => Student::findOrFail($data['profile_id']),
+            'teacher' => Teacher::findOrFail($data['profile_id']),
+            'employee' => Employee::findOrFail($data['profile_id']),
+        };
+        try {
+            $account = $accounts->provision($profile);
+        } catch (LogicException $exception) {
+            return response()->json(['message' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        AuditLogService::log('users', 'provision', $account->user, null, [
+            'profile_type' => $data['profile_type'],
+            'profile_id' => $data['profile_id'],
+            'role' => $account->role,
+        ], $request);
+
+        return response()->json(['data' => [
+            'login' => $account->login,
+            'password' => $account->password,
+            'name' => $account->name,
+            'role' => $account->role,
+        ]], Response::HTTP_CREATED);
     }
 
     public function show(User $user): UserResource

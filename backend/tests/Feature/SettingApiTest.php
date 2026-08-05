@@ -22,10 +22,13 @@ class SettingApiTest extends TestCase
                 'settings' => [
                     ['group' => 'general', 'key' => 'college_short_name', 'value' => 'Тестовый колледж'],
                     ['group' => 'identity', 'key' => 'duplicate_scan_window_seconds', 'value' => 5],
+                    ['group' => 'hr', 'key' => 'weekday_workday_end', 'value' => '17:00'],
                 ],
             ])
             ->assertOk()
             ->assertJsonFragment(['key' => 'college_short_name', 'value' => 'Тестовый колледж']);
+
+        $this->assertSame('17:00', Setting::where('group', 'hr')->where('key', 'weekday_workday_end')->firstOrFail()->value);
 
         $this->assertDatabaseHas('settings', [
             'group' => 'identity',

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AccessEventResource;
 use App\Models\AccessEvent;
+use App\Models\Employee;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Carbon;
@@ -67,10 +68,11 @@ class AccessReportController extends Controller
 
         return $events->filter(function (AccessEvent $event) use ($search): bool {
             $owner = $event->owner;
+            $person = $owner instanceof Employee ? $owner->person : $owner;
             $name = mb_strtolower(implode(' ', array_filter([
-                $owner?->last_name,
-                $owner?->first_name,
-                $owner?->middle_name,
+                $person?->last_name,
+                $person?->first_name,
+                $person?->middle_name,
             ])));
 
             return str_contains($name, $search);
@@ -87,11 +89,17 @@ class AccessReportController extends Controller
 
             foreach ($events as $event) {
                 $owner = $event->owner;
-                $name = trim(implode(' ', array_filter([$owner?->last_name, $owner?->first_name, $owner?->middle_name]))) ?: 'Неизвестный пропуск';
+                $person = $owner instanceof Employee ? $owner->person : $owner;
+                $name = trim(implode(' ', array_filter([$person?->last_name, $person?->first_name, $person?->middle_name]))) ?: 'Неизвестный пропуск';
                 fputcsv($output, [
                     $event->event_time?->format('d.m.Y H:i'),
                     $name,
-                    $event->entity_type === 'student' ? 'Студент' : ($event->entity_type === 'teacher' ? 'Преподаватель' : 'Неизвестно'),
+                    match ($event->entity_type) {
+                        'student' => 'Студент',
+                        'teacher' => 'Преподаватель',
+                        'employee' => 'Сотрудник',
+                        default => 'Неизвестно',
+                    },
                     $event->direction === AccessEvent::DIRECTION_OUT ? 'Выход' : 'Вход',
                     $event->result === AccessEvent::RESULT_ALLOWED ? 'Разрешено' : 'Отказано',
                     $event->reason,
