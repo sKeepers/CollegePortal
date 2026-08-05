@@ -19,9 +19,16 @@ class AuthController extends Controller
     {
         $credentials = $request->validated();
 
+        $login = $credentials['login'] ?? $credentials['email'];
         $user = User::query()
             ->with(['role.permissions', 'roles.permissions'])
-            ->where('email', $credentials['email'])
+            ->where(function ($query) use ($login): void {
+                $query->where('email', $login)
+                    ->orWhere('username', $login)
+                    ->orWhereHas('person', fn ($person) => $person->where('phone', $login))
+                    ->orWhereHas('student', fn ($student) => $student->where('phone', $login))
+                    ->orWhereHas('teacher', fn ($teacher) => $teacher->where('phone', $login));
+            })
             ->first();
 
         if ($user === null || ! Hash::check($credentials['password'], $user->password)) {
@@ -41,7 +48,7 @@ class AuthController extends Controller
             'last_login_at' => now(),
         ])->save();
 
-        AuditLogService::log('auth', 'login', $user, null, ['email' => $user->email], $request, $user);
+        AuditLogService::log('auth', 'login', $user, null, ['login' => $login], $request, $user);
 
         return response()->json([
             'token' => $token,

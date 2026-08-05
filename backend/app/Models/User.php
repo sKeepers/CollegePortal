@@ -25,6 +25,7 @@ class User extends Authenticatable
         'role_id',
         'name',
         'email',
+        'username',
         'password',
         'is_active',
         'api_token_hash',

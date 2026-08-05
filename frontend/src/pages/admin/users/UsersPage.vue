@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { usePermissions } from '../../../composables/usePermissions'
 import { useQuasar } from 'quasar'
-import { Ban, CheckCircle2, Edit, Plus, RefreshCw, ShieldCheck, Trash2, UserRound } from '@lucide/vue'
+import { Ban, CheckCircle2, Edit, KeyRound, Plus, Printer, RefreshCw, ShieldCheck, Trash2, UserRound } from '@lucide/vue'
 import AppPage from '../../../components/ui/AppPage.vue'
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import AppToolbar from '../../../components/ui/AppToolbar.vue'
@@ -22,6 +22,7 @@ const store = useUsersStore()
 const permissions = usePermissions()
 const canManage = computed(() => permissions.hasPermission('users.manage'))
 const $q = useQuasar()
+const portalUrl = window.location.origin
 const formOpen = ref(false)
 const formError = ref('')
 const editingUser = ref(null)
@@ -29,9 +30,13 @@ const deleteDialog = ref(false)
 const blockDialog = ref(false)
 const unblockDialog = ref(false)
 const rolesDialog = ref(false)
+const provisionDialog = ref(false)
+const credentialDialog = ref(false)
 const pendingUser = ref(null)
 const pagination = ref(createTablePagination(rowsPerPageKey, { rowsPerPage: 20 }))
 const rolesForm = reactive({ role_ids: [], primary_role_id: null })
+const provisionForm = reactive({ profile_type: 'student', profile_id: null })
+const credential = ref(null)
 const nameInput = ref(null)
 const emailInput = ref(null)
 const passwordInput = ref(null)
@@ -276,6 +281,16 @@ async function saveRoles() {
   $q.notify({ type: 'positive', message: 'Роли пользователя обновлены', position: 'top-right' })
 }
 
+async function provisionAccount() {
+  credential.value = await store.provision(provisionForm.profile_type, provisionForm.profile_id)
+  provisionDialog.value = false
+  credentialDialog.value = true
+}
+
+function printCredential() {
+  window.print()
+}
+
 function applyFilters() {
   store.load()
 }
@@ -324,6 +339,7 @@ onMounted(async () => {
         <AppLoading v-if="store.loading || store.saving" label="Обработка..." />
         <q-btn flat :disable="store.loading" @click="store.load"><RefreshCw :size="16" class="q-mr-xs" /> Обновить</q-btn>
         <q-btn v-if="canManage" color="primary" @click="openCreate"><Plus :size="16" class="q-mr-xs" /> Создать</q-btn>
+        <q-btn v-if="canManage" outline color="primary" @click="provisionDialog = true"><KeyRound :size="16" class="q-mr-xs" /> Создать по профилю</q-btn>
       </template>
     </AppToolbar>
     <AppErrorBanner :message="store.error" />
@@ -461,6 +477,25 @@ onMounted(async () => {
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="provisionDialog" persistent>
+      <q-card class="users-dialog">
+        <q-card-section><div class="text-h6">Создать учетную запись</div><p class="users-dialog-subtitle">Будет создан активный пользователь с пятизначным стартовым паролем. Пароль доступен только в следующей карточке.</p></q-card-section>
+        <q-card-section class="users-form">
+          <q-select v-model="provisionForm.profile_type" outlined dense emit-value map-options label="Тип профиля" :options="[{ label: 'Студент', value: 'student' }, { label: 'Преподаватель', value: 'teacher' }, { label: 'Сотрудник', value: 'employee' }]" />
+          <q-input v-model.number="provisionForm.profile_id" outlined dense type="number" label="ID профиля" />
+        </q-card-section>
+        <q-card-actions align="right"><q-btn flat label="Отмена" v-close-popup /><q-btn color="primary" :disable="!provisionForm.profile_id" :loading="store.saving" label="Создать и показать карточку" @click="provisionAccount" /></q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <q-dialog v-model="credentialDialog" persistent>
+      <q-card class="users-dialog credential-card">
+        <q-card-section><div class="text-h6">Карточка доступа</div><p class="users-dialog-subtitle">Распечатайте или передайте данные сейчас: пароль не сохраняется и повторно не отображается.</p></q-card-section>
+        <q-card-section v-if="credential" class="credential-card__body"><strong>{{ credential.name }}</strong><span>Роль: {{ credential.role }}</span><span>Логин: <b>{{ credential.login }}</b></span><span>Стартовый пароль: <b>{{ credential.password }}</b></span><span>Вход: {{ portalUrl }}</span></q-card-section>
+        <q-card-actions align="right"><q-btn flat label="Закрыть" @click="credentialDialog = false; credential = null" /><q-btn color="primary" @click="printCredential"><Printer :size="16" class="q-mr-xs" />Печать</q-btn></q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <AppConfirmDialog v-model="deleteDialog" title="Удалить пользователя" :message="`Удалить учетную запись ${pendingUser?.name || ''}?`" confirm-label="Удалить" @confirm="confirmDelete" />
     <AppConfirmDialog v-model="blockDialog" title="Заблокировать пользователя" :message="`Заблокировать ${pendingUser?.name || ''}? Пользователь не сможет войти в систему.`" confirm-label="Заблокировать" tone="warning" @confirm="confirmBlock" />
     <AppConfirmDialog v-model="unblockDialog" title="Разблокировать пользователя" :message="`Разблокировать ${pendingUser?.name || ''}?`" confirm-label="Разблокировать" tone="success" @confirm="confirmUnblock" />
@@ -570,6 +605,8 @@ onMounted(async () => {
   margin: 4px 0 0;
   color: #64748b;
 }
+
+.credential-card__body { display: grid; gap: 10px; font-size: 16px; }
 
 :deep(.cp-selected-row) {
   background: #eff6ff;

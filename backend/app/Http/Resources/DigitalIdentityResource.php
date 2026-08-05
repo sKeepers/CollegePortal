@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Models\Student;
 use App\Models\Teacher;
+use App\Models\Employee;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Gate;
@@ -40,20 +41,29 @@ class DigitalIdentityResource extends JsonResource
         return $this->status;
     }
 
-    private function ownerPayload(Student|Teacher $owner): array
+    private function ownerPayload(Student|Teacher|Employee $owner): array
     {
+        $person = $owner instanceof Employee ? $owner->person : $owner;
+
         return [
             'id' => $owner->id,
-            'last_name' => $owner->last_name,
-            'first_name' => $owner->first_name,
-            'middle_name' => $owner->middle_name,
-            'phone' => $owner->phone,
-            'email' => $owner->email,
+            'last_name' => $person?->last_name,
+            'first_name' => $person?->first_name,
+            'middle_name' => $person?->middle_name,
+            'phone' => $person?->phone,
+            'email' => $person?->email,
             'group' => $owner instanceof Student && $owner->relationLoaded('group') && $owner->group
                 ? ['id' => $owner->group->id, 'name' => $owner->group->name]
                 : null,
             'position' => $owner instanceof Teacher ? $owner->position : null,
             'department' => $owner instanceof Teacher ? $owner->department : null,
+            'employee_number' => $owner instanceof Employee ? $owner->employee_number : null,
+            'primary_position' => $owner instanceof Employee && $owner->primaryPosition
+                ? ['id' => $owner->primaryPosition->id, 'name' => $owner->primaryPosition->name]
+                : null,
+            'primary_department' => $owner instanceof Employee && $owner->primaryDepartment
+                ? ['id' => $owner->primaryDepartment->id, 'name' => $owner->primaryDepartment->name]
+                : null,
         ];
     }
 }

@@ -32,12 +32,12 @@ class UniversalImportService
     /** @var array<string, ImportHandlerInterface> */
     private array $handlers = [];
 
-    public function __construct(AutoCodeService $autoCodeService, ScheduleLessonService $scheduleLessonService, HrService $hrService, SnilsService $snils)
+    public function __construct(AutoCodeService $autoCodeService, ScheduleLessonService $scheduleLessonService, HrService $hrService, AccountProvisioningService $accounts, SnilsService $snils)
     {
         foreach ([
-            new StudentImportHandler($snils),
+            new StudentImportHandler($snils, $accounts),
             new GroupImportHandler(),
-            new TeacherImportHandler(),
+            new TeacherImportHandler($accounts),
             new SubjectImportHandler($autoCodeService),
             new ClassroomImportHandler(),
             new AdmissionImportHandler(),

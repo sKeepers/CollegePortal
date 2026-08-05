@@ -30,7 +30,8 @@ class PersonController extends Controller
         $profile = $request->string('profile')->toString();
 
         $people = Person::query()
-            ->withCount(['students', 'teachers', 'applicants', 'applicantApplications', 'graduates', 'users', 'digitalIdentities'])
+            ->whereDoesntHave('students')
+            ->withCount(['students', 'teachers', 'employees', 'applicants', 'applicantApplications', 'graduates', 'users', 'digitalIdentities'])
             ->when($search, function ($query) use ($operator, $search): void {
                 $query->where(function ($query) use ($operator, $search): void {
                     $query->where('last_name', $operator, "%{$search}%")
@@ -42,8 +43,8 @@ class PersonController extends Controller
             })
             ->when($profile, function ($query) use ($profile): void {
                 match ($profile) {
-                    'student' => $query->has('students'),
                     'teacher' => $query->has('teachers'),
+                    'employee' => $query->has('employees'),
                     'applicant' => $query->where(fn ($profileQuery) => $profileQuery->has('applicants')->orHas('applicantApplications')),
                     'graduate' => $query->has('graduates'),
                     'user' => $query->has('users'),
@@ -62,6 +63,8 @@ class PersonController extends Controller
         return new PersonResource($person->load([
             'students.group',
             'teachers.subjects',
+            'employees.primaryDepartment',
+            'employees.primaryPosition',
             'applicants.status',
             'applicants.source',
             'applicantApplications.educationProgram',
@@ -70,7 +73,7 @@ class PersonController extends Controller
             'graduates.diploma',
             'users.roles',
             'digitalIdentities',
-        ])->loadCount(['students', 'teachers', 'applicants', 'applicantApplications', 'graduates', 'users', 'digitalIdentities']));
+        ])->loadCount(['students', 'teachers', 'employees', 'applicants', 'applicantApplications', 'graduates', 'users', 'digitalIdentities']));
     }
 
     public function store(StorePersonRequest $request): JsonResponse
@@ -165,6 +168,8 @@ class PersonController extends Controller
         return $person->load([
             'students.group',
             'teachers.subjects',
+            'employees.primaryDepartment',
+            'employees.primaryPosition',
             'applicants.status',
             'applicants.source',
             'applicantApplications.educationProgram',
@@ -173,7 +178,7 @@ class PersonController extends Controller
             'graduates.diploma',
             'users.roles',
             'digitalIdentities',
-        ])->loadCount(['students', 'teachers', 'applicants', 'applicantApplications', 'graduates', 'users', 'digitalIdentities']);
+        ])->loadCount(['students', 'teachers', 'employees', 'applicants', 'applicantApplications', 'graduates', 'users', 'digitalIdentities']);
     }
 
     /** @return array<string, mixed> */

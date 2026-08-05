@@ -51,6 +51,7 @@ class UserResource extends JsonResource
             'role_id' => $this->role_id,
             'name' => $this->name,
             'email' => $this->email,
+            'username' => $this->username,
             'is_active' => $this->is_active,
             'status' => $this->is_active ? 'active' : 'blocked',
             'role' => new RoleResource($this->whenLoaded('role')),

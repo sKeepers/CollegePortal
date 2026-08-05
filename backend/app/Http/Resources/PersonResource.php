@@ -40,6 +40,7 @@ class PersonResource extends JsonResource
             'profiles_count' => [
                 'students' => $this->whenCounted('students'),
                 'teachers' => $this->whenCounted('teachers'),
+                'employees' => $this->whenCounted('employees'),
                 'applicants' => $this->whenCounted('applicants'),
                 'applicant_applications' => $this->whenCounted('applicantApplications'),
                 'graduates' => $this->whenCounted('graduates'),
@@ -48,6 +49,7 @@ class PersonResource extends JsonResource
             ],
             'students' => StudentResource::collection($this->whenLoaded('students')),
             'teachers' => TeacherResource::collection($this->whenLoaded('teachers')),
+            'employees' => EmployeeResource::collection($this->whenLoaded('employees')),
             'applicants' => ApplicantResource::collection($this->whenLoaded('applicants')),
             'applicant_applications' => ApplicantApplicationResource::collection($this->whenLoaded('applicantApplications')),
             'graduates' => GraduateResource::collection($this->whenLoaded('graduates')),

@@ -39,7 +39,7 @@ const {
 
 const profileOptions = [
   { label: 'Все профили', value: '' },
-  { label: 'Студенты', value: 'student' },
+  { label: 'Сотрудники', value: 'employee' },
   { label: 'Преподаватели', value: 'teacher' },
   { label: 'Абитуриенты', value: 'applicant' },
   { label: 'Выпускники', value: 'graduate' },
@@ -59,6 +59,7 @@ const metrics = computed(() => {
   const counts = selected.value?.profiles_count || {}
   return [
     { label: 'Студент', value: counts.students || 0 },
+    { label: 'Сотрудник', value: counts.employees || 0 },
     { label: 'Преподаватель', value: counts.teachers || 0 },
     { label: 'Абитуриент', value: counts.applicant_applications || 0 },
     { label: 'Выпускник', value: counts.graduates || 0 },
@@ -72,10 +73,12 @@ const actions = computed(() => {
   const items = []
   const student = person.students?.[0]
   const teacher = person.teachers?.[0]
+  const employee = person.employees?.[0]
   const applicant = person.applicant_applications?.[0]
   const graduate = person.graduates?.[0]
   if (student) items.push({ label: 'Открыть студента', to: { path: '/students', query: { selected: student.id } } })
   if (teacher) items.push({ label: 'Открыть преподавателя', to: { path: '/teachers', query: { selected: teacher.id } } })
+  if (employee) items.push({ label: 'Открыть сотрудника', to: { path: '/hr/employees', query: { selected: employee.id } } })
   if (applicant) items.push({ label: 'Открыть заявление', to: { path: '/admissions', query: { selected: applicant.id } } })
   if (graduate) items.push({ label: 'Открыть выпускника', to: { path: '/graduation', query: { selected: graduate.id } } })
   if (person.digital_identities?.length) items.push({ label: 'Цифровой пропуск', to: '/identity/digital-passes' })
@@ -123,7 +126,7 @@ onMounted(async () => {
 
 <template>
   <AppPage>
-    <PageHeader title="Люди" subtitle="Единая карточка человека для студентов, преподавателей, абитуриентов, выпускников, пользователей и цифровой идентичности." />
+    <PageHeader title="Люди" subtitle="Единая карточка сотрудников, преподавателей, абитуриентов, выпускников, пользователей и цифровой идентичности. Студенты отображаются в отдельном разделе." />
     <AppToolbar>
       <span>{{ tableSubtitle }}</span>
       <template #actions>
@@ -162,7 +165,7 @@ onMounted(async () => {
           </template>
           <template #body-cell-profiles="props">
             <q-td :props="props" class="people-profile-chips">
-              <q-chip v-if="profileCount(props.row, 'students')" dense>Студент</q-chip>
+              <q-chip v-if="profileCount(props.row, 'employees')" dense>Сотрудник</q-chip>
               <q-chip v-if="profileCount(props.row, 'teachers')" dense>Преподаватель</q-chip>
               <q-chip v-if="profileCount(props.row, 'applicant_applications')" dense>Абитуриент</q-chip>
               <q-chip v-if="profileCount(props.row, 'graduates')" dense>Выпускник</q-chip>

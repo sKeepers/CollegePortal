@@ -10,8 +10,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Employee extends Model
 {
     public const UNAVAILABLE_STATUSES = ['vacation', 'sick_leave', 'maternity_leave', 'business_trip', 'suspended', 'dismissed'];
+    public const WORK_SCHEDULE_CODES = ['weekday_0900_1800', 'weekday_0900_1700', 'shift_2_2_0800_2000', 'flexible'];
 
-    protected $fillable = ['person_id', 'employee_number', 'status', 'employment_type', 'hired_at', 'dismissed_at', 'primary_department_id', 'primary_position_id', 'workload_rate', 'is_teacher', 'comment'];
+    protected $fillable = ['person_id', 'employee_number', 'status', 'employment_type', 'work_schedule_code', 'hired_at', 'dismissed_at', 'primary_department_id', 'primary_position_id', 'workload_rate', 'is_teacher', 'comment'];
     protected function casts(): array { return ['hired_at' => 'date', 'dismissed_at' => 'date', 'workload_rate' => 'decimal:2', 'is_teacher' => 'boolean']; }
     public function person(): BelongsTo { return $this->belongsTo(Person::class); }
     public function primaryDepartment(): BelongsTo { return $this->belongsTo(Department::class, 'primary_department_id'); }
