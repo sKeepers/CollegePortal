@@ -74,6 +74,17 @@ class RbacApiTest extends TestCase
         $this->withApiAuth($security)->getJson('/api/attendance')->assertForbidden();
     }
 
+    public function test_hr_can_manage_hr_data_but_cannot_access_people_or_import(): void
+    {
+        $this->seed(RoleSeeder::class);
+        $hr = $this->createApiUser(roleCode: 'hr');
+
+        $this->withApiAuth($hr)->getJson('/api/employees')->assertOk();
+        $this->withApiAuth($hr)->getJson('/api/teachers')->assertOk();
+        $this->withApiAuth($hr)->getJson('/api/people')->assertForbidden();
+        $this->withApiAuth($hr)->getJson('/api/admin/import/config')->assertForbidden();
+    }
+
     public function test_director_can_view_but_cannot_mutate_academic_data(): void
     {
         $this->seed(RoleSeeder::class);
