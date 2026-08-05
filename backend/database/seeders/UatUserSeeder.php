@@ -21,7 +21,7 @@ class UatUserSeeder extends Seeder
         $roles = Role::query()->pluck('id', 'code');
         $password = Hash::make('demo12345');
         $users = [
-            ['name' => 'Администратор UAT', 'email' => 'admin.uat@college-portal.local', 'username' => 'admin', 'role' => 'admin'],
+            ['name' => 'Администратор UAT', 'email' => 'admin.uat@college-portal.local', 'username' => 'admin.uat', 'role' => 'admin'],
             ['name' => 'Директор UAT', 'email' => 'director.uat@college-portal.local', 'username' => 'director', 'role' => 'director'],
             ['name' => 'Заместитель директора UAT', 'email' => 'deputy.uat@college-portal.local', 'username' => 'deputy', 'role' => 'deputy'],
             ['name' => 'Учебная часть UAT', 'email' => 'study.uat@college-portal.local', 'username' => 'study', 'role' => 'study'],
