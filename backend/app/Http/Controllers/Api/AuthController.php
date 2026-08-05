@@ -20,14 +20,15 @@ class AuthController extends Controller
         $credentials = $request->validated();
 
         $login = $credentials['login'] ?? $credentials['email'];
+        $phoneLogins = $this->phoneLogins($login);
         $user = User::query()
             ->with(['role.permissions', 'roles.permissions'])
-            ->where(function ($query) use ($login): void {
+            ->where(function ($query) use ($login, $phoneLogins): void {
                 $query->where('email', $login)
                     ->orWhere('username', $login)
-                    ->orWhereHas('person', fn ($person) => $person->where('phone', $login))
-                    ->orWhereHas('student', fn ($student) => $student->where('phone', $login))
-                    ->orWhereHas('teacher', fn ($teacher) => $teacher->where('phone', $login));
+                    ->orWhereHas('person', fn ($person) => $person->whereIn('phone', $phoneLogins))
+                    ->orWhereHas('student', fn ($student) => $student->whereIn('phone', $phoneLogins))
+                    ->orWhereHas('teacher', fn ($teacher) => $teacher->whereIn('phone', $phoneLogins));
             })
             ->first();
 
@@ -55,6 +56,16 @@ class AuthController extends Controller
             'token_type' => 'Bearer',
             'user' => new UserResource($user->refresh()->load(['role.permissions', 'roles.permissions', 'student.group', 'teacher'])),
         ]);
+    }
+
+    private function phoneLogins(string $login): array
+    {
+        $digits = preg_replace('/\D+/', '', $login) ?? '';
+        if (! preg_match('/^(?:7|8)(\d{10})$/', $digits, $matches)) {
+            return [$login];
+        }
+
+        return ["+7{$matches[1]}", "8{$matches[1]}"];
     }
 
     public function me(Request $request): UserResource

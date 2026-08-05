@@ -104,6 +104,7 @@ class AuthApiTest extends TestCase
 
         $this->postJson('/api/auth/login', ['login' => 'account.login', 'password' => 'password'])->assertOk();
         $this->postJson('/api/auth/login', ['login' => '+79990000001', 'password' => 'password'])->assertOk();
+        $this->postJson('/api/auth/login', ['login' => '89990000001', 'password' => 'password'])->assertOk();
     }
 
     public function test_user_can_get_profile_and_logout(): void
