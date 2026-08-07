@@ -44,6 +44,10 @@ Thumbs.db
 
 # Scaffold/runtime scratch area
 .scaffold/
+# AGENTS.md requires Git worktrees to live at .worktrees/<branch>, so they are
+# always present in a working checkout and must never be tracked. Leaving them
+# untracked also breaks scripts/release/build-release.sh, which demands a clean tree.
+.worktrees/
 
 # Docker local data if bind-mounted in the future
 postgres_data/
