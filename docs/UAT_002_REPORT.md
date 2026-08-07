@@ -66,7 +66,19 @@ UAT-002 готовит текущий DEV-стенд Admissions Foundation к р
 
 ## Проверки
 
-UAT-002.2 проверен на DEV в Compose-контейнерах:
+UAT-002.2 проверен на DEV в Compose-контейнерах.
+
+### UAT-002.1: результат локальной проверки
+
+- Реализованные изменения мастера, role-based Dashboard, splitter, QR-menu и version metadata присутствуют в commit `5febab7`.
+- Модули `roleNavigation`, `useResizableWorkspace` и `versionService` проходят синтаксическую проверку Node.js.
+- Предсборочный генератор формирует `frontend/public/version.json` из единого commit/version/environment источника. Артефакт не включается в checkpoint вне штатной сборки.
+- DEV backend suite выполнен в Compose-контейнере: `337 passed (2153 assertions)`.
+- DEV frontend production build выполнен в Compose-контейнере: `npm run build` завершен успешно.
+- `GET /health/live` на DEV возвращает `200`.
+- Ручной role-based smoke остается отдельным этапом: требуется проверить меню, Admissions wizard и личный QR-пропуск под ролями admin, admission, teacher и student.
+
+Если UAT запускается вне DEV/CI, backend/frontend проверки должны быть выполнены в среде с PHP `>= 8.4.1`, Docker и установленными frontend-зависимостями.
 
 - `php artisan db:seed --class=RoleSeeder` применен, чтобы убрать `journal.view` у student-ролей;
 - `php artisan test`: `337 passed (2150 assertions)`;
