@@ -68,6 +68,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [Identity Domain](IDENTITY_DOMAIN.md)
 - [Digital Passes](DIGITAL_PASSES.md)
 - [Access Gate](ACCESS_GATE.md)
+- [Статус документов контроля доступа](ACCESS_CONTROL_STATUS.md) — девять `ACCESS_CONTROL_*.md` перенесены из невлитой ветки и описывают проект, а не действующую реализацию. Начинать читать с этого документа.
 - [Attendance Engine](ATTENDANCE_ENGINE.md)
 - [Curriculum Engine](CURRICULUM_ENGINE.md)
 - [Teaching Load Engine](TEACHING_LOAD_ENGINE.md)
@@ -77,6 +78,16 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 
 ## Full Documentation Inventory
 
+- [ACCESS_CONTROL_ARCHITECTURE.md](ACCESS_CONTROL_ARCHITECTURE.md)
+- [ACCESS_CONTROL_HARDWARE_TEST.md](ACCESS_CONTROL_HARDWARE_TEST.md)
+- [ACCESS_CONTROL_LEGACY_DEPRECATION.md](ACCESS_CONTROL_LEGACY_DEPRECATION.md)
+- [ACCESS_CONTROL_MOBILE_TEST.md](ACCESS_CONTROL_MOBILE_TEST.md)
+- [ACCESS_CONTROL_OPERATOR_GUIDE.md](ACCESS_CONTROL_OPERATOR_GUIDE.md)
+- [ACCESS_CONTROL_PRIVACY.md](ACCESS_CONTROL_PRIVACY.md)
+- [ACCESS_CONTROL_QR_PROTOCOL.md](ACCESS_CONTROL_QR_PROTOCOL.md)
+- [ACCESS_CONTROL_RELEASE_CHECKLIST.md](ACCESS_CONTROL_RELEASE_CHECKLIST.md)
+- [ACCESS_CONTROL_SECURITY.md](ACCESS_CONTROL_SECURITY.md)
+- [ACCESS_CONTROL_STATUS.md](ACCESS_CONTROL_STATUS.md)
 - [ACCESS_GATE.md](ACCESS_GATE.md)
 - [adr/ADR-FIS-GATEWAY.md](adr/ADR-FIS-GATEWAY.md)
 - [adr/ADR-INTEGRATION-GATEWAY.md](adr/ADR-INTEGRATION-GATEWAY.md)
