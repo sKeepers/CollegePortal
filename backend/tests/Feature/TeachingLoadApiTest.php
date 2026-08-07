@@ -119,11 +119,15 @@ class TeachingLoadApiTest extends TestCase
         $this->withApiAuth($teacherUser)->postJson('/api/teaching-loads', ['academic_year' => '2026/2027', 'teacher_id' => $teacher->id])->assertForbidden();
     }
 
-    public function test_self_scope_without_teacher_profile_is_forbidden(): void
+    public function test_self_scope_without_teacher_profile_returns_empty_list(): void
     {
         $user = $this->createTeacherUser();
+        $otherTeacher = $this->createTeacher();
+        TeachingLoad::create(['academic_year' => '2026/2027', 'teacher_id' => $otherTeacher->id, 'status' => 'active']);
 
-        $this->withApiAuth($user)->getJson('/api/teaching-loads')->assertForbidden();
+        $this->withApiAuth($user)->getJson('/api/teaching-loads')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
     }
 
     private function createTeacherUser(): \App\Models\User
