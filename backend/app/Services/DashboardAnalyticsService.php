@@ -33,11 +33,15 @@ class DashboardAnalyticsService
         $today = now()->toDateString();
         $lastSevenDays = collect(range(6, 0))->map(fn (int $daysAgo) => now()->subDays($daysAgo)->toDateString());
         $accessToday = AccessEvent::query()->whereDate('event_time', $today);
+        // Только сегодняшние события: иначе тот, кто вчера не отсканировал
+        // выход, остается «в колледже» навсегда, а виджет посещаемости,
+        // который считает по дню, показывает другое число про то же здание.
         $latestAllowedByIdentity = AccessEvent::query()
+            ->whereDate('event_time', $today)
             ->where('result', AccessEvent::RESULT_ALLOWED)
             ->whereNotNull('digital_identity_id')
             ->latest('event_time')
-            ->get()
+            ->get(['id', 'digital_identity_id', 'direction', 'event_time'])
             ->unique('digital_identity_id');
         $frdoErrors = FrdoPackage::query()
             ->withCount('validationErrors')

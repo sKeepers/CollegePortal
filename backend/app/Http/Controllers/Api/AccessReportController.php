@@ -18,10 +18,6 @@ class AccessReportController extends Controller
         $events = $this->filteredEvents($request);
         $todayEvents = $events->filter(fn (AccessEvent $event) => $event->event_time?->isToday());
         $allowedEvents = $events->where('result', AccessEvent::RESULT_ALLOWED);
-        $latestAllowedByIdentity = $allowedEvents
-            ->filter(fn (AccessEvent $event) => $event->digital_identity_id !== null)
-            ->sortByDesc('event_time')
-            ->unique('digital_identity_id');
 
         return [
             'data' => [
@@ -29,9 +25,29 @@ class AccessReportController extends Controller
                 'entries' => $allowedEvents->where('direction', AccessEvent::DIRECTION_IN)->count(),
                 'exits' => $allowedEvents->where('direction', AccessEvent::DIRECTION_OUT)->count(),
                 'denied' => $events->where('result', AccessEvent::RESULT_DENIED)->count(),
-                'inside_now' => $latestAllowedByIdentity->where('direction', AccessEvent::DIRECTION_IN)->count(),
+                'inside_now' => $this->insideNow(),
             ],
         ];
+    }
+
+    /**
+     * «Сейчас в здании» считается по текущему дню и не зависит от фильтров
+     * отчета. Иначе выборка за прошлый месяц показывала бы людей, находящихся
+     * в здании тогда, а тот, кто не отсканировал выход, оставался бы внутри
+     * навсегда. Разбор посещаемости считает это же значение по дню, и оба
+     * показателя должны совпадать.
+     */
+    private function insideNow(): int
+    {
+        return AccessEvent::query()
+            ->whereDate('event_time', Carbon::now()->toDateString())
+            ->where('result', AccessEvent::RESULT_ALLOWED)
+            ->whereNotNull('digital_identity_id')
+            ->orderByDesc('event_time')
+            ->get(['id', 'digital_identity_id', 'direction', 'event_time'])
+            ->unique('digital_identity_id')
+            ->where('direction', AccessEvent::DIRECTION_IN)
+            ->count();
     }
 
     public function events(Request $request): AnonymousResourceCollection|StreamedResponse
