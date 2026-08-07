@@ -4508,9 +4508,16 @@ body {
   text-align: center;
 }
 
-.workspace-device-desktop-hd { --cp-page-max-width: 1320px; }
-.workspace-device-desktop-fullhd { --cp-page-max-width: 1480px; }
-.workspace-device-desktop-ultrawide { --cp-page-max-width: 1680px; }
+/*
+ * Потолок ширины страницы. Прежние значения были заметно уже типового окна:
+ * на FullHD оставалась пустая полоса примерно в четверть экрана, из-за чего
+ * казалось, что раздел «не дорисован». Ограничение оставлено, чтобы таблицы не
+ * растягивались на всю ширину сверхшироких мониторов, но подняты так, чтобы
+ * на обычных экранах страница заполняла место.
+ */
+.workspace-device-desktop-hd { --cp-page-max-width: 1440px; }
+.workspace-device-desktop-fullhd { --cp-page-max-width: 1760px; }
+.workspace-device-desktop-ultrawide { --cp-page-max-width: min(2320px, calc(100vw - 48px)); }
 
 @media (min-width: 600px) and (max-width: 1199px) {
   .workspace-tablet .cp-page { padding: 14px; }

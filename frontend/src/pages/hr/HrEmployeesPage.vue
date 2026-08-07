@@ -534,7 +534,9 @@ watch(() => route.path, (path) => {
 </template>
 
 <style scoped>
-.hr-page { display: flex; flex-direction: column; gap: 16px; }
+/* Тот же потолок ширины, что и у страниц на общем контейнере: без него раздел
+   упирался в край окна, а соседние разделы — нет. */
+.hr-page { display: flex; flex-direction: column; gap: 16px; max-width: var(--cp-page-max-width); }
 .hr-page__header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
 .hr-page__header h1 { margin: 0; font-size: 28px; line-height: 1.2; font-weight: 700; }
 .hr-page__header p { margin: 6px 0 0; color: #64748b; }

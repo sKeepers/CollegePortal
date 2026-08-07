@@ -608,10 +608,12 @@ onMounted(load);
 </template>
 
 <style scoped>
+/* Тот же потолок ширины, что и у страниц на общем контейнере. */
 .hr-calendar-page {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  max-width: var(--cp-page-max-width);
 }
 .hr-calendar-header {
   display: flex;
