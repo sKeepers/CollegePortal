@@ -4,6 +4,8 @@ import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import { BadgeCheck, BriefcaseBusiness, Building2, CalendarDays, FileText, History, IdCard, UserRound } from '@lucide/vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
+import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
+import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import AppCard from '../../components/ui/AppCard.vue'
 import { useAuthStore } from '../../stores/auth'
 import { useHrStore } from '../../stores/hr'
@@ -109,6 +111,14 @@ const dictionaryColumns = [
 ]
 
 const selected = computed(() => store.selectedEmployee)
+const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({
+  storageKey: 'collegePortal.hr.employees.splitter.v1',
+  resizeBodyClass: 'hr-splitter-resizing',
+})
+
+function employeeRowClass(row) {
+  return Number(row.id) === Number(store.selectedId) ? 'workspace-row--selected' : ''
+}
 const canCreate = computed(() => auth.can('hr.employees.create'))
 const canUpdate = computed(() => auth.can('hr.employees.update'))
 const canDismiss = computed(() => auth.can('hr.employees.dismiss'))
@@ -309,7 +319,13 @@ watch(() => route.path, (path) => {
 
     <q-banner v-if="store.error" class="bg-red-1 text-negative q-mb-md" rounded>{{ store.error }}</q-banner>
 
-    <div v-if="activeTab === 'employees'" class="hr-layout">
+    <div
+      v-if="activeTab === 'employees'"
+      ref="workspaceRef"
+      class="hr-layout"
+      :class="{ 'resizable-workspace': Boolean(selected) }"
+      :style="selected ? workspaceStyle : null"
+    >
       <div class="hr-main">
         <AppCard>
           <div class="hr-filters">
@@ -333,6 +349,7 @@ watch(() => route.path, (path) => {
             :loading="store.loading"
             :rows-per-page-options="[20, 50, 100]"
             class="hr-table"
+            :table-row-class-fn="employeeRowClass"
             @row-click="(_, row) => store.selectedId = row.id"
           >
             <template #body-cell-status="props">
@@ -347,6 +364,13 @@ watch(() => route.path, (path) => {
           </q-table>
         </AppCard>
       </div>
+
+      <WorkspaceSplitter
+        v-if="selected"
+        label="Изменить ширину карточки сотрудника"
+        @resize-start="startResize"
+        @reset="resetSplitter"
+      />
 
       <WorkspacePanel
         v-if="selected"
@@ -516,19 +540,25 @@ watch(() => route.path, (path) => {
 .hr-page__header p { margin: 6px 0 0; color: #64748b; }
 .hr-page__actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .hr-tabs { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
-.hr-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; align-items: start; }
+/* Без выбранного сотрудника список занимает всю ширину; ширину карточки задаёт
+   разделитель, поэтому вторая колонка приходит из inline-стиля, а не отсюда. */
+.hr-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+.hr-layout.resizable-workspace { gap: 0; }
 .hr-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .hr-filters { display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)) auto; gap: 10px; align-items: end; }
 .hr-table { max-height: 620px; }
-.hr-workspace { position: sticky; top: 82px; max-height: calc(100vh - 104px); overflow: auto; }
+/* Карточка не должна ездить вбок: по горизонтали содержимое сжимается само,
+   а элементы вроде вкладок прокручиваются внутри себя. */
+.hr-workspace { position: sticky; top: 82px; min-width: 0; max-height: calc(100vh - 104px); overflow-x: hidden; overflow-y: auto; }
 .hr-avatar { background: #f8fafc; color: #334155; border: 1px solid #e2e8f0; }
-.hr-info-grid { display: grid; grid-template-columns: 130px 1fr; gap: 8px 12px; font-size: 13px; }
+.hr-info-grid { display: grid; grid-template-columns: minmax(110px, auto) minmax(0, 1fr); gap: 8px 12px; font-size: 13px; }
+.hr-info-grid strong { overflow-wrap: anywhere; }
 .hr-info-grid span { color: #64748b; }
 .hr-info-grid strong { color: #0f172a; font-weight: 600; }
 .hr-dialog { width: min(860px, calc(100vw - 32px)); }
 .hr-dialog--small { width: min(520px, calc(100vw - 32px)); }
 .hr-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .hr-form-wide { grid-column: 1 / -1; }
-@media (max-width: 1360px) { .hr-layout { grid-template-columns: minmax(0, 1fr) 340px; } .hr-filters { grid-template-columns: repeat(2, minmax(180px, 1fr)); } }
+@media (max-width: 1360px) { .hr-filters { grid-template-columns: repeat(2, minmax(180px, 1fr)); } }
 @media (max-width: 1023px) { .hr-page__header, .hr-layout { display: block; } .hr-workspace { position: static; margin-top: 16px; max-height: none; } .hr-filters, .hr-form-grid { grid-template-columns: 1fr; } }
 </style>

@@ -13,6 +13,8 @@ import AppStatusBadge from '../../../components/ui/AppStatusBadge.vue'
 import AppErrorBanner from '../../../components/ui/AppErrorBanner.vue'
 import AppEmptyState from '../../../components/ui/AppEmptyState.vue'
 import AppLoading from '../../../components/ui/AppLoading.vue'
+import WorkspaceSplitter from '../../../components/workspace/WorkspaceSplitter.vue'
+import { useResizableWorkspace } from '../../../composables/useResizableWorkspace'
 import { usePermissionsStore } from '../../../stores/permissions'
 
 const store = usePermissionsStore()
@@ -22,6 +24,14 @@ const $q = useQuasar()
 const roleIds = ref([])
 const pagination = ref({ rowsPerPage: 30 })
 const selected = computed(() => store.selectedPermission)
+const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({
+  storageKey: 'collegePortal.permissions.splitter.v1',
+  resizeBodyClass: 'permissions-splitter-resizing',
+})
+
+function permissionRowClass(row) {
+  return Number(row.id) === Number(selected.value?.id) ? 'workspace-row--selected' : ''
+}
 const columns = [
   { name: 'code', label: 'Код', field: 'code', align: 'left', sortable: true },
   { name: 'name', label: 'Название', field: 'name', align: 'left', sortable: true },
@@ -70,9 +80,14 @@ onMounted(store.load)
       </template>
     </AppFilterBar>
 
-    <div class="permissions-layout">
+    <div
+      ref="workspaceRef"
+      class="permissions-layout"
+      :class="{ 'resizable-workspace': Boolean(selected) }"
+      :style="selected ? workspaceStyle : null"
+    >
       <section class="permissions-main">
-        <AppTable v-if="store.permissions.length" v-model:pagination="pagination" :rows="store.permissions" :columns="columns" :loading="store.loading" row-key="id" @row-click="(_, row) => select(row)">
+        <AppTable v-if="store.permissions.length" v-model:pagination="pagination" :rows="store.permissions" :columns="columns" :loading="store.loading" row-key="id" :table-row-class-fn="permissionRowClass" @row-click="(_, row) => select(row)">
           <template #body-cell-code="props">
             <q-td :props="props">
               <button type="button" class="permissions-link" @click.stop="select(props.row)">
@@ -86,6 +101,13 @@ onMounted(store.load)
         </AppTable>
         <AppEmptyState v-else title="Разрешения не найдены" description="Запустите сидеры или измените фильтры поиска." />
       </section>
+
+      <WorkspaceSplitter
+        v-if="selected"
+        label="Изменить ширину карточки разрешения"
+        @resize-start="startResize"
+        @reset="resetSplitter"
+      />
 
       <aside class="permissions-side">
         <AppCard v-if="selected" title="Карточка разрешения" subtitle="Назначение permission ролям">
@@ -123,9 +145,11 @@ onMounted(store.load)
 </template>
 
 <style scoped>
+/* Пока разрешение не выбрано, список во всю ширину; вторую колонку задает
+   разделитель через inline-стиль. */
 .permissions-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 420px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }

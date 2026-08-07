@@ -170,6 +170,10 @@ async function load() {
   await store.loadCalendar(filters);
 }
 
+function periodRowClass(row) {
+  return Number(row.id) === Number(selectedPeriod.value?.id) ? "workspace-row--selected" : "";
+}
+
 async function openPeriod(row) {
   selectedPeriod.value = row;
   selectedLesson.value = null;
@@ -373,6 +377,7 @@ onMounted(load);
             row-key="id"
             :loading="store.loading"
             :rows-per-page-options="[20, 50, 100]"
+            :table-row-class-fn="periodRowClass"
             @row-click="(_, row) => openPeriod(row)"
           >
             <template #body-cell-status="props"
