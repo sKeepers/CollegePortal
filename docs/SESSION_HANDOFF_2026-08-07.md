@@ -4,8 +4,8 @@
 
 ## Состояние на конец сессии
 
-- Ствол: `develop`, тег последнего релиза `v0.8.0-rc4`.
-- PROD `192.168.34.17` обновлён до `0.8.0-rc4`, доступен как `https://portal.skki.ru` с доверенным сертификатом Let's Encrypt.
+- Ствол: `develop` на `f2fafe63b`, тег последнего релиза `v0.8.0-rc5`.
+- PROD `192.168.34.17` обновлён до `0.8.0-rc5`. `https://portal.skki.ru` с доверенным сертификатом Let's Encrypt, обращение по HTTP перенаправляется на HTTPS.
 - DEV `192.168.34.114` переведён на ветку `develop`, обновляется вместе с ней.
 - Неопубликованных коммитов нет ни локально, ни на DEV.
 
@@ -30,14 +30,16 @@
 
 **Инфраструктура.** Выпущен и установлен сертификат для `portal.skki.ru`, настроено автопродление с хуками вокруг контейнера nginx, проверено вхолостую. Написан [TLS_CERTIFICATE.md](TLS_CERTIFICATE.md).
 
+**Закрыт `SEC-004`.** Релизный прокси перенаправляет HTTP на HTTPS и отдаёт заголовки безопасности: HSTS, CSP, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` с обязательным `camera=(self)`. TLS ограничен версиями 1.2 и 1.3. `/.well-known/acme-challenge/` не перенаправляется, установки с `HTTPS_MODE=http` не затронуты. Собран и установлен на PROD релиз `0.8.0-rc5`; проверено снаружи: `301`, ACME-путь без редиректа, все заголовки, HTTP/2 поверх TLS 1.3, health `200`. В TASKS.md разведены две задачи, носившие один номер `SEC-004`: TLS остался `SEC-004`, PostgreSQL в CI стал `SEC-005`.
+
 ## Что нужно знать перед продолжением
 
 Всё существенное вынесено в [CLAUDE.md](../CLAUDE.md) в корне репозитория. Главное: на рабочей станции Windows нет PHP, Node и Docker — тесты и сборка выполняются только на DEV по SSH; push с рабочей станции невозможен, коммиты делаются с DEV.
 
 ## Следующие действия
 
-1. **`SEC-004`** — редирект HTTP→HTTPS и security headers в `installer/templates/nginx-release.conf`. Сертификат уже есть, но портал по-прежнему открывается по незащищённому протоколу. Редирект обязан пропускать `/.well-known/acme-challenge/` без перенаправления, иначе сломается автопродление. Блокирует четыре задачи из [AUTH_AND_MOBILE_PLAN.md](AUTH_AND_MOBILE_PLAN.md).
-2. **Версии в документации.** Фактически `0.8.0-rc4`, а `0.8.0-rc2` указан в README, README.en, PROJECT_CONTEXT, ROADMAP, SECURITY, TASKS, VERSIONING, GITHUB_REPOSITORY, UAT_SERVER, REPORT; `0.8.0-rc1` — в INSTALLATION и UPDATE. Ещё `TEST_USERS.md` даёт нерабочий адрес DEV `http://192.168.34.114:5174/login`, рабочий — `https://192.168.34.114:5443`.
+1. **Версии в документации.** Фактически `0.8.0-rc5`, а `0.8.0-rc2` указан в README, README.en, PROJECT_CONTEXT, ROADMAP, SECURITY, TASKS, VERSIONING, GITHUB_REPOSITORY, UAT_SERVER, REPORT; `0.8.0-rc1` — в INSTALLATION и UPDATE. Ещё `TEST_USERS.md` даёт нерабочий адрес DEV `http://192.168.34.114:5174/login`, рабочий — `https://192.168.34.114:5443`.
+2. **Проверить сканер на телефоне.** Раньше это было невозможно: камера требует доверенного secure context. Теперь `https://portal.skki.ru/access/mobile-scanner` открывается с доверенным сертификатом — это закрывает вопрос по `MOB-003`.
 3. **Полоса прокрутки меню.** Причина локализована: `q-scroll-area` в `AppLayout.vue:390` лежит в grid-строке `minmax(0, 1fr)` с `height: 100%` ([main.css:345](../frontend/src/styles/main.css#L345)). Компонент меряет высоту раньше, чем grid её раздаёт. Чинить с проверкой в браузере.
 4. **Вернуть в импорт сотрудников** `auto_account` и колонку «Рабочий график» — потеряны при переписывании `EmployeeImportHandler` на `HrService`. Для студентов и преподавателей `auto_account` работает.
 5. **Перенести 9 документов** контроля доступа из невлитой ветки `feature/access-control-foundation`. Только документы, код не переносить.
