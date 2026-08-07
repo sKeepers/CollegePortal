@@ -11,6 +11,7 @@ import AppTable from "../../components/ui/AppTable.vue";
 import AppEmptyState from "../../components/ui/AppEmptyState.vue";
 import AppLoading from "../../components/ui/AppLoading.vue";
 import AppErrorBanner from "../../components/ui/AppErrorBanner.vue";
+import AppTimeField from "../../components/ui/AppTimeField.vue";
 import AppStatusBadge from "../../components/ui/AppStatusBadge.vue";
 import AppConfirmDialog from "../../components/ui/AppConfirmDialog.vue";
 import WorkspacePanel from "../../components/workspace/WorkspacePanel.vue";
@@ -697,16 +698,10 @@ onMounted(async () => {
             outlined
             dense
             type="date"
-            label="Дата" /><q-input
+            label="Дата" /><AppTimeField
             v-model="examForm.starts_at"
-            outlined
-            dense
-            type="time"
-            label="Начало" /><q-input
+            label="Начало" /><AppTimeField
             v-model="examForm.ends_at"
-            outlined
-            dense
-            type="time"
             label="Окончание" /><q-select
             v-model="examForm.exam_type"
             outlined

@@ -10,6 +10,7 @@ import AppCard from '../../../components/ui/AppCard.vue'
 import AppErrorBanner from '../../../components/ui/AppErrorBanner.vue'
 import AppLoading from '../../../components/ui/AppLoading.vue'
 import AppConfirmDialog from '../../../components/ui/AppConfirmDialog.vue'
+import AppTimeField from '../../../components/ui/AppTimeField.vue'
 import { groupLabels, useSettingsStore } from '../../../stores/settings'
 
 const store = useSettingsStore()
@@ -103,7 +104,13 @@ onMounted(async () => {
                 <q-chip v-else dense color="grey-2" text-color="grey-8">Админ</q-chip>
               </div>
 
+              <AppTimeField
+                v-if="setting.type === 'time'"
+                v-model="store.editable[fieldKey(setting)]"
+                :label="setting.label"
+              />
               <q-input
+                v-else
                 v-model="store.editable[fieldKey(setting)]"
                 dense
                 outlined

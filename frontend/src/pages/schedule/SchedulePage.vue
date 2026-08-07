@@ -9,6 +9,7 @@ import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
+import AppTimeField from '../../components/ui/AppTimeField.vue'
 import ScheduleDetailsPanel from './ScheduleDetailsPanel.vue'
 import ScheduleFilters from './ScheduleFilters.vue'
 import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
@@ -828,8 +829,8 @@ onMounted(async () => {
           <q-select v-model="createForm.semester" dense outlined emit-value map-options label="Семестр" :options="[{ label: '1 семестр', value: 1 }, { label: '2 семестр', value: 2 }]" />
           <q-input v-model="createForm.date" dense outlined type="date" label="Дата" />
           <q-input v-model.number="createForm.lesson_number" dense outlined type="number" label="Пара" />
-          <q-input v-model="createForm.starts_at" dense outlined type="time" label="Начало" />
-          <q-input v-model="createForm.ends_at" dense outlined type="time" label="Окончание" />
+          <AppTimeField v-model="createForm.starts_at" label="Начало" />
+          <AppTimeField v-model="createForm.ends_at" label="Окончание" />
           <q-select v-model="createForm.group_id" dense outlined emit-value map-options label="Группа" :options="store.groupOptions" />
           <q-select v-model="createForm.subject_id" dense outlined emit-value map-options label="Дисциплина" :options="store.subjectOptions" />
           <q-select v-model="createForm.teacher_id" dense outlined emit-value map-options label="Преподаватель" :options="store.teacherOptions" />
@@ -859,8 +860,8 @@ onMounted(async () => {
           <q-select v-model="templateForm.group_id" dense outlined emit-value map-options label="Группа" :options="store.groupOptions" />
           <q-select v-model="templateForm.day_of_week" dense outlined emit-value map-options label="День" :options="selectedWeekDays.map((day, index) => ({ label: day.label, value: index + 1 }))" />
           <q-input v-model.number="templateForm.lesson_number" dense outlined type="number" label="Пара" />
-          <q-input v-model="templateForm.starts_at" dense outlined type="time" label="Начало" />
-          <q-input v-model="templateForm.ends_at" dense outlined type="time" label="Окончание" />
+          <AppTimeField v-model="templateForm.starts_at" label="Начало" />
+          <AppTimeField v-model="templateForm.ends_at" label="Окончание" />
           <q-select v-model="templateForm.subject_id" dense outlined emit-value map-options label="Дисциплина" :options="store.subjectOptions" />
           <q-select v-model="templateForm.teacher_id" dense outlined emit-value map-options label="Преподаватель" :options="store.teacherOptions" />
           <q-select v-model="templateForm.classroom_id" dense outlined emit-value map-options clearable label="Аудитория" :options="store.classroomOptions" />
