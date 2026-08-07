@@ -6,7 +6,7 @@
 
 CollegePortal is a modular information system for managing educational and administrative processes in a college.
 
-Current status: **Private Release Candidate 0.8.0-rc2**. The repository is private and intended for controlled DEV/UAT work. The system is under User Acceptance Testing and is not ready for production use without a separate security and operations review.
+Current status: **Private Release Candidate 0.8.0-rc5**. The repository is private and intended for controlled DEV/UAT work. The system is under User Acceptance Testing and is not ready for production use without a separate security and operations review.
 
 ## Purpose
 
@@ -88,8 +88,8 @@ Recommended UAT server:
 ## Quick Install
 
 ```bash
-tar -xzf college-portal-0.8.0-rc2.tar.gz
-cd college-portal-0.8.0-rc2
+tar -xzf college-portal-0.8.0-rc5.tar.gz
+cd college-portal-0.8.0-rc5
 sudo ./installer/install.sh
 sudo /opt/college-portal/installer/check.sh
 ```
@@ -121,7 +121,7 @@ Current release prepares data and architecture for FIS GIA/Admissions and FRDO. 
 
 Project board: [CollegePortal Roadmap](https://github.com/users/sKeepers/projects/2)
 
-Release: [v0.8.0-rc2](https://github.com/sKeepers/CollegePortal/releases/tag/v0.8.0-rc2)
+Release: [v0.8.0-rc5](https://github.com/sKeepers/CollegePortal/releases/tag/v0.8.0-rc5)
 
 ## Documentation
 

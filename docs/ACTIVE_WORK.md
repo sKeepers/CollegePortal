@@ -23,6 +23,7 @@
 - В TASKS.md разведены две задачи с одинаковым номером: TLS-контур остаётся `SEC-004`, задача про PostgreSQL в CI стала `SEC-005` и закрыта.
 - Проверка PROD после обновления, снаружи и независимо от `check.sh`: `http://portal.skki.ru/login` → `301` на HTTPS; `/.well-known/acme-challenge/` → `404` без перенаправления; HSTS, CSP, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` и `Permissions-Policy` присутствуют; `version.json` показывает `0.8.0-rc5` и build `f2fafe63b`; `health/live` и `health/ready` — `200`; сертификат проходит проверку доверия (`ssl_verify_result=0`); TLS 1.0 и 1.1 отклонены, согласован HTTP/2 поверх TLS 1.3 с `TLS_AES_256_GCM_SHA384`; SPA и её ассеты отдаются, API без токена отвечает `401`.
 - Резервная копия перед обновлением: `/var/backups/college-portal/20260807-191907`.
+- Версии в документации приведены к `0.8.0-rc5` в README, README.en, SECURITY, VERSIONING, INSTALLATION, UPDATE, GITHUB_REPOSITORY и PROJECT_STATUS. Исторические записи — отчёт о приёмке `INSTALLATION_ACCEPTANCE_TEST`, снимок первой публикации в `GITHUB_REPOSITORY`, журнал в `PROJECT_CONTEXT`, CHANGELOG и закрытые пункты TASKS — намеренно оставлены с прежними номерами. `PROJECT_STATUS.md` объявлен единственным местом, где указывается текущая версия, а `installer/VERSION` — источником истины. В `TEST_USERS.md` исправлен нерабочий адрес DEV на `https://192.168.34.114:5443/login`.
 - **Изменены и DEV, и PROD.** DEV переведён на новый `develop`, PROD обновлён до `0.8.0-rc5`.
 
 ## Git-состояние (журнал 03.08.2026)
@@ -90,8 +91,7 @@ GitHub Issues доступны на DEV только для чтения чер�
 
 ## Следующие действия
 
-1. Привести версии в документации: фактически `0.8.0-rc5`, в десяти документах указан `0.8.0-rc2`, в двух — `0.8.0-rc1`; в `TEST_USERS.md` нерабочий адрес DEV.
-2. Проверить на реальном телефоне то, что раньше было невозможно: камеру сканера на `https://portal.skki.ru/access/mobile-scanner` и личный пропуск. Это снимает вопрос по `MOB-003`.
+1. Проверить на реальном телефоне то, что раньше было невозможно: камеру сканера на `https://portal.skki.ru/access/mobile-scanner` и личный пропуск. Это снимает вопрос по `MOB-003`.
 4. Полоса прокрутки меню: `q-scroll-area` в `AppLayout.vue` меряет высоту раньше, чем grid её раздаёт. Чинить с проверкой в браузере.
 5. Вернуть в импорт сотрудников `auto_account` и колонку «Рабочий график».
 6. Перенести 9 документов контроля доступа из невлитой ветки `feature/access-control-foundation`. Только документы.

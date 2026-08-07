@@ -14,15 +14,18 @@
 
 Private DEV/UAT preparation after Release Candidate 0.8.x. Current project work is focused on final portal stabilization before a broader manual UAT pass.
 
+Текущий релиз — `0.8.0-rc5`, тег `v0.8.0-rc5`, установлен на PROD `https://portal.skki.ru`. Единственный источник истины о номере версии — `installer/VERSION`; в остальных документах номер допустим только в примерах команд и в исторических записях.
+
 This document is a navigation and status snapshot. GitHub Issues, Pull Requests and CI remain the authoritative live workflow when GitHub write access is available.
 
 ## Active Branch
 
-- Branch: `feature/uat-002-1-final-stabilization`
-- Base: `feature/uat-002-portal-stabilization`.
-- Scope: final UAT fixes for Admissions Foundation wizard validation, role dashboards, menu wording, reusable splitter behavior, Dashboard edit layout and unified version metadata.
+- Branch: `develop` — ствол проекта, CI запускается на нём и на ветках задач.
+- Ветка текущей задачи, локальный и серверный HEAD, выполненные проверки и блокеры — в [ACTIVE_WORK.md](ACTIVE_WORK.md).
 
 ## Current Task
+
+Раздел ниже описывает `UAT-002.1` и оставлен как история: задача завершена. Текущая работа ведётся в [ACTIVE_WORK.md](ACTIVE_WORK.md).
 
 - `UAT-002.1`: Final portal stabilization.
 - Разрешенные изменения: user-facing validation/localization fixes, Admissions Foundation wizard stabilization, role dashboard cleanup, reusable splitter hardening, existing QR pass readiness on DEV, DEV data cleanup, HTTPS-only DEV entrypoint, dynamic QR TTL and version/build metadata.

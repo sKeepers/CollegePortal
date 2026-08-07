@@ -428,7 +428,7 @@ Role-based UAT center добавлен. Следующие этапы: пров�
 
 ## INFRA-008 completed
 
-Installer acceptance on a clean UAT server is complete for 0.8.0-rc2. Remaining pre-PROD hardening: SSH keys/password rotation, trusted TLS certificate, and clearer repeated-install message.
+Installer acceptance on a clean UAT server is complete for 0.8.0-rc2. Trusted TLS is done since `SEC-004`: the certificate for `portal.skki.ru` is issued and renews itself, and the release proxy forces HTTPS and sends security headers. Remaining pre-PROD hardening: SSH keys and password rotation, and a clearer repeated-install message.
 
 
 ## FIS-API-001 / 0.9

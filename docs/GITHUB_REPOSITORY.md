@@ -43,7 +43,9 @@ Result: no leaks found by gitleaks. The only tracked XLSX files are official ext
 
 ## Release
 
-GitHub Release `v0.8.0-rc2` should be private-repository release notes for the validated RC. The source release archive remains generated from `/srv/college-dev` and must be reviewed before attaching as a release asset.
+The current release tag is `v0.8.0-rc5`. Release notes live in `CHANGELOG.md`; the release archive is built on DEV by `scripts/release/build-release.sh` and must be reviewed before being attached as a release asset.
+
+The Publication Result block below is a snapshot of the first publication (`v0.8.0-rc2`) and is kept as history, not as current state.
 
 
 ## Publication Result
