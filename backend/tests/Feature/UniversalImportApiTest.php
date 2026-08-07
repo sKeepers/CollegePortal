@@ -72,7 +72,7 @@ class UniversalImportApiTest extends TestCase
         file_put_contents($path, $response->getContent());
         $rows = IOFactory::load($path)->getActiveSheet()->toArray();
 
-        $this->assertSame(['Табельный номер', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон', 'Подразделение', 'Должность', 'Дата приема', 'Статус', 'Занятость', 'Ставка', 'Преподаватель'], $rows[0]);
+        $this->assertSame(['Табельный номер', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон', 'Подразделение', 'Должность', 'Дата приема', 'Статус', 'Занятость', 'Ставка', 'Преподаватель', 'Рабочий график', 'Создать учетную запись'], $rows[0]);
         $this->assertSame('Примерова', $rows[1][1]);
         $this->assertSame('employee@example.test', $rows[1][4]);
     }
@@ -107,6 +107,64 @@ class UniversalImportApiTest extends TestCase
         $this->assertSame('0.50', $employee->workload_rate);
         $this->assertTrue($employee->is_teacher);
         $this->assertDatabaseHas('teachers', ['person_id' => $employee->person_id, 'is_active' => true]);
+    }
+
+    public function test_it_imports_employee_work_schedule_and_provisions_requested_account(): void
+    {
+        Role::create(['name' => 'Сотрудник', 'code' => 'employee']);
+        Department::create(['code' => 'study', 'name' => 'Учебная часть']);
+        Position::create(['code' => 'methodist', 'name' => 'Методист']);
+        $file = $this->xlsxFile('employees-schedule.xlsx', [
+            ['Табельный номер', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон', 'Подразделение', 'Должность', 'Дата приема', 'Статус', 'Занятость', 'Ставка', 'Преподаватель', 'Рабочий график', 'Создать учетную запись'],
+            ['', 'Графикова', 'Мария', 'Петровна', 'schedule-import@example.test', '+70000000002', 'study', 'methodist', '01.09.2026', 'Активен', 'Полная занятость', '1', 'Нет', 'Пн–Пт, 09:00–18:00', 'Да'],
+        ]);
+
+        $mapping = $this->employeeTemplateMapping() + [
+            'work_schedule_code' => 'Рабочий график',
+            'auto_account' => 'Создать учетную запись',
+        ];
+
+        $jobId = $this->post('/api/admin/import/preview', ['data_type' => 'employees', 'file' => $file])
+            ->assertCreated()
+            ->assertJsonPath('data.mapping.work_schedule_code', 'Рабочий график')
+            ->assertJsonPath('data.mapping.auto_account', 'Создать учетную запись')
+            ->json('data.id');
+
+        $response = $this->postJson("/api/admin/import/{$jobId}/confirm", [
+            'mode' => 'skip_duplicates',
+            'mapping' => $mapping,
+        ])->assertOk()->assertJsonPath('data.created_count', 1)->assertJsonPath('data.error_count', 0);
+
+        $employee = Employee::where('employee_number', 'EMP-000001')->firstOrFail();
+        $this->assertSame('weekday_0900_1800', $employee->work_schedule_code);
+
+        $user = User::where('person_id', $employee->person_id)->firstOrFail();
+        $this->assertSame('70000000002', $user->username);
+        $this->assertTrue($user->is_active);
+        $this->assertStringNotContainsString('password', json_encode($response->json(), JSON_THROW_ON_ERROR));
+    }
+
+    public function test_it_rejects_unknown_employee_work_schedule(): void
+    {
+        Department::create(['code' => 'study', 'name' => 'Учебная часть']);
+        $file = $this->xlsxFile('employees-bad-schedule.xlsx', [
+            ['Фамилия', 'Имя', 'Дата приема', 'Рабочий график'],
+            ['Графикова', 'Мария', '01.09.2026', 'Когда получится'],
+        ]);
+
+        $jobId = $this->post('/api/admin/import/preview', ['data_type' => 'employees', 'file' => $file])
+            ->assertCreated()
+            ->json('data.id');
+
+        $this->postJson("/api/admin/import/{$jobId}/validate", [
+            'mode' => 'skip_duplicates',
+            'mapping' => ['last_name' => 'Фамилия', 'first_name' => 'Имя', 'hired_at' => 'Дата приема', 'work_schedule_code' => 'Рабочий график'],
+        ])->assertOk()
+            ->assertJsonPath('data.status', 'validation_failed')
+            ->assertJsonPath('data.error_count', 1)
+            ->assertJsonPath('data.validation_errors.0.column', 'Рабочий график');
+
+        $this->assertDatabaseCount('employees', 0);
     }
 
     public function test_it_rejects_ambiguous_employee_department_match(): void

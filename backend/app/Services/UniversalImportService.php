@@ -44,7 +44,7 @@ class UniversalImportService
             new CurriculumImportHandler($autoCodeService),
             new TeachingLoadImportHandler(),
             new ScheduleImportHandler($scheduleLessonService),
-            new EmployeeImportHandler($hrService),
+            new EmployeeImportHandler($hrService, $accounts),
         ] as $handler) {
             $this->handlers[$handler->type()] = $handler;
         }

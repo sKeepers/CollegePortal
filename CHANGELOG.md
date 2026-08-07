@@ -11,6 +11,12 @@
 - [Project Context](PROJECT_CONTEXT.md)
 - [Documentation Report](REPORT.md)
 
+## Unreleased
+
+### Fixed
+
+- Employee import can create accounts and set a work schedule again. Both columns existed for students and teachers but were dropped from the employee handler when it was rewritten on top of `HrService`, so an HR operator importing a spreadsheet had to open every imported employee afterwards to set the schedule, and could not request accounts at all. The work schedule accepts the same wording as the employee card, with any dash or spacing, and an unknown value stops the row naming the column instead of being silently ignored.
+
 ## 0.8.0-rc5 - Private Release Candidate
 
 ### Added

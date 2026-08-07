@@ -6,14 +6,17 @@ use App\Models\Department;
 use App\Models\Employee;
 use App\Models\Person;
 use App\Models\Position;
+use App\Services\AccountProvisioningService;
 use App\Services\HrService;
 use Illuminate\Database\Eloquent\Model;
 use RuntimeException;
 
 class EmployeeImportHandler extends AbstractImportHandler
 {
-    public function __construct(private readonly HrService $hrService)
-    {
+    public function __construct(
+        private readonly HrService $hrService,
+        private readonly AccountProvisioningService $accounts,
+    ) {
     }
 
     public function type(): string { return 'employees'; }
@@ -40,17 +43,19 @@ class EmployeeImportHandler extends AbstractImportHandler
             'hired_at' => ['label' => 'Дата приема', 'required' => true, 'aliases' => ['дата приема', 'hired_at', 'принят']],
             'dismissed_at' => ['label' => 'Дата увольнения', 'required' => false, 'aliases' => ['дата увольнения', 'dismissed_at', 'уволен']],
             'is_teacher' => ['label' => 'Преподаватель', 'required' => false, 'aliases' => ['преподаватель', 'является преподавателем', 'is_teacher']],
+            'work_schedule_code' => ['label' => 'Рабочий график', 'required' => false, 'aliases' => ['рабочий график', 'график работы', 'график', 'work_schedule_code']],
+            'auto_account' => ['label' => 'Создать учетную запись', 'required' => false, 'aliases' => ['создать учетную запись', 'auto_account']],
         ];
     }
 
     public function templateHeaders(): array
     {
-        return ['Табельный номер', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон', 'Подразделение', 'Должность', 'Дата приема', 'Статус', 'Занятость', 'Ставка', 'Преподаватель'];
+        return ['Табельный номер', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон', 'Подразделение', 'Должность', 'Дата приема', 'Статус', 'Занятость', 'Ставка', 'Преподаватель', 'Рабочий график', 'Создать учетную запись'];
     }
 
     public function templateExample(): array
     {
-        return ['', 'Примерова', 'Александра', 'Сергеевна', 'employee@example.test', '+70000000000', 'Учебная часть', 'Методист', '01.09.2026', 'Активен', 'Полная занятость', '1', 'Да'];
+        return ['', 'Примерова', 'Александра', 'Сергеевна', 'employee@example.test', '+70000000000', 'Учебная часть', 'Методист', '01.09.2026', 'Активен', 'Полная занятость', '1', 'Да', 'Пн–Пт, 09:00–18:00', 'Нет'];
     }
 
     public function prepare(array $data): array
@@ -66,6 +71,8 @@ class EmployeeImportHandler extends AbstractImportHandler
         $data['employment_type'] = $this->normalizeEmploymentType($data['employment_type'] ?? 'full_time');
         $data['workload_rate'] = !isset($data['workload_rate']) || $data['workload_rate'] === null || $data['workload_rate'] === '' ? 1 : (float) str_replace(',', '.', (string) $data['workload_rate']);
         $data['is_teacher'] = $this->booleanValue($data['is_teacher'] ?? false);
+        $data['work_schedule_code'] = $this->normalizeWorkSchedule($data['work_schedule_code'] ?? null);
+        $data['auto_account'] = $this->booleanValue($data['auto_account'] ?? false);
         return $data;
     }
 
@@ -88,6 +95,8 @@ class EmployeeImportHandler extends AbstractImportHandler
             'hired_at' => ['nullable','date'],
             'dismissed_at' => ['nullable','date'],
             'is_teacher' => ['boolean'],
+            'work_schedule_code' => ['nullable', 'in:'.implode(',', Employee::WORK_SCHEDULE_CODES)],
+            'auto_account' => ['boolean'],
         ];
     }
 
@@ -145,7 +154,11 @@ class EmployeeImportHandler extends AbstractImportHandler
             return 'updated';
         }
 
-        $this->hrService->createEmployee($this->employeeData($data));
+        $employee = $this->hrService->createEmployee($this->employeeData($data));
+        if ($data['auto_account'] ?? false) {
+            $this->accounts->provision($employee);
+        }
+
         return 'created';
     }
 
@@ -168,6 +181,7 @@ class EmployeeImportHandler extends AbstractImportHandler
             'primary_position_id' => $this->referenceId(Position::class, $data['position'] ?? null),
             'workload_rate' => $data['workload_rate'] ?: 1,
             'is_teacher' => (bool) ($data['is_teacher'] ?? false),
+            'work_schedule_code' => $data['work_schedule_code'] ?? null,
         ];
     }
 
@@ -188,6 +202,27 @@ class EmployeeImportHandler extends AbstractImportHandler
         $map = ['кандидат'=>'candidate','активен'=>'active','испытательный срок'=>'probation','отпуск'=>'vacation','больничный'=>'sick_leave','декрет'=>'maternity_leave','командировка'=>'business_trip','отстранен'=>'suspended','уволен'=>'dismissed'];
         $key = mb_strtolower(trim((string) $value));
         return $map[$key] ?? ($key ?: 'active');
+    }
+
+    private function normalizeWorkSchedule(?string $value): ?string
+    {
+        $value = trim((string) $value);
+        if ($value === '') { return null; }
+        if (in_array($value, Employee::WORK_SCHEDULE_CODES, true)) { return $value; }
+
+        // Из таблицы приходит человекочитаемая подпись, причём тире и пробелы у всех разные.
+        $key = mb_strtolower($value);
+        $key = str_replace(['–', '—'], '-', $key);
+        $key = (string) preg_replace('/\s*-\s*/', '-', $key);
+
+        return match (true) {
+            str_contains($key, '9:00-18:00') => 'weekday_0900_1800',
+            str_contains($key, '9:00-17:00') => 'weekday_0900_1700',
+            str_contains($key, '2/2') => 'shift_2_2_0800_2000',
+            str_contains($key, 'гибк') => 'flexible',
+            // Неизвестное значение возвращаем как есть: правило in: покажет строку и колонку.
+            default => $value,
+        };
     }
 
     private function normalizeEmploymentType(?string $value): string
