@@ -3,6 +3,15 @@
 .env.*
 !.env.example
 
+# Local operator material: SSH keys, server manifests, credential notes.
+# These patterns previously lived only in .git/info/exclude, which is per-clone and
+# never travels with the repository, so the same files were unprotected on the DEV
+# checkout and on every fresh clone.
+.local/
+*.private.*
+servers.private.*
+credentials.private.*
+
 # Dependencies
 node_modules/
 vendor/

@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "permissions": {
+    "allow": [
+      "Read",
+
+      "PowerShell(git status *)",
+      "PowerShell(git log *)",
+      "PowerShell(git diff *)",
+      "PowerShell(git fetch *)",
+      "PowerShell(git ls-files *)",
+      "PowerShell(git ls-remote *)",
+      "PowerShell(git worktree *)",
+      "PowerShell(git branch *)",
+      "PowerShell(git show *)",
+      "PowerShell(git rev-parse *)",
+      "PowerShell(git rev-list *)",
+      "PowerShell(git merge-base *)",
+      "PowerShell(git check-ignore *)",
+      "PowerShell(git cat-file *)",
+      "PowerShell(git for-each-ref *)",
+      "PowerShell(git stash list *)",
+      "PowerShell(git stash show *)",
+
+      "Bash(git status *)",
+      "Bash(git log *)",
+      "Bash(git diff *)",
+      "Bash(git fetch *)",
+      "Bash(git ls-files *)",
+      "Bash(git ls-remote *)",
+      "Bash(git worktree *)",
+      "Bash(git branch *)",
+      "Bash(git show *)",
+      "Bash(git rev-parse *)",
+      "Bash(git rev-list *)",
+      "Bash(git merge-base *)",
+      "Bash(git check-ignore *)",
+
+      "PowerShell(ssh -o BatchMode=yes andale@192.168.34.114 *)",
+      "PowerShell(ssh -o BatchMode=yes andale@192.168.34.17 *)",
+      "PowerShell(ssh -o BatchMode=yes ai_read@192.168.34.1 *)",
+      "PowerShell(ssh andale@192.168.34.114 *)",
+      "PowerShell(ssh andale@192.168.34.17 *)",
+      "PowerShell(ssh ai_read@192.168.34.1 *)",
+
+      "PowerShell(scp -o BatchMode=yes *)",
+      "PowerShell(scp *)",
+
+      "PowerShell(Invoke-WebRequest *)",
+      "PowerShell(Invoke-RestMethod *)",
+      "PowerShell(Resolve-DnsName *)",
+      "PowerShell(Test-Connection *)",
+      "PowerShell(Get-FileHash *)"
+    ]
+  }
+}
