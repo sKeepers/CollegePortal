@@ -15,6 +15,7 @@
 
 ### Fixed
 
+- The sidebar menu scrolls with the mouse wheel from the first paint. It previously refused to scroll until the scrollbar had been dragged once, because a descendant selector asked for a drawer content element inside a drawer content element and matched nothing: QDrawer puts the class on that element itself. The three-row grid the sidebar was written around therefore never applied, and what scrolled was the whole drawer rather than the menu. The menu now uses a plain overflow container, so there is nothing left to measure.
 - Employee import can create accounts and set a work schedule again. Both columns existed for students and teachers but were dropped from the employee handler when it was rewritten on top of `HrService`, so an HR operator importing a spreadsheet had to open every imported employee afterwards to set the schedule, and could not request accounts at all. The work schedule accepts the same wording as the employee card, with any dash or spacing, and an unknown value stops the row naming the column instead of being silently ignored.
 
 ## 0.8.0-rc5 - Private Release Candidate

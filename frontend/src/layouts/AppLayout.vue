@@ -387,7 +387,7 @@ watch(
         </div>
       </div>
 
-      <q-scroll-area class="cp-sidebar-scroll">
+      <div class="cp-sidebar-scroll">
         <q-list class="cp-nav-list">
           <template v-for="group in visibleNavGroups" :key="group.label">
             <q-item-label header class="cp-nav-section-label">
@@ -429,7 +429,7 @@ watch(
             </div>
           </template>
         </q-list>
-      </q-scroll-area>
+      </div>
 
       <SystemInfoPanel />
     </q-drawer>

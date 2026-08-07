@@ -298,7 +298,13 @@ body {
   color: #f8fafc;
 }
 
-.cp-sidebar .q-drawer__content {
+/*
+ * QDrawer переносит класс на свой content-элемент, поэтому здесь составной
+ * селектор, а не потомок: `.cp-sidebar .q-drawer__content` не совпадал ни с чем,
+ * grid не включался, и вместо меню прокручивался весь ящик.
+ * Компонент `overflow: hidden` перебивает класс `scroll`, который вешает Quasar.
+ */
+.cp-sidebar.q-drawer__content {
   display: grid;
   height: 100%;
   min-height: 0;
@@ -342,9 +348,47 @@ body {
   font-size: 13px;
 }
 
+/*
+ * Прокрутка меню намеренно нативная. q-scroll-area измеряет высоту сама, а в
+ * grid-строке minmax(0, 1fr) получает её позже, чем меряет, и до первого
+ * перетаскивания ползунка колесо мыши не прокручивало список.
+ */
 .cp-sidebar-scroll {
   min-height: 0;
   height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+}
+
+.cp-sidebar-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.cp-sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cp-sidebar-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background-color: rgba(148, 163, 184, 0.45);
+  background-clip: content-box;
+}
+
+.cp-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(203, 213, 225, 0.75);
+}
+
+/* В свернутом меню ширины 78 px полоса съедала бы место у иконок. */
+.q-drawer--mini .cp-sidebar-scroll {
+  scrollbar-width: none;
+}
+
+.q-drawer--mini .cp-sidebar-scroll::-webkit-scrollbar {
+  width: 0;
 }
 
 .cp-nav-list {
