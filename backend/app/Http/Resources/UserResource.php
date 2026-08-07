@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Employee;
+use App\Models\Person;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -40,8 +42,35 @@ class UserResource extends JsonResource
                 'id' => $this->teacher->id,
                 'name' => trim("{$this->teacher->last_name} {$this->teacher->first_name} {$this->teacher->middle_name}"),
             ] : ['type' => 'teacher', 'id' => $this->person_id],
+            // Провижининг связывает учетную запись с Person, а не с профилем, и
+            // без этой ветки карточка показывала «не связана» рядом с ID записи.
+            'person' => $this->personCardSummary(),
+            'employee' => $this->employeeSummary(),
             default => ['type' => $this->person_type, 'id' => $this->person_id],
         };
+    }
+
+    private function personCardSummary(): array
+    {
+        $person = Person::query()->find($this->person_id);
+
+        return [
+            'type' => 'person',
+            'id' => $this->person_id,
+            'name' => $person ? trim("{$person->last_name} {$person->first_name} {$person->middle_name}") : null,
+        ];
+    }
+
+    private function employeeSummary(): array
+    {
+        $employee = Employee::query()->with('person')->find($this->person_id);
+        $person = $employee?->person;
+
+        return [
+            'type' => 'employee',
+            'id' => $this->person_id,
+            'name' => $person ? trim("{$person->last_name} {$person->first_name} {$person->middle_name}") : null,
+        ];
     }
 
     public function toArray(Request $request): array

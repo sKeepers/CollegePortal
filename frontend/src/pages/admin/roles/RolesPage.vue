@@ -37,7 +37,48 @@ const columns = [
 
 const selectedRole = computed(() => store.selectedRole)
 const assignedUsers = computed(() => store.users.filter((user) => user.roles?.some((role) => Number(role.id) === Number(store.selectedId))))
-const selectedAssignmentUser = computed(() => store.users.find((user) => Number(user.id) === Number(assignment.user_id)) || null)
+const userSearchOptions = ref([])
+
+function roleRowClass(row) {
+  return Number(row.id) === Number(store.selectedId) ? 'workspace-row--selected' : ''
+}
+
+// Пользователей может быть много, поэтому в диалоге список с поиском.
+function filterUsers(input, update) {
+  update(() => {
+    const needle = (input || '').trim().toLowerCase()
+    userSearchOptions.value = needle
+      ? store.userOptions.filter((option) => option.label.toLowerCase().includes(needle))
+      : store.userOptions
+  })
+}
+
+/*
+ * Код роли — это латинский идентификатор, по которому право ищется в коде,
+ * поэтому он подставляется из названия и меняется только до сохранения.
+ */
+const TRANSLIT = {
+  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i', й: 'i',
+  к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f',
+  х: 'h', ц: 'c', ч: 'ch', ш: 'sh', щ: 'sch', ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+}
+
+function codeFromName(name) {
+  return (name || '')
+    .toLowerCase()
+    .split('')
+    .map((letter) => TRANSLIT[letter] ?? letter)
+    .join('')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 64)
+}
+
+function onRoleNameInput(value) {
+  if (!editingRole.value) {
+    roleForm.code = codeFromName(value)
+  }
+}
 
 function resetRoleForm() {
   Object.assign(roleForm, { name: '', code: '', description: '' })
@@ -75,12 +116,36 @@ async function confirmDelete() {
   $q.notify({ type: 'positive', message: 'Роль удалена', position: 'top-right' })
 }
 
+/*
+ * Раньше диалог без явного пользователя молча подставлял первого из списка, и
+ * назначение уходило не тому, кого видел оператор. Теперь пользователь либо
+ * передан явно, либо поле пустое, а выбранная в таблице роль сразу отмечена.
+ */
 function openAssign(user = null) {
-  const targetUser = user || selectedAssignmentUser.value || store.users[0] || null
-  assignment.user_id = targetUser?.id || null
-  assignment.role_ids = targetUser?.roles?.map((role) => role.id) || []
-  assignment.primary_role_id = targetUser?.role_id || assignment.role_ids[0] || null
+  userSearchOptions.value = store.userOptions
+  assignment.user_id = user?.id || null
+  assignment.role_ids = user
+    ? (user.roles?.map((role) => role.id) || [])
+    : (store.selectedId ? [store.selectedId] : [])
+  assignment.primary_role_id = user
+    ? (user.role_id || assignment.role_ids[0] || null)
+    : (assignment.role_ids[0] || null)
   assignOpen.value = true
+}
+
+function onAssignUserChange(userId) {
+  const user = store.users.find((item) => Number(item.id) === Number(userId))
+  if (!user) {
+    return
+  }
+
+  // Показываем действующие роли выбранного пользователя, добавляя выбранную в таблице.
+  const current = user.roles?.map((role) => role.id) || []
+  const withSelected = store.selectedId && !current.includes(store.selectedId)
+    ? [...current, store.selectedId]
+    : current
+  assignment.role_ids = withSelected
+  assignment.primary_role_id = user.role_id || withSelected[0] || null
 }
 
 async function assignRoles() {
@@ -123,7 +188,7 @@ onMounted(async () => {
 
     <div class="roles-layout">
       <section class="roles-main">
-        <AppTable v-if="store.roles.length" v-model:pagination="pagination" :rows="store.roles" :columns="columns" :loading="store.loading">
+        <AppTable v-if="store.roles.length" v-model:pagination="pagination" :rows="store.roles" :columns="columns" :loading="store.loading" row-key="id" :table-row-class-fn="roleRowClass" @row-click="(_, row) => selectRole(row)">
           <template #body-cell-name="props">
             <q-td :props="props">
               <button class="roles-link" type="button" @click="selectRole(props.row)">
@@ -184,11 +249,30 @@ onMounted(async () => {
 
     <q-dialog v-model="formOpen">
       <q-card class="roles-dialog">
-        <q-card-section><div class="text-h6">{{ editingRole ? 'Редактировать роль' : 'Создать роль' }}</div></q-card-section>
+        <q-card-section>
+          <div class="text-h6">{{ editingRole ? 'Редактировать роль' : 'Создать роль' }}</div>
+          <p class="roles-dialog-hint">
+            Роль — это набор прав. Здесь задаются только название и код; сами права
+            выдаются роли в разделе «Разрешения» после сохранения.
+          </p>
+        </q-card-section>
         <q-card-section class="roles-form">
-          <q-input v-model="roleForm.name" outlined dense label="Название" />
-          <q-input v-model="roleForm.code" outlined dense label="Код" />
-          <q-input v-model="roleForm.description" outlined dense label="Описание" type="textarea" />
+          <q-input
+            v-model="roleForm.name"
+            outlined
+            dense
+            label="Название"
+            hint="Как роль называется для людей: «Учебная часть 1», «Библиотекарь»."
+            @update:model-value="onRoleNameInput"
+          />
+          <q-input
+            v-model="roleForm.code"
+            outlined
+            dense
+            label="Код"
+            :hint="editingRole ? 'Код существующей роли менять не следует: по нему выданы права и настроены проверки.' : 'Подставляется из названия. Латиница и подчеркивания, по нему роль ищется в коде.'"
+          />
+          <q-input v-model="roleForm.description" outlined dense label="Описание" type="textarea" hint="Чем занимается эта роль. Видно в списке ролей." />
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Отмена" v-close-popup />
@@ -199,11 +283,31 @@ onMounted(async () => {
 
     <q-dialog v-model="assignOpen">
       <q-card class="roles-dialog">
-        <q-card-section><div class="text-h6">Назначить роли пользователю</div></q-card-section>
+        <q-card-section>
+          <div class="text-h6">Назначить роли пользователю</div>
+          <p v-if="selectedRole" class="roles-dialog-hint">
+            Выбрана роль «{{ selectedRole.name }}» — она уже отмечена в списке. Укажите пользователя,
+            и к его действующим ролям добавится выбранная.
+          </p>
+          <p v-else class="roles-dialog-hint">Выберите пользователя и роли, которые ему нужны.</p>
+        </q-card-section>
         <q-card-section class="roles-form">
-          <q-select v-model="assignment.user_id" outlined dense emit-value map-options label="Пользователь" :options="store.userOptions" />
-          <q-select v-model="assignment.role_ids" outlined dense emit-value map-options multiple use-chips label="Роли" :options="store.roleOptions" />
-          <q-select v-model="assignment.primary_role_id" outlined dense emit-value map-options label="Основная роль" :options="store.roleOptions" />
+          <q-select
+            v-model="assignment.user_id"
+            outlined
+            dense
+            emit-value
+            map-options
+            use-input
+            input-debounce="0"
+            label="Пользователь"
+            hint="Начните вводить имя или email"
+            :options="userSearchOptions"
+            @filter="filterUsers"
+            @update:model-value="onAssignUserChange"
+          />
+          <q-select v-model="assignment.role_ids" outlined dense emit-value map-options multiple use-chips label="Роли" :options="store.roleOptions" hint="Все роли пользователя. Снятая галочка снимает роль." />
+          <q-select v-model="assignment.primary_role_id" outlined dense emit-value map-options label="Основная роль" :options="store.roleOptions" hint="Определяет рабочий стол и стартовый раздел." />
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Отмена" v-close-popup />
@@ -222,6 +326,13 @@ onMounted(async () => {
   grid-template-columns: minmax(0, 1fr) 400px;
   gap: 16px;
   align-items: start;
+}
+
+.roles-dialog-hint {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .roles-link {

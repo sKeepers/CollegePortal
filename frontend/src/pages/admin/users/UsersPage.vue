@@ -281,6 +281,56 @@ async function saveRoles() {
   $q.notify({ type: 'positive', message: 'Роли пользователя обновлены', position: 'top-right' })
 }
 
+const profileOptions = ref([])
+const profileSearchLoading = ref(false)
+
+/*
+ * Логин и email — разные вещи. Когда учетную запись заводит портал, логином
+ * становится телефон, а email при его отсутствии достраивается служебным
+ * адресом @accounts.collegeportal.local. Показывать этот адрес как почту
+ * человека нельзя: письма туда не ходят.
+ */
+const SERVICE_EMAIL_DOMAIN = '@accounts.collegeportal.local'
+
+function loginOf(user) {
+  return user?.username || user?.email || '—'
+}
+
+function realEmailOf(user) {
+  const email = user?.email || ''
+  return !email || email.endsWith(SERVICE_EMAIL_DOMAIN) ? 'не указан' : email
+}
+const personProfileOptions = ref([])
+const personSearchLoading = ref(false)
+const isSearchablePersonType = computed(() => ['person', 'student', 'teacher', 'employee'].includes(form.person_type))
+
+function filterPersonProfiles(input, update) {
+  personSearchLoading.value = true
+  store.searchProfiles(form.person_type, input || '')
+    .then((options) => update(() => { personProfileOptions.value = options }))
+    .catch(() => update(() => { personProfileOptions.value = [] }))
+    .finally(() => { personSearchLoading.value = false })
+}
+
+function onPersonTypeChange() {
+  form.person_id = null
+  personProfileOptions.value = []
+}
+
+// Список людей подгружается поиском: справочники слишком велики для полного списка.
+function filterProfiles(input, update) {
+  profileSearchLoading.value = true
+  store.searchProfiles(provisionForm.profile_type, input || '')
+    .then((options) => update(() => { profileOptions.value = options }))
+    .catch(() => update(() => { profileOptions.value = [] }))
+    .finally(() => { profileSearchLoading.value = false })
+}
+
+function onProvisionTypeChange() {
+  provisionForm.profile_id = null
+  profileOptions.value = []
+}
+
 async function provisionAccount() {
   credential.value = await store.provision(provisionForm.profile_type, provisionForm.profile_id)
   provisionDialog.value = false
@@ -338,8 +388,8 @@ onMounted(async () => {
       <template #actions>
         <AppLoading v-if="store.loading || store.saving" label="Обработка..." />
         <q-btn flat :disable="store.loading" @click="store.load"><RefreshCw :size="16" class="q-mr-xs" /> Обновить</q-btn>
-        <q-btn v-if="canManage" color="primary" @click="openCreate"><Plus :size="16" class="q-mr-xs" /> Создать</q-btn>
-        <q-btn v-if="canManage" outline color="primary" @click="provisionDialog = true"><KeyRound :size="16" class="q-mr-xs" /> Создать по профилю</q-btn>
+        <q-btn v-if="canManage" color="primary" title="Завести учетную запись вручную: вы сами задаете email и пароль" @click="openCreate"><Plus :size="16" class="q-mr-xs" /> Создать вручную</q-btn>
+        <q-btn v-if="canManage" outline color="primary" title="Завести учетную запись человеку, который уже есть в системе: логин и пароль портал придумает сам" @click="provisionDialog = true"><KeyRound :size="16" class="q-mr-xs" /> Создать по профилю</q-btn>
       </template>
     </AppToolbar>
     <AppErrorBanner :message="store.error" />
@@ -372,7 +422,7 @@ onMounted(async () => {
             <q-td :props="props">
               <button class="users-link" type="button" @click="store.selectedId = props.row.id">
                 <strong>{{ props.row.name }}</strong>
-                <span>{{ props.row.email }}</span>
+                <span>{{ loginOf(props.row) }}</span>
               </button>
             </q-td>
           </template>
@@ -403,7 +453,7 @@ onMounted(async () => {
             <div class="users-avatar"><UserRound :size="28" /></div>
             <div>
               <h3>{{ selectedUser.name }}</h3>
-              <p>{{ selectedUser.email }}</p>
+              <p>{{ loginOf(selectedUser) }}</p>
             </div>
           </div>
           <div class="users-card-status">
@@ -413,12 +463,16 @@ onMounted(async () => {
           </div>
 
           <dl class="users-fields">
-            <dt>Связанная персона</dt>
-            <dd>{{ selectedUser.person?.name || personTypeLabel(selectedUser.person_type) }}</dd>
-            <dt>Тип связанной записи</dt>
-            <dd>{{ personTypeLabel(selectedUser.person_type) }}</dd>
-            <dt>ID связанной записи</dt>
-            <dd>{{ selectedUser.person_id || '—' }}</dd>
+            <dt>Логин для входа</dt>
+            <dd>{{ loginOf(selectedUser) }}</dd>
+            <dt>Email</dt>
+            <dd>{{ realEmailOf(selectedUser) }}</dd>
+            <dt>Связан с карточкой</dt>
+            <dd>
+              <template v-if="selectedUser.person?.name">{{ selectedUser.person.name }} · {{ personTypeLabel(selectedUser.person_type) }}</template>
+              <template v-else-if="selectedUser.person_type">{{ personTypeLabel(selectedUser.person_type) }} №{{ selectedUser.person_id }}</template>
+              <template v-else>Не связана</template>
+            </dd>
             <dt>Последний вход</dt>
             <dd>{{ formatDate(selectedUser.last_login_at) }}</dd>
             <dt>Создан</dt>
@@ -440,16 +494,44 @@ onMounted(async () => {
     <q-dialog v-model="formOpen">
       <q-card class="users-dialog">
         <q-card-section>
-          <div class="text-h6">{{ editingUser ? 'Редактировать пользователя' : 'Создать пользователя' }}</div>
+          <div class="text-h6">{{ editingUser ? 'Редактировать пользователя' : 'Создать учетную запись вручную' }}</div>
+          <p v-if="!editingUser" class="users-dialog-subtitle">
+            Email и пароль задаете вы, и их нужно передать человеку самостоятельно. Если человек уже заведен
+            как студент, преподаватель или сотрудник, быстрее и надежнее «Создать по профилю»: там логин
+            и пароль генерируются, а вместе с учетной записью выпускается QR-пропуск.
+          </p>
         </q-card-section>
         <q-card-section class="users-form">
           <AppErrorBanner v-if="formError" :message="formError" />
-          <q-input ref="nameInput" v-model="form.name" outlined dense label="Имя *" :error="Boolean(formErrors.name)" :error-message="formErrors.name" bottom-slots />
-          <q-input ref="emailInput" v-model="form.email" outlined dense label="Email *" type="email" :error="Boolean(formErrors.email)" :error-message="formErrors.email" bottom-slots />
+          <q-input ref="nameInput" v-model="form.name" outlined dense label="ФИО *" hint="Как показывать человека в списках. Это не логин." :error="Boolean(formErrors.name)" :error-message="formErrors.name" bottom-slots />
+          <q-input ref="emailInput" v-model="form.email" outlined dense label="Email *" type="email" hint="Он же логин для входа при ручном создании." :error="Boolean(formErrors.email)" :error-message="formErrors.email" bottom-slots />
           <q-input ref="passwordInput" v-model="form.password" outlined dense :label="editingUser ? 'Новый пароль, если нужно' : 'Пароль *'" type="password" :error="Boolean(formErrors.password)" :error-message="formErrors.password" bottom-slots />
           <q-select ref="roleInput" v-model="form.role_id" outlined dense emit-value map-options label="Роль *" :options="store.roleOptions" :error="Boolean(formErrors.role_id)" :error-message="formErrors.role_id" bottom-slots />
-          <q-select v-model="form.person_type" outlined dense clearable emit-value map-options label="Тип связанной записи" :options="store.personTypeOptions" :error="Boolean(formErrors.person_type)" :error-message="formErrors.person_type" bottom-slots />
-          <q-input ref="personIdInput" v-model.number="form.person_id" outlined dense clearable label="Связанная запись" type="number" hint="Укажите ID только если учетная запись уже связана с существующей личной карточкой." :error="Boolean(formErrors.person_id)" :error-message="formErrors.person_id" bottom-slots />
+          <q-select v-model="form.person_type" outlined dense clearable emit-value map-options label="Связать с карточкой" hint="Нужно, чтобы человек видел свое расписание, журнал и пропуск" :options="store.personTypeOptions" :error="Boolean(formErrors.person_type)" :error-message="formErrors.person_type" bottom-slots @update:model-value="onPersonTypeChange" />
+          <q-select
+            v-if="isSearchablePersonType"
+            v-model="form.person_id"
+            outlined
+            dense
+            clearable
+            emit-value
+            map-options
+            use-input
+            input-debounce="300"
+            label="Кто это"
+            hint="Начните вводить фамилию"
+            :options="personProfileOptions"
+            :loading="personSearchLoading"
+            :error="Boolean(formErrors.person_id)"
+            :error-message="formErrors.person_id"
+            bottom-slots
+            @filter="filterPersonProfiles"
+          >
+            <template #no-option>
+              <q-item><q-item-section class="text-grey">Никого не нашли. Проверьте, заведен ли человек в своем разделе.</q-item-section></q-item>
+            </template>
+          </q-select>
+          <q-input v-else-if="form.person_type" ref="personIdInput" v-model.number="form.person_id" outlined dense clearable label="Связанная запись" type="number" hint="Для этого типа выбор из списка пока недоступен: укажите ID карточки." :error="Boolean(formErrors.person_id)" :error-message="formErrors.person_id" bottom-slots />
           <q-toggle v-model="form.is_active" label="Активен" />
         </q-card-section>
         <q-card-actions align="right">
@@ -479,10 +561,35 @@ onMounted(async () => {
 
     <q-dialog v-model="provisionDialog" persistent>
       <q-card class="users-dialog">
-        <q-card-section><div class="text-h6">Создать учетную запись</div><p class="users-dialog-subtitle">Будет создан активный пользователь с пятизначным стартовым паролем. Пароль доступен только в следующей карточке.</p></q-card-section>
+        <q-card-section>
+          <div class="text-h6">Создать учетную запись по профилю</div>
+          <p class="users-dialog-subtitle">
+            Для человека, который уже заведен в системе как студент, преподаватель или сотрудник.
+            Логин и пароль портал придумает сам: логином станет телефон, при его отсутствии — email,
+            пароль будет пятизначным. Обе строки показываются один раз в карточке доступа, распечатайте ее сразу.
+            Вместе с учетной записью выпускается QR-пропуск.
+          </p>
+        </q-card-section>
         <q-card-section class="users-form">
-          <q-select v-model="provisionForm.profile_type" outlined dense emit-value map-options label="Тип профиля" :options="[{ label: 'Студент', value: 'student' }, { label: 'Преподаватель', value: 'teacher' }, { label: 'Сотрудник', value: 'employee' }]" />
-          <q-input v-model.number="provisionForm.profile_id" outlined dense type="number" label="ID профиля" />
+          <q-select v-model="provisionForm.profile_type" outlined dense emit-value map-options label="Кого заводим" :options="[{ label: 'Студент', value: 'student' }, { label: 'Преподаватель', value: 'teacher' }, { label: 'Сотрудник', value: 'employee' }]" @update:model-value="onProvisionTypeChange" />
+          <q-select
+            v-model="provisionForm.profile_id"
+            outlined
+            dense
+            emit-value
+            map-options
+            use-input
+            input-debounce="300"
+            label="Человек"
+            hint="Начните вводить фамилию"
+            :options="profileOptions"
+            :loading="profileSearchLoading"
+            @filter="filterProfiles"
+          >
+            <template #no-option>
+              <q-item><q-item-section class="text-grey">Никого не нашли. Проверьте, заведен ли человек в своем разделе.</q-item-section></q-item>
+            </template>
+          </q-select>
         </q-card-section>
         <q-card-actions align="right"><q-btn flat label="Отмена" v-close-popup /><q-btn color="primary" :disable="!provisionForm.profile_id" :loading="store.saving" label="Создать и показать карточку" @click="provisionAccount" /></q-card-actions>
       </q-card>

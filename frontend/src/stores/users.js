@@ -45,8 +45,34 @@ export const useUsersStore = defineStore('users', () => {
     { label: 'Заблокированные', value: 'blocked' },
   ]
 
+  /*
+   * Поиск людей для форм создания учетной записи. Раньше в обеих формах нужно
+   * было ввести числовой ID профиля, а взять его было неоткуда.
+   */
+  const PROFILE_SOURCES = {
+    person: { resource: 'people', label: (row) => [row.last_name, row.first_name, row.middle_name].filter(Boolean).join(' ') },
+    student: { resource: 'students', label: (row) => [row.last_name, row.first_name, row.middle_name].filter(Boolean).join(' ') + (row.group?.name ? ` · ${row.group.name}` : '') },
+    teacher: { resource: 'teachers', label: (row) => [row.last_name, row.first_name, row.middle_name].filter(Boolean).join(' ') + (row.position ? ` · ${row.position}` : '') },
+    employee: { resource: 'employees', label: (row) => (row.full_name || '').trim() + (row.employee_number ? ` · ${row.employee_number}` : '') },
+  }
+
+  async function searchProfiles(profileType, query = '') {
+    const source = PROFILE_SOURCES[profileType]
+    if (!source) {
+      return []
+    }
+
+    const payload = await api.list(source.resource, { search: query, per_page: 20 })
+    const rows = Array.isArray(payload?.data) ? payload.data : []
+
+    return rows.map((row) => ({ label: source.label(row) || `#${row.id}`, value: row.id }))
+  }
+
   const personTypeOptions = [
     { label: 'Не связана', value: null },
+    // Портал сам связывает учетную запись с личной карточкой, поэтому этот тип
+    // должен быть в списке: без него в поле показывался служебный код «person».
+    { label: 'Личная карточка', value: 'person' },
     { label: 'Студент', value: 'student' },
     { label: 'Преподаватель', value: 'teacher' },
     { label: 'Сотрудник', value: 'employee' },
@@ -211,6 +237,7 @@ export const useUsersStore = defineStore('users', () => {
     roleOptions,
     statusOptions,
     personTypeOptions,
+    searchProfiles,
     load,
     save,
     remove,
