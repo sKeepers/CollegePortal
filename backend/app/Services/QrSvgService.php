@@ -21,6 +21,19 @@ class QrSvgService
     public const DYNAMIC_TTL_SECONDS = 30;
     private const DYNAMIC_SIGNATURE_LENGTH = 16;
 
+    /**
+     * ЙЦУКЕН -> QWERTY. A USB HID scanner types the pass token with the active
+     * Windows layout, so with a Russian layout the gate receives Cyrillic.
+     */
+    private const RUSSIAN_LAYOUT_MAP = [
+        'й' => 'q', 'ц' => 'w', 'у' => 'e', 'к' => 'r', 'е' => 't', 'н' => 'y', 'г' => 'u', 'ш' => 'i', 'щ' => 'o', 'з' => 'p', 'х' => '[', 'ъ' => ']',
+        'ф' => 'a', 'ы' => 's', 'в' => 'd', 'а' => 'f', 'п' => 'g', 'р' => 'h', 'о' => 'j', 'л' => 'k', 'д' => 'l', 'ж' => ';', 'э' => "'",
+        'я' => 'z', 'ч' => 'x', 'с' => 'c', 'м' => 'v', 'и' => 'b', 'т' => 'n', 'ь' => 'm', 'б' => ',', 'ю' => '.', 'ё' => '`',
+        'Й' => 'Q', 'Ц' => 'W', 'У' => 'E', 'К' => 'R', 'Е' => 'T', 'Н' => 'Y', 'Г' => 'U', 'Ш' => 'I', 'Щ' => 'O', 'З' => 'P', 'Х' => '{', 'Ъ' => '}',
+        'Ф' => 'A', 'Ы' => 'S', 'В' => 'D', 'А' => 'F', 'П' => 'G', 'Р' => 'H', 'О' => 'J', 'Л' => 'K', 'Д' => 'L', 'Ж' => ':', 'Э' => '"',
+        'Я' => 'Z', 'Ч' => 'X', 'С' => 'C', 'М' => 'V', 'И' => 'B', 'Т' => 'N', 'Ь' => 'M', 'Б' => '<', 'Ю' => '>', 'Ё' => '~',
+    ];
+
     public function qrPayload(string $token): string
     {
         $payload = trim($token, " \t\r\n");
@@ -34,7 +47,22 @@ class QrSvgService
 
     public function normalizeScannedToken(string $value): string
     {
-        return trim($value, " \t\r\n");
+        $token = trim($value, " \t\r\n");
+
+        if ($this->isKnownTokenShape($token)) {
+            return $token;
+        }
+
+        $candidate = strtr($token, self::RUSSIAN_LAYOUT_MAP);
+
+        return $this->isKnownTokenShape($candidate) ? $candidate : $token;
+    }
+
+    private function isKnownTokenShape(string $token): bool
+    {
+        $dynamic = '/^'.self::DYNAMIC_PREFIX.':[0-9A-Z]{1,10}:[a-f0-9]{'.self::DYNAMIC_SIGNATURE_LENGTH.'}$/i';
+
+        return preg_match($dynamic, $token) === 1;
     }
 
     public function isDynamicPayload(string $value): bool

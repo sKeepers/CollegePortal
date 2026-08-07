@@ -147,6 +147,57 @@ class AccessGateApiTest extends TestCase
             ->assertJsonPath('data.owner', null);
     }
 
+    public function test_scan_accepts_cp2_payload_typed_with_russian_keyboard_layout(): void
+    {
+        $identity = $this->createStudentIdentity();
+        $payload = app(\App\Services\QrSvgService::class)->dynamicPayload($identity)['payload'];
+        $typedInRussian = $this->asRussianLayout($payload);
+
+        $this->assertNotSame($payload, $typedInRussian);
+
+        $this->postJson('/api/access/scan', ['token' => $typedInRussian])
+            ->assertOk()
+            ->assertJsonPath('data.result', AccessEvent::RESULT_ALLOWED)
+            ->assertJsonPath('data.direction', AccessEvent::DIRECTION_IN)
+            ->assertJsonPath('data.owner.last_name', 'Иванов');
+    }
+
+    public function test_russian_layout_normalization_does_not_allow_unknown_tokens(): void
+    {
+        $this->createStudentIdentity();
+
+        $this->postJson('/api/access/scan', ['token' => 'случайный текст'])
+            ->assertOk()
+            ->assertJsonPath('data.result', AccessEvent::RESULT_DENIED)
+            ->assertJsonPath('data.reason', 'Пропуск не найден.')
+            ->assertJsonPath('data.owner', null);
+    }
+
+    public function test_russian_layout_normalization_does_not_revive_static_token(): void
+    {
+        $identity = $this->createStudentIdentity();
+
+        $this->postJson('/api/access/scan', ['token' => $this->asRussianLayout($identity->token)])
+            ->assertOk()
+            ->assertJsonPath('data.result', AccessEvent::RESULT_DENIED)
+            ->assertJsonPath('data.owner', null);
+    }
+
+    private function asRussianLayout(string $value): string
+    {
+        $map = [
+            'q' => 'й', 'w' => 'ц', 'e' => 'у', 'r' => 'к', 't' => 'е', 'y' => 'н', 'u' => 'г', 'i' => 'ш', 'o' => 'щ', 'p' => 'з',
+            'a' => 'ф', 's' => 'ы', 'd' => 'в', 'f' => 'а', 'g' => 'п', 'h' => 'р', 'j' => 'о', 'k' => 'л', 'l' => 'д',
+            'z' => 'я', 'x' => 'ч', 'c' => 'с', 'v' => 'м', 'b' => 'и', 'n' => 'т', 'm' => 'ь',
+            'Q' => 'Й', 'W' => 'Ц', 'E' => 'У', 'R' => 'К', 'T' => 'Е', 'Y' => 'Н', 'U' => 'Г', 'I' => 'Ш', 'O' => 'Щ', 'P' => 'З',
+            'A' => 'Ф', 'S' => 'Ы', 'D' => 'В', 'F' => 'А', 'G' => 'П', 'H' => 'Р', 'J' => 'О', 'K' => 'Л', 'L' => 'Д',
+            'Z' => 'Я', 'X' => 'Ч', 'C' => 'С', 'V' => 'М', 'B' => 'И', 'N' => 'Т', 'M' => 'Ь',
+            ':' => 'Ж',
+        ];
+
+        return strtr($value, $map);
+    }
+
 
 
     public function test_access_scan_permissions_allow_security_and_block_teacher_student(): void
