@@ -72,13 +72,13 @@ copy_release() {
   if [[ -d "${APP_DIR}" && -f "${APP_DIR}/.env" ]]; then
     fail "${APP_DIR} already contains an installation. Use update.sh instead of install.sh."
   fi
-  run mkdir -p "${APP_DIR}" "${BACKUP_DIR}" "${APP_DIR}/certs"
+  run mkdir -p "${APP_DIR}" "${BACKUP_DIR}" "${APP_DIR}/certs" "${APP_DIR}/acme"
   log "Copying release files to ${APP_DIR}."
   run rsync -a --delete \
     --exclude '.git' --exclude '.env' --exclude 'backend/.env' --exclude 'frontend/.env' \
     --exclude 'node_modules' --exclude 'vendor' --exclude 'frontend/dist' \
     --exclude 'storage/logs' --exclude 'tmp' --exclude 'logs' --exclude 'releases' \
-    --exclude 'certs' --exclude 'backups' \
+    --exclude 'certs' --exclude 'acme' --exclude 'backups' \
     "${RELEASE_ROOT}/" "${APP_DIR}/"
 }
 

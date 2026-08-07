@@ -11,6 +11,18 @@
 - [Project Context](PROJECT_CONTEXT.md)
 - [Documentation Report](REPORT.md)
 
+## Unreleased
+
+### Added
+
+- SEC-004: the release nginx template redirects HTTP to HTTPS and sends security headers — HSTS, CSP, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and `Permissions-Policy`. TLS is limited to 1.2 and 1.3 with an explicit cipher list, session tickets are off and the nginx version is hidden. `/.well-known/acme-challenge/` stays on plain HTTP so certificate renewal keeps working, and installations with `HTTPS_MODE=http` are left exactly as they were.
+- The installer mounts `/opt/college-portal/acme` into nginx as an ACME webroot, so switching to renewal without downtime becomes a host configuration change instead of a code change.
+- `check.sh` verifies the HTTP to HTTPS redirect, the ACME challenge path and the presence of the HSTS and CSP headers.
+
+### Fixed
+
+- The mobile scanner no longer tells every user to open the DEV address when the page is not a secure context; it names the host the portal was actually opened from.
+
 ## 0.8.0-rc4 - Private Release Candidate
 
 ### Fixed

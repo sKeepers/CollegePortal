@@ -101,10 +101,12 @@ services:
     volumes:
       - ./templates/nginx-release.conf:/etc/nginx/templates/default.conf.template:ro
       - ../certs:/etc/nginx/certs:ro
+      - ../acme:/var/www/certbot:ro
       - backend_storage:/var/www/html/storage:ro
     environment:
       DOMAIN_OR_IP: ${DOMAIN_OR_IP:-localhost}
       HTTPS_MODE: ${HTTPS_MODE:-http}
+      HTTPS_PORT: ${HTTPS_PORT:-443}
     networks: [internal, public]
 
 volumes:

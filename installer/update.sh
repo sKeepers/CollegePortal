@@ -22,7 +22,7 @@ backup_path=$("${APP_DIR}/installer/backup.sh" | awk '/Backup created:/ {print $
 log "Backup before update: ${backup_path}"
 cd "${APP_DIR}"
 docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" exec -T backend php artisan down || true
-rsync -a --delete --exclude '.env' --exclude 'certs' --exclude 'storage' --exclude 'backend/storage' "${work}/" "${APP_DIR}/"
+rsync -a --delete --exclude '.env' --exclude 'certs' --exclude 'acme' --exclude 'storage' --exclude 'backend/storage' "${work}/" "${APP_DIR}/"
 docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" up -d --build
 docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" up -d --force-recreate nginx
 docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" exec -T backend php artisan migrate --force

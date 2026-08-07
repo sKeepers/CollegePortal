@@ -147,12 +147,48 @@ openssl x509 -in /etc/letsencrypt/live/portal.skki.ru/fullchain.pem -noout -date
 
 Даты должны совпадать. Если нет — выполните deploy-хук вручную и перезапустите nginx.
 
-## Не сделано
+## Редирект и заголовки безопасности
 
-Сертификат установлен, но контур TLS не завершён. В шаблоне `installer/templates/nginx-release.conf` один server-блок слушает и 80, и 443, поэтому:
+Задача `SEC-004`, выполнена в `installer/templates/nginx-release.conf`.
 
-- нет перенаправления с HTTP на HTTPS — портал по-прежнему открывается по незащищённому протоколу;
-- нет HSTS, CSP, `X-Content-Type-Options`, `Referrer-Policy` и `Permissions-Policy`;
-- версии TLS и набор шифров не заданы явно.
+Обращение по HTTP получает `301` на HTTPS. Исключений два, оба намеренные:
 
-Это задача `SEC-004`. При её выполнении перенаправление обязано пропускать `/.well-known/acme-challenge/` без редиректа, иначе сломается продление.
+- `/.well-known/acme-challenge/` отдаётся по HTTP без перенаправления, иначе сломалось бы продление способом `--webroot`;
+- при `HTTPS_MODE=http` редиректа нет вовсе — установка без сертификата продолжает работать как раньше.
+
+Решение принимается по значению `HTTPS_MODE` из `.env`: `http` означает установку без TLS, любое другое значение (`existing-cert`, `letsencrypt`, `self-signed`, `https`) включает редирект. Нестандартный `HTTPS_PORT` подставляется в адрес перенаправления.
+
+Заголовки ответа:
+
+| Заголовок | Значение | Примечание |
+| --- | --- | --- |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` | только по HTTPS и только при настроенном TLS; без `preload` — он необратим |
+| `Content-Security-Policy` | `default-src 'self'` с уточнениями | `style-src` допускает `'unsafe-inline'`: Quasar пишет стили в разметку |
+| `X-Content-Type-Options` | `nosniff` | |
+| `X-Frame-Options` | `SAMEORIGIN` | дублирует `frame-ancestors` для старых браузеров |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | |
+| `Permissions-Policy` | камера разрешена себе, остальное запрещено | `camera=(self)` обязателен: без него не работает сканер проходной |
+
+TLS ограничен версиями 1.2 и 1.3, набор шифров задан явно, session tickets выключены, версия nginx скрыта.
+
+CSP проверена по релизной сборке фронтенда: во `frontend/dist/index.html` нет ни встроенных `<script>`, ни обработчиков в разметке, все ресурсы загружаются с того же origin. Внешних доменов, шрифтов с CDN, web worker'ов и `eval` в бандле нет. Если появится что-то из этого списка, CSP придётся расширять вместе с изменением.
+
+## Продление без остановки портала
+
+Сейчас продление идёт способом `--standalone` и останавливает nginx примерно на 30 секунд. Шаблон уже готов к переходу на `--webroot`: каталог `/opt/college-portal/acme` смонтирован в контейнер как `/var/www/certbot`, а запросы проверки не перенаправляются.
+
+Переход, когда простой станет нежелателен:
+
+```bash
+sudo certbot certonly --webroot -w /opt/college-portal/acme -d portal.skki.ru --cert-name portal.skki.ru
+sudo rm /etc/letsencrypt/renewal-hooks/pre/collegeportal-stop-nginx.sh
+sudo rm /etc/letsencrypt/renewal-hooks/post/collegeportal-start-nginx.sh
+sudo certbot renew --dry-run
+```
+
+Deploy-хук остаётся: он по-прежнему копирует новые файлы в `/opt/college-portal/certs`. Без pre- и post-хуков nginx не перезапускается и продолжает держать в памяти старый сертификат, поэтому в конец deploy-хука обязательно добавить перечитывание конфигурации:
+
+```bash
+docker compose -f /opt/college-portal/installer/docker-compose.yml \
+  --env-file /opt/college-portal/.env exec -T nginx nginx -s reload
+```

@@ -62,8 +62,9 @@
 
 - [x] SEC-001: заменить O(N) bcrypt-поиск bearer-токена на индексированный SHA-256 lookup, добавить TTL токена и rate limiting для login/authenticated API.
 - [ ] SEC-002: убрать хранение bearer-токена из frontend `localStorage`, перейти на HttpOnly Secure cookie/Sanctum или другой backend-controlled session flow.
-- [ ] SEC-003: подготовить encryption-at-rest для ПДн, private storage и backup archives; настроить production TLS, HSTS, CSP и security headers.
-- [ ] SEC-004: приблизить CI/test database checks к PostgreSQL production semantics и добавить проверки миграций на PostgreSQL.
+- [ ] SEC-003: подготовить encryption-at-rest для ПДн, private storage и backup archives. TLS, HSTS, CSP и security headers выделены в SEC-004.
+- [x] SEC-004: TLS-контур релизной установки — редирект HTTP→HTTPS с исключением `/.well-known/acme-challenge/`, HSTS, CSP, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, явные версии TLS и набор шифров. Установки с `HTTPS_MODE=http` не затронуты. Сделано в шаблоне и проверено на DEV; на PROD появится со следующим релизом.
+- [x] SEC-005: приблизить CI/test database checks к PostgreSQL production semantics и добавить проверки миграций на PostgreSQL. Выполняет задание `Backend tests (PostgreSQL 17)`: весь набор прогоняется с миграциями на PostgreSQL. Раньше эта задача шла под номером SEC-004 и конфликтовала с TLS-контуром.
 
 ## Frontend
 
