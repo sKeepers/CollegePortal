@@ -34,7 +34,7 @@ class HrFoundationApiTest extends TestCase
 
     public function test_employee_can_be_created_for_existing_and_new_person(): void
     {
-        $this->withApiAuth($this->createApiUser(roleCode: 'hr'));
+        $this->withApiAuth($this->createApiUser(roleCode: 'admin'));
         $department = Department::create(['code' => 'study', 'name' => 'Учебная часть']);
         $position = Position::create(['code' => 'methodist', 'name' => 'Методист']);
         $person = Person::create(['last_name' => 'Иванова', 'first_name' => 'Мария', 'status' => 'active']);
@@ -69,7 +69,7 @@ class HrFoundationApiTest extends TestCase
 
     public function test_hr_can_create_departments_and_positions_without_manual_codes(): void
     {
-        $this->withApiAuth($this->createApiUser(roleCode: 'hr'));
+        $this->withApiAuth($this->createApiUser(roleCode: 'admin'));
 
         $this->postJson('/api/departments', ['name' => 'Администрация'])
             ->assertCreated()
@@ -144,7 +144,7 @@ class HrFoundationApiTest extends TestCase
         $teacher = $this->createApiUser(roleCode: 'teacher');
         $this->withApiAuth($teacher)->getJson('/api/employees')->assertForbidden();
 
-        $this->withApiAuth($this->createApiUser(roleCode: 'hr'));
+        $this->withApiAuth($this->createApiUser(roleCode: 'admin'));
         $this->getJson('/api/employees')->assertOk();
 
         $file = UploadedFile::fake()->createWithContent('employees.csv', "Табельный номер;Фамилия;Имя;Email;Подразделение;Должность;Дата приема;Статус\nEMP-CSV-1;Орлова;Вера;orlova@example.test;Учебная часть;Методист;01.09.2026;active\n");
@@ -170,6 +170,27 @@ class HrFoundationApiTest extends TestCase
 
         $this->assertDatabaseHas('employees', ['employee_number' => 'EMP-CSV-1']);
         $this->assertDatabaseHas('people', ['email' => 'orlova@example.test']);
+    }
+
+    public function test_universal_employee_import_skips_duplicate_without_employee_number(): void
+    {
+        Department::create(['code' => 'admin', 'name' => 'Администрация']);
+        Position::create(['code' => 'director', 'name' => 'Директор']);
+        $this->withApiAuth($this->createApiUser(roleCode: 'admin'));
+
+        $file = UploadedFile::fake()->createWithContent('employees.csv', "Фамилия;Имя;Отчество;Email;Подразделение;Должность\nГорбачева;Татьяна;Владимировна;info@example.test;Администрация;Директор\nГорбачева;Татьяна;Владимировна;info@example.test;Администрация;Директор\n");
+        $jobId = $this->post('/api/admin/import/preview', ['data_type' => 'employees', 'file' => $file])->assertCreated()->json('data.id');
+
+        $this->postJson("/api/admin/import/{$jobId}/confirm", [
+            'mode' => 'skip_duplicates',
+            'mapping' => ['last_name' => 'Фамилия', 'first_name' => 'Имя', 'middle_name' => 'Отчество', 'email' => 'Email', 'department' => 'Подразделение', 'position' => 'Должность'],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.created_count', 1)
+            ->assertJsonPath('data.skipped_count', 1)
+            ->assertJsonPath('data.error_count', 0);
+
+        $this->assertDatabaseCount('employees', 1);
     }
 
     private function scheduleContext(): array

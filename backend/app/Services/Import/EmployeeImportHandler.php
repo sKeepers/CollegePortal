@@ -4,6 +4,7 @@ namespace App\Services\Import;
 
 use App\Models\Department;
 use App\Models\Employee;
+use App\Models\Person;
 use App\Models\Position;
 use App\Services\HrService;
 use Illuminate\Database\Eloquent\Model;
@@ -54,9 +55,13 @@ class EmployeeImportHandler extends AbstractImportHandler
 
     public function prepare(array $data): array
     {
+        $data['employee_number'] = filled($data['employee_number'] ?? null) ? trim($data['employee_number']) : null;
         $data['birth_date'] = $this->normalizeDate($data['birth_date'] ?? null);
         $data['hired_at'] = $this->normalizeDate($data['hired_at'] ?? null);
         $data['dismissed_at'] = $this->normalizeDate($data['dismissed_at'] ?? null);
+        $data['email'] = filled($data['email'] ?? null) ? mb_strtolower(trim($data['email'])) : null;
+        $data['phone'] = filled($data['phone'] ?? null) ? preg_replace('/\D+/', '', $data['phone']) : null;
+        $data['snils'] = filled($data['snils'] ?? null) ? preg_replace('/\D+/', '', $data['snils']) : null;
         $data['status'] = $this->normalizeStatus($data['status'] ?? 'active');
         $data['employment_type'] = $this->normalizeEmploymentType($data['employment_type'] ?? 'full_time');
         $data['workload_rate'] = !isset($data['workload_rate']) || $data['workload_rate'] === null || $data['workload_rate'] === '' ? 1 : (float) str_replace(',', '.', (string) $data['workload_rate']);
@@ -80,7 +85,7 @@ class EmployeeImportHandler extends AbstractImportHandler
             'employment_type' => ['nullable','in:full_time,part_time,internal_part_time,external_part_time,contract'],
             'workload_rate' => ['nullable','numeric','min:0','max:2'],
             'status' => ['nullable','in:candidate,active,probation,vacation,sick_leave,maternity_leave,business_trip,suspended,dismissed'],
-            'hired_at' => ['required','date'],
+            'hired_at' => ['nullable','date'],
             'dismissed_at' => ['nullable','date'],
             'is_teacher' => ['boolean'],
         ];
@@ -88,7 +93,36 @@ class EmployeeImportHandler extends AbstractImportHandler
 
     public function findExisting(array $data): ?Model
     {
-        return empty($data['employee_number']) ? null : Employee::where('employee_number', $data['employee_number'])->first();
+        if (!empty($data['employee_number']) && ($employee = Employee::where('employee_number', $data['employee_number'])->first())) {
+            return $employee;
+        }
+
+        $personIds = collect();
+        foreach (['snils', 'email', 'phone'] as $field) {
+            if (!empty($data[$field])) {
+                $personIds = $personIds->merge(Person::where($field, $data[$field])->pluck('id'));
+            }
+        }
+        if ($personIds->isEmpty() && !empty($data['birth_date'])) {
+            $personIds = Person::where('last_name', $data['last_name'])
+                ->where('first_name', $data['first_name'])
+                ->where('middle_name', $data['middle_name'] ?? null)
+                ->where('birth_date', $data['birth_date'])
+                ->pluck('id');
+        }
+        if ($personIds->isEmpty()) {
+            $personIds = Person::where('last_name', $data['last_name'])
+                ->where('first_name', $data['first_name'])
+                ->where('middle_name', $data['middle_name'] ?? null)
+                ->pluck('id');
+        }
+
+        $employees = Employee::whereIn('person_id', $personIds->unique())->get();
+        if ($employees->count() > 1) {
+            throw new RuntimeException('Найдено несколько возможных сотрудников. Уточните табельный номер, СНИЛС, email или телефон.');
+        }
+
+        return $employees->first();
     }
 
     public function businessValidationErrors(array $data): array
@@ -118,7 +152,7 @@ class EmployeeImportHandler extends AbstractImportHandler
     private function employeeData(array $data): array
     {
         return [
-            'employee_number' => $data['employee_number'] ?: null,
+            'employee_number' => $data['employee_number'] ?? null,
             'last_name' => $data['last_name'],
             'first_name' => $data['first_name'],
             'middle_name' => $data['middle_name'] ?? null,
@@ -128,8 +162,8 @@ class EmployeeImportHandler extends AbstractImportHandler
             'snils' => $data['snils'] ?? null,
             'status' => $data['status'] ?: 'active',
             'employment_type' => $data['employment_type'] ?: 'full_time',
-            'hired_at' => $data['hired_at'],
-            'dismissed_at' => $data['dismissed_at'] ?: null,
+            'hired_at' => $data['hired_at'] ?? null,
+            'dismissed_at' => $data['dismissed_at'] ?? null,
             'primary_department_id' => $this->referenceId(Department::class, $data['department'] ?? null),
             'primary_position_id' => $this->referenceId(Position::class, $data['position'] ?? null),
             'workload_rate' => $data['workload_rate'] ?: 1,
