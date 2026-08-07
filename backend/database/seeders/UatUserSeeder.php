@@ -2,8 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Models\Group;
 use App\Models\Role;
 use App\Models\Person;
+use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -71,5 +73,47 @@ class UatUserSeeder extends Seeder
 
         $teacherUser->update(['person_type' => 'person', 'person_id' => $person->id]);
         $teacher->update(['user_id' => $teacherUser->id]);
+
+        $this->linkStudent();
+    }
+
+    /**
+     * Give the UAT student the same User -> Person -> Student chain the UAT teacher has.
+     * Without it the student cabinet, the personal QR pass and the group journal all resolve
+     * to nothing, so the student contour cannot be tested at all.
+     */
+    private function linkStudent(): void
+    {
+        $studentUser = User::query()->where('email', 'student1.uat@college-portal.local')->firstOrFail();
+
+        $person = Person::query()->firstOrCreate(
+            ['email' => $studentUser->email],
+            ['last_name' => 'Студент', 'first_name' => 'UAT', 'middle_name' => null, 'status' => 'active']
+        );
+
+        // students.group_id is not nullable, so a group has to exist before the student does.
+        $group = Group::query()->orderBy('id')->first() ?? Group::query()->create([
+            'name' => 'UAT-101',
+            'specialty' => 'UAT',
+            'course' => 1,
+            'year_start' => (int) now()->year,
+        ]);
+
+        $student = Student::query()->updateOrCreate(
+            ['person_id' => $person->id],
+            [
+                'user_id' => $studentUser->id,
+                'group_id' => $group->id,
+                'course' => $group->course,
+                'last_name' => $person->last_name,
+                'first_name' => $person->first_name,
+                'middle_name' => $person->middle_name,
+                'email' => $studentUser->email,
+                'status' => 'active',
+            ]
+        );
+
+        $studentUser->update(['person_type' => 'person', 'person_id' => $person->id]);
+        $student->update(['user_id' => $studentUser->id]);
     }
 }

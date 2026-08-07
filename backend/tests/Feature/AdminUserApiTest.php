@@ -241,5 +241,15 @@ class AdminUserApiTest extends TestCase
 
         $this->assertDatabaseHas('users', ['email' => 'director.uat@college-portal.local']);
         $this->assertTrue(Hash::check('demo12345', User::where('email', 'student1.uat@college-portal.local')->firstOrFail()->password));
+
+        $teacherUser = User::where('email', 'teacher1.uat@college-portal.local')->firstOrFail();
+        $this->assertNotNull($teacherUser->person_id, 'UAT teacher must be linked to a Person');
+        $this->assertNotNull($teacherUser->teacher()->first(), 'UAT teacher must be linked to a Teacher profile');
+
+        $studentUser = User::where('email', 'student1.uat@college-portal.local')->firstOrFail();
+        $this->assertNotNull($studentUser->person_id, 'UAT student must be linked to a Person');
+        $student = $studentUser->student()->first();
+        $this->assertNotNull($student, 'UAT student must be linked to a Student profile');
+        $this->assertNotNull($student->group_id, 'UAT student must belong to a group');
     }
 }
