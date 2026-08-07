@@ -8,11 +8,22 @@
 
 ## Обновлено
 
-- Date: 2026-08-03
-- Local worktree: `C:\!Projects\CollegePortal\.worktrees\sync-001`
-- DEV checkout: `/home/andale/CollegePortal`
+- Дата: 2026-08-07
+- Рабочая копия: `C:\!Projects\CollegePortal`
+- DEV checkout: `/home/andale/CollegePortal`, worktree задачи `/home/andale/CollegePortal/.worktrees/sec-004`
 
-## Git-состояние
+## Состояние на 07.08.2026
+
+- Ствол `develop`, последний релиз `v0.8.0-rc4` установлен на PROD.
+- Ветка задачи `fix/sec-004-tls-hardening`, отведена от `develop` (`596c8d0fb`), опубликована на GitHub. HEAD ветки — `0e3565f9d`.
+- Незакоммиченного в worktree DEV нет. Локальная ветка `dev-line` расходится с `develop` и для работы не используется; правки переносились на DEV и коммитились там.
+- **SEC-004 выполнен.** Редирект HTTP→HTTPS, HSTS, CSP, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` и явные версии TLS в `installer/templates/nginx-release.conf`. Подробности — в [TLS_CERTIFICATE.md](TLS_CERTIFICATE.md).
+- Проверки: `nginx -t` и живые запросы в трёх режимах (`letsencrypt` на 443, `http`, `existing-cert` на 8443) на DEV в контейнере `nginx:1.27-alpine` с заглушками upstream; редирект `301`, ACME-путь отдаётся без перенаправления, HSTS и CSP присутствуют, TLS 1.0 и 1.1 отклоняются; `bash -n` для изменённых скриптов; `docker compose config`; сборка фронтенда.
+- CSP сверена с релизной сборкой: во `frontend/dist/index.html` нет встроенных `<script>` и обработчиков в разметке, внешних origin, web worker'ов и `eval` в бандле нет.
+- В TASKS.md разведены две задачи с одинаковым номером: TLS-контур остаётся `SEC-004`, задача про PostgreSQL в CI стала `SEC-005` и закрыта.
+- Ни DEV, ни PROD не изменялись: правки лежат в шаблоне установщика и попадут на PROD только со следующим релизом.
+
+## Git-состояние (журнал 03.08.2026)
 
 - Active worktree branch: `sync/sync-001-local`
 - Last deployed DEV checkpoint: `22c4883de`
@@ -77,13 +88,18 @@ GitHub Issues доступны на DEV только для чтения чер�
 
 ## Следующие действия
 
-1. Выполнить ручной `dry-run` ФИС-выгрузки, проверить сопоставление конкурсов и только после отдельного подтверждения применять импорт.
-2. Выполнить ручные проверки XLSX-импорта сотрудников, СНИЛС на формах студентов/абитуриентов, истории редактирования журналов и resize-line.
-3. На новом компьютере клонировать GitHub ветку `feature/uat-002-1-final-stabilization`, не перенося build artifacts; private database archives и secrets переносить отдельно и защищенно.
+1. Влить `fix/sec-004-tls-hardening` в `develop` после зелёного CI.
+2. Собрать релиз и обновить PROD — только по отдельному решению. До этого портал на `portal.skki.ru` продолжает отвечать по HTTP без редиректа и без заголовков безопасности, а `AUTH-003`, `AUTH-004`, `MOB-003` и `MOB-005` остаются непроверяемыми.
+3. Привести версии в документации: фактически `0.8.0-rc4`, в десяти документах указан `0.8.0-rc2`, в двух — `0.8.0-rc1`; в `TEST_USERS.md` нерабочий адрес DEV.
+4. Полоса прокрутки меню: `q-scroll-area` в `AppLayout.vue` меряет высоту раньше, чем grid её раздаёт. Чинить с проверкой в браузере.
+5. Вернуть в импорт сотрудников `auto_account` и колонку «Рабочий график».
+6. Перенести 9 документов контроля доступа из невлитой ветки `feature/access-control-foundation`. Только документы.
 
 ## Блокеры
 
 - ФИС-выгрузка не должна применяться без ручной проверки dry-run и подтверждения сопоставления конкурсов.
+- `SEC-002`: bearer-токен в браузерном хранилище. Стоп-фактор перед обработкой реальных персональных данных.
+- Проверка Telegram-виджета, камеры телефона и установки PWA возможна только на `https://portal.skki.ru`, то есть после установки релиза на PROD.
 
 ## Чек-лист передачи
 
