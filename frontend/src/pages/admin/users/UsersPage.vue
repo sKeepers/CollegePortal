@@ -317,6 +317,24 @@ function onPersonTypeChange() {
   personProfileOptions.value = []
 }
 
+/*
+ * Выбранная карточка — источник данных, а не отдельная сущность: ФИО и почта
+ * подставляются из нее, иначе одно и то же приходится вводить дважды.
+ */
+function onPersonProfileChange(personId) {
+  const option = personProfileOptions.value.find((item) => Number(item.value) === Number(personId))
+  if (!option) {
+    return
+  }
+
+  if (option.fullName) {
+    form.name = option.fullName
+  }
+  if (option.email && !form.email) {
+    form.email = option.email
+  }
+}
+
 // Список людей подгружается поиском: справочники слишком велики для полного списка.
 function filterProfiles(input, update) {
   profileSearchLoading.value = true
@@ -503,7 +521,7 @@ onMounted(async () => {
         </q-card-section>
         <q-card-section class="users-form">
           <AppErrorBanner v-if="formError" :message="formError" />
-          <q-input ref="nameInput" v-model="form.name" outlined dense label="ФИО *" hint="Как показывать человека в списках. Это не логин." :error="Boolean(formErrors.name)" :error-message="formErrors.name" bottom-slots />
+          <q-input ref="nameInput" v-model="form.name" outlined dense label="ФИО *" hint="Как показывать человека в списках. Это не логин. Если ниже выбрана карточка, подставляется из нее." :error="Boolean(formErrors.name)" :error-message="formErrors.name" bottom-slots />
           <q-input ref="emailInput" v-model="form.email" outlined dense label="Email *" type="email" hint="Он же логин для входа при ручном создании." :error="Boolean(formErrors.email)" :error-message="formErrors.email" bottom-slots />
           <q-input ref="passwordInput" v-model="form.password" outlined dense :label="editingUser ? 'Новый пароль, если нужно' : 'Пароль *'" type="password" :error="Boolean(formErrors.password)" :error-message="formErrors.password" bottom-slots />
           <q-select ref="roleInput" v-model="form.role_id" outlined dense emit-value map-options label="Роль *" :options="store.roleOptions" :error="Boolean(formErrors.role_id)" :error-message="formErrors.role_id" bottom-slots />
@@ -526,6 +544,7 @@ onMounted(async () => {
             :error-message="formErrors.person_id"
             bottom-slots
             @filter="filterPersonProfiles"
+            @update:model-value="onPersonProfileChange"
           >
             <template #no-option>
               <q-item><q-item-section class="text-grey">Никого не нашли. Проверьте, заведен ли человек в своем разделе.</q-item-section></q-item>

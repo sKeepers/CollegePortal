@@ -65,7 +65,13 @@ export const useUsersStore = defineStore('users', () => {
     const payload = await api.list(source.resource, { search: query, per_page: 20 })
     const rows = Array.isArray(payload?.data) ? payload.data : []
 
-    return rows.map((row) => ({ label: source.label(row) || `#${row.id}`, value: row.id }))
+    return rows.map((row) => ({
+      label: source.label(row) || `#${row.id}`,
+      value: row.id,
+      // Форма создания подставляет ФИО и почту из карточки, чтобы не вводить их заново.
+      fullName: [row.last_name, row.first_name, row.middle_name].filter(Boolean).join(' ') || row.full_name || '',
+      email: row.email || row.person?.email || '',
+    }))
   }
 
   const personTypeOptions = [
