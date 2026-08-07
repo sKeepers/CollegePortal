@@ -2651,6 +2651,12 @@ body {
   background: #eff6ff !important;
 }
 
+/* Общая подсветка выбранной строки для разделов, где справа открывается
+   карточка: без нее непонятно, чья карточка сейчас показана. */
+.workspace-row--selected td {
+  background: #eff6ff !important;
+}
+
 .groups-row--selected .groups-row-link {
   color: #1e40af;
 }
@@ -4508,8 +4514,7 @@ body {
 
 @media (min-width: 600px) and (max-width: 1199px) {
   .workspace-tablet .cp-page { padding: 14px; }
-  .workspace-tablet .dashboard-grid,
-  .workspace-tablet .personal-dashboard__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .workspace-tablet .dashboard-grid:not(.personal-dashboard__grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .workspace-tablet .personal-dashboard__widget--full { grid-column: 1 / -1; }
 }
 
@@ -6193,15 +6198,30 @@ body {
   font-weight: 850;
 }
 
+/*
+ * Персональный dashboard живет на дорожке из 12 колонок, а не из двух-четырех.
+ * На двух колонках четыре размера не помещаются: S и M получались одинаковыми,
+ * L и XL тоже. Двенадцать дорожек дают четверть, половину, три четверти и всю
+ * ширину при любом числе видимых колонок.
+ */
+.dashboard-grid.personal-dashboard__grid,
+.workspace-bp-xl .dashboard-grid.personal-dashboard__grid,
+.workspace-bp-xxl .dashboard-grid.personal-dashboard__grid {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
 .personal-dashboard__grid {
   min-width: 0;
   grid-auto-rows: 8px;
 }
 
+/*
+ * Строки остаются высотой 8px и в режиме редактирования: иначе grid выравнивает
+ * их по самому высокому виджету и между карточками появляются пустоты.
+ */
 .personal-dashboard__grid--editing {
   display: grid;
   grid-auto-flow: dense;
-  grid-auto-rows: auto;
   align-items: start;
 }
 
@@ -6211,39 +6231,64 @@ body {
 
 .personal-dashboard__widget--full {
   grid-column: 1 / -1;
-  column-span: all;
 }
 
 .personal-dashboard__widget--large {
-  grid-column: span 2;
+  grid-column: span 9;
 }
 
-.personal-dashboard__widget--medium,
+.personal-dashboard__widget--medium {
+  grid-column: span 6;
+}
+
 .personal-dashboard__widget--small {
-  grid-column: span 1;
+  grid-column: span 3;
 }
 
+/*
+ * Рамка и панель инструментов не должны менять высоту карточки. Иначе grid
+ * укладывает виджеты в режиме редактирования иначе, чем после сохранения, и
+ * виджет переезжает из правой колонки в левую. Поэтому outline вместо border,
+ * без внутренних отступов, а панель инструментов — поверх карточки.
+ */
 .personal-dashboard__grid--editing .personal-dashboard__widget {
+  position: relative;
   margin-bottom: 0;
-  border: 1px dashed #94a3b8;
   border-radius: 10px;
-  padding: 8px;
-  background: #f8fafc;
-  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+  outline: 1px dashed #94a3b8;
+  outline-offset: -1px;
+  transition: outline-color 0.16s ease, box-shadow 0.16s ease;
 }
 
 .personal-dashboard__grid--editing .personal-dashboard__widget:hover {
-  border-color: #2563eb;
+  outline-color: #2563eb;
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
-  transform: translateY(-1px);
+}
+
+/*
+ * Панель инструментов встает на место шапки карточки и показывает то же имя
+ * виджета, поэтому саму шапку на время редактирования скрываем. Именно
+ * visibility, а не display: место должно остаться занятым, иначе высота
+ * изменится и раскладка перестанет совпадать с сохраненной.
+ */
+.personal-dashboard__grid--editing .app-card__header {
+  visibility: hidden;
 }
 
 .personal-dashboard__widget-toolbar {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 0;
+  left: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 8px;
+  border-radius: 10px 10px 0 0;
+  padding: 6px 10px;
+  background: rgba(248, 250, 252, 0.97);
+  box-shadow: 0 1px 0 rgba(148, 163, 184, 0.4);
 }
 
 .personal-dashboard__widget-toolbar span,
@@ -6296,9 +6341,30 @@ body {
   color: #1d4ed8;
 }
 
-@media (min-width: 1920px) {
-  .personal-dashboard__widget--large {
-    grid-column: span 2;
+/*
+ * Плитки показателей: в узком виджете четыре колонки не помещаются и подписи
+ * обрезаются, поэтому их число зависит от выбранного размера виджета.
+ */
+@media (min-width: 1024px) {
+  .personal-dashboard__widget--small .dashboard-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .personal-dashboard__widget--medium .dashboard-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* На планшетной ширине четверть экрана нечитаема: S и M занимают половину. */
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .workspace-tablet .personal-dashboard__widget--small,
+  .workspace-tablet .personal-dashboard__widget--medium {
+    grid-column: span 6;
+  }
+
+  .workspace-tablet .personal-dashboard__widget--large,
+  .workspace-tablet .personal-dashboard__widget--full {
+    grid-column: 1 / -1;
   }
 }
 

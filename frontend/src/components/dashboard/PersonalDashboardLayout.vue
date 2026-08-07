@@ -284,7 +284,9 @@ function setVisible(widgetId, visible) {
 }
 
 function updateWidgetSpan(widgetId, element) {
-  if (editing.value || !element) return
+  // Высоту строки считаем и в режиме редактирования: без этого grid выравнивает
+  // строку по самому высокому виджету и раскладка перестает быть компактной.
+  if (!element) return
   const rowHeight = 8
   const gap = 12
   const span = Math.max(1, Math.ceil((element.getBoundingClientRect().height + gap) / (rowHeight + gap)))
@@ -397,7 +399,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
         :key="widget.id"
         :ref="(element) => setWidgetElement(widget.id, element)"
         :class="['personal-dashboard__widget', `personal-dashboard__widget--${widget.size || 'medium'}`]"
-        :style="editing ? null : { gridRowEnd: `span ${widgetSpans[widget.id] || 1}` }"
+        :style="{ gridRowEnd: `span ${widgetSpans[widget.id] || 1}` }"
         :draggable="editing"
         @dragstart="onDragStart(widget.id)"
         @dragover.prevent
