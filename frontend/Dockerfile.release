@@ -3,7 +3,14 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci || npm install
 COPY . .
-RUN npm run build
+# scripts/release/build-release.sh writes the authoritative public/version.json into the
+# archive: real version, release, commit and "environment": "production". npm run build
+# fires the prebuild hook, which regenerates that file from git — but this image has no
+# git and no build metadata, so it degrades to dev-unknown/development and silently
+# replaces the release values. Keep them and restore them over the generated file.
+RUN cp public/version.json /tmp/release-version.json 2>/dev/null || true; \
+    npm run build; \
+    if [ -f /tmp/release-version.json ]; then cp /tmp/release-version.json dist/version.json; fi
 
 FROM nginx:1.27-alpine
 COPY --from=build /app/dist /usr/share/nginx/html

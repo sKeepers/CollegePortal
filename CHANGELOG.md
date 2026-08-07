@@ -11,6 +11,12 @@
 - [Project Context](PROJECT_CONTEXT.md)
 - [Documentation Report](REPORT.md)
 
+## 0.8.0-rc4 - Private Release Candidate
+
+### Fixed
+
+- The release frontend image no longer reports itself as `dev-unknown` in the `development` environment. `npm run build` fires the `prebuild` hook, which regenerates `version.json` from git, but the image has neither git nor build metadata, so it overwrote the values recorded by `scripts/release/build-release.sh`. Found on 0.8.0-rc3 immediately after deployment.
+
 ## 0.8.0-rc3 - Private Release Candidate
 
 First trunk release since 0.8.0-rc2. Merges 121 commits of UAT stabilisation that had never reached `develop`, and is the first release verified by CI on PostgreSQL 17 as well as SQLite.
