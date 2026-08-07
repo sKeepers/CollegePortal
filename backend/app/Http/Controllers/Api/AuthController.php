@@ -26,6 +26,7 @@ class AuthController extends Controller
             ->where(function ($query) use ($login, $phoneLogins): void {
                 $query->where('email', $login)
                     ->orWhere('username', $login)
+                    ->orWhereIn('username', $phoneLogins)
                     ->orWhereHas('person', fn ($person) => $person->whereIn('phone', $phoneLogins))
                     ->orWhereHas('student', fn ($student) => $student->whereIn('phone', $phoneLogins))
                     ->orWhereHas('teacher', fn ($teacher) => $teacher->whereIn('phone', $phoneLogins));
@@ -58,6 +59,14 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Телефон в системе хранится по-разному: импорт оставляет только цифры,
+     * формы сохраняют +7, а люди набирают то через 8, то через +7. Поэтому из
+     * введенного номера строятся все написания сразу, иначе человек, заведенный
+     * импортом, не может войти по телефону ни в одном формате.
+     *
+     * @return list<string>
+     */
     private function phoneLogins(string $login): array
     {
         $digits = preg_replace('/\D+/', '', $login) ?? '';
@@ -65,7 +74,12 @@ class AuthController extends Controller
             return [$login];
         }
 
-        return ["+7{$matches[1]}", "8{$matches[1]}"];
+        return array_values(array_unique([
+            $login,
+            "+7{$matches[1]}",
+            "7{$matches[1]}",
+            "8{$matches[1]}",
+        ]));
     }
 
     public function me(Request $request): UserResource

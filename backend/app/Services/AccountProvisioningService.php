@@ -115,25 +115,63 @@ class AccountProvisioningService
         ]);
     }
 
+    /**
+     * Логин — это телефон в едином написании, а если телефона нет, то фамилия
+     * с инициалами латиницей: ivanov.ds. Email логином не делаем: у студентов
+     * его обычно нет, а служебный адрес @accounts.collegeportal.local человек
+     * не запомнит и все равно не сможет им пользоваться.
+     */
     private function username(Model $profile, Person $person): string
     {
-        $phone = $profile->phone ?: $person->phone;
-        $email = $profile->email ?: $person->email;
+        $phone = $this->normalizePhone($profile->phone ?: $person->phone);
 
-        if ($phone) {
-            return $this->uniqueUsername((string) $phone);
+        if ($phone !== null) {
+            return $this->uniqueUsername($phone);
         }
 
-        if ($email) {
-            return $this->uniqueUsername((string) $email);
-        }
-
-        $initials = Str::ascii((string) $profile->first_name);
-        $middleInitial = Str::ascii((string) $profile->middle_name);
-        $base = Str::lower(Str::ascii((string) $profile->last_name).'.'.Str::substr($initials, 0, 1).Str::substr($middleInitial, 0, 1));
-        $base = trim((string) preg_replace('/[^a-z0-9._-]+/', '', $base), '.');
+        $lastName = $this->transliterate((string) ($profile->last_name ?: $person->last_name));
+        $firstInitial = Str::substr($this->transliterate((string) ($profile->first_name ?: $person->first_name)), 0, 1);
+        $middleInitial = Str::substr($this->transliterate((string) ($profile->middle_name ?: $person->middle_name)), 0, 1);
+        $base = trim((string) preg_replace('/[^a-z0-9._-]+/', '', $lastName.'.'.$firstInitial.$middleInitial), '.');
 
         return $this->uniqueUsername($base ?: 'user');
+    }
+
+    /**
+     * Str::ascii передает шипящие одной буквой, из-за чего Альгашова становится
+     * algasova. Для логина, который человек диктует и набирает, нужна привычная
+     * запись, поэтому таблица задана явно.
+     */
+    private function transliterate(string $value): string
+    {
+        $map = [
+            'а' => 'a', 'б' => 'b', 'в' => 'v', 'г' => 'g', 'д' => 'd', 'е' => 'e', 'ё' => 'e',
+            'ж' => 'zh', 'з' => 'z', 'и' => 'i', 'й' => 'i', 'к' => 'k', 'л' => 'l', 'м' => 'm',
+            'н' => 'n', 'о' => 'o', 'п' => 'p', 'р' => 'r', 'с' => 's', 'т' => 't', 'у' => 'u',
+            'ф' => 'f', 'х' => 'h', 'ц' => 'c', 'ч' => 'ch', 'ш' => 'sh', 'щ' => 'sch',
+            'ъ' => '', 'ы' => 'y', 'ь' => '', 'э' => 'e', 'ю' => 'yu', 'я' => 'ya',
+        ];
+
+        return strtr(Str::lower($value), $map);
+    }
+
+    /**
+     * Номер приводится к виду +7XXXXXXXXXX независимо от того, записан он через
+     * 8, через 7 или с разделителями. Вход по телефону принимает все написания.
+     */
+    private function normalizePhone(?string $value): ?string
+    {
+        $digits = preg_replace('/\D+/', '', (string) $value) ?? '';
+
+        if (preg_match('/^(?:7|8)(\d{10})$/', $digits, $matches)) {
+            return "+7{$matches[1]}";
+        }
+
+        if (preg_match('/^(\d{10})$/', $digits, $matches)) {
+            return "+7{$matches[1]}";
+        }
+
+        return $digits === '' ? null : $digits;
     }
 
     private function uniqueUsername(string $base): string

@@ -139,7 +139,7 @@ class UniversalImportApiTest extends TestCase
         $this->assertSame('weekday_0900_1800', $employee->work_schedule_code);
 
         $user = User::where('person_id', $employee->person_id)->firstOrFail();
-        $this->assertSame('70000000002', $user->username);
+        $this->assertSame('+70000000002', $user->username);
         $this->assertTrue($user->is_active);
         $this->assertStringNotContainsString('password', json_encode($response->json(), JSON_THROW_ON_ERROR));
     }
