@@ -148,7 +148,8 @@ class BulkOperationsApiTest extends TestCase
     {
         $this->seed(ReferenceDataSeeder::class);
         $this->seed(RoleSeeder::class);
-        $this->withApiAuth($this->createApiUser(roleCode: 'study'));
+        // Массовые операции по контингенту относятся к «Учебной части 2».
+        $this->withApiAuth($this->createApiUser(roleCode: 'study_records'));
         $program = $this->createProgram();
         $group = $this->createGroup($program, 'M-101');
         $targetGroup = $this->createGroup($program, 'M-102');

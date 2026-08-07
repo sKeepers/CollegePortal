@@ -14,7 +14,8 @@ class RoleSeeder extends Seeder
             ['code' => 'admin', 'name' => 'Администратор', 'description' => 'Полный доступ к системе.'],
             ['code' => 'director', 'name' => 'Директор', 'description' => 'Управленческий просмотр отчетов и сводок.'],
             ['code' => 'deputy', 'name' => 'Заместитель директора', 'description' => 'Контроль учебного процесса, отчетов и справочников.'],
-            ['code' => 'study', 'name' => 'Учебная часть', 'description' => 'Ведение студентов, групп, расписания и журнала.'],
+            ['code' => 'study', 'name' => 'Учебная часть 1', 'description' => 'Расписание, замены, учебная нагрузка и учебные планы.'],
+            ['code' => 'study_records', 'name' => 'Учебная часть 2', 'description' => 'Контингент, журнал успеваемости, посещаемость и выпуск.'],
             ['code' => 'admission', 'name' => 'Приемная комиссия', 'description' => 'Работа с абитуриентами и приемными кампаниями.'],
             ['code' => 'teacher', 'name' => 'Преподаватель', 'description' => 'Работа со своим расписанием, журналом и нагрузкой.'],
             ['code' => 'student', 'name' => 'Студент', 'description' => 'Просмотр личного кабинета, QR, расписания и оценок.'],
@@ -40,7 +41,8 @@ class RoleSeeder extends Seeder
         $this->syncPermissions('admin', $all);
         $this->syncPermissions('director', $this->ids($this->directorPermissions()));
         $this->syncPermissions('deputy', $this->ids($this->academicEditorPermissions()));
-        $this->syncPermissions('study', $this->ids($this->academicEditorPermissions()));
+        $this->syncPermissions('study', $this->ids($this->studySchedulePermissions()));
+        $this->syncPermissions('study_records', $this->ids($this->studyRecordsPermissions()));
         $this->syncPermissions('academic_office', $this->ids($this->academicEditorPermissions()));
         $this->syncPermissions('admission', $this->ids($this->admissionPermissions()));
         $this->syncPermissions('teacher', $this->ids($this->teacherPermissions()));
@@ -222,6 +224,49 @@ class RoleSeeder extends Seeder
             'schedule.view', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.view_all', 'journal.export', 'attendance.view', 'attendance.reports',
             'admissions.view', 'admissions.applicant.view', 'admissions.application.view', 'admissions.choice.view', 'admissions.document.view', 'admissions.document.download_sensitive', 'admissions.documents.view', 'admissions.documents.download', 'admissions.bulk_export', 'admissions.reference.view', 'curricula.view', 'curricula.subjects.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'graduation.view',
             'frdo.view', 'fis.view', 'fis.outbound.view', 'fis.outbound.status', 'gate.reports', 'audit.view', 'reference.manage', 'uat.manage', 'hr.employees.view', 'hr.calendar.view', 'hr.replacements.view', 'hr.reports.view', 'view_reports',
+        ];
+    }
+
+    /**
+     * Учебная часть 1 — расписание, замены, нагрузка и учебные планы. Контингент
+     * и журнал доступны только на просмотр там, где без них нельзя составить
+     * расписание.
+     */
+    private function studySchedulePermissions(): array
+    {
+        return [
+            'dashboard.view', 'view_own_data', 'view_reports',
+            'schedule.view', 'schedule.create', 'schedule.update', 'schedule.delete', 'schedule.validate',
+            'schedule.manage_templates', 'schedule.manage_replacements', 'schedule.view_conflicts', 'schedule.view_coverage', 'manage_schedule',
+            'teachingload.view', 'teachingload.edit', 'teaching_load.generate', 'teaching_load.assign', 'teaching_load.bulk_assign', 'teaching_load.view_coverage',
+            'curricula.view', 'curricula.edit', 'curricula.subjects.view', 'curricula.subjects.create', 'curricula.subjects.update', 'curricula.subjects.delete',
+            'subjects.view', 'subjects.create', 'subjects.update', 'subjects.delete',
+            'classrooms.view', 'classrooms.create', 'classrooms.update', 'classrooms.delete', 'manage_dictionaries',
+            'exams.view', 'exams.edit',
+            'groups.view', 'teachers.view', 'students.view', 'people.view',
+            'attendance.view',
+            'hr.calendar.view', 'hr.replacements.view', 'hr.replacements.manage',
+        ];
+    }
+
+    /**
+     * Учебная часть 2 — контингент, журнал успеваемости, посещаемость и выпуск.
+     * Расписание и нагрузка доступны только на просмотр.
+     */
+    private function studyRecordsPermissions(): array
+    {
+        return [
+            'dashboard.view', 'view_own_data', 'view_reports',
+            'people.view', 'people.update', 'people.link',
+            'students.view', 'students.create', 'students.update', 'students.delete',
+            'students.bulk_group', 'students.bulk_status', 'students.bulk_course', 'students.bulk_education', 'students.bulk_passes', 'students.bulk_archive', 'students.bulk_export',
+            'groups.view', 'groups.create', 'groups.update', 'groups.delete',
+            'journal.view', 'journal.view_all', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files',
+            'journal.complete', 'journal.sign', 'journal.reopen', 'journal.export', 'manage_journal',
+            'attendance.view', 'attendance.reports',
+            'graduation.view', 'graduation.edit', 'frdo.view',
+            'exams.view', 'curricula.view', 'schedule.view', 'teachingload.view',
+            'teachers.view', 'subjects.view', 'classrooms.view',
         ];
     }
 
