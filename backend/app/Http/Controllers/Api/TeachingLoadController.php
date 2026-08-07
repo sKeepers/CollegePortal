@@ -97,11 +97,15 @@ class TeachingLoadController extends Controller
         if (! $request->user()->hasPermission('teachingload.view')) {
             $teacherId = $request->user()->teacher()->value('id');
 
-            abort_unless($teacherId, Response::HTTP_FORBIDDEN, 'У вас нет доступа к этому действию.');
-
-            $query->where(fn ($loadQuery) => $loadQuery
-                ->where('teacher_id', $teacherId)
-                ->orWhereHas('items', fn ($itemQuery) => $itemQuery->where('teacher_id', $teacherId)));
+            // A teacher account that is not linked to a Teacher profile is still authorized here:
+            // it simply owns no load. Return an empty page instead of a misleading permission error.
+            $query->when(
+                $teacherId === null,
+                fn ($loadQuery) => $loadQuery->whereRaw('1 = 0'),
+                fn ($loadQuery) => $loadQuery->where(fn ($ownQuery) => $ownQuery
+                    ->where('teacher_id', $teacherId)
+                    ->orWhereHas('items', fn ($itemQuery) => $itemQuery->where('teacher_id', $teacherId)))
+            );
         }
 
         $loads = $query->paginate(50);
