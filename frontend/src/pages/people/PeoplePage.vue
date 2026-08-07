@@ -37,8 +37,12 @@ const {
   resizeBodyClass: 'people-splitter-resizing',
 })
 
+const DEFAULT_PROFILE = 'without_students'
+
 const profileOptions = [
-  { label: 'Все профили', value: '' },
+  { label: 'Без студентов', value: 'without_students' },
+  { label: 'Все профили', value: 'all' },
+  { label: 'Студенты', value: 'student' },
   { label: 'Сотрудники', value: 'employee' },
   { label: 'Преподаватели', value: 'teacher' },
   { label: 'Абитуриенты', value: 'applicant' },
@@ -111,13 +115,13 @@ watch(() => route.query.selected, (value) => { if (!syncingQuery.value) store.se
 watch(() => [route.query.search, route.query.profile], async () => {
   if (syncingQuery.value) return
   store.filters.search = route.query.search ? String(route.query.search) : ''
-  store.filters.profile = route.query.profile ? String(route.query.profile) : ''
+  store.filters.profile = route.query.profile ? String(route.query.profile) : DEFAULT_PROFILE
   await store.load()
 }, { deep: true })
 
 onMounted(async () => {
   store.filters.search = route.query.search ? String(route.query.search) : ''
-  store.filters.profile = route.query.profile ? String(route.query.profile) : ''
+  store.filters.profile = route.query.profile ? String(route.query.profile) : DEFAULT_PROFILE
   await store.load()
   if (routeSelectedId()) await store.select(routeSelectedId())
 })
@@ -141,7 +145,7 @@ onMounted(async () => {
       <q-input v-model="store.filters.search" dense outlined clearable label="ФИО, телефон, email" @keyup.enter="applyFilters">
         <template #prepend><Search :size="16" /></template>
       </q-input>
-      <q-select v-model="store.filters.profile" dense outlined clearable emit-value map-options label="Профиль" :options="profileOptions" />
+      <q-select v-model="store.filters.profile" dense outlined emit-value map-options label="Профиль" :options="profileOptions" />
     </AppFilterBar>
 
     <div ref="workspaceRef" class="people-workspace" :style="workspaceStyle">
@@ -165,7 +169,8 @@ onMounted(async () => {
           </template>
           <template #body-cell-profiles="props">
             <q-td :props="props" class="people-profile-chips">
-              <q-chip v-if="profileCount(props.row, 'employees')" dense>Сотрудник</q-chip>
+              <q-chip v-if="profileCount(props.row, 'students')" dense>Студент</q-chip>
+          <q-chip v-if="profileCount(props.row, 'employees')" dense>Сотрудник</q-chip>
               <q-chip v-if="profileCount(props.row, 'teachers')" dense>Преподаватель</q-chip>
               <q-chip v-if="profileCount(props.row, 'applicant_applications')" dense>Абитуриент</q-chip>
               <q-chip v-if="profileCount(props.row, 'graduates')" dense>Выпускник</q-chip>

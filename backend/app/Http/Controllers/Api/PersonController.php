@@ -30,7 +30,6 @@ class PersonController extends Controller
         $profile = $request->string('profile')->toString();
 
         $people = Person::query()
-            ->whereDoesntHave('students')
             ->withCount(['students', 'teachers', 'employees', 'applicants', 'applicantApplications', 'graduates', 'users', 'digitalIdentities'])
             ->when($search, function ($query) use ($operator, $search): void {
                 $query->where(function ($query) use ($operator, $search): void {
@@ -42,7 +41,13 @@ class PersonController extends Controller
                 });
             })
             ->when($profile, function ($query) use ($profile): void {
+                // Person is the single registry of every human in the system, so the list must
+                // not hide anyone by itself: someone who is both a student and an employee has
+                // to stay findable. Excluding students is a filter the caller asks for, not a
+                // silent rule of the endpoint.
                 match ($profile) {
+                    'student' => $query->has('students'),
+                    'without_students' => $query->whereDoesntHave('students'),
                     'teacher' => $query->has('teachers'),
                     'employee' => $query->has('employees'),
                     'applicant' => $query->where(fn ($profileQuery) => $profileQuery->has('applicants')->orHas('applicantApplications')),

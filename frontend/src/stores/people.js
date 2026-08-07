@@ -2,7 +2,9 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
 
-const initialFilters = { search: '', profile: '' }
+// The registry holds every person, so the list opens without students to stay readable.
+// It is a preselected filter the operator can change, not a hidden rule of the section.
+const initialFilters = { search: '', profile: 'without_students' }
 
 function rows(payload) { return Array.isArray(payload?.data) ? payload.data : [] }
 function meta(payload) { return payload?.meta || null }

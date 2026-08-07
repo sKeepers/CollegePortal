@@ -30,22 +30,29 @@ class PersonFoundationTest extends TestCase
         $this->assertTrue($person->teachers()->whereKey($teacher)->exists());
     }
 
-    public function test_people_api_excludes_students_and_returns_employee_profiles(): void
+    public function test_people_api_lists_every_person_and_filters_students_only_on_request(): void
     {
         $this->seed(RoleSeeder::class);
         $director = $this->createApiUser(roleCode: 'director');
         $teacher = $this->createApiUser(roleCode: 'teacher');
         $group = $this->group();
+
         $studentPerson = Person::create(['last_name' => 'Петрова', 'first_name' => 'Анна', 'status' => 'active']);
         Student::create(['person_id' => $studentPerson->id, 'group_id' => $group->id, 'last_name' => 'Петрова', 'first_name' => 'Анна', 'status' => 'active']);
+
         $employeePerson = Person::create(['last_name' => 'Иванова', 'first_name' => 'Мария', 'status' => 'active']);
         Employee::create(['person_id' => $employeePerson->id, 'employee_number' => 'EMP-PEOPLE-1', 'status' => 'active', 'employment_type' => 'full_time']);
 
-        $this->withApiAuth($director)
-            ->getJson('/api/people')
-            ->assertOk()
-            ->assertJsonPath('data.0.full_name', 'Иванова Мария')
-            ->assertJsonPath('data.0.profiles_count.employees', 1);
+        $names = fn (array $response): array => collect($response['data'])->pluck('full_name')->all();
+
+        $all = $this->withApiAuth($director)->getJson('/api/people')->assertOk()->json();
+        $this->assertEqualsCanonicalizing(['Иванова Мария', 'Петрова Анна'], $names($all));
+
+        $withoutStudents = $this->withApiAuth($director)->getJson('/api/people?profile=without_students')->assertOk()->json();
+        $this->assertSame(['Иванова Мария'], $names($withoutStudents));
+
+        $studentsOnly = $this->withApiAuth($director)->getJson('/api/people?profile=student')->assertOk()->json();
+        $this->assertSame(['Петрова Анна'], $names($studentsOnly));
 
         $this->withApiAuth($director)
             ->getJson("/api/people/{$employeePerson->id}")
@@ -54,6 +61,31 @@ class PersonFoundationTest extends TestCase
             ->assertJsonCount(1, 'data.employees');
 
         $this->withApiAuth($teacher)->getJson('/api/people')->assertForbidden();
+    }
+
+    public function test_person_with_both_student_and_employee_profiles_stays_in_the_registry(): void
+    {
+        $this->seed(RoleSeeder::class);
+        $director = $this->createApiUser(roleCode: 'director');
+        $group = $this->group();
+
+        // A student working as a lab assistant: excluding anyone who has a student profile
+        // used to erase this person from the registry entirely, including for HR.
+        $person = Person::create(['last_name' => 'Сидоров', 'first_name' => 'Павел', 'status' => 'active']);
+        Student::create(['person_id' => $person->id, 'group_id' => $group->id, 'last_name' => 'Сидоров', 'first_name' => 'Павел', 'status' => 'active']);
+        Employee::create(['person_id' => $person->id, 'employee_number' => 'EMP-PEOPLE-2', 'status' => 'active', 'employment_type' => 'part_time']);
+
+        $this->withApiAuth($director)
+            ->getJson('/api/people?profile=employee')
+            ->assertOk()
+            ->assertJsonPath('data.0.full_name', 'Сидоров Павел')
+            ->assertJsonPath('data.0.profiles_count.students', 1)
+            ->assertJsonPath('data.0.profiles_count.employees', 1);
+
+        $this->withApiAuth($director)
+            ->getJson('/api/people?profile=without_students')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
     }
 
     public function test_duplicate_search_uses_snils_and_ambiguous_duplicates_are_not_auto_linked(): void
