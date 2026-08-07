@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\DTO\ProvisionedAccount;
+use App\Models\DigitalIdentity;
 use App\Models\Employee;
 use App\Models\Person;
 use App\Models\Role;
@@ -16,6 +17,10 @@ use LogicException;
 
 class AccountProvisioningService
 {
+    public function __construct(private readonly DigitalIdentityService $digitalIdentities)
+    {
+    }
+
     public function provision(Model $profile): ProvisionedAccount
     {
         $roleCode = match (true) {
@@ -62,8 +67,39 @@ class AccountProvisioningService
                 $profile->forceFill(['user_id' => $user->id])->save();
             }
 
+            $this->issuePassIfMissing($profile, $roleCode);
+
             return new ProvisionedAccount($user, $username, $password, $name, $role->code);
         });
+    }
+
+    /**
+     * QR-пропуск выпускается вместе с учетной записью. До этого порядок был не
+     * определен: пропуск можно было выдать человеку без логина, и тогда владелец
+     * физически не мог его открыть, потому что QR показывается только в личном
+     * кабинете. Действующий пропуск не трогаем, иначе повторное создание
+     * учетной записи отозвало бы уже выданный код.
+     */
+    private function issuePassIfMissing(Model $profile, string $entityType): void
+    {
+        $hasActivePass = DigitalIdentity::query()
+            ->where('entity_type', $entityType)
+            ->where('entity_id', $profile->getKey())
+            ->where('status', DigitalIdentity::STATUS_ACTIVE)
+            ->exists();
+
+        if ($hasActivePass) {
+            return;
+        }
+
+        $this->digitalIdentities->issue(
+            $entityType,
+            (int) $profile->getKey(),
+            null,
+            request(),
+            'digital_identity',
+            'issue_qr_with_account',
+        );
     }
 
     private function createPerson(Model $profile): Person
