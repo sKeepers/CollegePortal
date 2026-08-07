@@ -77,7 +77,7 @@ async function startCamera(deviceId = selectedDeviceId.value) {
   stopCamera()
 
   if (!isSecureContext.value) {
-    cameraError.value = 'Камера доступна только через HTTPS. Откройте портал по адресу https://192.168.34.114:5443.'
+    cameraError.value = `Камера доступна только через HTTPS. Откройте портал по адресу https://${window.location.hostname}.`
     cameraStatus.value = 'Нужен HTTPS'
     return
   }
