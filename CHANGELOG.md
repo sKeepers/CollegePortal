@@ -11,6 +11,22 @@
 - [Project Context](PROJECT_CONTEXT.md)
 - [Documentation Report](REPORT.md)
 
+## 0.8.0-rc3 - Private Release Candidate
+
+First trunk release since 0.8.0-rc2. Merges 121 commits of UAT stabilisation that had never reached `develop`, and is the first release verified by CI on PostgreSQL 17 as well as SQLite.
+
+### Added
+
+- CI runs on feature branches and verifies the backend against PostgreSQL 17, not only in-memory SQLite.
+- Planning document for login providers, password recovery and the mobile contour: `docs/AUTH_AND_MOBILE_PLAN.md`.
+
+### Fixed
+
+- Gate QR is accepted when a USB HID scanner types the token with a Russian keyboard layout active.
+- Employee import no longer creates duplicates when the personnel number is empty.
+- A teacher account without a linked Teacher profile sees an empty teaching load instead of a permission error.
+- The UAT student is linked to a Person and Student profile, so the student cabinet, personal QR pass and group journal resolve.
+
 ## 0.8.0-rc2 - Private Release Candidate
 
 ### Added
