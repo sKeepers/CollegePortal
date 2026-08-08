@@ -65,6 +65,11 @@ export function humanizeApiMessage(message, field = '') {
   if (text === 'Forbidden.' || text === 'Forbidden' || text === 'This action is unauthorized.') {
     return 'У вас нет доступа к этому разделу или действию.'
   }
+  // Ответ ограничителя приходит от Laravel по-английски, а пользователь читает
+  // именно его — при неудачном входе чаще всего.
+  if (text === 'Too Many Attempts.' || text === 'Too Many Requests') {
+    return 'Слишком много попыток. Подождите минуту и попробуйте снова.'
+  }
 
   const mapped = VALIDATION_RULE_MESSAGES[text]
   if (mapped) {

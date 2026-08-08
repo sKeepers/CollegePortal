@@ -13,6 +13,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- Five people mistyping their password no longer shut everybody else out. The limiter counted attempts by IP address and email, but the login form has never sent an email field — it sends `login` — so the key collapsed to the address on its own and the five attempts a minute were shared by everyone behind it: the sixth person to sign in, with the right password, was refused. The same slip meant guessing at one account's password was never limited at all, only the address it came from. There are two counters now, because they guard against different things: a strict one per account, which is what actually stops password guessing, and a generous one per address, which stops one machine sweeping through accounts without punishing a college that leaves through a single gateway. Either one alone gives up something. The four ways of writing a phone number share a counter as well — they already found the same person, so counting them apart handed four times the attempts away for nothing. Which spellings mean the same login is now decided in one place rather than restated by the limiter and the login screen separately.
+
 ## 0.8.0-rc7 - Private Release Candidate
 
 ### Added

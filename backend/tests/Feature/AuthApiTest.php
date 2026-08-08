@@ -159,4 +159,74 @@ class AuthApiTest extends TestCase
             ->getJson('/api/auth/me')
             ->assertUnauthorized();
     }
+
+    /**
+     * Счетчик попыток раньше собирался из поля email, которого форма входа не
+     * отправляет, поэтому ключ сводился к одному адресу и пятеро ошибившихся
+     * закрывали вход всем остальным с того же адреса.
+     */
+    public function test_wrong_logins_from_one_address_do_not_lock_out_another_account(): void
+    {
+        $role = Role::create(['name' => 'Преподаватель', 'code' => 'teacher']);
+        User::factory()->create([
+            'role_id' => $role->id,
+            'username' => 'petrova.av',
+            'password' => Hash::make('correct-horse-battery'),
+            'is_active' => true,
+        ]);
+
+        for ($attempt = 1; $attempt <= 5; $attempt++) {
+            $this->postJson('/api/auth/login', ['login' => "somebody{$attempt}", 'password' => 'wrong'])
+                ->assertStatus(422);
+        }
+
+        $this->postJson('/api/auth/login', ['login' => 'petrova.av', 'password' => 'correct-horse-battery'])
+            ->assertOk();
+    }
+
+    /** Подбор пароля к одной учетной записи обязан упираться в счетчик. */
+    public function test_repeated_attempts_against_one_account_are_throttled(): void
+    {
+        $role = Role::create(['name' => 'Преподаватель', 'code' => 'teacher']);
+        User::factory()->create([
+            'role_id' => $role->id,
+            'username' => 'petrova.av',
+            'password' => Hash::make('correct-horse-battery'),
+            'is_active' => true,
+        ]);
+
+        for ($attempt = 1; $attempt <= 5; $attempt++) {
+            $this->postJson('/api/auth/login', ['login' => 'petrova.av', 'password' => "guess{$attempt}"])
+                ->assertStatus(422);
+        }
+
+        $this->postJson('/api/auth/login', ['login' => 'petrova.av', 'password' => 'correct-horse-battery'])
+            ->assertStatus(429);
+    }
+
+    /**
+     * Телефон пишут четырьмя способами, и все четыре находят одного человека.
+     * Значит, и попытки по ним обязаны складываться в один счет — иначе запас
+     * попыток учетверяется просто из-за формы записи номера.
+     */
+    public function test_phone_login_spellings_share_one_attempt_counter(): void
+    {
+        $role = Role::create(['name' => 'Преподаватель', 'code' => 'teacher']);
+        User::factory()->create([
+            'role_id' => $role->id,
+            'username' => '+79990000001',
+            'password' => Hash::make('correct-horse-battery'),
+            'is_active' => true,
+        ]);
+
+        $spellings = ['+79990000001', '79990000001', '89990000001', '8 (999) 000-00-01', '+7 999 000 00 01'];
+
+        foreach ($spellings as $spelling) {
+            $this->postJson('/api/auth/login', ['login' => $spelling, 'password' => 'wrong'])
+                ->assertStatus(422);
+        }
+
+        $this->postJson('/api/auth/login', ['login' => '+79990000001', 'password' => 'correct-horse-battery'])
+            ->assertStatus(429);
+    }
 }

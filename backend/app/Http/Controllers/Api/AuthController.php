@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Support\LoginIdentifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Services\AuditLogService;
@@ -20,7 +21,7 @@ class AuthController extends Controller
         $credentials = $request->validated();
 
         $login = $credentials['login'] ?? $credentials['email'];
-        $phoneLogins = $this->phoneLogins($login);
+        $phoneLogins = LoginIdentifier::variants($login);
         $user = User::query()
             ->with(['role.permissions', 'roles.permissions'])
             ->where(function ($query) use ($login, $phoneLogins): void {
@@ -57,29 +58,6 @@ class AuthController extends Controller
             'token_type' => 'Bearer',
             'user' => new UserResource($user->refresh()->load(['role.permissions', 'roles.permissions', 'student.group', 'teacher'])),
         ]);
-    }
-
-    /**
-     * Телефон в системе хранится по-разному: импорт оставляет только цифры,
-     * формы сохраняют +7, а люди набирают то через 8, то через +7. Поэтому из
-     * введенного номера строятся все написания сразу, иначе человек, заведенный
-     * импортом, не может войти по телефону ни в одном формате.
-     *
-     * @return list<string>
-     */
-    private function phoneLogins(string $login): array
-    {
-        $digits = preg_replace('/\D+/', '', $login) ?? '';
-        if (! preg_match('/^(?:7|8)(\d{10})$/', $digits, $matches)) {
-            return [$login];
-        }
-
-        return array_values(array_unique([
-            $login,
-            "+7{$matches[1]}",
-            "7{$matches[1]}",
-            "8{$matches[1]}",
-        ]));
     }
 
     public function me(Request $request): UserResource
