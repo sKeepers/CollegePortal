@@ -11,6 +11,7 @@ use App\Models\UatTestRun;
 use App\Models\User;
 use App\Services\AuditLogService;
 use App\Services\UatScenarioService;
+use App\Support\Csv\CsvExport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -193,35 +194,31 @@ class UatController extends Controller
 
     public function exportRuns(Request $request): StreamedResponse
     {
-        return response()->streamDownload(function (): void {
-            $out = fopen('php://output', 'w');
-            fputcsv($out, ['run_id', 'role', 'tester', 'scenario', 'status', 'comment', 'actual_result']);
-            UatTestRun::query()->with(['tester', 'results'])->orderBy('id')->chunk(100, function ($runs) use ($out): void {
+        return CsvExport::download('uat-results.csv', ['run_id', 'role', 'tester', 'scenario', 'status', 'comment', 'actual_result'], function (callable $row): void {
+            UatTestRun::query()->with(['tester', 'results'])->orderBy('id')->chunk(100, function ($runs) use ($row): void {
                 foreach ($runs as $run) {
                     foreach ($run->results as $result) {
-                        fputcsv($out, [$run->id, $run->role_code, $run->tester?->email, $result->scenario_code, $result->status, $result->comment, $result->actual_result]);
+                        $row([$run->id, $run->role_code, $run->tester?->email, $result->scenario_code, $result->status, $result->comment, $result->actual_result]);
                     }
                 }
             });
-            fclose($out);
-        }, 'uat-results.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        });
     }
 
     public function exportIssues(Request $request): StreamedResponse
     {
-        return response()->streamDownload(function () use ($request): void {
-            $out = fopen('php://output', 'w');
-            fputcsv($out, ['id', 'role', 'category', 'severity', 'title', 'status', 'page_url', 'version', 'build']);
+        $filename = $request->boolean('failed_only') ? 'uat-open-issues.csv' : 'uat-feedback.csv';
+
+        return CsvExport::download($filename, ['id', 'role', 'category', 'severity', 'title', 'status', 'page_url', 'version', 'build'], function (callable $row) use ($request): void {
             $query = UatFeedback::query()->orderBy('id');
             if ($request->boolean('failed_only')) {
                 $query->whereIn('status', ['new', 'confirmed', 'in_progress', 'retest']);
             }
-            $query->chunk(100, function ($items) use ($out): void {
+            $query->chunk(100, function ($items) use ($row): void {
                 foreach ($items as $item) {
-                    fputcsv($out, [$item->id, $item->role_code, $item->category, $item->severity, $item->title, $item->status, $item->page_url, $item->app_version, $item->build_hash]);
+                    $row([$item->id, $item->role_code, $item->category, $item->severity, $item->title, $item->status, $item->page_url, $item->app_version, $item->build_hash]);
                 }
             });
-            fclose($out);
-        }, $request->boolean('failed_only') ? 'uat-open-issues.csv' : 'uat-feedback.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        });
     }
 }

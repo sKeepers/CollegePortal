@@ -11,6 +11,7 @@ use App\Services\ApplicantApplicationEventService;
 use App\Services\ApplicantDocumentRegistryService;
 use App\Services\AuditLogService;
 use App\Services\PersonService;
+use App\Support\Csv\CsvExport;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -276,11 +277,9 @@ class AdmissionBulkService
 
     private function export(Collection $applications): StreamedResponse
     {
-        return response()->streamDownload(function () use ($applications): void {
-            $output = fopen('php://output', 'w');
-            fputcsv($output, ['id', 'fio', 'status', 'education_program_id', 'submitted_at', 'documents_provided', 'recommended_for_enrollment'], ';');
+        return CsvExport::download('admissions-selected.csv', ['id', 'fio', 'status', 'education_program_id', 'submitted_at', 'documents_provided', 'recommended_for_enrollment'], function (callable $row) use ($applications): void {
             foreach ($applications as $application) {
-                fputcsv($output, [
+                $row([
                     $application->id,
                     $this->name($application),
                     $application->status,
@@ -288,10 +287,9 @@ class AdmissionBulkService
                     $application->submitted_at?->toDateString(),
                     $application->documents_provided ? 'yes' : 'no',
                     $application->recommended_for_enrollment ? 'yes' : 'no',
-                ], ';');
+                ]);
             }
-            fclose($output);
-        }, 'admissions-selected.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        });
     }
 
     private function baseReport(string $action, int $total, array $selection = []): array

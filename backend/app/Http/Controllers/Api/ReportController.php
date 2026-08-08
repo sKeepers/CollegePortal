@@ -9,6 +9,7 @@ use App\Models\Group;
 use App\Models\ScheduleLesson;
 use App\Models\Student;
 use App\Models\Subject;
+use App\Support\Csv\CsvExport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -31,24 +32,19 @@ class ReportController extends Controller
         $validated = $this->validateAttendanceReportRequest($request);
         $report = $this->buildAttendanceByGroupReport($validated);
 
-        return response()->streamDownload(function () use ($report): void {
-            $output = fopen('php://output', 'w');
-
-            fwrite($output, "\xEF\xBB\xBF");
-            fputcsv($output, [
-                'student',
-                'group',
-                'total_lessons',
-                'marked_total',
-                'present',
-                'absent',
-                'late',
-                'excused',
-                'unmarked',
-            ], ';');
-
+        return CsvExport::download('attendance-report.csv', [
+            'student',
+            'group',
+            'total_lessons',
+            'marked_total',
+            'present',
+            'absent',
+            'late',
+            'excused',
+            'unmarked',
+        ], function (callable $row) use ($report): void {
             foreach ($report['students'] as $student) {
-                fputcsv($output, [
+                $row([
                     $student['name'],
                     $report['group']['name'],
                     $report['summary']['total_lessons'],
@@ -58,13 +54,9 @@ class ReportController extends Controller
                     $student['late'],
                     $student['excused'],
                     $student['unmarked'],
-                ], ';');
+                ]);
             }
-
-            fclose($output);
-        }, 'attendance-report.csv', [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        });
     }
 
     public function gradesByGroup(Request $request): JsonResponse
@@ -81,34 +73,25 @@ class ReportController extends Controller
         $validated = $this->validateGradeReportRequest($request);
         $report = $this->buildGradesByGroupReport($validated);
 
-        return response()->streamDownload(function () use ($report): void {
-            $output = fopen('php://output', 'w');
-
-            fwrite($output, "\xEF\xBB\xBF");
-            fputcsv($output, [
-                'student',
-                'group',
-                'subject',
-                'grades',
-                'numeric_grades_count',
-                'average_grade',
-            ], ';');
-
+        return CsvExport::download('grades-report.csv', [
+            'student',
+            'group',
+            'subject',
+            'grades',
+            'numeric_grades_count',
+            'average_grade',
+        ], function (callable $row) use ($report): void {
             foreach ($report['students'] as $student) {
-                fputcsv($output, [
+                $row([
                     $student['name'],
                     $report['group']['name'],
                     $report['subject']['name'],
                     collect($student['grades'])->join(', '),
                     $student['numeric_grades_count'],
                     $student['average_grade'],
-                ], ';');
+                ]);
             }
-
-            fclose($output);
-        }, 'grades-report.csv', [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        });
     }
 
     private function validateAttendanceReportRequest(Request $request): array

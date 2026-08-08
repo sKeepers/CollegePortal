@@ -10,6 +10,7 @@ use App\Models\Student;
 use App\Models\Teacher;
 use App\Services\AccessPresenceService;
 use App\Services\AttendanceAnalysisService;
+use App\Support\Csv\CsvExport;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -164,17 +165,14 @@ class AccessReportController extends Controller
     {
         $filename = 'access-events-'.now()->format('Ymd-His').'.csv';
 
-        return response()->streamDownload(function () use ($events): void {
-            $output = fopen('php://output', 'w');
-            // Дата и время разведены по столбцам: в одной ячейке период не свести
-            // сводной таблицей, а именно этим выгрузку и разбирают.
-            fputcsv($output, ['Дата', 'Время', 'ФИО', 'Тип', 'Группа или подразделение', 'Корпус', 'Точка доступа', 'Направление', 'Результат', 'Причина', 'Устройство'], ';');
-
+        // Дата и время разведены по столбцам: в одной ячейке период не свести
+        // сводной таблицей, а именно этим выгрузку и разбирают.
+        return CsvExport::download($filename, ['Дата', 'Время', 'ФИО', 'Тип', 'Группа или подразделение', 'Корпус', 'Точка доступа', 'Направление', 'Результат', 'Причина', 'Устройство'], function (callable $row) use ($events): void {
             foreach ($events as $event) {
                 $owner = $event->owner;
                 $person = $owner instanceof Employee ? $owner->person : $owner;
                 $name = trim(implode(' ', array_filter([$person?->last_name, $person?->first_name, $person?->middle_name]))) ?: 'Неизвестный пропуск';
-                fputcsv($output, [
+                $row([
                     $event->event_time?->format('d.m.Y'),
                     $event->event_time?->format('H:i'),
                     $name,
@@ -191,10 +189,8 @@ class AccessReportController extends Controller
                     $event->result === AccessEvent::RESULT_ALLOWED ? 'Разрешено' : 'Отказано',
                     $event->reason,
                     $event->device_name,
-                ], ';');
+                ]);
             }
-
-            fclose($output);
-        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+        });
     }
 }

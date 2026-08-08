@@ -21,6 +21,7 @@ use App\Models\Teacher;
 use App\Models\User;
 use App\Services\AuditLogService;
 use Database\Seeders\DemoDataSeeder;
+use App\Support\Csv\CsvExport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -174,14 +175,11 @@ class DemoDataController extends Controller
 
         AuditLogService::log('demo_data', 'export', ['type' => 'demo_data', 'id' => null], null, ['filename' => $filename], request());
 
-        return response()->streamDownload(function (): void {
-            $output = fopen('php://output', 'w');
-            fputcsv($output, ['entity', 'count'], ';');
+        return CsvExport::download($filename, ['entity', 'count'], function (callable $row): void {
             foreach ($this->summary() as $entity => $count) {
-                fputcsv($output, [$entity, $count], ';');
+                $row([$entity, $count]);
             }
-            fclose($output);
-        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+        });
     }
 
     public function import(Request $request): JsonResponse

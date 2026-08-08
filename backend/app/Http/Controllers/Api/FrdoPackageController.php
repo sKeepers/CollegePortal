@@ -9,6 +9,7 @@ use App\Models\FrdoPackage;
 use App\Models\Graduate;
 use App\Models\Student;
 use App\Services\Admissions\AdmissionDocumentReadinessService;
+use App\Support\Csv\CsvExport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -130,15 +131,12 @@ class FrdoPackageController extends Controller
         $package = $this->freshPackage($frdoPackage);
         $filename = 'frdo-package-'.$package->id.'.csv';
 
-        return response()->streamDownload(function () use ($package): void {
-            $output = fopen('php://output', 'w');
-            fputcsv($output, ['record_id', 'graduate_id', 'student', 'birth_date', 'specialty', 'education_program', 'diploma_series', 'diploma_number', 'registration_number', 'issue_date', 'qualification', 'diploma_status', 'record_status'], ';');
+        return CsvExport::download($filename, ['record_id', 'graduate_id', 'student', 'birth_date', 'specialty', 'education_program', 'diploma_series', 'diploma_number', 'registration_number', 'issue_date', 'qualification', 'diploma_status', 'record_status'], function (callable $row) use ($package): void {
             foreach ($package->records as $record) {
                 $p = $record->payload ?: [];
-                fputcsv($output, [$record->id, $record->graduate_id, $p['student'] ?? null, $p['birth_date'] ?? null, $p['specialty'] ?? null, $p['education_program'] ?? null, $p['diploma_series'] ?? null, $p['diploma_number'] ?? null, $p['registration_number'] ?? null, $p['issue_date'] ?? null, $p['qualification'] ?? null, $p['diploma_status'] ?? null, $record->status], ';');
+                $row([$record->id, $record->graduate_id, $p['student'] ?? null, $p['birth_date'] ?? null, $p['specialty'] ?? null, $p['education_program'] ?? null, $p['diploma_series'] ?? null, $p['diploma_number'] ?? null, $p['registration_number'] ?? null, $p['issue_date'] ?? null, $p['qualification'] ?? null, $p['diploma_status'] ?? null, $record->status]);
             }
-            fclose($output);
-        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+        });
     }
 
     public function exportJson(FrdoPackage $frdoPackage): JsonResponse

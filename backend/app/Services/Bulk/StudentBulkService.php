@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\AccountProvisioningService;
 use App\Services\AuditLogService;
 use Throwable;
+use App\Support\Csv\CsvExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -239,11 +240,9 @@ class StudentBulkService
 
     private function export(Collection $students): StreamedResponse
     {
-        return response()->streamDownload(function () use ($students): void {
-            $output = fopen('php://output', 'w');
-            fputcsv($output, ['id', 'fio', 'group', 'status', 'course', 'education_form', 'funding_form', 'phone_masked', 'email_masked'], ';');
+        return CsvExport::download('students-selected.csv', ['id', 'fio', 'group', 'status', 'course', 'education_form', 'funding_form', 'phone_masked', 'email_masked'], function (callable $row) use ($students): void {
             foreach ($students as $student) {
-                fputcsv($output, [
+                $row([
                     $student->id,
                     $this->name($student),
                     $student->group?->name,
@@ -253,10 +252,9 @@ class StudentBulkService
                     $student->funding_form,
                     $this->mask($student->phone),
                     $this->maskEmail($student->email),
-                ], ';');
+                ]);
             }
-            fclose($output);
-        }, 'students-selected.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        });
     }
 
     private function baseReport(string $action, int $total): array

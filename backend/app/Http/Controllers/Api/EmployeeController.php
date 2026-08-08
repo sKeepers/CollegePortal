@@ -1,6 +1,6 @@
 <?php
 namespace App\Http\Controllers\Api;
-use App\Http\Controllers\Controller; use App\Http\Resources\DigitalIdentityResource; use App\Http\Resources\EmployeeResource; use App\Models\DigitalIdentity; use App\Models\Employee; use App\Models\EmployeeAssignment; use App\Models\EmployeeStatusPeriod; use App\Services\AuditLogService; use App\Services\DigitalIdentityService; use App\Services\HrService; use App\Services\Import\EmployeeImportHandler; use Illuminate\Database\Eloquent\Builder; use Illuminate\Http\Request; use Illuminate\Http\Resources\Json\AnonymousResourceCollection; use Illuminate\Http\Response; use Illuminate\Validation\Rule; use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Http\Controllers\Controller; use App\Http\Resources\DigitalIdentityResource; use App\Http\Resources\EmployeeResource; use App\Models\DigitalIdentity; use App\Models\Employee; use App\Models\EmployeeAssignment; use App\Models\EmployeeStatusPeriod; use App\Services\AuditLogService; use App\Services\DigitalIdentityService; use App\Services\HrService; use App\Services\Import\EmployeeImportHandler; use App\Support\Csv\CsvExport; use Illuminate\Database\Eloquent\Builder; use Illuminate\Http\Request; use Illuminate\Http\Resources\Json\AnonymousResourceCollection; use Illuminate\Http\Response; use Illuminate\Validation\Rule; use Symfony\Component\HttpFoundation\StreamedResponse;
 class EmployeeController extends Controller {
  public function __construct(private readonly HrService $hrService) {}
  public function index(Request $request): AnonymousResourceCollection { $q=Employee::query()->with(['person','teacher','primaryDepartment','primaryPosition','assignments.department','assignments.position','statusPeriods'])->when($request->string('status')->toString(),fn($q,$v)=>$q->where('status',$v))->when($request->integer('department_id'),fn($q,$v)=>$q->where('primary_department_id',$v))->when($request->integer('position_id'),fn($q,$v)=>$q->where('primary_position_id',$v))->when($request->string('employment_type')->toString(),fn($q,$v)=>$q->where('employment_type',$v))->when($request->has('is_teacher'),fn($q)=>$q->where('is_teacher',$request->boolean('is_teacher')))->when($request->string('working')->toString()==='active',fn($q)=>$q->whereNull('dismissed_at')->where('status','!=','dismissed'))->when($request->string('working')->toString()==='dismissed',fn($q)=>$q->where(fn($x)=>$x->whereNotNull('dismissed_at')->orWhere('status','dismissed')))->when($request->string('search')->toString(),function(Builder $q,string $s){$s=mb_strtolower($s);$q->where(fn($x)=>$x->whereRaw('lower(employee_number) like ?', ["%$s%"])->orWhereHas('person',fn($p)=>$p->whereRaw('lower(last_name) like ?', ["%$s%"])->orWhereRaw('lower(first_name) like ?', ["%$s%"])->orWhereRaw('lower(middle_name) like ?', ["%$s%"]))); })->orderBy('employee_number'); return EmployeeResource::collection($q->paginate($request->integer('per_page')?:50)); }
@@ -14,13 +14,9 @@ class EmployeeController extends Controller {
  {
      $employees = Employee::query()->with(['person', 'primaryDepartment', 'primaryPosition'])->orderBy('employee_number')->get();
 
-     return response()->streamDownload(function () use ($employees, $handler): void {
-         $output = fopen('php://output', 'w');
-         fwrite($output, "\xEF\xBB\xBF");
-         fputcsv($output, $handler->templateHeaders(), ';');
-
+     return CsvExport::download('employees-'.now()->format('Ymd-His').'.csv', $handler->templateHeaders(), function (callable $row) use ($employees): void {
          foreach ($employees as $employee) {
-             fputcsv($output, [
+             $row([
                  $employee->employee_number,
                  $employee->person?->last_name,
                  $employee->person?->first_name,
@@ -36,11 +32,9 @@ class EmployeeController extends Controller {
                  $employee->is_teacher ? 'да' : 'нет',
                  $employee->work_schedule_code,
                  '',
-             ], ';');
+             ]);
          }
-
-         fclose($output);
-     }, 'employees-'.now()->format('Ymd-His').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+     });
  }
  public function store(Request $request): EmployeeResource { abort_unless($request->user()->hasPermission('hr.employees.create'),403); $data=$this->validateEmployee($request); $employee=$this->hrService->createEmployee($data); AuditLogService::log('hr','employee_hired',$employee,null,$employee->toArray(),$request); return new EmployeeResource($employee); }
  public function show(Employee $employee): EmployeeResource { return new EmployeeResource($employee->load(['person','teacher','primaryDepartment','primaryPosition','assignments.department','assignments.position','statusPeriods'])); }

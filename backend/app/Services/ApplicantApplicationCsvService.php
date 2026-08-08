@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\ApplicantApplication;
 use App\Models\EducationProgram;
 use DateTimeImmutable;
+use App\Support\Csv\CsvExport;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Validator;
@@ -40,16 +41,11 @@ class ApplicantApplicationCsvService
 
     public function export(Request $request): StreamedResponse
     {
-        return response()->streamDownload(function () use ($request): void {
-            $output = fopen('php://output', 'w');
-
-            fwrite($output, "\xEF\xBB\xBF");
-            fputcsv($output, self::HEADERS, ';');
-
+        return CsvExport::download('applicant-applications.csv', self::HEADERS, function (callable $row) use ($request): void {
             $this->query($request)
-                ->chunk(200, function ($applications) use ($output): void {
+                ->chunk(200, function ($applications) use ($row): void {
                     foreach ($applications as $application) {
-                        fputcsv($output, [
+                        $row([
                             $application->id,
                             $application->education_program_id,
                             $application->educationProgram?->name,
@@ -64,14 +60,10 @@ class ApplicantApplicationCsvService
                             $application->status,
                             $application->submitted_at?->toDateString(),
                             $application->comment,
-                        ], ';');
+                        ]);
                     }
                 });
-
-            fclose($output);
-        }, 'applicant-applications.csv', [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        });
     }
 
     public function import(UploadedFile $file): array

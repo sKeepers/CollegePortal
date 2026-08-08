@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\AttendanceAnalysisService;
+use App\Support\Csv\CsvExport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -32,19 +33,15 @@ class AttendanceAnalysisController extends Controller
         if (($filters['export'] ?? null) === 'csv') {
             $rows = $service->historyCsvRows($filters);
 
-            return response()->streamDownload(function () use ($rows): void {
-                $handle = fopen('php://output', 'w');
-                fputs($handle, "\xEF\xBB\xBF");
-                if ($rows === []) {
-                    fputcsv($handle, ['ФИО', 'Тип', 'Дней по расписанию', 'Присутствовал', 'Отсутствовал', 'Опозданий', 'Минут опоздания', 'Ранних уходов', 'Минут раннего ухода', 'Время внутри, минут', 'Среднее в день, минут', 'Незакрытая сессия'], ';');
-                } else {
-                    fputcsv($handle, array_keys($rows[0]), ';');
-                    foreach ($rows as $row) {
-                        fputcsv($handle, $row, ';');
-                    }
+            $headers = $rows === []
+                ? ['ФИО', 'Тип', 'Дней по расписанию', 'Присутствовал', 'Отсутствовал', 'Опозданий', 'Минут опоздания', 'Ранних уходов', 'Минут раннего ухода', 'Время внутри, минут', 'Среднее в день, минут', 'Незакрытая сессия']
+                : array_keys($rows[0]);
+
+            return CsvExport::download('attendance-history.csv', $headers, function (callable $row) use ($rows): void {
+                foreach ($rows as $line) {
+                    $row($line);
                 }
-                fclose($handle);
-            }, 'attendance-history.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+            });
         }
 
         return response()->json($service->history($filters));

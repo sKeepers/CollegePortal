@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Group;
 use App\Models\EducationProgram;
 use App\Models\Teacher;
+use App\Support\Csv\CsvExport;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -28,18 +29,13 @@ class GroupCsvService
 
     public function export(): StreamedResponse
     {
-        return response()->streamDownload(function (): void {
-            $output = fopen('php://output', 'w');
-
-            fwrite($output, "\xEF\xBB\xBF");
-            fputcsv($output, self::HEADERS, ';');
-
+        return CsvExport::download('groups.csv', self::HEADERS, function (callable $row): void {
             Group::query()
                 ->with(['curator', 'educationProgram.specialty'])
                 ->orderBy('name')
-                ->chunk(200, function ($groups) use ($output): void {
+                ->chunk(200, function ($groups) use ($row): void {
                     foreach ($groups as $group) {
-                        fputcsv($output, [
+                        $row([
                             $group->id,
                             $group->name,
                             $group->specialty,
@@ -49,14 +45,10 @@ class GroupCsvService
                             $group->year_start,
                             $group->curator_id,
                             $group->curator ? $this->teacherName($group->curator) : null,
-                        ], ';');
+                        ]);
                     }
                 });
-
-            fclose($output);
-        }, 'groups.csv', [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        });
     }
 
     public function import(UploadedFile $file): array

@@ -20,6 +20,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use App\Support\Csv\CsvExport;
+use App\Support\Csv\CsvImport;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -119,11 +121,9 @@ class GraduateController extends Controller
         $graduates = Graduate::query()->with($this->relations())->orderBy('id')->get();
         $filename = 'graduates-'.now()->format('Ymd-His').'.csv';
 
-        return response()->streamDownload(function () use ($graduates): void {
-            $output = fopen('php://output', 'w');
-            fputcsv($output, ['id', 'student_id', 'student', 'group_id', 'group_name', 'education_program_id', 'education_program', 'specialty_id', 'specialty', 'graduation_year', 'qualification', 'status', 'diploma_series', 'diploma_number', 'registration_number', 'issue_date', 'gia_decision', 'diploma_status', 'supplement_series', 'supplement_number', 'supplement_status', 'note'], ';');
+        return CsvExport::download($filename, ['id', 'student_id', 'student', 'group_id', 'group_name', 'education_program_id', 'education_program', 'specialty_id', 'specialty', 'graduation_year', 'qualification', 'status', 'diploma_series', 'diploma_number', 'registration_number', 'issue_date', 'gia_decision', 'diploma_status', 'supplement_series', 'supplement_number', 'supplement_status', 'note'], function (callable $row) use ($graduates): void {
             foreach ($graduates as $graduate) {
-                fputcsv($output, [
+                $row([
                     $graduate->id,
                     $graduate->student_id,
                     $this->studentName($graduate->student),
@@ -146,22 +146,17 @@ class GraduateController extends Controller
                     $graduate->diploma?->supplement?->number,
                     $graduate->diploma?->supplement?->status,
                     $graduate->note,
-                ], ';');
+                ]);
             }
-            fclose($output);
-        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+        });
     }
 
     public function import(Request $request): JsonResponse
     {
         $request->validate(['file' => ['required', 'file', 'mimes:csv,txt', 'max:5120']]);
-        $handle = fopen($request->file('file')->getRealPath(), 'r');
-        $headers = fgetcsv($handle, 0, ';') ?: [];
-        $created = 0; $updated = 0; $diplomasSaved = 0; $errors = []; $line = 1;
+        $created = 0; $updated = 0; $diplomasSaved = 0; $errors = [];
 
-        while (($row = fgetcsv($handle, 0, ';')) !== false) {
-            $line++;
-            $data = array_combine($headers, array_pad($row, count($headers), '')) ?: [];
+        foreach (CsvImport::rows($request->file('file')->getRealPath()) as $line => $data) {
             $validator = Validator::make($data, [
                 'student_id' => ['nullable', 'integer', 'exists:students,id'],
                 'student' => ['nullable', 'string'],
@@ -214,7 +209,6 @@ class GraduateController extends Controller
                 $errors[] = ['line' => $line, 'errors' => [$exception->getMessage()]];
             }
         }
-        fclose($handle);
 
         return response()->json(['data' => compact('created', 'updated', 'diplomasSaved', 'errors')]);
     }

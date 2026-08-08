@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\EducationProgram;
 use App\Models\Specialty;
+use App\Support\Csv\CsvExport;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -27,19 +28,14 @@ class EducationProgramCsvService
 
     public function export(): StreamedResponse
     {
-        return response()->streamDownload(function (): void {
-            $output = fopen('php://output', 'w');
-
-            fwrite($output, "\xEF\xBB\xBF");
-            fputcsv($output, self::HEADERS, ';');
-
+        return CsvExport::download('education-programs.csv', self::HEADERS, function (callable $row): void {
             EducationProgram::query()
                 ->with('specialty')
                 ->orderByDesc('year_start')
                 ->orderBy('name')
-                ->chunk(200, function ($programs) use ($output): void {
+                ->chunk(200, function ($programs) use ($row): void {
                     foreach ($programs as $program) {
-                        fputcsv($output, [
+                        $row([
                             $program->id,
                             $program->specialty_id,
                             $program->specialty?->code,
@@ -49,14 +45,10 @@ class EducationProgramCsvService
                             $program->study_years,
                             $program->is_active ? '1' : '0',
                             $program->description,
-                        ], ';');
+                        ]);
                     }
                 });
-
-            fclose($output);
-        }, 'education-programs.csv', [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        });
     }
 
     public function import(UploadedFile $file): array

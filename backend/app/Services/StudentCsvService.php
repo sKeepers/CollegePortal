@@ -7,6 +7,7 @@ use App\Models\Student;
 use App\Services\Admissions\PersonDocumentService;
 use App\Services\Import\StudentImportHandler;
 use DateTimeImmutable;
+use App\Support\Csv\CsvExport;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -67,17 +68,12 @@ class StudentCsvService
     {
         $handler = app(StudentImportHandler::class);
 
-        return response()->streamDownload(function () use ($handler): void {
-            $output = fopen('php://output', 'w');
-
-            fwrite($output, "\xEF\xBB\xBF");
-            fputcsv($output, $handler->templateHeaders(), ';');
-
+        return CsvExport::download('students.csv', $handler->templateHeaders(), function (callable $row) use ($handler): void {
             Student::query()
                 ->with('group')
                 ->orderBy('last_name')
                 ->orderBy('first_name')
-                ->chunk(200, function ($students) use ($output): void {
+                ->chunk(200, function ($students) use ($row): void {
                     // Документы принадлежат человеку, поэтому выгружаются пачкой на страницу,
                     // а не запросом на строку.
                     $personIds = $students->pluck('person_id')->filter()->map(fn ($id): int => (int) $id)->all();
@@ -92,7 +88,7 @@ class StudentCsvService
                         // Порядок обязан совпадать с templateHeaders() обработчика импорта.
                         // «Создать учетную запись» выгружается пустым: обратная
                         // загрузка не должна переоформлять учётные записи.
-                        fputcsv($output, [
+                        $row([
                             $student->last_name,
                             $student->first_name,
                             $student->middle_name,
@@ -120,14 +116,10 @@ class StudentCsvService
                             $education?->document_organization,
                             $education?->graduation_year,
                             '',
-                        ], ';');
+                        ]);
                     }
                 });
-
-            fclose($output);
-        }, 'students.csv', [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        });
     }
 
     public function import(UploadedFile $file): array

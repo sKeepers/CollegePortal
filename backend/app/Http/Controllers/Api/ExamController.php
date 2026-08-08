@@ -19,6 +19,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use App\Support\Csv\CsvExport;
+use App\Support\Csv\CsvImport;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -100,13 +102,11 @@ class ExamController extends Controller
         $exams = Exam::query()->with($this->relations())->orderBy('id')->get();
         $filename = 'exams-'.now()->format('Ymd-His').'.csv';
 
-        return response()->streamDownload(function () use ($exams): void {
-            $output = fopen('php://output', 'w');
-            fputcsv($output, ['id', 'academic_year', 'semester', 'group_id', 'group_name', 'subject_id', 'subject_code', 'subject_name', 'teacher_id', 'teacher', 'classroom_id', 'classroom', 'exam_date', 'starts_at', 'ends_at', 'exam_type', 'status', 'topic', 'student_id', 'student', 'result', 'score', 'result_status', 'comment'], ';');
+        return CsvExport::download($filename, ['id', 'academic_year', 'semester', 'group_id', 'group_name', 'subject_id', 'subject_code', 'subject_name', 'teacher_id', 'teacher', 'classroom_id', 'classroom', 'exam_date', 'starts_at', 'ends_at', 'exam_type', 'status', 'topic', 'student_id', 'student', 'result', 'score', 'result_status', 'comment'], function (callable $row) use ($exams): void {
             foreach ($exams as $exam) {
                 $results = $exam->results->isNotEmpty() ? $exam->results : collect([null]);
                 foreach ($results as $result) {
-                    fputcsv($output, [
+                    $row([
                         $exam->id,
                         $exam->academic_year,
                         $exam->semester,
@@ -131,23 +131,18 @@ class ExamController extends Controller
                         $result?->score,
                         $result?->status,
                         $result?->comment,
-                    ], ';');
+                    ]);
                 }
             }
-            fclose($output);
-        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+        });
     }
 
     public function import(Request $request): JsonResponse
     {
         $request->validate(['file' => ['required', 'file', 'mimes:csv,txt', 'max:5120']]);
-        $handle = fopen($request->file('file')->getRealPath(), 'r');
-        $headers = fgetcsv($handle, 0, ';') ?: [];
-        $created = 0; $updated = 0; $resultsCreated = 0; $errors = []; $line = 1;
+        $created = 0; $updated = 0; $resultsCreated = 0; $errors = [];
 
-        while (($row = fgetcsv($handle, 0, ';')) !== false) {
-            $line++;
-            $data = array_combine($headers, array_pad($row, count($headers), '')) ?: [];
+        foreach (CsvImport::rows($request->file('file')->getRealPath()) as $line => $data) {
             $validator = Validator::make($data, [
                 'academic_year' => ['required', 'string', 'max:20'],
                 'semester' => ['required', 'integer', 'min:1', 'max:12'],
@@ -213,7 +208,6 @@ class ExamController extends Controller
                 $errors[] = ['line' => $line, 'errors' => [$exception->getMessage()]];
             }
         }
-        fclose($handle);
 
         return response()->json(['data' => compact('created', 'updated', 'resultsCreated', 'errors')]);
     }

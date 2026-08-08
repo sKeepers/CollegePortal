@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ImportJob;
 use App\Models\User;
+use App\Support\Csv\CsvExport;
 use App\Services\Import\AdmissionImportHandler;
 use App\Services\Import\ClassroomImportHandler;
 use App\Services\Import\CurriculumImportHandler;
@@ -270,7 +271,7 @@ class UniversalImportService
     private function rowError(ImportHandlerInterface $handler, array $mapping, array $sourceRow, array $prepared, int $rowNumber, string $reason, ?string $field = null, array $messages = []): array
     { $fields = $handler->fields(); $header = $field ? ($mapping[$field] ?? null) : null; $column = $header ?: ($field ? ($fields[$field]['label'] ?? $field) : 'Строка'); $value = $header ? ($sourceRow[$header] ?? null) : ($field ? ($prepared[$field] ?? null) : null); return ['row' => $rowNumber, 'field' => $field, 'column' => $column, 'reason' => $reason, 'value' => $value, 'errors' => $messages ?: [$reason], 'data' => $prepared]; }
 
-    private function csvContent(array $rows): string { $handle = fopen('php://temp', 'r+'); fwrite($handle, "\xEF\xBB\xBF"); foreach ($rows as $row) { fputcsv($handle, $row, ';'); } rewind($handle); return stream_get_contents($handle) ?: ''; }
+    private function csvContent(array $rows): string { return CsvExport::toString($rows); }
     private function fieldExample(ImportHandlerInterface $handler, string $field): ?string { $headers = $handler->templateHeaders(); $example = $handler->templateExample(); $label = $handler->fields()[$field]['label'] ?? null; $index = array_search($label, $headers, true); if ($index === false && $field === 'name') { $index = array_search($handler->type() === 'groups' ? 'Группа' : ($handler->type() === 'subjects' ? 'Дисциплина' : 'Аудитория'), $headers, true); } if ($index === false && $field === 'number') { $index = array_search('Аудитория', $headers, true); } return $index === false ? null : ($example[$index] ?? null); }
     private function mappedRow(array $mapping, array $row): array { $data = []; foreach ($mapping as $field => $header) { $data[$field] = $header ? ($row[$header] ?? null) : null; } return $data; }
     private function prepareData(ImportHandlerInterface $handler, array $data): array { $data = array_map(fn ($value) => is_string($value) ? trim($value) : $value, $data); return $handler->prepare($data); }

@@ -9,6 +9,7 @@ use App\Models\EmployeeStatusPeriod;
 use App\Models\ScheduleEntry;
 use App\Models\User;
 use App\Services\HrAbsenceService;
+use App\Support\Csv\CsvExport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -75,14 +76,12 @@ class HrCalendarController extends Controller
     public function export(Request $request): Response
     {
         $rows = $this->service->reportRows($request->query());
-        $handle = fopen('php://temp', 'r+');
-        fwrite($handle, "\xEF\xBB\xBF");
-        fputcsv($handle, ['Сотрудник', 'Подразделение', 'Статус', 'Состояние периода', 'Дата начала', 'Дата окончания', 'Затронуто занятий'], ';');
-        foreach ($rows as $row) {
-            fputcsv($handle, [$row['employee_name'], $row['department'], $row['status'], $row['period_status'], $row['date_from'], $row['date_to'], $row['affected_lessons_count']], ';');
-        }
-        rewind($handle);
-        return response(stream_get_contents($handle) ?: '', 200, ['Content-Type' => 'text/csv; charset=UTF-8', 'Content-Disposition' => 'attachment; filename="hr_absences.csv"']);
+        $csv = CsvExport::toString(array_merge(
+            [['Сотрудник', 'Подразделение', 'Статус', 'Состояние периода', 'Дата начала', 'Дата окончания', 'Затронуто занятий']],
+            array_map(fn (array $row): array => [$row['employee_name'], $row['department'], $row['status'], $row['period_status'], $row['date_from'], $row['date_to'], $row['affected_lessons_count']], $rows),
+        ));
+
+        return response($csv, 200, ['Content-Type' => 'text/csv; charset=UTF-8', 'Content-Disposition' => 'attachment; filename="hr_absences.csv"']);
     }
 
     private function scopedFilters(Request $request): array

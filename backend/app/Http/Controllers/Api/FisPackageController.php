@@ -11,6 +11,7 @@ use App\Models\FisPackage;
 use App\Models\Graduate;
 use App\Models\Student;
 use App\Services\Admissions\AdmissionDocumentReadinessService;
+use App\Support\Csv\CsvExport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -103,15 +104,12 @@ class FisPackageController extends Controller
     public function exportCsv(FisPackage $fisPackage): StreamedResponse
     {
         $package = $this->freshPackage($fisPackage);
-        return response()->streamDownload(function () use ($package): void {
-            $output = fopen('php://output', 'w');
-            fputcsv($output, ['record_id', 'type', 'person', 'birth_date', 'program', 'specialty', 'status', 'details'], ';');
+        return CsvExport::download('fis-package-'.$package->id.'.csv', ['record_id', 'type', 'person', 'birth_date', 'program', 'specialty', 'status', 'details'], function (callable $row) use ($package): void {
             foreach ($package->records as $record) {
                 $p = $record->payload ?: [];
-                fputcsv($output, [$record->id, $package->package_type, $p['person'] ?? null, $p['birth_date'] ?? null, $p['education_program'] ?? null, $p['specialty'] ?? null, $record->status, $p['details'] ?? null], ';');
+                $row([$record->id, $package->package_type, $p['person'] ?? null, $p['birth_date'] ?? null, $p['education_program'] ?? null, $p['specialty'] ?? null, $record->status, $p['details'] ?? null]);
             }
-            fclose($output);
-        }, 'fis-package-'.$package->id.'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        });
     }
 
     public function exportJson(FisPackage $fisPackage): JsonResponse

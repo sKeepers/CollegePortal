@@ -18,6 +18,8 @@ use App\Models\Subject;
 use App\Services\AuditLogService;
 use App\Services\AutoCodeService;
 use App\Services\CurriculumEngineService;
+use App\Support\Csv\CsvExport;
+use App\Support\Csv\CsvImport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -161,13 +163,11 @@ class CurriculumController extends Controller
         $filename = 'curricula-'.now()->format('Ymd-His').'.csv';
         $curricula = Curriculum::query()->with(['educationProgram.specialty', 'items.subject'])->orderBy('id')->get();
 
-        return response()->streamDownload(function () use ($curricula): void {
-            $output = fopen('php://output', 'w');
-            fputcsv($output, ['id', 'code', 'education_program_id', 'program_name', 'specialty', 'year_start', 'name', 'status', 'description', 'subject_id', 'subject_code', 'subject_name', 'course', 'semester', 'hours_total', 'control_form', 'sort_order'], ';');
+        return CsvExport::download($filename, ['id', 'code', 'education_program_id', 'program_name', 'specialty', 'year_start', 'name', 'status', 'description', 'subject_id', 'subject_code', 'subject_name', 'course', 'semester', 'hours_total', 'control_form', 'sort_order'], function (callable $row) use ($curricula): void {
             foreach ($curricula as $curriculum) {
                 $items = $curriculum->items->isNotEmpty() ? $curriculum->items : collect([null]);
                 foreach ($items as $item) {
-                    fputcsv($output, [
+                    $row([
                         $curriculum->id,
                         $curriculum->code,
                         $curriculum->education_program_id,
@@ -185,23 +185,18 @@ class CurriculumController extends Controller
                         $item?->hours_total,
                         $item?->control_form,
                         $item?->sort_order,
-                    ], ';');
+                    ]);
                 }
             }
-            fclose($output);
-        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+        });
     }
 
     public function import(Request $request): JsonResponse
     {
         $request->validate(['file' => ['required', 'file', 'mimes:csv,txt', 'max:5120']]);
-        $handle = fopen($request->file('file')->getRealPath(), 'r');
-        $headers = fgetcsv($handle, 0, ';') ?: [];
-        $created = 0; $updated = 0; $itemsCreated = 0; $errors = []; $line = 1;
+        $created = 0; $updated = 0; $itemsCreated = 0; $errors = [];
 
-        while (($row = fgetcsv($handle, 0, ';')) !== false) {
-            $line++;
-            $data = array_combine($headers, array_pad($row, count($headers), '')) ?: [];
+        foreach (CsvImport::rows($request->file('file')->getRealPath()) as $line => $data) {
             $validator = Validator::make($data, [
                 'code' => ['nullable', 'string', 'max:100'],
                 'education_program_id' => ['nullable', 'integer', 'exists:education_programs,id'],
@@ -247,7 +242,6 @@ class CurriculumController extends Controller
                 $errors[] = ['line' => $line, 'errors' => [$exception->getMessage()]];
             }
         }
-        fclose($handle);
 
         return response()->json(['data' => compact('created', 'updated', 'itemsCreated', 'errors')]);
     }

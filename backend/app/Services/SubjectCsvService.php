@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Subject;
 use App\Models\Teacher;
+use App\Support\Csv\CsvExport;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -25,18 +26,13 @@ class SubjectCsvService
 
     public function export(): StreamedResponse
     {
-        return response()->streamDownload(function (): void {
-            $output = fopen('php://output', 'w');
-
-            fwrite($output, "\xEF\xBB\xBF");
-            fputcsv($output, self::HEADERS, ';');
-
+        return CsvExport::download('subjects.csv', self::HEADERS, function (callable $row): void {
             Subject::query()
                 ->with('teachers')
                 ->orderBy('name')
-                ->chunk(200, function ($subjects) use ($output): void {
+                ->chunk(200, function ($subjects) use ($row): void {
                     foreach ($subjects as $subject) {
-                        fputcsv($output, [
+                        $row([
                             $subject->id,
                             $subject->name,
                             $subject->code,
@@ -44,14 +40,10 @@ class SubjectCsvService
                             $subject->description,
                             $subject->teachers->pluck('id')->join(','),
                             $subject->teachers->map(fn (Teacher $teacher) => $this->teacherName($teacher))->join(' | '),
-                        ], ';');
+                        ]);
                     }
                 });
-
-            fclose($output);
-        }, 'subjects.csv', [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        });
     }
 
     public function import(UploadedFile $file): array

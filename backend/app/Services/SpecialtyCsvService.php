@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Specialty;
+use App\Support\Csv\CsvExport;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -24,17 +25,12 @@ class SpecialtyCsvService
 
     public function export(): StreamedResponse
     {
-        return response()->streamDownload(function (): void {
-            $output = fopen('php://output', 'w');
-
-            fwrite($output, "\xEF\xBB\xBF");
-            fputcsv($output, self::HEADERS, ';');
-
+        return CsvExport::download('specialties.csv', self::HEADERS, function (callable $row): void {
             Specialty::query()
                 ->orderBy('code')
-                ->chunk(200, function ($specialties) use ($output): void {
+                ->chunk(200, function ($specialties) use ($row): void {
                     foreach ($specialties as $specialty) {
-                        fputcsv($output, [
+                        $row([
                             $specialty->id,
                             $specialty->code,
                             $specialty->name,
@@ -42,14 +38,10 @@ class SpecialtyCsvService
                             $specialty->qualification,
                             $specialty->normative_study_years,
                             $specialty->description,
-                        ], ';');
+                        ]);
                     }
                 });
-
-            fclose($output);
-        }, 'specialties.csv', [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        });
     }
 
     public function import(UploadedFile $file): array

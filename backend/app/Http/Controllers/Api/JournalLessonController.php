@@ -17,6 +17,7 @@ use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
 use App\Services\JournalService;
+use App\Support\Csv\CsvExport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -338,13 +339,11 @@ class JournalLessonController extends Controller
         $this->authorizeLesson($request->user(), $lesson, false);
         $lesson = $this->journalService->loadLesson($lesson);
 
-        return response()->streamDownload(function () use ($lesson): void {
-            $out = fopen('php://output', 'w');
-            fputcsv($out, ['student', 'attendance', 'minutes_late', 'grade', 'comment']);
+        return CsvExport::download("journal-lesson-{$lesson->id}.csv", ['student', 'attendance', 'minutes_late', 'grade', 'comment'], function (callable $row) use ($lesson): void {
             foreach ($lesson->attendance as $attendance) {
                 $grade = $lesson->grades->firstWhere('student_id', $attendance->student_id);
                 $student = $attendance->student;
-                fputcsv($out, [
+                $row([
                     trim("{$student->last_name} {$student->first_name} {$student->middle_name}"),
                     $attendance->status,
                     $attendance->minutes_late,
@@ -352,8 +351,7 @@ class JournalLessonController extends Controller
                     $attendance->comment,
                 ]);
             }
-            fclose($out);
-        }, "journal-lesson-{$lesson->id}.csv", ['Content-Type' => 'text/csv; charset=UTF-8']);
+        });
     }
 
 
@@ -395,14 +393,12 @@ class JournalLessonController extends Controller
 
     private function streamLessonsCsv($lessons, string $filename): StreamedResponse
     {
-        return response()->streamDownload(function () use ($lessons): void {
-            $out = fopen('php://output', 'w');
-            fputcsv($out, ['lesson_date', 'starts_at', 'group', 'subject', 'teacher', 'student', 'attendance', 'minutes_late', 'grade', 'comment']);
+        return CsvExport::download($filename, ['lesson_date', 'starts_at', 'group', 'subject', 'teacher', 'student', 'attendance', 'minutes_late', 'grade', 'comment'], function (callable $row) use ($lessons): void {
             foreach ($lessons as $lesson) {
                 foreach ($lesson->attendance as $attendance) {
                     $grade = $lesson->grades->firstWhere('student_id', $attendance->student_id);
                     $student = $attendance->student;
-                    fputcsv($out, [
+                    $row([
                         $lesson->lesson_date,
                         $lesson->starts_at,
                         $lesson->group?->name,
@@ -416,8 +412,7 @@ class JournalLessonController extends Controller
                     ]);
                 }
             }
-            fclose($out);
-        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+        });
     }
 
     private function applyDateRange(Builder $query, Request $request): void

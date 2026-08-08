@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Teacher;
+use App\Support\Csv\CsvExport;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Validator;
 use RuntimeException;
@@ -25,18 +26,13 @@ class TeacherCsvService
 
     public function export(): StreamedResponse
     {
-        return response()->streamDownload(function (): void {
-            $output = fopen('php://output', 'w');
-
-            fwrite($output, "\xEF\xBB\xBF");
-            fputcsv($output, self::HEADERS, ';');
-
+        return CsvExport::download('teachers.csv', self::HEADERS, function (callable $row): void {
             Teacher::query()
                 ->orderBy('last_name')
                 ->orderBy('first_name')
-                ->chunk(200, function ($teachers) use ($output): void {
+                ->chunk(200, function ($teachers) use ($row): void {
                     foreach ($teachers as $teacher) {
-                        fputcsv($output, [
+                        $row([
                             $teacher->id,
                             $teacher->last_name,
                             $teacher->first_name,
@@ -46,14 +42,10 @@ class TeacherCsvService
                             $teacher->position,
                             $teacher->department,
                             $teacher->is_active ? '1' : '0',
-                        ], ';');
+                        ]);
                     }
                 });
-
-            fclose($output);
-        }, 'teachers.csv', [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        });
     }
 
     public function import(UploadedFile $file): array

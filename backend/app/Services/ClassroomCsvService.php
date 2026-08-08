@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Classroom;
+use App\Support\Csv\CsvExport;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -24,18 +25,13 @@ class ClassroomCsvService
 
     public function export(): StreamedResponse
     {
-        return response()->streamDownload(function (): void {
-            $output = fopen('php://output', 'w');
-
-            fwrite($output, "\xEF\xBB\xBF");
-            fputcsv($output, self::HEADERS, ';');
-
+        return CsvExport::download('classrooms.csv', self::HEADERS, function (callable $row): void {
             Classroom::query()
                 ->orderBy('building')
                 ->orderBy('number')
-                ->chunk(200, function ($classrooms) use ($output): void {
+                ->chunk(200, function ($classrooms) use ($row): void {
                     foreach ($classrooms as $classroom) {
-                        fputcsv($output, [
+                        $row([
                             $classroom->id,
                             $classroom->number,
                             $classroom->building,
@@ -43,14 +39,10 @@ class ClassroomCsvService
                             $classroom->capacity,
                             $classroom->type,
                             $classroom->description,
-                        ], ';');
+                        ]);
                     }
                 });
-
-            fclose($output);
-        }, 'classrooms.csv', [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        });
     }
 
     public function import(UploadedFile $file): array
