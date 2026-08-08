@@ -94,6 +94,59 @@ class AdminUserController extends Controller
         ]], Response::HTTP_CREATED);
     }
 
+    /**
+     * Сброс пароля прямо из карточки человека. Пароль возвращается один раз и
+     * нигде не сохраняется: в базе хеш, в аудите — только факт сброса. Старый
+     * пароль восстановить нельзя и после сброса он перестает работать, поэтому
+     * экран обязан предупредить об этом до нажатия, а не после.
+     */
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'profile_type' => ['required', Rule::in(['student', 'teacher', 'employee'])],
+            'profile_id' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $profile = match ($data['profile_type']) {
+            'student' => Student::findOrFail($data['profile_id']),
+            'teacher' => Teacher::findOrFail($data['profile_id']),
+            'employee' => Employee::findOrFail($data['profile_id']),
+        };
+
+        $user = $this->profileUser($profile);
+
+        if ($user === null) {
+            return response()->json([
+                'message' => 'У этого человека нет учетной записи. Сначала создайте ее.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $password = (string) random_int(10000, 99999);
+        $user->forceFill(['password' => Hash::make($password)])->save();
+
+        AuditLogService::log('users', 'reset_password', $user, null, [
+            'profile_type' => $data['profile_type'],
+            'profile_id' => $data['profile_id'],
+        ], $request);
+
+        return response()->json(['data' => [
+            'login' => $user->username,
+            'password' => $password,
+            'name' => $user->name,
+        ]]);
+    }
+
+    private function profileUser(Student|Teacher|Employee $profile): ?User
+    {
+        if (($profile->user_id ?? null) !== null) {
+            return User::find($profile->user_id);
+        }
+
+        return $profile->person_id
+            ? User::query()->where('person_id', $profile->person_id)->first()
+            : null;
+    }
+
     public function show(User $user): UserResource
     {
         return new UserResource($user->load(['role.permissions', 'roles.permissions']));

@@ -4,6 +4,7 @@ import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import PersonPhotoManager from '../../components/person/PersonPhotoManager.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
+import PersonAccountActions from '../../components/identity/PersonAccountActions.vue'
 
 const props = defineProps({
   student: { type: Object, default: null },
@@ -49,7 +50,7 @@ const studentActions = computed(() => [
   { label: 'Расписание', to: props.student?.group_id ? { path: '/schedule', query: { group: props.student.group_id } } : '/schedule' },
   { label: 'Журнал', to: props.student?.group_id ? { path: '/journal', query: { group: props.student.group_id } } : '/journal' },
   { label: 'Учебный план', to: '/curricula' },
-  { label: 'QR-пропуск', to: { path: '/identity/digital-passes', query: { owner: 'student', selected: props.student?.id } } },
+  { label: 'Цифровой пропуск', to: { path: '/identity/digital-passes', query: { owner: 'student', selected: props.student?.id } } },
   { label: 'История проходов', to: { path: '/access/reports', query: { type: 'student', q: studentName.value } } },
   { label: 'Документы', to: { path: '/students', query: { selected: props.student?.id, tab: 'documents' } } },
   { label: 'Выпуск', to: { path: '/graduation', query: { student: props.student?.id } } },
@@ -95,6 +96,7 @@ function removePhoto() {
 
     <template #status>
       <AppStatusBadge :label="statusLabels[student.status] || student.status" :tone="statusTones[student.status] || 'neutral'" />
+      <PersonAccountActions profile-type="student" :profile-id="student.id" :has-account="Boolean(student.user_id)" />
     </template>
 
     <div class="student-details">

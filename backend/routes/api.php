@@ -270,6 +270,9 @@ Route::middleware(['api.token', 'throttle:api.authenticated'])->group(function (
     Route::post('admin/users/provision', [AdminUserController::class, 'provision'])
         ->middleware('permission:users.manage');
 
+    Route::post('admin/users/reset-password', [AdminUserController::class, 'resetPassword'])
+        ->middleware('permission:users.manage');
+
     Route::middleware('permission:manage_users')->group(function (): void {
         Route::get('admin/audit', [AuditLogController::class, 'index']);
         Route::get('admin/settings', [AdminSettingController::class, 'index']);

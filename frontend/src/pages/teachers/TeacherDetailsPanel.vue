@@ -4,6 +4,7 @@ import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import PersonPhotoManager from '../../components/person/PersonPhotoManager.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
+import PersonAccountActions from '../../components/identity/PersonAccountActions.vue'
 
 const props = defineProps({
   teacher: { type: Object, default: null },
@@ -34,7 +35,7 @@ const teacherActions = computed(() => [
   { label: 'Расписание', to: scheduleLink.value },
   { label: 'Нагрузка', to: loadLink.value },
   { label: 'Журнал', to: journalLink.value },
-  { label: 'QR-пропуск', to: passLink.value },
+  { label: 'Цифровой пропуск', to: passLink.value },
   { label: 'История проходов', to: accessLink.value },
 ])
 const teacherEvents = computed(() => props.lessons.slice(0, 3).map((lesson) => ({
@@ -73,6 +74,7 @@ function removePhoto() {
     <template #status>
       <AppStatusBadge :label="statusLabel" :tone="statusTone" />
       <AppStatusBadge :label="teacher.department || 'Отделение не указано'" tone="info" />
+      <PersonAccountActions profile-type="teacher" :profile-id="teacher.id" :has-account="Boolean(teacher.user_id)" />
     </template>
 
     <div class="teacher-details">

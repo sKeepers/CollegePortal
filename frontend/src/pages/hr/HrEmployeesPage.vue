@@ -7,6 +7,7 @@ import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
 import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import AppCard from '../../components/ui/AppCard.vue'
+import PersonAccountActions from '../../components/identity/PersonAccountActions.vue'
 import { useAuthStore } from '../../stores/auth'
 import { useHrStore } from '../../stores/hr'
 
@@ -409,8 +410,9 @@ watch(() => route.path, (path) => {
               <q-btn v-if="canUpdate" outline no-caps color="primary" @click="openEmployeeDialog(selected)">Редактировать</q-btn>
               <q-btn v-if="canManageStatuses" outline no-caps color="orange" @click="openStatusDialog('vacation')">Оформить отпуск</q-btn>
               <q-btn v-if="canManageStatuses" outline no-caps color="deep-orange" @click="openStatusDialog('sick_leave')">Больничный</q-btn>
-              <q-btn v-if="canIssueDigitalPass" outline no-caps color="primary" :loading="store.saving" @click="confirmIssueDigitalPass(selected)"><BadgeCheck :size="16" class="q-mr-xs" />Выпустить пропуск</q-btn>
+              <q-btn v-if="canIssueDigitalPass" outline no-caps color="primary" :loading="store.saving" @click="confirmIssueDigitalPass(selected)"><BadgeCheck :size="16" class="q-mr-xs" />Выпустить цифровой пропуск</q-btn>
               <q-btn v-if="canDismiss && selected.status !== 'dismissed'" outline no-caps color="negative" @click="confirmDismiss(selected)">Уволить</q-btn>
+              <PersonAccountActions profile-type="employee" :profile-id="selected.id" :has-account="Boolean(selected.user_id)" />
             </div>
           </q-tab-panel>
           <q-tab-panel name="assignments" class="q-px-none">
