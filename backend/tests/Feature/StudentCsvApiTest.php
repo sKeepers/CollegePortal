@@ -41,7 +41,10 @@ class StudentCsvApiTest extends TestCase
 
         $content = $response->streamedContent();
 
-        $this->assertStringContainsString('last_name', $content);
+        // Выгрузка отдаёт колонки шаблона импорта, а не технические имена полей:
+        // файл нужен как заготовка для заполнения и обратной загрузки.
+        $this->assertStringContainsString('Фамилия', $content);
+        $this->assertStringContainsString('Специальность', $content);
         $this->assertStringContainsString('Иванов', $content);
         $this->assertStringContainsString('ИСП-101', $content);
     }

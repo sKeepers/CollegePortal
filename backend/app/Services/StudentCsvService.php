@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Group;
 use App\Models\Student;
+use App\Services\Import\StudentImportHandler;
 use DateTimeImmutable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Validator;
@@ -14,37 +15,54 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StudentCsvService
 {
+    /** Колонки, которые принимает собственный CSV-импорт студентов. */
     private const HEADERS = [
-        'id',
-        'group_id',
-        'group',
-        'last_name',
-        'first_name',
-        'middle_name',
-        'birth_date',
-        'phone',
-        'email',
-        'snils',
-        'address',
-        'passport_series',
-        'passport_number',
-        'passport_issue_date',
-        'passport_issued_by',
-        'status',
-        'course',
-        'education_form',
-        'enrollment_date',
-        'enrollment_order_number',
-        'enrollment_order_date',
+        'id', 'group_id', 'group', 'last_name', 'first_name', 'middle_name', 'birth_date',
+        'phone', 'email', 'snils', 'address', 'passport_series', 'passport_number',
+        'passport_issue_date', 'passport_issued_by', 'status', 'course', 'education_form',
+        'enrollment_date', 'enrollment_order_number', 'enrollment_order_date',
     ];
 
+    /**
+     * Заголовки шаблона импорта в технические имена этого сервиса. Нужно, чтобы
+     * выгрузка грузилась не только «Универсальным импортом», но и сюда: файл
+     * отдают как заготовку, и он обязан приниматься там, откуда его взяли.
+     */
+    private const LABEL_TO_COLUMN = [
+        'фамилия' => 'last_name',
+        'имя' => 'first_name',
+        'отчество' => 'middle_name',
+        'группа' => 'group',
+        'дата рождения' => 'birth_date',
+        'телефон' => 'phone',
+        'email' => 'email',
+        'снилс' => 'snils',
+        'статус' => 'status',
+        'дата зачисления' => 'enrollment_date',
+        'курс' => 'course',
+        'форма обучения' => 'education_form',
+        'адрес' => 'address',
+        'приказ о зачислении' => 'enrollment_order_number',
+        'дата приказа о зачислении' => 'enrollment_order_date',
+    ];
+
+    /**
+     * Выгрузка отдаёт колонки шаблона импорта, взятые у самого обработчика.
+     * Раньше здесь был свой список технических имён: специальности в нём не было
+     * вовсе (она хранится у группы, а не у студента), зато были поля паспорта,
+     * которых импорт студентов не понимает и молча отбрасывал. Файл нужен как
+     * заготовка для заполнения и обратной загрузки, поэтому источник колонок
+     * должен быть один.
+     */
     public function export(): StreamedResponse
     {
-        return response()->streamDownload(function (): void {
+        $handler = app(StudentImportHandler::class);
+
+        return response()->streamDownload(function () use ($handler): void {
             $output = fopen('php://output', 'w');
 
             fwrite($output, "\xEF\xBB\xBF");
-            fputcsv($output, self::HEADERS, ';');
+            fputcsv($output, $handler->templateHeaders(), ';');
 
             Student::query()
                 ->with('group')
@@ -52,28 +70,27 @@ class StudentCsvService
                 ->orderBy('first_name')
                 ->chunk(200, function ($students) use ($output): void {
                     foreach ($students as $student) {
+                        // Порядок обязан совпадать с templateHeaders() обработчика импорта.
+                        // «Создать учетную запись» выгружается пустым: обратная
+                        // загрузка не должна переоформлять учётные записи.
                         fputcsv($output, [
-                            $student->id,
-                            $student->group_id,
-                            $student->group?->name,
                             $student->last_name,
                             $student->first_name,
                             $student->middle_name,
+                            $student->group?->name,
                             $student->birth_date?->toDateString(),
                             $student->phone,
                             $student->email,
                             $student->snils,
-                            $student->address,
-                            $student->passport_series,
-                            $student->passport_number,
-                            $student->passport_issue_date?->toDateString(),
-                            $student->passport_issued_by,
                             $student->status,
-                            $student->course,
-                            $student->education_form,
                             $student->enrollment_date?->toDateString(),
+                            $student->course,
+                            $student->group?->specialty,
+                            $student->education_form,
+                            $student->address,
                             $student->enrollment_order_number,
                             $student->enrollment_order_date?->toDateString(),
+                            '',
                         ], ';');
                     }
                 });
@@ -166,11 +183,18 @@ class StudentCsvService
 
         foreach ($headers as $index => $header) {
             if ($header !== '') {
-                $payload[$header] = $row[$index] ?? null;
+                $payload[$this->canonicalColumn($header)] = $row[$index] ?? null;
             }
         }
 
         return $payload;
+    }
+
+    private function canonicalColumn(string $header): string
+    {
+        $key = mb_strtolower(trim(preg_replace('/^\xEF\xBB\xBF/', '', $header) ?? $header));
+
+        return self::LABEL_TO_COLUMN[$key] ?? $header;
     }
 
     private function normalizePayload(array $payload): array
