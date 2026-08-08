@@ -8,11 +8,13 @@
 
 ## Обновлено
 
-- Дата: 2026-08-07
+- Дата: 2026-08-08
 - Рабочая копия: `C:\!Projects\CollegePortal`
 - DEV checkout: `/home/andale/CollegePortal`, worktree задачи `/home/andale/CollegePortal/.worktrees/sec-004`
 
-## Состояние на 07.08.2026
+## Состояние на 08.08.2026
+
+Подробности и очередь работ — в [SESSION_HANDOFF_2026-08-08.md](SESSION_HANDOFF_2026-08-08.md).
 
 - Ствол `develop` на `f2fafe63b`, тег `v0.8.0-rc5` стоит на этом же коммите. Ветка `fix/sec-004-tls-hardening` влита fast-forward.
 - **PROD `192.168.34.17` обновлён до `0.8.0-rc5`.** DEV на `develop`, рабочее дерево чистое.
