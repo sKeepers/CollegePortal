@@ -103,7 +103,9 @@ class AccessReportApiTest extends TestCase
         $response = $this->get('/api/access/reports/events?export=csv');
 
         $response->assertOk();
-        $this->assertStringContainsString('Дата и время', $response->streamedContent());
+        // Дата и время разведены по столбцам, чтобы выгрузку можно было свести
+        // сводной таблицей по дням.
+        $this->assertStringContainsString('Дата;Время;ФИО', $response->streamedContent());
         $this->assertStringContainsString('Иванов', $response->streamedContent());
     }
 

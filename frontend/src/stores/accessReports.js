@@ -10,7 +10,27 @@ export const ACCESS_ENTITY_OPTIONS = [
   { label: 'Все', value: '' },
   { label: 'Студенты', value: 'student' },
   { label: 'Преподаватели', value: 'teacher' },
+  { label: 'Сотрудники', value: 'employee' },
 ]
+
+export const ACCESS_PERIOD_OPTIONS = [
+  { label: 'День', value: 'day' },
+  { label: 'Неделя', value: 'week' },
+  { label: 'Месяц', value: 'month' },
+]
+
+/**
+ * Период задается одной кнопкой, а не двумя датами: день, неделя и месяц —
+ * это то, чем отчет спрашивают на самом деле. Точные даты остаются рядом
+ * для произвольного отрезка.
+ */
+export function periodRange(period) {
+  const today = new Date()
+  const from = new Date(today)
+  if (period === 'week') from.setDate(today.getDate() - 6)
+  if (period === 'month') from.setMonth(today.getMonth() - 1)
+  return { date_from: from.toISOString().slice(0, 10), date_to: today.toISOString().slice(0, 10) }
+}
 
 export const ACCESS_RESULT_OPTIONS = [
   { label: 'Все', value: '' },
@@ -24,9 +44,33 @@ export const useAccessReportsStore = defineStore('accessReports', () => {
   const loading = ref(false)
   const exporting = ref(false)
   const error = ref('')
-  const filters = reactive({ date_from: todayIsoDate(), date_to: todayIsoDate(), entity_type: '', result: '', search: '' })
+  const filters = reactive({ date_from: todayIsoDate(), date_to: todayIsoDate(), entity_type: '', result: '', search: '', only_late: false })
+  const period = ref('day')
 
-  const queryParams = computed(() => Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== null && value !== undefined && value !== '')))
+  const queryParams = computed(() => Object.fromEntries(
+    Object.entries(filters).filter(([, value]) => value !== null && value !== undefined && value !== '' && value !== false),
+  ))
+
+  // «Только опоздавшие» опирается на расписание, а у сотрудников оно не заведено:
+  // рабочий график с порогом опоздания пока не связан.
+  const lateFilterAvailable = computed(() => filters.entity_type !== 'employee')
+
+  function setPeriod(value) {
+    period.value = value
+    Object.assign(filters, periodRange(value))
+  }
+
+  /**
+   * Из строки события открывается карточка человека, а не поиск по фамилии:
+   * однофамильцы иначе приводят не туда.
+   */
+  function personRoute(event) {
+    if (!event?.entity_id) return null
+    if (event.entity_type === 'student') return { path: '/students', query: { student: String(event.entity_id) } }
+    if (event.entity_type === 'teacher') return { path: '/teachers', query: { teacher: String(event.entity_id) } }
+    if (event.entity_type === 'employee') return { path: '/hr/employees', query: { employee: String(event.entity_id) } }
+    return null
+  }
 
   async function load() {
     loading.value = true
@@ -51,6 +95,8 @@ export const useAccessReportsStore = defineStore('accessReports', () => {
     filters.entity_type = ''
     filters.result = ''
     filters.search = ''
+    filters.only_late = false
+    period.value = 'day'
   }
 
   async function exportCsv() {
@@ -75,5 +121,5 @@ export const useAccessReportsStore = defineStore('accessReports', () => {
     }
   }
 
-  return { events, summary, loading, exporting, error, filters, load, resetFilters, exportCsv, directionLabel, entityTypeLabel, formatEventTime, ownerName, resultLabel, resultTone }
+  return { events, summary, loading, exporting, error, filters, period, lateFilterAvailable, load, resetFilters, setPeriod, personRoute, exportCsv, directionLabel, entityTypeLabel, formatEventTime, ownerName, resultLabel, resultTone }
 })

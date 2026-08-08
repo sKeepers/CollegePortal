@@ -48,7 +48,7 @@ class AccessEvent extends Model
         return match ($this->entity_type) {
             DigitalIdentity::ENTITY_STUDENT => Student::with('group')->find($this->entity_id),
             DigitalIdentity::ENTITY_TEACHER => Teacher::find($this->entity_id),
-            DigitalIdentity::ENTITY_EMPLOYEE => Employee::with('person')->find($this->entity_id),
+            DigitalIdentity::ENTITY_EMPLOYEE => Employee::with(['person', 'primaryDepartment'])->find($this->entity_id),
             default => null,
         };
     }

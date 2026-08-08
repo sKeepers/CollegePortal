@@ -14,7 +14,7 @@ import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
 import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
-import { ACCESS_ENTITY_OPTIONS, ACCESS_RESULT_OPTIONS, useAccessReportsStore } from '../../stores/accessReports'
+import { ACCESS_ENTITY_OPTIONS, ACCESS_PERIOD_OPTIONS, ACCESS_RESULT_OPTIONS, useAccessReportsStore } from '../../stores/accessReports'
 
 const store = useAccessReportsStore()
 const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.accessReports.splitter.v1', resizeBodyClass: 'access-reports-splitter-resizing' })
@@ -43,6 +43,7 @@ const reportEvents = computed(() => store.events.slice(0, 5).map((event) => ({
 
 function applyFilters() { store.load() }
 function resetFilters() { store.resetFilters(); store.load() }
+function selectPeriod(value) { store.setPeriod(value); store.load() }
 
 onMounted(() => store.load())
 </script>
@@ -64,11 +65,25 @@ onMounted(() => store.load())
     <AppErrorBanner :message="store.error" />
 
     <AppFilterBar>
+      <q-btn-toggle
+        :model-value="store.period"
+        no-caps
+        dense
+        unelevated
+        toggle-color="primary"
+        :options="ACCESS_PERIOD_OPTIONS"
+        @update:model-value="selectPeriod"
+      />
       <q-input v-model="store.filters.search" dense outlined clearable label="ФИО" @keyup.enter="applyFilters" />
       <q-select v-model="store.filters.entity_type" dense outlined emit-value map-options label="Тип владельца" :options="ACCESS_ENTITY_OPTIONS" />
       <q-select v-model="store.filters.result" dense outlined emit-value map-options label="Результат" :options="ACCESS_RESULT_OPTIONS" />
       <q-input v-model="store.filters.date_from" dense outlined type="date" label="Дата с" />
       <q-input v-model="store.filters.date_to" dense outlined type="date" label="Дата по" />
+      <q-toggle v-model="store.filters.only_late" :disable="!store.lateFilterAvailable" label="Только опоздавшие">
+        <q-tooltip v-if="!store.lateFilterAvailable">
+          Опоздание считается по расписанию. У сотрудников рабочий график с порогом опоздания пока не связан.
+        </q-tooltip>
+      </q-toggle>
       <template #actions>
         <q-btn color="primary" :disable="store.loading" @click="applyFilters">Применить</q-btn>
         <q-btn flat :disable="store.loading" @click="resetFilters"><RotateCcw :size="16" class="q-mr-xs" /> Сбросить</q-btn>
@@ -87,11 +102,23 @@ onMounted(() => store.load())
       <div class="access-reports-main">
         <AppTable v-if="store.events.length || store.loading" :rows="store.events" :columns="columns" :loading="store.loading" :pagination="pagination">
           <template #body-cell-event_time="props"><q-td :props="props">{{ store.formatEventTime(props.row.event_time) }}</q-td></template>
-          <template #body-cell-owner="props"><q-td :props="props"><strong>{{ store.ownerName(props.row) }}</strong></q-td></template>
+          <template #body-cell-owner="props">
+            <q-td :props="props">
+              <router-link v-if="store.personRoute(props.row)" :to="store.personRoute(props.row)">
+                <strong>{{ store.ownerName(props.row) }}</strong>
+              </router-link>
+              <strong v-else>{{ store.ownerName(props.row) }}</strong>
+            </q-td>
+          </template>
           <template #body-cell-entity_type="props"><q-td :props="props">{{ store.entityTypeLabel(props.row.entity_type) }}</q-td></template>
           <template #body-cell-direction="props"><q-td :props="props">{{ store.directionLabel(props.row.direction) }}</q-td></template>
           <template #body-cell-result="props"><q-td :props="props"><AppStatusBadge :label="store.resultLabel(props.row.result)" :tone="store.resultTone(props.row.result)" /></q-td></template>
-          <template #body-cell-access_point="props"><q-td :props="props">{{ props.row.access_point || '—' }}</q-td></template>
+          <template #body-cell-access_point="props">
+            <q-td :props="props">
+              {{ props.row.access_point || '—' }}
+              <div v-if="props.row.building_name" class="text-caption text-grey-7">{{ props.row.building_name }}</div>
+            </q-td>
+          </template>
           <template #body-cell-reason="props"><q-td :props="props">{{ props.row.reason || '—' }}</q-td></template>
         </AppTable>
         <AppEmptyState v-else title="События не найдены" description="Измените фильтры или выполните сканирование на проходной." />
