@@ -8,6 +8,7 @@ import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import AppCard from '../../components/ui/AppCard.vue'
 import PersonAccountActions from '../../components/identity/PersonAccountActions.vue'
+import { api } from '../../services/api'
 import { useAuthStore } from '../../stores/auth'
 import { useHrStore } from '../../stores/hr'
 
@@ -121,6 +122,30 @@ function employeeRowClass(row) {
   return Number(row.id) === Number(store.selectedId) ? 'workspace-row--selected' : ''
 }
 const canCreate = computed(() => auth.can('hr.employees.create'))
+const exporting = ref(false)
+
+/**
+ * Выгрузка сотрудников теми же колонками, что у шаблона импорта: файл можно
+ * поправить в Excel и залить обратно «Универсальным импортом».
+ */
+async function exportEmployees() {
+  exporting.value = true
+  try {
+    const blob = await api.download('/employees/export')
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `employees-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  } catch (err) {
+    $q.notify({ type: 'negative', message: err.message || 'Не удалось выгрузить сотрудников' })
+  } finally {
+    exporting.value = false
+  }
+}
 const canUpdate = computed(() => auth.can('hr.employees.update'))
 const canDismiss = computed(() => auth.can('hr.employees.dismiss'))
 const canIssueDigitalPass = computed(() => auth.can('hr.employees.digital_pass.issue'))
@@ -306,6 +331,7 @@ watch(() => route.path, (path) => {
         <p>Единая карточка сотрудника связана с личной карточкой и может быть связана с преподавателем без изменения API преподавателей.</p>
       </div>
       <div class="hr-page__actions">
+        <q-btn v-if="activeTab === 'employees'" outline no-caps :loading="exporting" @click="exportEmployees">Экспорт CSV</q-btn>
         <q-btn v-if="activeTab === 'employees' && canCreate" color="primary" no-caps @click="openEmployeeDialog()">Новый сотрудник</q-btn>
         <q-btn v-if="activeTab === 'departments' && canManageDepartments" color="primary" no-caps @click="openDictionaryDialog()">Новое подразделение</q-btn>
         <q-btn v-if="activeTab === 'positions' && canManagePositions" color="primary" no-caps @click="openDictionaryDialog()">Новая должность</q-btn>

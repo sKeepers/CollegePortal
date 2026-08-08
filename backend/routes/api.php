@@ -99,6 +99,8 @@ Route::middleware(['api.token', 'throttle:api.authenticated'])->group(function (
 
     Route::middleware('permission:hr.employees.view')->group(function (): void {
         Route::get('employees', [EmployeeController::class, 'index']);
+        // Строго до employees/{employee}: иначе параметр перехватит слово export.
+        Route::get('employees/export', [EmployeeController::class, 'export']);
         Route::get('employees/{employee}', [EmployeeController::class, 'show']);
         Route::post('employees', [EmployeeController::class, 'store'])->middleware('permission:hr.employees.create');
         Route::put('employees/{employee}', [EmployeeController::class, 'update'])->middleware('permission:hr.employees.update');

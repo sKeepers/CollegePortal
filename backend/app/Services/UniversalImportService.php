@@ -177,6 +177,11 @@ class UniversalImportService
         $delimiter = $this->detectDelimiter($sample);
         $handle = fopen($path, 'r');
         if (!$handle) { throw new RuntimeException('Не удалось открыть файл импорта.'); }
+        // Excel сохраняет CSV с BOM, и снимать его после разбора поздно: BOM стоит
+        // перед открывающей кавычкой, поэтому fgetcsv не считает первое поле
+        // закавыченным и первый заголовок приезжает вместе с кавычками — а значит
+        // не совпадает ни с одним псевдонимом и первая колонка молча теряется.
+        if (fread($handle, 3) !== "\xEF\xBB\xBF") { rewind($handle); }
         $headers = $this->normalizeHeaders(fgetcsv($handle, 0, $delimiter) ?: []);
         $rows = [];
         while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
