@@ -42,12 +42,22 @@ function formatDefault(setting) {
 
 async function save() {
   const payload = await store.save()
+  // На production запрос останавливается на проверке и просит подтверждения —
+  // тогда payload пустой, а показать «сохранено» было бы неправдой.
+  if (!payload) return
   $q.notify({ type: 'positive', message: payload?.message || 'Настройки сохранены', position: 'top-right' })
 }
 
 async function resetToDefaults() {
   const payload = await store.resetToDefaults()
+  if (!payload) return
   $q.notify({ type: 'warning', message: payload?.message || 'Настройки сброшены', position: 'top-right' })
+}
+
+async function confirmProduction() {
+  const payload = await store.confirmProductionAction()
+  if (!payload) return
+  $q.notify({ type: 'positive', message: payload?.message || 'Настройки применены', position: 'top-right' })
 }
 
 onMounted(async () => {
@@ -134,6 +144,18 @@ onMounted(async () => {
       confirm-label="Сбросить"
       tone="warning"
       @confirm="resetToDefaults"
+    />
+
+    <AppConfirmDialog
+      :model-value="Boolean(store.pendingProductionAction)"
+      title="Это боевой контур"
+      :message="store.pendingProductionAction === 'reset'
+        ? 'Настройки боевого портала будут возвращены к значениям по умолчанию. Изменение вступит в силу сразу для всех пользователей.'
+        : 'Настройки боевого портала изменятся сразу для всех пользователей. Продолжить?'"
+      confirm-label="Подтвердить и применить"
+      tone="warning"
+      @confirm="confirmProduction"
+      @update:model-value="(value) => { if (!value) store.cancelProductionAction() }"
     />
   </AppPage>
 </template>

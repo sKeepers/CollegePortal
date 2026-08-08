@@ -27,7 +27,12 @@ async function putSettings(payload) {
     body: JSON.stringify(payload),
   })
   const data = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(data.message || 'Настройки не сохранены')
+  if (!response.ok) {
+    const error = new Error(data.message || 'Настройки не сохранены')
+    // Не ошибка, а требуемый шаг: экран должен предложить подтверждение.
+    error.requiresProductionConfirmation = data.requires_production_confirmation === true
+    throw error
+  }
   return data
 }
 
@@ -52,6 +57,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const publicLoaded = ref(false)
   const error = ref('')
   const lastMessage = ref('')
+  // Какое действие ждёт подтверждения на production: 'save', 'reset' или ничего.
+  const pendingProductionAction = ref('')
 
   const orderedGroups = computed(() => groupOrder
     .filter((key) => Array.isArray(groups.value[key]))
@@ -89,7 +96,7 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  async function save() {
+  async function save(confirmProduction = false) {
     saving.value = true
     error.value = ''
     try {
@@ -98,13 +105,18 @@ export const useSettingsStore = defineStore('settings', () => {
         key: setting.key,
         value: editable.value[`${setting.group}.${setting.key}`],
       }))
-      const payload = await putSettings({ settings })
+      const payload = await putSettings({ settings, ...(confirmProduction ? { confirm_production: true } : {}) })
       groups.value = payload?.data || {}
       hydrateEditable()
+      pendingProductionAction.value = ''
       lastMessage.value = payload?.message || 'Настройки сохранены'
       await loadPublic()
       return payload
     } catch (err) {
+      if (err.requiresProductionConfirmation) {
+        pendingProductionAction.value = 'save'
+        return null
+      }
       error.value = err.message || 'Не удалось сохранить настройки'
       throw err
     } finally {
@@ -112,22 +124,43 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  async function resetToDefaults() {
+  async function resetToDefaults(confirmProduction = false) {
     saving.value = true
     error.value = ''
     try {
-      const payload = await putSettings({ reset_to_defaults: true })
+      const payload = await putSettings({ reset_to_defaults: true, ...(confirmProduction ? { confirm_production: true } : {}) })
       groups.value = payload?.data || {}
       hydrateEditable()
+      pendingProductionAction.value = ''
       lastMessage.value = payload?.message || 'Настройки сброшены'
       await loadPublic()
       return payload
     } catch (err) {
+      if (err.requiresProductionConfirmation) {
+        pendingProductionAction.value = 'reset'
+        return null
+      }
       error.value = err.message || 'Не удалось сбросить настройки'
       throw err
     } finally {
       saving.value = false
     }
+  }
+
+  /**
+   * Подтверждение того действия, которое запрос уже попытался выполнить.
+   * Первый запрос ничего не меняет — он останавливается на проверке.
+   */
+  async function confirmProductionAction() {
+    const action = pendingProductionAction.value
+    pendingProductionAction.value = ''
+    if (action === 'save') return save(true)
+    if (action === 'reset') return resetToDefaults(true)
+    return null
+  }
+
+  function cancelProductionAction() {
+    pendingProductionAction.value = ''
   }
 
   function publicValue(group, key, fallback = null) {
@@ -144,11 +177,14 @@ export const useSettingsStore = defineStore('settings', () => {
     publicLoaded,
     error,
     lastMessage,
+    pendingProductionAction,
     orderedGroups,
     load,
     loadPublic,
     save,
     resetToDefaults,
+    confirmProductionAction,
+    cancelProductionAction,
     publicValue,
   }
 })

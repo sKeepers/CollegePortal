@@ -43,6 +43,35 @@ class SettingApiTest extends TestCase
         $this->assertSame(2, Setting::where('group', 'identity')->where('key', 'duplicate_scan_window_seconds')->firstOrFail()->value);
     }
 
+    /**
+     * На production настройки меняются только после подтверждения. Проверяется
+     * не только сам запрет, но и то, что подтвердить возможно: раньше флаг
+     * требовался, а отправить его было нечем, и настройки боевого портала не
+     * сохранялись вообще никак.
+     */
+    public function test_production_settings_require_a_confirmation_that_works(): void
+    {
+        $this->app['env'] = 'production';
+
+        $payload = [
+            'settings' => [
+                ['group' => 'general', 'key' => 'college_short_name', 'value' => 'СККИ'],
+            ],
+        ];
+
+        $this->withApiAuth()
+            ->putJson('/api/admin/settings', $payload)
+            ->assertForbidden()
+            ->assertJsonPath('requires_production_confirmation', true);
+
+        $this->assertNotSame('СККИ', Setting::query()->where('key', 'college_short_name')->value('value'));
+
+        $this->withApiAuth()
+            ->putJson('/api/admin/settings', $payload + ['confirm_production' => true])
+            ->assertOk()
+            ->assertJsonFragment(['key' => 'college_short_name', 'value' => 'СККИ']);
+    }
+
     public function test_public_settings_return_only_public_values(): void
     {
         $this->getJson('/api/settings/public')

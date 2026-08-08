@@ -21,9 +21,13 @@ class AdminSettingController extends Controller
 
     public function update(Request $request): JsonResponse
     {
+        // Признак нужен экрану, чтобы предложить подтверждение, а не разбирать
+        // текст сообщения. Без него запрет выглядел как ошибка без выхода:
+        // подтвердить было нечем, и настройки на production не сохранялись вовсе.
         if (app()->environment('production') && ! $request->boolean('confirm_production')) {
             return response()->json([
                 'message' => 'Изменение production-настроек требует отдельного подтверждения.',
+                'requires_production_confirmation' => true,
             ], Response::HTTP_FORBIDDEN);
         }
 
