@@ -8,10 +8,12 @@ use App\Models\Group;
 use App\Models\Specialty;
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\CompletesStudentCard;
 use Tests\TestCase;
 
 class FrdoPackageApiTest extends TestCase
 {
+    use CompletesStudentCard;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -75,6 +77,11 @@ class FrdoPackageApiTest extends TestCase
         $program = EducationProgram::create(['specialty_id' => $specialty->id, 'name' => 'ППССЗ Вокальное искусство', 'year_start' => 2023, 'study_form' => 'Очная', 'study_years' => 4, 'is_active' => true]);
         $group = Group::create(['name' => 'ВИ-401', 'specialty' => 'Вокальное искусство', 'education_program_id' => $program->id, 'course' => 4, 'year_start' => 2023]);
         $student = Student::create(['group_id' => $group->id, 'last_name' => 'Иванов', 'first_name' => 'Иван', 'middle_name' => 'Петрович', 'birth_date' => '2007-05-10', 'status' => 'active']);
+
+        if ($complete) {
+            $this->completeStudentCard($student);
+        }
+
         $graduate = Graduate::create(['student_id' => $student->id, 'group_id' => $group->id, 'education_program_id' => $program->id, 'specialty_id' => $specialty->id, 'graduation_year' => 2027, 'qualification' => 'Артист-вокалист, преподаватель', 'status' => 'ready']);
         $graduate->diploma()->create($complete
             ? ['series' => 'СК', 'number' => '000001', 'registration_number' => '27-001', 'issue_date' => '2027-06-30', 'qualification' => 'Артист-вокалист, преподаватель', 'status' => 'issued']

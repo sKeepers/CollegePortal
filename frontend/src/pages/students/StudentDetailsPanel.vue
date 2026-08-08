@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import PersonPhotoManager from '../../components/person/PersonPhotoManager.vue'
@@ -8,6 +8,10 @@ import PersonAccountActions from '../../components/identity/PersonAccountActions
 
 const props = defineProps({
   student: { type: Object, default: null },
+  documents: { type: Object, default: null },
+  documentsLoading: { type: Boolean, default: false },
+  canEditDocuments: { type: Boolean, default: false },
+  savingDocument: { type: Boolean, default: false },
   statusLabels: { type: Object, required: true },
   statusTones: { type: Object, required: true },
   attendanceSummary: {
@@ -21,7 +25,34 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
 })
 
+const emit = defineEmits(['save-education-document'])
+
 const activeTab = ref('common')
+
+const completeness = computed(() => props.student?.card_completeness || props.documents?.completeness || null)
+const missingReasons = computed(() => completeness.value?.blocking_reasons || [])
+const identityDocuments = computed(() => props.documents?.identity_documents || [])
+const educationDocuments = computed(() => props.documents?.education_documents || [])
+const educationFormVisible = ref(false)
+const educationForm = reactive({
+  series: '',
+  number: '',
+  issue_date: '',
+  document_organization: '',
+  graduation_year: '',
+})
+
+function submitEducationDocument() {
+  emit('save-education-document', {
+    series: educationForm.series?.trim() || null,
+    number: educationForm.number?.trim() || null,
+    issue_date: educationForm.issue_date || null,
+    document_organization: educationForm.document_organization?.trim() || null,
+    graduation_year: educationForm.graduation_year ? Number(educationForm.graduation_year) : null,
+  })
+  educationFormVisible.value = false
+  Object.assign(educationForm, { series: '', number: '', issue_date: '', document_organization: '', graduation_year: '' })
+}
 
 const programName = computed(() => props.student?.group?.education_program?.name || '—')
 const specialtyName = computed(() => (
@@ -179,12 +210,70 @@ function removePhoto() {
 
         <q-tab-panel name="documents">
           <section class="student-details__section">
-            <h3>Документы / ФРДО</h3>
+            <h3>Полнота карточки</h3>
+            <q-linear-progress v-if="documentsLoading" indeterminate color="primary" rounded />
+            <AppStatusBadge
+              v-if="completeness"
+              :label="completeness.complete ? 'Карточка полная' : 'Карточка неполная'"
+              :tone="completeness.complete ? 'success' : 'warning'"
+            />
+            <ul v-if="missingReasons.length" class="student-card-flag__list">
+              <li v-for="reason in missingReasons" :key="reason">{{ reason }}</li>
+            </ul>
+            <p v-else-if="completeness" class="student-details__muted">
+              Паспорт, документ об образовании и СНИЛС на месте.
+            </p>
+          </section>
+
+          <section class="student-details__section">
+            <h3>Документ, удостоверяющий личность</h3>
+            <dl v-for="document in identityDocuments" :key="document.id" class="student-details__list">
+              <div><dt>Документ</dt><dd>{{ document.document_type?.name || 'Документ личности' }}</dd></div>
+              <div><dt>Серия и номер</dt><dd>{{ [document.series || document.series_masked, document.number || document.number_masked].filter(Boolean).join(' ') || '—' }}</dd></div>
+              <div><dt>Дата выдачи</dt><dd>{{ document.issue_date || '—' }}</dd></div>
+              <div><dt>Кем выдан</dt><dd>{{ document.issued_by || '—' }}</dd></div>
+              <div><dt>Происхождение</dt><dd>{{ document.applicant_id ? 'Приёмная комиссия' : 'Заведён в контингенте' }}</dd></div>
+            </dl>
+            <p v-if="!identityDocuments.length" class="student-details__muted">
+              Документа нет. Реквизиты паспорта из формы студента сохраняются как документ человека.
+            </p>
+          </section>
+
+          <section class="student-details__section">
+            <h3>Документ об образовании</h3>
+            <dl v-for="document in educationDocuments" :key="document.id" class="student-details__list">
+              <div><dt>Документ</dt><dd>{{ document.document_type?.name || 'Документ об образовании' }}</dd></div>
+              <div><dt>Серия и номер</dt><dd>{{ [document.series || document.series_masked, document.number || document.number_masked].filter(Boolean).join(' ') || '—' }}</dd></div>
+              <div><dt>Дата выдачи</dt><dd>{{ document.issue_date || '—' }}</dd></div>
+              <div><dt>Учебное заведение</dt><dd>{{ document.document_organization || '—' }}</dd></div>
+              <div><dt>Год окончания</dt><dd>{{ document.graduation_year || '—' }}</dd></div>
+            </dl>
+            <p v-if="!educationDocuments.length" class="student-details__muted">Документа об образовании нет.</p>
+
+            <div v-if="canEditDocuments" class="student-documents__actions">
+              <q-btn
+                flat
+                dense
+                no-caps
+                :label="educationFormVisible ? 'Отмена' : 'Добавить документ об образовании'"
+                @click="educationFormVisible = !educationFormVisible"
+              />
+            </div>
+
+            <form v-if="educationFormVisible" class="student-form__grid" @submit.prevent="submitEducationDocument">
+              <q-input v-model="educationForm.series" dense outlined label="Серия" />
+              <q-input v-model="educationForm.number" dense outlined label="Номер" />
+              <q-input v-model="educationForm.issue_date" dense outlined type="date" label="Дата выдачи" stack-label />
+              <q-input v-model="educationForm.document_organization" dense outlined label="Учебное заведение" />
+              <q-input v-model="educationForm.graduation_year" dense outlined type="number" label="Год окончания" />
+              <q-btn color="primary" type="submit" label="Сохранить документ" :loading="savingDocument" />
+            </form>
+          </section>
+
+          <section class="student-details__section">
+            <h3>СНИЛС</h3>
             <dl class="student-details__list">
-              <div><dt>СНИЛС</dt><dd>{{ student.snils || '—' }}</dd></div>
-              <div><dt>Паспорт</dt><dd>{{ [student.passport_series, student.passport_number].filter(Boolean).join(' ') || '—' }}</dd></div>
-              <div><dt>Дата выдачи</dt><dd>{{ student.passport_issue_date || '—' }}</dd></div>
-              <div><dt>Кем выдан</dt><dd>{{ student.passport_issued_by || '—' }}</dd></div>
+              <div><dt>СНИЛС</dt><dd>{{ student.snils || completeness?.snils?.masked || '—' }}</dd></div>
             </dl>
           </section>
         </q-tab-panel>

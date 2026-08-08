@@ -108,12 +108,23 @@ const columns = [
     align: 'left',
   },
   {
+    name: 'card_completeness',
+    label: 'Карточка',
+    field: (row) => (row.card_completeness?.complete ? 'complete' : 'incomplete'),
+    align: 'left',
+  },
+  {
     name: 'actions',
     label: '',
     field: 'actions',
     align: 'right',
   },
 ]
+
+// Чего не хватает в карточке — считает бэкенд, здесь только подпись к признаку.
+function missingParts(row) {
+  return (row.card_completeness?.blocking_reasons || [])
+}
 
 const tableSubtitle = computed(() => {
   const total = store.pagination?.total ?? store.students.length
@@ -230,6 +241,11 @@ function routeAction() {
   return route.query.action ? String(route.query.action) : ''
 }
 
+// Напоминание «Учебной части» ведёт сюда со списком неполных карточек.
+function routeCompleteness() {
+  return route.query.completeness === 'incomplete' ? 'incomplete' : ''
+}
+
 async function syncStudentQuery({ groupId = routeGroupId(), selectedId = routeSelectedId(), searchText = routeSearchText() }) {
   const query = { ...route.query }
 
@@ -279,6 +295,49 @@ async function saveStudent(payload) {
   formVisible.value = false
   editingStudent.value = null
   notifySuccess(isEdit ? 'Студент обновлен' : 'Студент создан')
+  notifySaveWarnings()
+}
+
+/**
+ * Пустой СНИЛС и вероятные дубли по ФИО и дате рождения — предупреждения, а не ошибки:
+ * карточка сохранена, но неполна, а совпадения оператор объединяет вручную.
+ */
+function notifySaveWarnings() {
+  const warnings = store.lastWarnings
+
+  if (!warnings) return
+
+  if (warnings.snils_missing) {
+    $q.notify({
+      type: 'warning',
+      message: 'СНИЛС не заполнен',
+      caption: 'Карточка сохранена как неполная. Без СНИЛС заблокированы ФИС ГИА, ФРДО, приказ и диплом.',
+      position: 'top-right',
+      timeout: 8000,
+    })
+  }
+
+  const candidates = warnings.duplicate_candidates || []
+  if (candidates.length) {
+    $q.notify({
+      type: 'warning',
+      message: `Возможные дубли: ${candidates.length}`,
+      caption: candidates
+        .map((candidate) => [candidate.full_name, candidate.birth_date].filter(Boolean).join(', '))
+        .join('; '),
+      position: 'top-right',
+      timeout: 12000,
+      actions: [{ label: 'Открыть реестр людей', color: 'white', handler: () => router.push('/people') }],
+    })
+  }
+}
+
+async function saveEducationDocument(payload) {
+  const studentId = store.selectedId
+  if (!studentId) return
+
+  await store.addEducationDocument(studentId, payload)
+  notifySuccess('Документ об образовании сохранён')
 }
 
 function requestDelete(student) {
@@ -354,6 +413,7 @@ onMounted(async () => {
   store.setFilters({
     group_id: routeGroupId(),
     search: routeSearchText(),
+    completeness: routeCompleteness(),
   })
   await store.load()
   store.selectStudentById(routeSelectedId())
@@ -504,6 +564,20 @@ onMounted(async () => {
             </q-td>
           </template>
 
+          <template #body-cell-card_completeness="props">
+            <q-td :props="props">
+              <span v-if="props.row.card_completeness?.complete" class="student-card-flag">
+                <AppStatusBadge label="Полная" tone="success" />
+              </span>
+              <span v-else class="student-card-flag">
+                <AppStatusBadge label="Неполная" tone="warning" />
+                <q-tooltip v-if="missingParts(props.row).length">
+                  {{ missingParts(props.row).join(' ') }}
+                </q-tooltip>
+              </span>
+            </q-td>
+          </template>
+
           <template #body-cell-actions="props">
             <q-td :props="props">
               <div class="students-row-actions">
@@ -532,11 +606,16 @@ onMounted(async () => {
       <aside class="students-side">
         <StudentDetailsPanel
           :student="store.selectedStudent"
+          :documents="store.selectedDocuments"
+          :documents-loading="store.documentsLoading"
+          :can-edit-documents="canUpdate"
+          :saving-document="store.saving"
           :status-labels="statusLabels"
           :status-tones="statusTones"
           :attendance-summary="store.attendanceSummary"
           :grade-summary="store.gradeSummary"
           :loading="store.detailsLoading"
+          @save-education-document="saveEducationDocument"
         />
       </aside>
     </div>

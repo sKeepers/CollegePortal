@@ -26,9 +26,15 @@ class EducationDocumentService
     /** @return Collection<int, EducationDocument> */
     public function listForApplicant(int $applicantId, bool $withArchived = false): Collection
     {
-        $this->foundationApplicant($applicantId);
+        $applicant = $this->foundationApplicant($applicantId);
 
-        return $this->documents->listForApplicant($applicantId, $withArchived);
+        return $this->documents->listForPerson($applicant->person_id, $withArchived);
+    }
+
+    /** @return Collection<int, EducationDocument> */
+    public function listForPerson(int $personId, bool $withArchived = false): Collection
+    {
+        return $this->documents->listForPerson($personId, $withArchived);
     }
 
     public function find(int $id): ?EducationDocument
@@ -41,32 +47,120 @@ class EducationDocumentService
     {
         return DB::transaction(function () use ($applicantId, $payload, $actor): EducationDocument {
             $applicant = $this->foundationApplicant($applicantId);
-            $this->assertReference($payload['document_type_id'] ?? null, 'admission_education_document_types', 'document_type_id');
-            $this->assertReference($payload['country_id'] ?? null, null, 'country_id');
-            $this->assertReference($payload['education_level_id'] ?? null, 'education_levels', 'education_level_id');
-            $status = $this->verificationStatus($payload['verification_status'] ?? EducationDocument::STATUS_RECEIVED);
 
-            if ((bool) ($payload['is_primary'] ?? false)) {
-                $this->unsetPrimary($applicant->id);
-            }
-
-            $document = $this->documents->create([
-                ...$payload,
-                'uuid' => (string) Str::uuid(),
-                'applicant_id' => $applicant->id,
-                'number_hash' => $this->documentHash($payload['series'] ?? null, $payload['number'] ?? null),
-                'verification_status' => $status,
-                'created_by' => $actor?->id,
-                'updated_by' => $actor?->id,
-                'verified_by' => $status === EducationDocument::STATUS_VERIFIED ? $actor?->id : null,
-                'verified_at' => $status === EducationDocument::STATUS_VERIFIED ? now() : null,
-                'archived_at' => null,
-            ]);
-
-            AuditLogService::log('Admissions', 'education_document_created', $document, null, $this->audit->education($document), user: $actor);
-
-            return $document;
+            return $this->store($applicant->person_id, $applicant->id, $payload, $actor);
         });
+    }
+
+    /**
+     * Документ человека без заявления в приёмной комиссии: переведённый, восстановленный
+     * или заведённый импортом студент. `applicant_id` остаётся пустым намеренно.
+     *
+     * @param array<string, mixed> $payload
+     */
+    public function createForPerson(int $personId, array $payload, ?User $actor = null): EducationDocument
+    {
+        return DB::transaction(fn (): EducationDocument => $this->store($personId, null, $payload, $actor));
+    }
+
+    /**
+     * Реквизиты документа об образовании из импорта студентов: документ хранится
+     * у человека, а не у строки файла.
+     *
+     * @param array<string, mixed> $source
+     */
+    public function syncForPerson(int $personId, array $source, ?User $actor = null): ?EducationDocument
+    {
+        $payload = array_filter([
+            'series' => $this->trimmed($source['series'] ?? null),
+            'number' => $this->trimmed($source['number'] ?? null),
+            'issue_date' => $this->trimmed($source['issue_date'] ?? null),
+            'document_organization' => $this->trimmed($source['document_organization'] ?? null),
+            'graduation_year' => $this->trimmed($source['graduation_year'] ?? null),
+        ], fn ($value): bool => $value !== null);
+
+        if (! isset($payload['series']) && ! isset($payload['number'])) {
+            return null;
+        }
+
+        $current = $this->documents->listForPerson($personId)->first();
+
+        if (! $current) {
+            return $this->createForPerson($personId, [
+                ...$payload,
+                'document_type_id' => $this->documentTypeId($source['document_type'] ?? null),
+                'is_primary' => true,
+            ], $actor);
+        }
+
+        $changes = [];
+        foreach ($payload as $field => $value) {
+            $currentValue = $field === 'issue_date' ? $current->issue_date?->toDateString() : $current->{$field};
+
+            if ((string) $currentValue !== (string) $value) {
+                $changes[$field] = $value;
+            }
+        }
+
+        return $changes === [] ? $current : $this->update($current->id, $changes, $actor);
+    }
+
+    /** Название типа документа из файла импорта: код, точное имя или аттестат по умолчанию. */
+    private function documentTypeId(?string $type): ?int
+    {
+        $catalogId = ReferenceCatalog::query()->where('code', 'admission_education_document_types')->value('id');
+
+        if (! $catalogId) {
+            return null;
+        }
+
+        $type = trim((string) $type);
+        $items = ReferenceItem::query()->where('catalog_id', $catalogId)->get();
+
+        $match = $type === '' ? null : $items->first(
+            fn (ReferenceItem $item): bool => mb_strtolower($item->code) === mb_strtolower($type)
+                || mb_strtolower($item->name) === mb_strtolower($type),
+        );
+
+        return ($match ?? $items->firstWhere('code', 'basic_general_certificate'))?->id;
+    }
+
+    private function trimmed(mixed $value): ?string
+    {
+        $value = is_string($value) ? trim($value) : $value;
+
+        return $value === null || $value === '' ? null : (string) $value;
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function store(int $personId, ?int $applicantId, array $payload, ?User $actor): EducationDocument
+    {
+        $this->assertReference($payload['document_type_id'] ?? null, 'admission_education_document_types', 'document_type_id');
+        $this->assertReference($payload['country_id'] ?? null, null, 'country_id');
+        $this->assertReference($payload['education_level_id'] ?? null, 'education_levels', 'education_level_id');
+        $status = $this->verificationStatus($payload['verification_status'] ?? EducationDocument::STATUS_RECEIVED);
+
+        if ((bool) ($payload['is_primary'] ?? false)) {
+            $this->unsetPrimary($personId);
+        }
+
+        $document = $this->documents->create([
+            ...$payload,
+            'uuid' => (string) Str::uuid(),
+            'applicant_id' => $applicantId,
+            'person_id' => $personId,
+            'number_hash' => $this->documentHash($payload['series'] ?? null, $payload['number'] ?? null),
+            'verification_status' => $status,
+            'created_by' => $actor?->id,
+            'updated_by' => $actor?->id,
+            'verified_by' => $status === EducationDocument::STATUS_VERIFIED ? $actor?->id : null,
+            'verified_at' => $status === EducationDocument::STATUS_VERIFIED ? now() : null,
+            'archived_at' => null,
+        ]);
+
+        AuditLogService::log('Admissions', 'education_document_created', $document, null, $this->audit->education($document), user: $actor);
+
+        return $document;
     }
 
     /** @param array<string, mixed> $payload */
@@ -90,7 +184,7 @@ class EducationDocumentService
             }
 
             if (array_key_exists('is_primary', $payload) && (bool) $payload['is_primary']) {
-                $this->unsetPrimary($document->applicant_id, $document->id);
+                $this->unsetPrimary($document->person_id, $document->id);
             }
 
             if (array_key_exists('verification_status', $payload)) {
@@ -106,7 +200,7 @@ class EducationDocumentService
             }
 
             $document->update([...$payload, 'updated_by' => $actor?->id]);
-            $document->refresh()->load(['applicant.person', 'documentType', 'country', 'educationLevel', 'activeFiles']);
+            $document->refresh()->load(['person', 'applicant.person', 'documentType', 'country', 'educationLevel', 'activeFiles']);
 
             AuditLogService::log('Admissions', 'education_document_updated', $document, $old, $this->audit->education($document), user: $actor);
 
@@ -166,11 +260,11 @@ class EducationDocumentService
         return $status;
     }
 
-    private function unsetPrimary(int $applicantId, ?int $exceptId = null): void
+    private function unsetPrimary(int $personId, ?int $exceptId = null): void
     {
         EducationDocument::query()
             ->active()
-            ->where('applicant_id', $applicantId)
+            ->where('person_id', $personId)
             ->when($exceptId !== null, fn ($query) => $query->whereKeyNot($exceptId))
             ->update(['is_primary' => false]);
     }
@@ -210,6 +304,7 @@ class EducationDocumentService
     {
         $base = collect($document->getAttributes())->only([
             'applicant_id',
+            'person_id',
             'document_type_id',
             'series',
             'number',
@@ -238,7 +333,7 @@ class EducationDocumentService
 
         $status = $this->verificationStatus($payload['verification_status'] ?? EducationDocument::STATUS_PENDING_REVIEW);
         if ((bool) ($payload['is_primary'] ?? $document->is_primary)) {
-            $this->unsetPrimary($document->applicant_id, $document->id);
+            $this->unsetPrimary($document->person_id, $document->id);
         }
 
         $next = $this->documents->create([

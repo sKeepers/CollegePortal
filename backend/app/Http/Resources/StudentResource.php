@@ -38,6 +38,9 @@ class StudentResource extends JsonResource
             'enrollment_order_date' => $this->enrollment_order_date?->toDateString(),
             'specialty' => $this->group?->specialty ?? $this->group?->educationProgram?->specialty?->name,
             'archived_at' => $this->archived_at?->toISOString(),
+            // Полнота карточки приходит из AdmissionDocumentReadinessService и кладётся
+            // на модель контроллером; в списках она есть, в служебных ответах — нет.
+            'card_completeness' => $this->whenNotNull($this->resource->card_completeness ?? null),
             'group' => new GroupResource($this->whenLoaded('group')),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),

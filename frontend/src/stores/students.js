@@ -6,6 +6,7 @@ const initialFilters = {
   search: '',
   group_id: '',
   status: '',
+  completeness: '',
 }
 
 function extractRows(payload) {
@@ -67,6 +68,11 @@ export const useStudentsStore = defineStore('students', () => {
   const importSummary = ref(null)
   const selectedAttendance = ref([])
   const selectedGrades = ref([])
+  // Предупреждения последнего сохранения: пустой СНИЛС и вероятные дубли по ФИО
+  // и дате рождения. Сохранять они не мешают — оператор решает сам.
+  const lastWarnings = ref(null)
+  const selectedDocuments = ref(null)
+  const documentsLoading = ref(false)
 
   const selectedStudent = computed(() => (
     students.value.find((student) => Number(student.id) === Number(selectedId.value)) || null
@@ -147,6 +153,8 @@ export const useStudentsStore = defineStore('students', () => {
       const response = id
         ? await api.update('students', id, data)
         : await api.create('students', data)
+
+      lastWarnings.value = response?.warnings || null
 
       await load()
 
@@ -285,10 +293,66 @@ export const useStudentsStore = defineStore('students', () => {
     filters.value = { ...initialFilters }
   }
 
+  async function loadDocuments(studentId) {
+    if (!studentId) {
+      selectedDocuments.value = null
+      return null
+    }
+
+    documentsLoading.value = true
+
+    try {
+      const payload = await api.get(`students/${studentId}/documents`)
+      selectedDocuments.value = payload?.data || null
+
+      return selectedDocuments.value
+    } catch (err) {
+      error.value = err.message || 'Не удалось загрузить документы студента'
+      throw err
+    } finally {
+      documentsLoading.value = false
+    }
+  }
+
+  async function addIdentityDocument(studentId, payload) {
+    saving.value = true
+    error.value = ''
+
+    try {
+      const response = await api.create(`students/${studentId}/identity-documents`, payload)
+      await Promise.all([loadDocuments(studentId), load()])
+
+      return response?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось сохранить документ, удостоверяющий личность'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function addEducationDocument(studentId, payload) {
+    saving.value = true
+    error.value = ''
+
+    try {
+      const response = await api.create(`students/${studentId}/education-documents`, payload)
+      await Promise.all([loadDocuments(studentId), load()])
+
+      return response?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось сохранить документ об образовании'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
   async function loadStudentDetails(studentId) {
     if (!studentId) {
       selectedAttendance.value = []
       selectedGrades.value = []
+      selectedDocuments.value = null
       return
     }
 
@@ -304,6 +368,8 @@ export const useStudentsStore = defineStore('students', () => {
         selectedAttendance.value = extractRows(attendancePayload)
         selectedGrades.value = extractRows(gradesPayload)
       }
+
+      await loadDocuments(studentId)
     } catch (err) {
       error.value = err.message || 'Не удалось загрузить карточку студента'
     } finally {
@@ -334,6 +400,12 @@ export const useStudentsStore = defineStore('students', () => {
     saving,
     error,
     importSummary,
+    lastWarnings,
+    selectedDocuments,
+    documentsLoading,
+    loadDocuments,
+    addIdentityDocument,
+    addEducationDocument,
     selectedAttendance,
     selectedGrades,
     attendanceSummary,

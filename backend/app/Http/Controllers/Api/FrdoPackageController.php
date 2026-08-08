@@ -7,15 +7,22 @@ use App\Http\Requests\StoreFrdoPackageRequest;
 use App\Http\Resources\FrdoPackageResource;
 use App\Models\FrdoPackage;
 use App\Models\Graduate;
+use App\Models\Student;
+use App\Services\Admissions\AdmissionDocumentReadinessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class FrdoPackageController extends Controller
 {
+    public function __construct(private readonly AdmissionDocumentReadinessService $readiness)
+    {
+    }
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $packages = FrdoPackage::query()
@@ -97,6 +104,14 @@ class FrdoPackageController extends Controller
 
     public function markExported(FrdoPackage $frdoPackage): FrdoPackageResource
     {
+        // Пакет с невалидными записями выгружать нельзя: неполная карточка студента
+        // делает запись невалидной ещё на проверке.
+        if ($frdoPackage->status !== 'ready') {
+            throw ValidationException::withMessages([
+                'status' => 'Пакет не прошёл проверку. Выгрузка в ФРДО заблокирована до устранения ошибок.',
+            ]);
+        }
+
         $frdoPackage->update(['status' => 'exported', 'exported_at' => now()]);
         $frdoPackage->records()->update(['status' => 'exported']);
 
@@ -151,7 +166,30 @@ class FrdoPackageController extends Controller
             ['diploma_status', $diploma?->status, 'Не указан статус диплома'],
         ];
 
-        return collect($checks)->filter(fn ($item) => blank($item[1]))->map(fn ($item) => [$item[0], $item[2]])->values()->all();
+        $errors = collect($checks)->filter(fn ($item) => blank($item[1]))->map(fn ($item) => [$item[0], $item[2]])->values()->all();
+
+        // ФРДО — выгрузка по закону: без паспорта, документа об образовании и СНИЛС
+        // запись пакета обязана быть невалидной.
+        return array_merge($errors, $this->cardErrors($student));
+    }
+
+    /** @return list<array{0:string,1:string}> */
+    private function cardErrors(?Student $student): array
+    {
+        if (! $student) {
+            return [['student_card', 'Выпускник не связан с карточкой студента']];
+        }
+
+        $card = $this->readiness->forStudent($student);
+
+        if ($card['complete']) {
+            return [];
+        }
+
+        return array_map(
+            fn (array $reason): array => ['student_card.'.$reason['field'], 'Неполная карточка студента: '.$reason['message']],
+            $card['blocking_reasons_detailed'],
+        );
     }
 
     private function payloadFor(Graduate $graduate): array

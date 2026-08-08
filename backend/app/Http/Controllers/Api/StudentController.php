@@ -6,22 +6,30 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreStudentRequest;
 use App\Http\Requests\UpdateStudentRequest;
 use App\Http\Resources\StudentResource;
-use App\Models\Person;
 use App\Models\Student;
+use App\Services\Admissions\AdmissionDocumentReadinessService;
+use App\Services\Admissions\IdentityDocumentService;
 use App\Services\Admissions\SnilsService;
 use App\Services\StudentCsvService;
+use App\Services\StudentPersonService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StudentController extends Controller
 {
-    public function __construct(private readonly StudentCsvService $studentCsvService, private readonly SnilsService $snils)
-    {
+    public function __construct(
+        private readonly StudentCsvService $studentCsvService,
+        private readonly SnilsService $snils,
+        private readonly StudentPersonService $studentPeople,
+        private readonly AdmissionDocumentReadinessService $readiness,
+        private readonly IdentityDocumentService $identityDocuments,
+    ) {
     }
 
     public function index(Request $request): AnonymousResourceCollection
@@ -30,6 +38,12 @@ class StudentController extends Controller
             ->with('group.educationProgram.specialty')
             ->when($request->integer('group_id'), fn ($query, int $groupId) => $query->where('group_id', $groupId))
             ->when($request->string('status')->toString(), fn ($query, string $status) => $query->where('status', $status))
+            // Фильтр «неполные карточки» берёт идентификаторы у сервиса готовности:
+            // признак в строке и список в фильтре обязаны считаться одинаково.
+            ->when(
+                $request->string('completeness')->toString() === 'incomplete',
+                fn ($query) => $query->whereIn('id', $this->readiness->incompleteStudentIds()),
+            )
             ->when($request->string('search')->toString(), function ($query, string $search): void {
                 $operator = $query->getModel()->getConnection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
 
@@ -44,53 +58,87 @@ class StudentController extends Controller
             ->orderBy('first_name')
             ->paginate(20);
 
+        $this->attachCompleteness($students->getCollection());
+
         return StudentResource::collection($students);
     }
 
     public function store(StoreStudentRequest $request): JsonResponse
     {
-        $student = DB::transaction(function () use ($request): Student {
+        $result = DB::transaction(function () use ($request): array {
             $data = $request->validated();
-            $personId = null;
+
             if (filled($data['snils'] ?? null)) {
-                $normalizedSnils = $this->snils->normalize($data['snils']);
-                $hash = $this->snils->hash($normalizedSnils);
-                $person = Person::query()->firstOrCreate(
-                    ['snils_hash' => $hash],
-                    [
-                        'last_name' => $data['last_name'],
-                        'first_name' => $data['first_name'],
-                        'middle_name' => $data['middle_name'] ?? null,
-                        'birth_date' => $data['birth_date'] ?? null,
-                        'phone' => $data['phone'] ?? null,
-                        'email' => $data['email'] ?? null,
-                        'snils' => $normalizedSnils,
-                        'snils_hash' => $hash,
-                        'status' => 'active',
-                    ],
-                );
-                $data['snils'] = $normalizedSnils;
-                $personId = $person->id;
+                $data['snils'] = $this->snils->normalize($data['snils']);
             }
 
-            return Student::create([...$data, 'person_id' => $personId]);
+            // Человек заводится всегда: паспорт и документ об образовании принадлежат
+            // ему, а не карточке студента, и без Person их некуда прикрепить.
+            $resolved = $this->studentPeople->resolveForData($data);
+            $student = Student::create([...$data, 'person_id' => $resolved['person']->id]);
+            $this->syncPassport($resolved['person']->id, $data, $request);
+            $this->assertOrderAllowed($student, filled($data['enrollment_order_number'] ?? null));
+
+            return [
+                'student' => $student,
+                'duplicate_candidates' => $resolved['duplicate_candidates'],
+                'snils_missing' => blank($data['snils'] ?? null),
+            ];
         });
 
+        $student = $result['student'];
+        $this->attachCompleteness(collect([$student]));
+
         return (new StudentResource($student->load('group.educationProgram.specialty')))
+            ->additional(['warnings' => [
+                'snils_missing' => $result['snils_missing'],
+                'duplicate_candidates' => $result['duplicate_candidates'],
+            ]])
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
     public function show(Student $student): StudentResource
     {
+        $this->attachCompleteness(collect([$student]));
+
         return new StudentResource($student->load('group.educationProgram.specialty'));
     }
 
-    public function update(UpdateStudentRequest $request, Student $student): StudentResource
+    public function update(UpdateStudentRequest $request, Student $student): JsonResponse
     {
-        $student->update($request->validated());
+        $result = DB::transaction(function () use ($request, $student): array {
+            $data = $request->validated();
 
-        return new StudentResource($student->load('group.educationProgram.specialty'));
+            if (array_key_exists('snils', $data) && filled($data['snils'])) {
+                $data['snils'] = $this->snils->normalize($data['snils']);
+            }
+
+            $orderChanged = array_key_exists('enrollment_order_number', $data)
+                && filled($data['enrollment_order_number'])
+                && $data['enrollment_order_number'] !== $student->enrollment_order_number;
+
+            $student->update($data);
+            $student->refresh();
+
+            $resolved = $this->studentPeople->ensureForStudent($student);
+            $this->syncPassport($resolved['person']->id, $data, $request);
+            $this->assertOrderAllowed($student, $orderChanged);
+
+            return [
+                'duplicate_candidates' => $resolved['duplicate_candidates'],
+                'snils_missing' => blank($student->snils) && blank($resolved['person']->snils),
+            ];
+        });
+
+        $this->attachCompleteness(collect([$student]));
+
+        return (new StudentResource($student->load('group.educationProgram.specialty')))
+            ->additional(['warnings' => [
+                'snils_missing' => $result['snils_missing'],
+                'duplicate_candidates' => $result['duplicate_candidates'],
+            ]])
+            ->response();
     }
 
     public function destroy(Student $student): Response
@@ -123,5 +171,58 @@ class StudentController extends Controller
             'message' => 'Импорт студентов завершен.',
             'data' => $summary,
         ]);
+    }
+
+    /**
+     * Паспорт с формы студента ложится в документ человека. Без этого оператор
+     * заполнял бы поля паспорта, а карточка оставалась бы неполной.
+     *
+     * @param array<string, mixed> $data
+     */
+    private function syncPassport(int $personId, array $data, Request $request): void
+    {
+        if (! array_key_exists('passport_series', $data) && ! array_key_exists('passport_number', $data)) {
+            return;
+        }
+
+        $this->identityDocuments->syncPassportForPerson($personId, [
+            'series' => $data['passport_series'] ?? null,
+            'number' => $data['passport_number'] ?? null,
+            'issue_date' => $data['passport_issue_date'] ?? null,
+            'issued_by' => $data['passport_issued_by'] ?? null,
+        ], $request->user());
+    }
+
+    /**
+     * Приказ о зачислении — операция по закону, поэтому здесь блокировка жёсткая.
+     * Проверяется только момент, когда номер приказа появляется или меняется: иначе
+     * карточку с уже записанным приказом нельзя было бы редактировать вовсе.
+     */
+    private function assertOrderAllowed(Student $student, bool $orderChanged): void
+    {
+        if (! $orderChanged) {
+            return;
+        }
+
+        $this->readiness->assertStudentCardComplete($student, 'Приказ о зачислении заблокирован', 'enrollment_order_number');
+    }
+
+    /**
+     * Полнота карточки считается пакетно и кладётся на модель: реестр обязан показывать
+     * неполноту без запроса на каждую строку.
+     *
+     * @param Collection<int, Student> $students
+     */
+    private function attachCompleteness(Collection $students): void
+    {
+        if ($students->isEmpty()) {
+            return;
+        }
+
+        $cards = $this->readiness->forStudents($students);
+
+        foreach ($students as $student) {
+            $student->setAttribute('card_completeness', $cards[$student->id] ?? null);
+        }
     }
 }

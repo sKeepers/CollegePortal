@@ -51,6 +51,7 @@ use App\Http\Controllers\Api\JournalLessonController;
 use App\Http\Controllers\Api\GraduateController;
 use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\StudentBulkController;
+use App\Http\Controllers\Api\StudentDocumentController;
 use App\Http\Controllers\Api\SubjectController;
 use App\Http\Controllers\Api\ScheduleLessonController;
 use App\Http\Controllers\Api\ScheduleEngineController;
@@ -268,6 +269,24 @@ Route::middleware(['api.token', 'throttle:api.authenticated'])->group(function (
     Route::get('admissions/applications/{application}/document-readiness', [AdmissionsDocumentReadinessController::class, 'show'])
         ->whereNumber('application')
         ->middleware('permission:admissions.document.view');
+
+    // Полнота карточки студента и его документы. Право указано явно, поэтому таблица
+    // префиксов в EnsurePermission здесь не участвует; литеральный сегмент объявлен
+    // раньше параметрического, иначе `{student}` перехватил бы слово.
+    Route::get('students/card-completeness/summary', [StudentDocumentController::class, 'summary'])
+        ->middleware('permission:students.view');
+    Route::get('students/{student}/card-completeness', [StudentDocumentController::class, 'completeness'])
+        ->whereNumber('student')
+        ->middleware('permission:students.view');
+    Route::get('students/{student}/documents', [StudentDocumentController::class, 'index'])
+        ->whereNumber('student')
+        ->middleware('permission:students.view');
+    Route::post('students/{student}/identity-documents', [StudentDocumentController::class, 'storeIdentity'])
+        ->whereNumber('student')
+        ->middleware('permission:students.update');
+    Route::post('students/{student}/education-documents', [StudentDocumentController::class, 'storeEducation'])
+        ->whereNumber('student')
+        ->middleware('permission:students.update');
 
     Route::post('admin/users/provision', [AdminUserController::class, 'provision'])
         ->middleware('permission:users.manage');

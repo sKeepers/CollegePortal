@@ -17,6 +17,7 @@ class EducationDocumentResource extends JsonResource
             'id' => $this->id,
             'uuid' => $this->uuid,
             'applicant_id' => $this->applicant_id,
+            'person_id' => $this->person_id,
             'previous_version_id' => $this->previous_version_id,
             'version_number' => $this->version_number,
             'replaced_by_document_id' => $this->replaced_by_document_id,

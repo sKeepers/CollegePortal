@@ -13,10 +13,12 @@ use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Teacher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\CompletesStudentCard;
 use Tests\TestCase;
 
 class FisPackageApiTest extends TestCase
 {
+    use CompletesStudentCard;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -44,6 +46,7 @@ class FisPackageApiTest extends TestCase
     public function test_it_creates_and_validates_gia_package(): void
     {
         [$program, $group, $student] = $this->studentProgram();
+        $this->completeStudentCard($student);
         $subject = Subject::create(['name' => 'ГИА', 'code' => 'GIA']);
         $teacher = Teacher::create(['last_name' => 'Смирнова', 'first_name' => 'Елена', 'is_active' => true]);
         $classroom = Classroom::create(['number' => '201', 'type' => 'Учебная']);

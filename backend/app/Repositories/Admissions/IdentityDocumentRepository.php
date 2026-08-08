@@ -7,12 +7,17 @@ use Illuminate\Support\Collection;
 
 class IdentityDocumentRepository
 {
-    /** @return Collection<int, IdentityDocument> */
-    public function listForApplicant(int $applicantId, bool $withArchived = false): Collection
+    /**
+     * Документы принадлежат человеку, а не роли, поэтому список строится по `person_id`:
+     * абитуриент, студент и выпускник видят одну и ту же историю документов.
+     *
+     * @return Collection<int, IdentityDocument>
+     */
+    public function listForPerson(int $personId, bool $withArchived = false): Collection
     {
         return IdentityDocument::query()
             ->with(['documentType', 'releaseCountry', 'activeFiles'])
-            ->where('applicant_id', $applicantId)
+            ->where('person_id', $personId)
             ->when(! $withArchived, fn ($query) => $query->current())
             ->orderByDesc('is_primary')
             ->orderByDesc('issue_date')
@@ -23,7 +28,7 @@ class IdentityDocumentRepository
     public function find(int $id, bool $withArchived = false): ?IdentityDocument
     {
         return IdentityDocument::query()
-            ->with(['applicant.person', 'documentType', 'releaseCountry', 'activeFiles'])
+            ->with(['person', 'applicant.person', 'documentType', 'releaseCountry', 'activeFiles'])
             ->when(! $withArchived, fn ($query) => $query->active())
             ->find($id);
     }
@@ -33,6 +38,6 @@ class IdentityDocumentRepository
     {
         return IdentityDocument::query()
             ->create($data)
-            ->load(['applicant.person', 'documentType', 'releaseCountry', 'activeFiles']);
+            ->load(['person', 'applicant.person', 'documentType', 'releaseCountry', 'activeFiles']);
     }
 }

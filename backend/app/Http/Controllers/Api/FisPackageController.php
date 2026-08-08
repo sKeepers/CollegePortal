@@ -9,15 +9,22 @@ use App\Models\ApplicantApplication;
 use App\Models\Exam;
 use App\Models\FisPackage;
 use App\Models\Graduate;
+use App\Models\Student;
+use App\Services\Admissions\AdmissionDocumentReadinessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class FisPackageController extends Controller
 {
+    public function __construct(private readonly AdmissionDocumentReadinessService $readiness)
+    {
+    }
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $packages = FisPackage::query()
@@ -74,6 +81,14 @@ class FisPackageController extends Controller
 
     public function markExported(FisPackage $fisPackage): FisPackageResource
     {
+        // Выгрузка в ФИС ГИА — операция по закону. Пакет, не прошедший проверку
+        // (в том числе из-за неполной карточки студента), выгружать нельзя.
+        if ($fisPackage->status !== 'ready') {
+            throw ValidationException::withMessages([
+                'status' => 'Пакет не прошёл проверку. Выгрузка в ФИС ГИА заблокирована до устранения ошибок.',
+            ]);
+        }
+
         $fisPackage->update(['status' => 'exported', 'exported_at' => now()]);
         $fisPackage->records()->update(['status' => 'exported']);
         return new FisPackageResource($this->freshPackage($fisPackage));
@@ -134,7 +149,29 @@ class FisPackageController extends Controller
     private function validateGiaRecord(?Exam $exam, ?Graduate $graduate): array
     {
         $checks = [['exam', $exam?->id, 'Не указан экзамен/ГИА'], ['exam_date', $exam?->exam_date?->toDateString(), 'Не указана дата ГИА'], ['subject', $exam?->subject?->name, 'Не указана дисциплина/предмет'], ['group', $exam?->group?->name, 'Не указана группа'], ['education_program', $exam?->group?->educationProgram?->name ?: $graduate?->educationProgram?->name, 'Не указана образовательная программа'], ['specialty', $exam?->group?->educationProgram?->specialty?->name ?: $graduate?->specialty?->name, 'Не указана специальность']];
-        return collect($checks)->filter(fn ($item) => blank($item[1]))->map(fn ($item) => [$item[0], $item[2]])->values()->all();
+        $errors = collect($checks)->filter(fn ($item) => blank($item[1]))->map(fn ($item) => [$item[0], $item[2]])->values()->all();
+
+        // Выгрузка в ФИС ГИА требует паспорта, документа об образовании и СНИЛС.
+        // Пакет по группе без выпускника проверять нечего — карточку смотрим,
+        // только когда запись относится к конкретному человеку.
+        return $graduate?->student
+            ? array_merge($errors, $this->studentCardErrors($graduate->student))
+            : $errors;
+    }
+
+    /** @return list<array{0:string,1:string}> */
+    private function studentCardErrors(Student $student): array
+    {
+        $card = $this->readiness->forStudent($student);
+
+        if ($card['complete']) {
+            return [];
+        }
+
+        return array_map(
+            fn (array $reason): array => ['student_card.'.$reason['field'], 'Неполная карточка студента: '.$reason['message']],
+            $card['blocking_reasons_detailed'],
+        );
     }
 
     private function payloadForRecord(string $type, mixed $record): array

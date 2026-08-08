@@ -56,6 +56,7 @@ const adminNotifications = ref([])
 const notificationInitialized = ref(false)
 let notificationTimer = null
 const NAVIGATION_SECTIONS_KEY = 'collegePortal.navigation.sections.v1'
+const STUDENT_CARD_REMINDER_PERIOD = 8 * 60 * 60 * 1000
 
 const navGroups = [
   {
@@ -170,7 +171,12 @@ const visibleNavGroups = computed(() =>
 
 const collapsedSections = ref(loadNavigationSections())
 const pageTitle = computed(() => route.meta.title || 'CollegePortal')
-const canReceiveAdminNotifications = computed(() => auth.can('uat.manage') || auth.can('journal.reopen'))
+// «Учебная часть 2» ведёт контингент, поэтому именно ей приходит напоминание
+// о студентах с неполной карточкой.
+const canReceiveStudentCardReminder = computed(() => auth.hasRole('study_records') && auth.can('students.view'))
+const canReceiveAdminNotifications = computed(() => (
+  auth.can('uat.manage') || auth.can('journal.reopen') || canReceiveStudentCardReminder.value
+))
 const unreadNotificationCount = computed(() => adminNotifications.value.length)
 const collegeShortName = computed(() => settingsStore.publicValue('general', 'college_short_name', 'Колледж искусств'))
 const logoPath = computed(() => settingsStore.publicValue('branding', 'logo_path', '/brand/logo-skki-bw.jpg'))
@@ -262,6 +268,21 @@ async function loadAdminNotifications() {
       description: `${item.lesson?.subject || 'Занятие'} · ${item.lesson?.group || 'Группа'}`,
       to: { path: '/journal', query: { journalLesson: item.journal_lesson_id } },
     }))))
+  }
+  if (canReceiveStudentCardReminder.value) {
+    requests.push(api.list('students/card-completeness/summary').then((payload) => {
+      const summary = payload?.data || {}
+      if (!summary.incomplete) return []
+
+      // Идентификатор меняется раз в восемь часов, поэтому напоминание повторяется
+      // периодически, а не всплывает при каждом опросе.
+      return [{
+        id: `students-incomplete-${Math.floor(Date.now() / STUDENT_CARD_REMINDER_PERIOD)}`,
+        title: `Неполные карточки студентов: ${summary.incomplete}`,
+        description: `Нет паспорта: ${summary.missing_identity || 0} · нет документа об образовании: ${summary.missing_education || 0} · нет СНИЛС: ${summary.missing_snils || 0}`,
+        to: { path: '/students', query: { completeness: 'incomplete' } },
+      }]
+    }))
   }
 
   const next = (await Promise.all(requests)).flat()

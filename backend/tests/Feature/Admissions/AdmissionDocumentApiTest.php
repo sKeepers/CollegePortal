@@ -454,6 +454,7 @@ class AdmissionDocumentApiTest extends TestCase
         return EducationDocument::query()->create(array_merge([
             'uuid' => (string) Str::uuid(),
             'applicant_id' => $application->applicant_id,
+            'person_id' => $application->person_id,
             'document_type_id' => $this->referenceItemId('admission_education_document_types', 'basic_general_certificate'),
             'series' => 'АБ',
             'number' => '123456',

@@ -2,6 +2,7 @@
 
 namespace App\Models\Admissions;
 
+use App\Models\Person;
 use App\Models\ReferenceItem;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -31,6 +32,7 @@ class EducationDocument extends Model
         'previous_version_id',
         'version_number',
         'applicant_id',
+        'person_id',
         'document_type_id',
         'series',
         'number',
@@ -97,9 +99,15 @@ class EducationDocument extends Model
         return $query->active()->whereNull('replaced_at');
     }
 
+    /** Исторический признак происхождения: заведён ли документ приёмной комиссией. */
     public function applicant(): BelongsTo
     {
         return $this->belongsTo(Applicant::class);
+    }
+
+    public function person(): BelongsTo
+    {
+        return $this->belongsTo(Person::class);
     }
 
     public function documentType(): BelongsTo

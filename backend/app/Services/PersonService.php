@@ -42,7 +42,9 @@ class PersonService
                     $query
                         ->where('last_name', $normalized['last_name'])
                         ->where('first_name', $normalized['first_name'])
-                        ->where('birth_date', $normalized['birth_date'])
+                        // Дата рождения хранится с нулевым временем, поэтому сравнение
+                        // строк «2008-09-01» с «2008-09-01 00:00:00» не находило дублей.
+                        ->whereDate('birth_date', $normalized['birth_date'])
                         ->where(function ($query) use ($normalized): void {
                             $query->where('middle_name', $normalized['middle_name'] ?? null)
                                 ->orWhereNull('middle_name');

@@ -7,12 +7,17 @@ use Illuminate\Support\Collection;
 
 class EducationDocumentRepository
 {
-    /** @return Collection<int, EducationDocument> */
-    public function listForApplicant(int $applicantId, bool $withArchived = false): Collection
+    /**
+     * Документы принадлежат человеку, а не роли, поэтому список строится по `person_id`:
+     * абитуриент, студент и выпускник видят одну и ту же историю документов.
+     *
+     * @return Collection<int, EducationDocument>
+     */
+    public function listForPerson(int $personId, bool $withArchived = false): Collection
     {
         return EducationDocument::query()
             ->with(['documentType', 'country', 'educationLevel', 'activeFiles'])
-            ->where('applicant_id', $applicantId)
+            ->where('person_id', $personId)
             ->when(! $withArchived, fn ($query) => $query->current())
             ->orderByDesc('is_primary')
             ->orderByDesc('issue_date')
@@ -23,7 +28,7 @@ class EducationDocumentRepository
     public function find(int $id, bool $withArchived = false): ?EducationDocument
     {
         return EducationDocument::query()
-            ->with(['applicant.person', 'documentType', 'country', 'educationLevel', 'activeFiles'])
+            ->with(['person', 'applicant.person', 'documentType', 'country', 'educationLevel', 'activeFiles'])
             ->when(! $withArchived, fn ($query) => $query->active())
             ->find($id);
     }
@@ -33,6 +38,6 @@ class EducationDocumentRepository
     {
         return EducationDocument::query()
             ->create($data)
-            ->load(['applicant.person', 'documentType', 'country', 'educationLevel', 'activeFiles']);
+            ->load(['person', 'applicant.person', 'documentType', 'country', 'educationLevel', 'activeFiles']);
     }
 }

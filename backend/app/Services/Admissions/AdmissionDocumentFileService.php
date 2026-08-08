@@ -46,13 +46,14 @@ class AdmissionDocumentFileService
             throw ValidationException::withMessages(['file' => 'Такой файл уже загружен для документа.']);
         }
 
-        $storedPath = $this->store($file, $fileInfo['extension'], "admissions/documents/applicant-{$document->applicant_id}/identity-{$document->id}");
+        $storedPath = $this->store($file, $fileInfo['extension'], "admissions/documents/person-{$document->person_id}/identity-{$document->id}");
 
         $applicationId = $this->applicationId($payload['application_id'] ?? null, $document->applicant_id);
 
         $model = $document->files()->create([
             'uuid' => (string) Str::uuid(),
             'applicant_id' => $document->applicant_id,
+            'person_id' => $document->person_id,
             'application_id' => $applicationId,
             'category' => $this->category($payload['category'] ?? 'other'),
             'original_name' => basename($file->getClientOriginalName()),
@@ -82,13 +83,14 @@ class AdmissionDocumentFileService
             throw ValidationException::withMessages(['file' => 'Такой файл уже загружен для документа.']);
         }
 
-        $storedPath = $this->store($file, $fileInfo['extension'], "admissions/documents/applicant-{$document->applicant_id}/education-{$document->id}");
+        $storedPath = $this->store($file, $fileInfo['extension'], "admissions/documents/person-{$document->person_id}/education-{$document->id}");
 
         $applicationId = $this->applicationId($payload['application_id'] ?? null, $document->applicant_id);
 
         $model = $document->files()->create([
             'uuid' => (string) Str::uuid(),
             'applicant_id' => $document->applicant_id,
+            'person_id' => $document->person_id,
             'application_id' => $applicationId,
             'category' => $this->category($payload['category'] ?? 'other'),
             'original_name' => basename($file->getClientOriginalName()),
@@ -198,10 +200,16 @@ class AdmissionDocumentFileService
         return $category;
     }
 
-    private function applicationId(mixed $applicationId, int $applicantId): ?int
+    private function applicationId(mixed $applicationId, ?int $applicantId): ?int
     {
         if ($applicationId === null || $applicationId === '') {
             return null;
+        }
+
+        // У документа человека без заявления в приёмной комиссии абитуриента нет,
+        // значит и привязать файл к заявлению нельзя.
+        if ($applicantId === null) {
+            throw ValidationException::withMessages(['application_id' => 'Документ не относится к приёмной комиссии, привязать файл к заявлению нельзя.']);
         }
 
         $application = AdmissionApplication::query()

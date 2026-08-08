@@ -2,6 +2,7 @@
 
 namespace App\Models\Admissions;
 
+use App\Models\Person;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -12,6 +13,7 @@ class AdmissionDocumentFile extends Model
     protected $fillable = [
         'uuid',
         'applicant_id',
+        'person_id',
         'application_id',
         'identity_document_id',
         'education_document_id',
@@ -48,6 +50,11 @@ class AdmissionDocumentFile extends Model
     public function applicant(): BelongsTo
     {
         return $this->belongsTo(Applicant::class);
+    }
+
+    public function person(): BelongsTo
+    {
+        return $this->belongsTo(Person::class);
     }
 
     public function application(): BelongsTo

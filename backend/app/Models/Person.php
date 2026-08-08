@@ -39,6 +39,7 @@ class Person extends Model
     public function teachers(): HasMany { return $this->hasMany(Teacher::class); }
     public function applicants(): HasMany { return $this->hasMany(Applicant::class); }
     public function admissionIdentityDocuments(): HasMany { return $this->hasMany(\App\Models\Admissions\IdentityDocument::class); }
+    public function admissionEducationDocuments(): HasMany { return $this->hasMany(\App\Models\Admissions\EducationDocument::class); }
     public function applicantApplications(): HasMany
     {
         return $this->hasMany(ApplicantApplication::class)

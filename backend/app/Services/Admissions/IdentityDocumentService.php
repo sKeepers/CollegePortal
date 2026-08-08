@@ -26,9 +26,15 @@ class IdentityDocumentService
     /** @return Collection<int, IdentityDocument> */
     public function listForApplicant(int $applicantId, bool $withArchived = false): Collection
     {
-        $this->foundationApplicant($applicantId);
+        $applicant = $this->foundationApplicant($applicantId);
 
-        return $this->documents->listForApplicant($applicantId, $withArchived);
+        return $this->documents->listForPerson($applicant->person_id, $withArchived);
+    }
+
+    /** @return Collection<int, IdentityDocument> */
+    public function listForPerson(int $personId, bool $withArchived = false): Collection
+    {
+        return $this->documents->listForPerson($personId, $withArchived);
     }
 
     public function find(int $id): ?IdentityDocument
@@ -41,32 +47,110 @@ class IdentityDocumentService
     {
         return DB::transaction(function () use ($applicantId, $payload, $actor): IdentityDocument {
             $applicant = $this->foundationApplicant($applicantId);
-            $this->assertReference($payload['document_type_id'] ?? null, 'admission_identity_document_types', 'document_type_id');
-            $this->assertReference($payload['release_country_id'] ?? null, null, 'release_country_id');
-            $status = $this->verificationStatus($payload['verification_status'] ?? IdentityDocument::STATUS_RECEIVED);
 
-            if ((bool) ($payload['is_primary'] ?? false)) {
-                $this->unsetPrimary($applicant->id);
-            }
-
-            $document = $this->documents->create([
-                ...$payload,
-                'uuid' => (string) Str::uuid(),
-                'applicant_id' => $applicant->id,
-                'person_id' => $applicant->person_id,
-                'number_hash' => $this->documentHash($payload['series'] ?? null, $payload['number'] ?? null),
-                'verification_status' => $status,
-                'created_by' => $actor?->id,
-                'updated_by' => $actor?->id,
-                'verified_by' => $status === IdentityDocument::STATUS_VERIFIED ? $actor?->id : null,
-                'verified_at' => $status === IdentityDocument::STATUS_VERIFIED ? now() : null,
-                'archived_at' => null,
-            ]);
-
-            AuditLogService::log('Admissions', 'identity_document_created', $document, null, $this->audit->identity($document), user: $actor);
-
-            return $document;
+            return $this->store($applicant->person_id, $applicant->id, $payload, $actor);
         });
+    }
+
+    /**
+     * Документ человека без заявления в приёмной комиссии: переведённый, восстановленный
+     * или заведённый импортом студент. `applicant_id` остаётся пустым намеренно.
+     *
+     * @param array<string, mixed> $payload
+     */
+    public function createForPerson(int $personId, array $payload, ?User $actor = null): IdentityDocument
+    {
+        return DB::transaction(fn (): IdentityDocument => $this->store($personId, null, $payload, $actor));
+    }
+
+    /**
+     * Реквизиты паспорта из карточки студента и из импорта. Форма и файл заполняют
+     * поля, а хранится документ у человека — иначе полнота карточки не сойдётся
+     * с приёмной комиссией.
+     *
+     * @param array<string, mixed> $passport
+     */
+    public function syncPassportForPerson(int $personId, array $passport, ?User $actor = null): ?IdentityDocument
+    {
+        $payload = array_filter([
+            'series' => $this->trimmed($passport['series'] ?? null),
+            'number' => $this->trimmed($passport['number'] ?? null),
+            'issue_date' => $this->trimmed($passport['issue_date'] ?? null),
+            'issued_by' => $this->trimmed($passport['issued_by'] ?? null),
+        ], fn ($value): bool => $value !== null);
+
+        if (! isset($payload['series']) && ! isset($payload['number'])) {
+            return null;
+        }
+
+        $current = $this->documents->listForPerson($personId)->first();
+
+        if (! $current) {
+            return $this->createForPerson($personId, [
+                ...$payload,
+                'document_type_id' => $this->defaultPassportTypeId(),
+                'is_primary' => true,
+            ], $actor);
+        }
+
+        // Обновляем только то, что действительно изменилось: иначе каждое сохранение
+        // карточки плодило бы новую версию документа зарегистрированного заявления.
+        $changes = [];
+        foreach ($payload as $field => $value) {
+            $currentValue = $field === 'issue_date' ? $current->issue_date?->toDateString() : $current->{$field};
+
+            if ((string) $currentValue !== (string) $value) {
+                $changes[$field] = $value;
+            }
+        }
+
+        return $changes === [] ? $current : $this->update($current->id, $changes, $actor);
+    }
+
+    private function defaultPassportTypeId(): ?int
+    {
+        $catalogId = ReferenceCatalog::query()->where('code', 'admission_identity_document_types')->value('id');
+
+        return $catalogId
+            ? ReferenceItem::query()->where('catalog_id', $catalogId)->where('code', 'russian_passport')->value('id')
+            : null;
+    }
+
+    private function trimmed(mixed $value): ?string
+    {
+        $value = is_string($value) ? trim($value) : $value;
+
+        return $value === null || $value === '' ? null : (string) $value;
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function store(int $personId, ?int $applicantId, array $payload, ?User $actor): IdentityDocument
+    {
+        $this->assertReference($payload['document_type_id'] ?? null, 'admission_identity_document_types', 'document_type_id');
+        $this->assertReference($payload['release_country_id'] ?? null, null, 'release_country_id');
+        $status = $this->verificationStatus($payload['verification_status'] ?? IdentityDocument::STATUS_RECEIVED);
+
+        if ((bool) ($payload['is_primary'] ?? false)) {
+            $this->unsetPrimary($personId);
+        }
+
+        $document = $this->documents->create([
+            ...$payload,
+            'uuid' => (string) Str::uuid(),
+            'applicant_id' => $applicantId,
+            'person_id' => $personId,
+            'number_hash' => $this->documentHash($payload['series'] ?? null, $payload['number'] ?? null),
+            'verification_status' => $status,
+            'created_by' => $actor?->id,
+            'updated_by' => $actor?->id,
+            'verified_by' => $status === IdentityDocument::STATUS_VERIFIED ? $actor?->id : null,
+            'verified_at' => $status === IdentityDocument::STATUS_VERIFIED ? now() : null,
+            'archived_at' => null,
+        ]);
+
+        AuditLogService::log('Admissions', 'identity_document_created', $document, null, $this->audit->identity($document), user: $actor);
+
+        return $document;
     }
 
     /** @param array<string, mixed> $payload */
@@ -89,7 +173,7 @@ class IdentityDocumentService
             }
 
             if (array_key_exists('is_primary', $payload) && (bool) $payload['is_primary']) {
-                $this->unsetPrimary($document->applicant_id, $document->id);
+                $this->unsetPrimary($document->person_id, $document->id);
             }
 
             if (array_key_exists('verification_status', $payload)) {
@@ -105,7 +189,7 @@ class IdentityDocumentService
             }
 
             $document->update([...$payload, 'updated_by' => $actor?->id]);
-            $document->refresh()->load(['applicant.person', 'documentType', 'releaseCountry', 'activeFiles']);
+            $document->refresh()->load(['person', 'applicant.person', 'documentType', 'releaseCountry', 'activeFiles']);
 
             AuditLogService::log('Admissions', 'identity_document_updated', $document, $old, $this->audit->identity($document), user: $actor);
 
@@ -165,11 +249,11 @@ class IdentityDocumentService
         return $status;
     }
 
-    private function unsetPrimary(int $applicantId, ?int $exceptId = null): void
+    private function unsetPrimary(int $personId, ?int $exceptId = null): void
     {
         IdentityDocument::query()
             ->active()
-            ->where('applicant_id', $applicantId)
+            ->where('person_id', $personId)
             ->when($exceptId !== null, fn ($query) => $query->whereKeyNot($exceptId))
             ->update(['is_primary' => false]);
     }
@@ -222,7 +306,7 @@ class IdentityDocumentService
 
         $status = $this->verificationStatus($payload['verification_status'] ?? IdentityDocument::STATUS_PENDING_REVIEW);
         if ((bool) ($payload['is_primary'] ?? $document->is_primary)) {
-            $this->unsetPrimary($document->applicant_id, $document->id);
+            $this->unsetPrimary($document->person_id, $document->id);
         }
 
         $next = $this->documents->create([

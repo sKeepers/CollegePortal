@@ -39,6 +39,7 @@ class FisReadinessServiceTest extends TestCase
         $education = EducationDocument::query()->create([
             'uuid' => (string) Str::uuid(),
             'applicant_id' => $application->applicant_id,
+            'person_id' => $application->person_id,
             'document_type_id' => $this->referenceItemId('admission_education_document_types', 'basic_general_certificate'),
             'number' => '654321',
             'issue_date' => '2026-06-20',

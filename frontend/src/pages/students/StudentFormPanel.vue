@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, watch } from 'vue'
+import { computed, reactive, watch } from 'vue'
 import AppCard from '../../components/ui/AppCard.vue'
 import AppFormSection from '../../components/ui/AppFormSection.vue'
 
@@ -76,6 +76,13 @@ watch(
   { immediate: true },
 )
 
+// СНИЛС обязателен для полноты карточки, но не для сохранения: без него студента
+// завести можно, а вот выгрузка в ФИС ГИА, ФРДО, приказ и диплом заблокируются.
+const snilsMissing = computed(() => !String(form.snils || '').trim())
+const passportMissing = computed(() => (
+  !String(form.passport_series || '').trim() && !String(form.passport_number || '').trim()
+))
+
 function submitForm() {
   emit('save', { ...form })
 }
@@ -131,9 +138,14 @@ function submitForm() {
         <div class="student-form__grid">
           <q-input v-model="form.phone" dense outlined label="Телефон" />
           <q-input v-model="form.email" dense outlined type="email" label="Email" />
-          <q-input v-model="form.snils" dense outlined label="СНИЛС (необязательно)" />
+          <q-input v-model="form.snils" dense outlined label="СНИЛС" hint="Обязателен для полноты карточки" />
           <q-input v-model="form.address" dense outlined class="student-form__wide" label="Адрес" />
         </div>
+        <q-banner v-if="snilsMissing" dense class="student-form__warning">
+          СНИЛС обязателен для полноты карточки. Сохранить студента без него можно, но карточка
+          будет помечена неполной, а выгрузка в ФИС ГИА и ФРДО, приказ о зачислении и диплом
+          останутся заблокированными. Без СНИЛС дубли ищутся только по ФИО и дате рождения.
+        </q-banner>
       </AppFormSection>
 
       <AppFormSection title="Паспорт">
@@ -143,6 +155,10 @@ function submitForm() {
           <q-input v-model="form.passport_issue_date" dense outlined type="date" label="Дата выдачи" stack-label />
           <q-input v-model="form.passport_issued_by" dense outlined label="Кем выдан" />
         </div>
+        <q-banner v-if="passportMissing" dense class="student-form__warning">
+          Паспорт обязателен для полноты карточки. Реквизиты сохраняются как документ человека,
+          поэтому останутся с ним и после перевода или выпуска.
+        </q-banner>
       </AppFormSection>
 
       <div class="student-form__actions">

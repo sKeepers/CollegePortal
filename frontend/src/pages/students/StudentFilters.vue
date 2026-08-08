@@ -23,10 +23,16 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'apply', 'reset'])
 
+const completenessOptions = [
+  { label: 'Все карточки', value: '' },
+  { label: 'Только неполные', value: 'incomplete' },
+]
+
 const localFilters = reactive({
   search: '',
   group_id: '',
   status: '',
+  completeness: '',
 })
 
 const activeChips = computed(() => {
@@ -46,6 +52,10 @@ const activeChips = computed(() => {
     chips.push({ key: 'status', label: `Статус: ${selectedStatus?.label || localFilters.status}` })
   }
 
+  if (localFilters.completeness) {
+    chips.push({ key: 'completeness', label: 'Только неполные карточки' })
+  }
+
   return chips
 })
 
@@ -56,6 +66,7 @@ watch(
       search: value.search || '',
       group_id: value.group_id || '',
       status: value.status || '',
+      completeness: value.completeness || '',
     })
   },
   { immediate: true, deep: true },
@@ -71,6 +82,7 @@ function resetFilters() {
     search: '',
     group_id: '',
     status: '',
+    completeness: '',
   })
   emit('update:modelValue', { ...localFilters })
   emit('reset')
@@ -112,6 +124,15 @@ function removeChip(key) {
       map-options
       label="Статус"
       :options="statusOptions"
+    />
+    <q-select
+      v-model="localFilters.completeness"
+      dense
+      outlined
+      emit-value
+      map-options
+      label="Полнота карточки"
+      :options="completenessOptions"
     />
     <template #actions>
       <q-btn flat label="Сбросить" :disable="loading" @click="resetFilters" />

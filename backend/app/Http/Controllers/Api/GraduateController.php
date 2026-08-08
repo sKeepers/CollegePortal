@@ -15,16 +15,22 @@ use App\Models\Graduate;
 use App\Models\Group;
 use App\Models\Specialty;
 use App\Models\Student;
+use App\Services\Admissions\AdmissionDocumentReadinessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class GraduateController extends Controller
 {
+    public function __construct(private readonly AdmissionDocumentReadinessService $readiness)
+    {
+    }
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $graduates = Graduate::query()
@@ -70,6 +76,8 @@ class GraduateController extends Controller
 
     public function storeDiploma(StoreDiplomaRequest $request, Graduate $graduate): JsonResponse
     {
+        $this->assertCardComplete($graduate, 'Выдача диплома');
+
         $diploma = $graduate->diploma()->updateOrCreate(['graduate_id' => $graduate->id], $this->normalizeDiplomaData($request->validated(), $graduate));
 
         return (new DiplomaResource($diploma->load('supplement')))
@@ -79,12 +87,31 @@ class GraduateController extends Controller
 
     public function storeSupplement(StoreDiplomaSupplementRequest $request, Graduate $graduate): JsonResponse
     {
+        $this->assertCardComplete($graduate, 'Выдача приложения к диплому');
+
         $diploma = $graduate->diploma()->firstOrCreate(['graduate_id' => $graduate->id], ['qualification' => $graduate->qualification, 'status' => 'draft']);
         $supplement = $diploma->supplement()->updateOrCreate(['diploma_id' => $diploma->id], $request->validated());
 
         return (new DiplomaSupplementResource($supplement))
             ->response()
             ->setStatusCode($supplement->wasRecentlyCreated ? Response::HTTP_CREATED : Response::HTTP_OK);
+    }
+
+    /**
+     * Диплом и приложение выдаются по закону: без паспорта, документа об образовании
+     * и СНИЛС операция блокируется жёстко, а не помечается предупреждением.
+     */
+    private function assertCardComplete(Graduate $graduate, string $operation): void
+    {
+        $student = $graduate->student;
+
+        if (! $student) {
+            throw ValidationException::withMessages([
+                'student_id' => $operation.' заблокирована: выпускник не связан с карточкой студента.',
+            ]);
+        }
+
+        $this->readiness->assertStudentCardComplete($student, $operation.' заблокирована');
     }
 
     public function export(): StreamedResponse

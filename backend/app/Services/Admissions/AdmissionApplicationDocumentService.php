@@ -13,6 +13,10 @@ use Illuminate\Validation\ValidationException;
 
 class AdmissionApplicationDocumentService
 {
+    public function __construct(private readonly PersonDocumentService $personDocuments)
+    {
+    }
+
     public function show(int $applicationId): ApplicationDocumentSet
     {
         $application = $this->foundationApplication($applicationId);
@@ -26,8 +30,8 @@ class AdmissionApplicationDocumentService
             $application = $this->foundationApplication($applicationId);
             $document = IdentityDocument::query()->current()->find($documentId);
 
-            if (! $document || $document->applicant_id !== $application->applicant_id) {
-                throw ValidationException::withMessages(['document_id' => 'Документ личности не найден или не относится к абитуриенту заявления.']);
+            if (! $document || $document->person_id !== $application->applicant?->person_id) {
+                throw ValidationException::withMessages(['document_id' => 'Документ личности не найден или не относится к человеку из заявления.']);
             }
 
             $set = $this->writableDocumentSet($application);
@@ -53,8 +57,8 @@ class AdmissionApplicationDocumentService
             $application = $this->foundationApplication($applicationId);
             $document = EducationDocument::query()->current()->find($documentId);
 
-            if (! $document || $document->applicant_id !== $application->applicant_id) {
-                throw ValidationException::withMessages(['document_id' => 'Документ об образовании не найден или не относится к абитуриенту заявления.']);
+            if (! $document || $document->person_id !== $application->applicant?->person_id) {
+                throw ValidationException::withMessages(['document_id' => 'Документ об образовании не найден или не относится к человеку из заявления.']);
             }
 
             $set = $this->writableDocumentSet($application);
@@ -139,7 +143,7 @@ class AdmissionApplicationDocumentService
     {
         $application = AdmissionApplication::query()
             ->foundation()
-            ->with(['documentSet.identityDocument.activeFiles', 'documentSet.educationDocument.activeFiles'])
+            ->with(['applicant', 'documentSet.identityDocument.activeFiles', 'documentSet.educationDocument.activeFiles'])
             ->find($applicationId);
 
         if (! $application) {
@@ -171,28 +175,12 @@ class AdmissionApplicationDocumentService
 
     private function currentIdentityDocument(AdmissionApplication $application): ?IdentityDocument
     {
-        return IdentityDocument::query()
-            ->with('activeFiles')
-            ->current()
-            ->where('applicant_id', $application->applicant_id)
-            ->whereIn('verification_status', IdentityDocument::ACTIVE_STATUSES)
-            ->orderByDesc('is_primary')
-            ->orderByDesc('issue_date')
-            ->orderByDesc('id')
-            ->first();
+        return $this->personDocuments->currentIdentity($application->applicant?->person_id);
     }
 
     private function currentEducationDocument(AdmissionApplication $application): ?EducationDocument
     {
-        return EducationDocument::query()
-            ->with('activeFiles')
-            ->current()
-            ->where('applicant_id', $application->applicant_id)
-            ->whereIn('verification_status', EducationDocument::ACTIVE_STATUSES)
-            ->orderByDesc('is_primary')
-            ->orderByDesc('issue_date')
-            ->orderByDesc('id')
-            ->first();
+        return $this->personDocuments->currentEducation($application->applicant?->person_id);
     }
 
     private function assertCanReplaceRegisteredDocument(AdmissionApplication $application, ?int $currentId, int $newId, string $field): void

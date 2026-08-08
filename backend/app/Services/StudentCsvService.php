@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Group;
 use App\Models\Student;
+use App\Services\Admissions\PersonDocumentService;
 use App\Services\Import\StudentImportHandler;
 use DateTimeImmutable;
 use Illuminate\Http\UploadedFile;
@@ -15,6 +16,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StudentCsvService
 {
+    public function __construct(private readonly PersonDocumentService $personDocuments)
+    {
+    }
+
     /** Колонки, которые принимает собственный CSV-импорт студентов. */
     private const HEADERS = [
         'id', 'group_id', 'group', 'last_name', 'first_name', 'middle_name', 'birth_date',
@@ -44,6 +49,10 @@ class StudentCsvService
         'адрес' => 'address',
         'приказ о зачислении' => 'enrollment_order_number',
         'дата приказа о зачислении' => 'enrollment_order_date',
+        'серия паспорта' => 'passport_series',
+        'номер паспорта' => 'passport_number',
+        'дата выдачи паспорта' => 'passport_issue_date',
+        'кем выдан паспорт' => 'passport_issued_by',
     ];
 
     /**
@@ -69,7 +78,17 @@ class StudentCsvService
                 ->orderBy('last_name')
                 ->orderBy('first_name')
                 ->chunk(200, function ($students) use ($output): void {
+                    // Документы принадлежат человеку, поэтому выгружаются пачкой на страницу,
+                    // а не запросом на строку.
+                    $personIds = $students->pluck('person_id')->filter()->map(fn ($id): int => (int) $id)->all();
+                    $identities = $this->personDocuments->currentIdentityForPeople($personIds);
+                    $educations = $this->personDocuments->currentEducationForPeople($personIds);
+
                     foreach ($students as $student) {
+                        $personId = $student->person_id !== null ? (int) $student->person_id : null;
+                        $identity = $personId !== null ? $identities->get($personId) : null;
+                        $education = $personId !== null ? $educations->get($personId) : null;
+
                         // Порядок обязан совпадать с templateHeaders() обработчика импорта.
                         // «Создать учетную запись» выгружается пустым: обратная
                         // загрузка не должна переоформлять учётные записи.
@@ -90,6 +109,16 @@ class StudentCsvService
                             $student->address,
                             $student->enrollment_order_number,
                             $student->enrollment_order_date?->toDateString(),
+                            $identity?->series ?: $student->passport_series,
+                            $identity?->number ?: $student->passport_number,
+                            $identity?->issue_date?->toDateString() ?: $student->passport_issue_date?->toDateString(),
+                            $identity?->issued_by ?: $student->passport_issued_by,
+                            $education?->documentType?->name,
+                            $education?->series,
+                            $education?->number,
+                            $education?->issue_date?->toDateString(),
+                            $education?->document_organization,
+                            $education?->graduation_year,
                             '',
                         ], ';');
                     }

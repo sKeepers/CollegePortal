@@ -9,10 +9,12 @@ use App\Models\Specialty;
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Tests\Concerns\CompletesStudentCard;
 use Tests\TestCase;
 
 class GraduateApiTest extends TestCase
 {
+    use CompletesStudentCard;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -50,9 +52,29 @@ class GraduateApiTest extends TestCase
         $this->assertDatabaseMissing('graduates', ['id' => $graduateId]);
     }
 
+    public function test_diploma_is_blocked_when_student_card_is_incomplete(): void
+    {
+        [$student, $group, $program, $specialty] = $this->baseEntities();
+        $graduate = Graduate::create(['student_id' => $student->id, 'group_id' => $group->id, 'education_program_id' => $program->id, 'specialty_id' => $specialty->id, 'graduation_year' => 2027, 'qualification' => 'Артист', 'status' => 'ready']);
+
+        $this->postJson("/api/graduates/{$graduate->id}/diploma", [
+            'series' => 'СК',
+            'number' => '000001',
+            'registration_number' => '27-001',
+            'issue_date' => '2027-06-30',
+            'qualification' => 'Артист',
+            'status' => 'issued',
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('student_id');
+
+        $this->assertDatabaseMissing('diplomas', ['graduate_id' => $graduate->id]);
+    }
+
     public function test_it_saves_diploma_and_supplement(): void
     {
         [$student, $group, $program, $specialty] = $this->baseEntities();
+        $this->completeStudentCard($student);
         $graduate = Graduate::create(['student_id' => $student->id, 'group_id' => $group->id, 'education_program_id' => $program->id, 'specialty_id' => $specialty->id, 'graduation_year' => 2027, 'qualification' => 'Артист', 'status' => 'ready']);
 
         $this->postJson("/api/graduates/{$graduate->id}/diploma", [

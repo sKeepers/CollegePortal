@@ -2892,6 +2892,36 @@ body {
   gap: 8px;
 }
 
+/* Предупреждение о неполноте: сохранять разрешено, поэтому тон мягкий. */
+.student-form__warning {
+  margin-top: 10px;
+  border-radius: 8px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.student-card-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.student-card-flag__list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: #92400e;
+  font-size: 12px;
+}
+
+.student-documents__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .student-details-card .q-card__section {
   padding: 12px;
 }
