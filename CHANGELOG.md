@@ -13,8 +13,25 @@
 
 ## Unreleased
 
+## 0.8.0-rc6 - Private Release Candidate
+
+### Added
+
+- The study office is split into two roles. `study` covers timetables, substitutions, teaching load, curricula and exams; `study_records` covers the student body, the journal, attendance and graduation. The obsolete `academic_office` duplicate is deliberately left alone so existing assignments keep working until it is retired.
+- A QR pass is issued together with the account on every path that creates one, including employee import. A pass that is still valid is never reissued, so an account holder no longer has to be handled a second time before they can walk through the entrance.
+
 ### Fixed
 
+- People entered by import can log in by phone again. The login form normalises a number to `+7…` and `8…`, while the import stored bare digits and built the login out of them, so every imported account was locked out under every written form of its own number. A phone number is now accepted as `+7`, as `8`, or as bare digits with any separators, and is matched against every written form. Generated logins are normalised to `+7XXXXXXXXXX`.
+- A generated login for a person without a phone is now their surname with initials in Latin (`ivanov.ds`), transliterated through our own table: the stock one turned Альгашова into `algasova`. An email address no longer serves as a login.
+- The account forms can be filled in. Creating an account demanded a numeric profile ID that nobody has to hand; a person is now found by searching their surname, and the name and email are taken from the chosen card instead of being asked for a second time.
+- The user card tells a login apart from an email. The service address `@accounts.collegeportal.local` is no longer presented as a person's mail.
+- Who is now in the building is counted over the current day. It was counted over every event ever recorded, so somebody who entered yesterday stayed inside forever, and filtering the report to last month showed who had been in the building during that month. The figure no longer depends on the report filters. A test now covers the seam from scan to reports, widgets and attendance.
+- The role screen highlights the selected row, the assignment dialog no longer substitutes the first user in the list, and the create form works.
+- The four widget sizes are four different sizes: S and M rendered identically, and so did L and XL. Edit mode no longer rearranges widgets after saving.
+- Time is shown in 24-hour form regardless of the browser locale.
+- A details card shows which row it belongs to and can be resized. The row separator and highlight were added to the employees, HR calendar and permissions screens.
+- Page width is the same in every section.
 - The sidebar menu scrolls with the mouse wheel from the first paint. It previously refused to scroll until the scrollbar had been dragged once, because a descendant selector asked for a drawer content element inside a drawer content element and matched nothing: QDrawer puts the class on that element itself. The three-row grid the sidebar was written around therefore never applied, and what scrolled was the whole drawer rather than the menu. The menu now uses a plain overflow container, so there is nothing left to measure.
 - Employee import can create accounts and set a work schedule again. Both columns existed for students and teachers but were dropped from the employee handler when it was rewritten on top of `HrService`, so an HR operator importing a spreadsheet had to open every imported employee afterwards to set the schedule, and could not request accounts at all. The work schedule accepts the same wording as the employee card, with any dash or spacing, and an unknown value stops the row naming the column instead of being silently ignored.
 

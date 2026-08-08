@@ -19,7 +19,7 @@ This document records the UAT server used for INFRA-008 installer acceptance.
 
 ## Installed Application
 
-This section records the INFRA-008 acceptance install and is kept as history. The same machine is now the production server: it runs `0.8.0-rc5`, answers as `https://portal.skki.ru` with a trusted Let's Encrypt certificate, and redirects plain HTTP. See [TLS_CERTIFICATE.md](TLS_CERTIFICATE.md) and [ACTIVE_WORK.md](ACTIVE_WORK.md) for the current state.
+This section records the INFRA-008 acceptance install and is kept as history. The same machine is now the production server: it runs `0.8.0-rc6`, answers as `https://portal.skki.ru` with a trusted Let's Encrypt certificate, and redirects plain HTTP. See [TLS_CERTIFICATE.md](TLS_CERTIFICATE.md) and [ACTIVE_WORK.md](ACTIVE_WORK.md) for the current state.
 
 - Install path: `/opt/college-portal`
 - Release archive on DEV: `/srv/college-dev/releases/college-portal-0.8.0-rc2.tar.gz`

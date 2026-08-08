@@ -14,7 +14,7 @@
 
 Private DEV/UAT preparation after Release Candidate 0.8.x. Current project work is focused on final portal stabilization before a broader manual UAT pass.
 
-Текущий релиз — `0.8.0-rc5`, тег `v0.8.0-rc5`, установлен на PROD `https://portal.skki.ru`. Единственный источник истины о номере версии — `installer/VERSION`; в остальных документах номер допустим только в примерах команд и в исторических записях.
+Текущий релиз — `0.8.0-rc6`, тег `v0.8.0-rc6`, установлен на PROD `https://portal.skki.ru`. Единственный источник истины о номере версии — `installer/VERSION`; в остальных документах номер допустим только в примерах команд и в исторических записях.
 
 This document is a navigation and status snapshot. GitHub Issues, Pull Requests and CI remain the authoritative live workflow when GitHub write access is available.
 
