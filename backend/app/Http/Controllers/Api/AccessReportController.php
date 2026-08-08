@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\AccessEventResource;
 use App\Models\AccessEvent;
 use App\Models\Employee;
+use App\Services\AccessPresenceService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Carbon;
@@ -13,6 +14,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AccessReportController extends Controller
 {
+    public function __construct(private readonly AccessPresenceService $presence)
+    {
+    }
+
     public function summary(Request $request): array
     {
         $events = $this->filteredEvents($request);
@@ -25,29 +30,28 @@ class AccessReportController extends Controller
                 'entries' => $allowedEvents->where('direction', AccessEvent::DIRECTION_IN)->count(),
                 'exits' => $allowedEvents->where('direction', AccessEvent::DIRECTION_OUT)->count(),
                 'denied' => $events->where('result', AccessEvent::RESULT_DENIED)->count(),
-                'inside_now' => $this->insideNow(),
+                'inside_now' => $this->presence->insideNowCount(),
             ],
         ];
     }
 
     /**
-     * «Сейчас в здании» считается по текущему дню и не зависит от фильтров
-     * отчета. Иначе выборка за прошлый месяц показывала бы людей, находящихся
-     * в здании тогда, а тот, кто не отсканировал выход, оставался бы внутри
-     * навсегда. Разбор посещаемости считает это же значение по дню, и оба
-     * показателя должны совпадать.
+     * Поименный список находящихся в здании — на случай эвакуации. Открывается
+     * без фильтров и без параметров: в этот момент никто не будет настраивать
+     * выборку. Пустые корпуса остаются в списке, чтобы было видно, что корпус
+     * проверен, а не потерян.
      */
-    private function insideNow(): int
+    public function muster(): array
     {
-        return AccessEvent::query()
-            ->whereDate('event_time', Carbon::now()->toDateString())
-            ->where('result', AccessEvent::RESULT_ALLOWED)
-            ->whereNotNull('digital_identity_id')
-            ->orderByDesc('event_time')
-            ->get(['id', 'digital_identity_id', 'direction', 'event_time'])
-            ->unique('digital_identity_id')
-            ->where('direction', AccessEvent::DIRECTION_IN)
-            ->count();
+        $groups = $this->presence->musterByBuilding();
+
+        return [
+            'data' => [
+                'generated_at' => Carbon::now()->toISOString(),
+                'inside_now' => $this->presence->insideNowCount(),
+                'buildings' => $groups,
+            ],
+        ];
     }
 
     public function events(Request $request): AnonymousResourceCollection|StreamedResponse

@@ -110,6 +110,11 @@ class EnsurePermission
             'api/access/scan' => ['gate.scan', 'gate.scan', 'gate.scan', 'gate.scan'],
             'api/access/events' => ['gate.reports', 'gate.reports', 'gate.reports', 'gate.reports'],
             'api/access/reports' => ['gate.reports', 'gate.reports', 'gate.reports', 'gate.reports'],
+            // Список эвакуации читают все, кто и так видит отчеты проходной;
+            // справочник корпусов и точек правит только тот, кто им владеет.
+            'api/access/muster' => ['gate.reports', 'gate.reports', 'gate.reports', 'gate.reports'],
+            'api/access/buildings' => ['gate.reports', 'gate.points.manage', 'gate.points.manage', 'gate.points.manage'],
+            'api/access/points' => ['gate.reports', 'gate.points.manage', 'gate.points.manage', 'gate.points.manage'],
             'api/digital-identities' => ['digitalpasses.manage', 'digitalpasses.manage', 'digitalpasses.manage', 'digitalpasses.manage'],
             'api/applicant-applications' => ['admissions.view', 'admissions.edit', 'admissions.edit', 'admissions.edit'],
             'api/curriculum-items' => ['curricula.view', 'curricula.edit', 'curricula.edit', 'curricula.edit'],

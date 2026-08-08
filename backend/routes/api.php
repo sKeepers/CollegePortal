@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AccessGateController;
+use App\Http\Controllers\Api\AccessPointController;
 use App\Http\Controllers\Api\AccessReportController;
 use App\Http\Controllers\Api\AdminRoleController;
 use App\Http\Controllers\Api\AdminPermissionController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\Api\Admissions\ProgramChoiceController as AdmissionsPro
 use App\Http\Controllers\Api\ApplicantApplicationController;
 use App\Http\Controllers\Api\ApplicantDocumentController;
 use App\Http\Controllers\Api\AdmissionBulkController;
+use App\Http\Controllers\Api\BuildingController;
 use App\Http\Controllers\Api\GroupController;
 use App\Http\Controllers\Api\HrCalendarController;
 use App\Http\Controllers\Api\MobileStudentController;
@@ -320,6 +322,15 @@ Route::middleware(['api.token', 'throttle:api.authenticated'])->group(function (
         Route::post('access/scan', [AccessGateController::class, 'scan']);
         Route::get('access/reports/summary', [AccessReportController::class, 'summary']);
         Route::get('access/reports/events', [AccessReportController::class, 'events']);
+        Route::get('access/muster', [AccessReportController::class, 'muster']);
+        Route::get('access/buildings', [BuildingController::class, 'index']);
+        Route::post('access/buildings', [BuildingController::class, 'store']);
+        Route::put('access/buildings/{building}', [BuildingController::class, 'update']);
+        Route::delete('access/buildings/{building}', [BuildingController::class, 'destroy']);
+        Route::get('access/points', [AccessPointController::class, 'index']);
+        Route::post('access/points', [AccessPointController::class, 'store']);
+        Route::put('access/points/{access_point}', [AccessPointController::class, 'update']);
+        Route::delete('access/points/{access_point}', [AccessPointController::class, 'destroy']);
         Route::get('digital-identities', [DigitalIdentityController::class, 'index']);
         Route::post('digital-identities/issue', [DigitalIdentityController::class, 'issue']);
         Route::post('digital-identities/{digitalIdentity}/revoke', [DigitalIdentityController::class, 'revoke']);

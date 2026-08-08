@@ -15,6 +15,7 @@ class AccessEvent extends Model
 
     protected $fillable = [
         'digital_identity_id',
+        'access_point_id',
         'entity_type',
         'entity_id',
         'direction',
@@ -35,6 +36,11 @@ class AccessEvent extends Model
     public function digitalIdentity(): BelongsTo
     {
         return $this->belongsTo(DigitalIdentity::class);
+    }
+
+    public function accessPoint(): BelongsTo
+    {
+        return $this->belongsTo(AccessPoint::class);
     }
 
     public function getOwnerAttribute(): ?Model

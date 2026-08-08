@@ -177,7 +177,8 @@ class RoleSeeder extends Seeder
             ['module' => 'FIS', 'code' => 'fis.outbound.download', 'name' => 'ФИС outbound: скачать XML', 'description' => 'Скачивание XML из private storage.'],
             ['module' => 'FIS', 'code' => 'fis.settings.manage', 'name' => 'ФИС: настройки подключения', 'description' => 'Управление настройками официального подключения ФИС.'],
             ['module' => 'Identity', 'code' => 'gate.scan', 'name' => 'Проходная: сканирование', 'description' => 'Сканирование QR на проходной.'],
-            ['module' => 'Identity', 'code' => 'gate.reports', 'name' => 'Проходная: отчеты', 'description' => 'Просмотр событий и отчетов проходной.'],
+            ['module' => 'Identity', 'code' => 'gate.reports', 'name' => 'Проходная: отчеты', 'description' => 'Просмотр событий, отчетов и списка находящихся в здании.'],
+            ['module' => 'Identity', 'code' => 'gate.points.manage', 'name' => 'Проходная: корпуса и точки прохода', 'description' => 'Ведение справочника корпусов и точек прохода.'],
             ['module' => 'Identity', 'code' => 'digitalpasses.manage', 'name' => 'Цифровые пропуска: управление', 'description' => 'Выпуск, отзыв и просмотр QR-пропусков.'],
 
             ['module' => 'HR', 'code' => 'hr.employees.view', 'name' => 'Кадры: сотрудники просмотр', 'description' => 'Просмотр сотрудников.'],
@@ -308,7 +309,7 @@ class RoleSeeder extends Seeder
 
     private function securityPermissions(): array
     {
-        return ['dashboard.view', 'gate.scan', 'gate.reports', 'digitalpasses.manage', 'attendance.view', 'attendance.reports', 'view_reports'];
+        return ['dashboard.view', 'gate.scan', 'gate.reports', 'gate.points.manage', 'digitalpasses.manage', 'attendance.view', 'attendance.reports', 'view_reports'];
     }
 
     private function ids(array $codes)

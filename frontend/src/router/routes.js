@@ -27,6 +27,8 @@ const MyDigitalPassPage = () => import('../pages/identity/MyDigitalPassPage.vue'
 const AccessGatePage = () => import('../pages/access/AccessGatePage.vue')
 const MobileScannerPage = () => import('../pages/access/MobileScannerPage.vue')
 const AccessReportsPage = () => import('../pages/access/AccessReportsPage.vue')
+const MusterPage = () => import('../pages/access/MusterPage.vue')
+const AccessPointsPage = () => import('../pages/access/AccessPointsPage.vue')
 const ScannerTestPage = () => import('../pages/access/ScannerTestPage.vue')
 const ApplicantPublicPage = () => import('../pages/public/ApplicantPublicPage.vue')
 const UiFoundationPage = () => import('../pages/system/UiFoundationPage.vue')
@@ -274,6 +276,18 @@ export const routes = [
         name: 'access-reports',
         component: AccessReportsPage,
         meta: { title: 'Отчеты по проходам', roles: ['admin', 'security'], permission: 'gate.reports' },
+      },
+      {
+        path: 'access/muster',
+        name: 'access-muster',
+        component: MusterPage,
+        meta: { title: 'Кто сейчас в здании', roles: ['admin', 'security', 'hr'], permission: 'gate.reports' },
+      },
+      {
+        path: 'access/points',
+        name: 'access-points',
+        component: AccessPointsPage,
+        meta: { title: 'Корпуса и точки прохода', roles: ['admin', 'security'], permission: 'gate.points.manage' },
       },
       {
         path: 'access/scanner-test',

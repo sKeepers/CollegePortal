@@ -13,6 +13,15 @@
 
 ## Unreleased
 
+### Added
+
+- Buildings and access points are a reference book, and every scan is bound to the point it came through. Scanners keep sending the point as the string somebody typed into them at installation — no firmware is going to be reflashed for this — so the string is matched against the reference by name or code, ignoring case and stray spacing. A point that is not in the reference still records the pass; it just lands in a separate group rather than being lost.
+- «Кто сейчас в здании» — a muster report: who is inside, by name, grouped by building. It opens with no filters and no parameters, because during an evacuation nobody is going to configure a query, and it refreshes itself every 30 seconds. Empty buildings stay on the list so that a building reads as checked and empty rather than as missing. People who came through a point outside the reference are listed under their own heading.
+
+### Fixed
+
+- The number of people in the building is now computed in one place for all three screens that show it. The rule — the last allowed event of the current day per pass, counted as inside when it is an entry — was written out separately in the access summary and in the dashboard KPI, so the two could drift apart while both looked right. The muster list counts from the same service, and a test pins the three to the same number.
+
 ## 0.8.0-rc6 - Private Release Candidate
 
 ### Added

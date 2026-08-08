@@ -7,6 +7,7 @@ use App\Http\Requests\ScanAccessPassRequest;
 use App\Http\Resources\AccessEventResource;
 use App\Models\AccessEvent;
 use App\Models\DigitalIdentity;
+use App\Services\AccessPointResolver;
 use App\Services\QrSvgService;
 use App\Services\SettingService;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -44,6 +45,7 @@ class AccessGateController extends Controller
     {
         $event = AccessEvent::create([
             'digital_identity_id' => $identity?->id,
+            'access_point_id' => app(AccessPointResolver::class)->resolve($validated['access_point'] ?? null)?->id,
             'entity_type' => $identity?->entity_type,
             'entity_id' => $identity?->entity_id,
             'direction' => $identity ? $this->nextDirection($identity) : AccessEvent::DIRECTION_IN,

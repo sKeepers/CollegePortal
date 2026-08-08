@@ -24,8 +24,11 @@ use Illuminate\Support\Facades\File;
 
 class DashboardAnalyticsService
 {
-    public function __construct(private readonly AttendanceAnalysisService $attendanceAnalysis, private readonly HrAbsenceService $hrAbsence)
-    {
+    public function __construct(
+        private readonly AttendanceAnalysisService $attendanceAnalysis,
+        private readonly HrAbsenceService $hrAbsence,
+        private readonly AccessPresenceService $presence,
+    ) {
     }
 
     public function executive(): array
@@ -33,16 +36,6 @@ class DashboardAnalyticsService
         $today = now()->toDateString();
         $lastSevenDays = collect(range(6, 0))->map(fn (int $daysAgo) => now()->subDays($daysAgo)->toDateString());
         $accessToday = AccessEvent::query()->whereDate('event_time', $today);
-        // Только сегодняшние события: иначе тот, кто вчера не отсканировал
-        // выход, остается «в колледже» навсегда, а виджет посещаемости,
-        // который считает по дню, показывает другое число про то же здание.
-        $latestAllowedByIdentity = AccessEvent::query()
-            ->whereDate('event_time', $today)
-            ->where('result', AccessEvent::RESULT_ALLOWED)
-            ->whereNotNull('digital_identity_id')
-            ->latest('event_time')
-            ->get(['id', 'digital_identity_id', 'direction', 'event_time'])
-            ->unique('digital_identity_id');
         $frdoErrors = FrdoPackage::query()
             ->withCount('validationErrors')
             ->where(fn ($query) => $query->where('status', 'validation_failed')->orHas('validationErrors'))
@@ -97,7 +90,7 @@ class DashboardAnalyticsService
                         'free_classrooms' => $this->freeClassroomsToday($today),
                     ],
                     'access' => [
-                        'inside_now' => $latestAllowedByIdentity->where('direction', AccessEvent::DIRECTION_IN)->count(),
+                        'inside_now' => $this->presence->insideNowCount(),
                         'entries_today' => (clone $accessToday)->where('direction', AccessEvent::DIRECTION_IN)->where('result', AccessEvent::RESULT_ALLOWED)->count(),
                         'exits_today' => AccessEvent::query()->whereDate('event_time', $today)->where('direction', AccessEvent::DIRECTION_OUT)->where('result', AccessEvent::RESULT_ALLOWED)->count(),
                         'denied_today' => AccessEvent::query()->whereDate('event_time', $today)->where('result', AccessEvent::RESULT_DENIED)->count(),
