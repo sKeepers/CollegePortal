@@ -48,6 +48,11 @@ class PersonFoundationTest extends TestCase
         $all = $this->withApiAuth($director)->getJson('/api/people')->assertOk()->json();
         $this->assertEqualsCanonicalizing(['Иванова Мария', 'Петрова Анна'], $names($all));
 
+        // «Все профили» — это значение фильтра, а не его отсутствие: экран передает
+        // profile=all, и ничего отфильтровать оно не должно.
+        $explicitAll = $this->withApiAuth($director)->getJson('/api/people?profile=all')->assertOk()->json();
+        $this->assertEqualsCanonicalizing(['Иванова Мария', 'Петрова Анна'], $names($explicitAll));
+
         $withoutStudents = $this->withApiAuth($director)->getJson('/api/people?profile=without_students')->assertOk()->json();
         $this->assertSame(['Иванова Мария'], $names($withoutStudents));
 

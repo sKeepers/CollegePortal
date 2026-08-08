@@ -1215,7 +1215,7 @@ onMounted(async () => {
       </div>
     </q-banner>
 
-    <AppFilterBar @apply="applyFilters" @reset="resetFilters">
+    <AppFilterBar>
       <q-input v-model="store.filters.q" dense outlined clearable label="Номер заявления или ФИО" @keyup.enter="applyFilters">
         <template #prepend><Search :size="16" /></template>
       </q-input>

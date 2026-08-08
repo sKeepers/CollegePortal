@@ -141,11 +141,25 @@ onMounted(async () => {
     </AppToolbar>
     <AppErrorBanner :message="store.error" />
 
-    <AppFilterBar @apply="applyFilters" @reset="resetFilters">
+    <AppFilterBar>
       <q-input v-model="store.filters.search" dense outlined clearable label="ФИО, телефон, email" @keyup.enter="applyFilters">
         <template #prepend><Search :size="16" /></template>
       </q-input>
-      <q-select v-model="store.filters.profile" dense outlined emit-value map-options label="Профиль" :options="profileOptions" />
+      <!-- Выбор в списке применяется сразу: это то, чего от выпадающего списка и ждут. -->
+      <q-select
+        v-model="store.filters.profile"
+        dense
+        outlined
+        emit-value
+        map-options
+        label="Профиль"
+        :options="profileOptions"
+        @update:model-value="applyFilters"
+      />
+      <template #actions>
+        <q-btn color="primary" :disable="store.loading" @click="applyFilters">Применить</q-btn>
+        <q-btn flat :disable="store.loading" @click="resetFilters">Сбросить</q-btn>
+      </template>
     </AppFilterBar>
 
     <div ref="workspaceRef" class="people-workspace" :style="workspaceStyle">
