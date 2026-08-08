@@ -6,7 +6,7 @@
 
 CollegePortal — модульная информационная система для управления образовательными и административными процессами колледжа.
 
-Текущий статус: **Private Release Candidate 0.8.0-rc6**. Репозиторий остается **PRIVATE** и используется для контролируемой разработки, DEV/UAT-проверок и подготовки пилотной эксплуатации. Система проходит UAT и не должна переноситься в production без отдельной проверки безопасности, резервного копирования и эксплуатационной готовности.
+Текущий статус: **Private Release Candidate 0.8.0-rc7**. Репозиторий остается **PRIVATE** и используется для контролируемой разработки, DEV/UAT-проверок и подготовки пилотной эксплуатации. Система проходит UAT и не должна переноситься в production без отдельной проверки безопасности, резервного копирования и эксплуатационной готовности.
 
 ## Для кого предназначена система
 
@@ -133,8 +133,8 @@ Frontend:
 ## Быстрая установка
 
 ```bash
-tar -xzf college-portal-0.8.0-rc6.tar.gz
-cd college-portal-0.8.0-rc6
+tar -xzf college-portal-0.8.0-rc7.tar.gz
+cd college-portal-0.8.0-rc7
 sudo ./installer/install.sh
 sudo /opt/college-portal/installer/check.sh
 ```
@@ -144,7 +144,7 @@ sudo /opt/college-portal/installer/check.sh
 ## Обновление
 
 ```bash
-sudo /opt/college-portal/installer/update.sh college-portal-0.8.0-rc6.tar.gz
+sudo /opt/college-portal/installer/update.sh college-portal-0.8.0-rc7.tar.gz
 sudo /opt/college-portal/installer/check.sh
 ```
 
@@ -183,7 +183,7 @@ sudo /opt/college-portal/installer/restore.sh /srv/backups/college-portal/<backu
 
 GitHub Project: [CollegePortal Roadmap](https://github.com/users/sKeepers/projects/2)
 
-Release: [v0.8.0-rc6](https://github.com/sKeepers/CollegePortal/releases/tag/v0.8.0-rc6)
+Release: [v0.8.0-rc7](https://github.com/sKeepers/CollegePortal/releases/tag/v0.8.0-rc7)
 
 ## Документация
 

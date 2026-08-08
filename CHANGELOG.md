@@ -13,6 +13,8 @@
 
 ## Unreleased
 
+## 0.8.0-rc7 - Private Release Candidate
+
 ### Added
 
 - Buildings and access points are a reference book, and every scan is bound to the point it came through. Scanners keep sending the point as the string somebody typed into them at installation — no firmware is going to be reflashed for this — so the string is matched against the reference by name or code, ignoring case and stray spacing. A point that is not in the reference still records the pass; it just lands in a separate group rather than being lost.
@@ -30,6 +32,8 @@
 
 ### Fixed
 
+- The settings screen of the live portal can be used at all. Every save was refused as needing a separate confirmation, and there was no way to give one: the endpoint demanded a flag that nothing in the portal ever sent, so the guard had been added and the way through it never built. Saving and resetting now ask for confirmation and send it, the reply carries a machine readable field instead of a sentence to match on, and the screen no longer reports settings as saved when they were not.
+- The profile filter in «Люди» filters. Choosing a profile changed nothing, and neither did clearing it, because the filter bar renders no buttons and emits no events while the page listened for events from it — nothing ever asked the server. The list now applies on choice and has explicit apply and reset controls.
 - The number of people in the building is now computed in one place for all three screens that show it. The rule — the last allowed event of the current day per pass, counted as inside when it is an entry — was written out separately in the access summary and in the dashboard KPI, so the two could drift apart while both looked right. The muster list counts from the same service, and a test pins the three to the same number.
 
 ## 0.8.0-rc6 - Private Release Candidate

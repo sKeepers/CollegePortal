@@ -4,7 +4,7 @@
 
 ## Русский
 
-Текущая поддерживаемая версия: **0.8.0-rc6 / Private Release Candidate**.
+Текущая поддерживаемая версия: **0.8.0-rc7 / Private Release Candidate**.
 
 ### Как сообщить об уязвимости
 
@@ -45,7 +45,7 @@
 
 ## English
 
-Supported private RC: **0.8.0-rc6**.
+Supported private RC: **0.8.0-rc7**.
 
 Report security issues through private repository maintainer channels or the agreed internal communication channel. Do not publish secrets, credentials, personal data, exploit details, database dumps, backups, private documents or screenshots with personal data in issues or pull requests.
 

@@ -38,8 +38,8 @@ major.minor.patch-suffix
 ```json
 {
   "name": "CollegePortal",
-  "version": "0.8.0-rc6",
-  "release": "v0.8.0-rc6",
+  "version": "0.8.0-rc7",
+  "release": "v0.8.0-rc7",
   "build": "git-short-hash",
   "gitCommit": "git-full-hash",
   "buildDate": "YYYY-MM-DD",
@@ -67,7 +67,7 @@ major.minor.patch-suffix
 
 ```text
 CollegePortal
-v0.8.0-rc6
+v0.8.0-rc7
 Build: <hash>
 DEV
 ```
@@ -104,10 +104,10 @@ frontend/scripts/generate-version.mjs
 Переменные окружения используются только как явный override для контролируемой release-сборки:
 
 ```text
-APP_VERSION=0.8.0-rc6
-APP_RELEASE=v0.8.0-rc6
-VITE_APP_VERSION=0.8.0-rc6
-VITE_APP_RELEASE=v0.8.0-rc6
+APP_VERSION=0.8.0-rc7
+APP_RELEASE=v0.8.0-rc7
+VITE_APP_VERSION=0.8.0-rc7
+VITE_APP_RELEASE=v0.8.0-rc7
 VITE_BUILD_COMMIT=<short-hash>
 VITE_BUILD_FULL_COMMIT=<full-hash>
 VITE_BUILD_DATE=YYYY-MM-DD
