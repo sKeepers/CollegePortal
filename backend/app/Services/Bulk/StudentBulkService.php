@@ -4,7 +4,10 @@ namespace App\Services\Bulk;
 
 use App\Models\DigitalIdentity;
 use App\Models\Student;
+use App\Models\User;
+use App\Services\AccountProvisioningService;
 use App\Services\AuditLogService;
+use Throwable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -20,12 +23,15 @@ class StudentBulkService
         'change_education_form' => 'students.bulk_education',
         'change_funding_form' => 'students.bulk_education',
         'issue_digital_passes' => 'students.bulk_passes',
+        'issue_accounts' => 'students.bulk_accounts',
         'archive_selected' => 'students.bulk_archive',
         'export_selected' => 'students.bulk_export',
     ];
 
-    public function __construct(private readonly BulkSelectionResolver $resolver)
-    {
+    public function __construct(
+        private readonly BulkSelectionResolver $resolver,
+        private readonly AccountProvisioningService $accounts,
+    ) {
     }
 
     public function preview(string $action, array $selection, array $payload = []): array
@@ -50,7 +56,10 @@ class StudentBulkService
             return $this->buildReport($action, $students, $payload, true);
         });
 
-        AuditLogService::log('Students', 'bulk_'.$action, ['type' => 'Student', 'id' => null], null, $report, $request, requestId: $this->requestId($request));
+        // В аудит уходит отчет без паролей: сам факт выдачи фиксируется, пароль — нет.
+        $audited = $report;
+        unset($audited['credentials']);
+        AuditLogService::log('Students', 'bulk_'.$action, ['type' => 'Student', 'id' => null], null, $audited, $request, requestId: $this->requestId($request));
 
         return $report;
     }
@@ -67,6 +76,7 @@ class StudentBulkService
                 'change_education_form' => $this->changeEducationForm($student, $payload, $apply),
                 'change_funding_form' => $this->changeFundingForm($student, $payload, $apply),
                 'issue_digital_passes' => $this->issueDigitalPass($student, $payload, $apply),
+                'issue_accounts' => $this->issueAccount($student, $apply),
                 'archive_selected' => $this->archive($student, $apply),
                 default => ['type' => 'error', 'reason' => 'Неизвестное массовое действие.'],
             };
@@ -184,6 +194,38 @@ class StudentBulkService
         return ['type' => 'changed', 'changes' => $changes];
     }
 
+    /**
+     * Учетная запись на группу разом. Пароль возвращается ровно один раз — в
+     * ответе на apply — и больше нигде не появляется: в базе он хеширован, в
+     * журнал аудита не попадает, повторно узнать его нельзя, только сбросить.
+     * Поэтому оператор обязан распечатать или выгрузить карточки сразу.
+     */
+    private function issueAccount(Student $student, bool $apply): array
+    {
+        if ($student->user_id || ($student->person_id && User::query()->where('person_id', $student->person_id)->exists())) {
+            return ['type' => 'skipped', 'reason' => 'Учетная запись уже создана.'];
+        }
+
+        if (! $apply) {
+            return ['type' => 'changed', 'changes' => ['account' => 'will_be_created']];
+        }
+
+        try {
+            $account = $this->accounts->provision($student);
+        } catch (Throwable $exception) {
+            return ['type' => 'error', 'reason' => $exception->getMessage()];
+        }
+
+        return [
+            'type' => 'changed',
+            'changes' => ['account' => 'created', 'login' => $account->login],
+            'credentials' => [
+                'login' => $account->login,
+                'password' => $account->password,
+            ],
+        ];
+    }
+
     private function archive(Student $student, bool $apply): array
     {
         if ($student->archived_at) {
@@ -219,7 +261,7 @@ class StudentBulkService
 
     private function baseReport(string $action, int $total): array
     {
-        return ['action' => $action, 'selected' => $total, 'will_change' => 0, 'changed' => 0, 'skipped' => 0, 'errors' => 0, 'items' => [], 'sample' => []];
+        return ['action' => $action, 'selected' => $total, 'will_change' => 0, 'changed' => 0, 'skipped' => 0, 'errors' => 0, 'items' => [], 'sample' => [], 'credentials' => []];
     }
 
     private function appendResult(array &$report, Student $student, array $result): void
@@ -231,6 +273,17 @@ class StudentBulkService
         $item = ['id' => $student->id, 'name' => $this->name($student), 'result' => $type, 'reason' => $result['reason'] ?? null, 'changes' => $result['changes'] ?? []];
         $report['items'][] = $item;
         if (count($report['sample']) < 10) { $report['sample'][] = $item; }
+
+        // Пароли живут отдельной веткой отчета, которую снимают перед аудитом.
+        if (isset($result['credentials'])) {
+            $report['credentials'][] = [
+                'id' => $student->id,
+                'name' => $this->name($student),
+                'group' => $student->group?->name,
+                'login' => $result['credentials']['login'],
+                'password' => $result['credentials']['password'],
+            ];
+        }
     }
 
     private function name(Student $student): string

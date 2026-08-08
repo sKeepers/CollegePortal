@@ -71,6 +71,7 @@ class RoleSeeder extends Seeder
             ['module' => 'Students', 'code' => 'students.bulk_course', 'name' => 'Студенты: массовое изменение курса', 'description' => 'Массовое изменение курса студентов.'],
             ['module' => 'Students', 'code' => 'students.bulk_education', 'name' => 'Студенты: массовое изменение формы обучения', 'description' => 'Массовое изменение формы обучения и финансирования студентов.'],
             ['module' => 'Students', 'code' => 'students.bulk_passes', 'name' => 'Студенты: массовый выпуск QR', 'description' => 'Массовый выпуск цифровых пропусков студентам.'],
+            ['module' => 'Students', 'code' => 'students.bulk_accounts', 'name' => 'Студенты: массовая выдача учетных записей', 'description' => 'Создание учетных записей группе разом с одноразовым показом паролей.'],
             ['module' => 'Students', 'code' => 'students.bulk_archive', 'name' => 'Студенты: массовое архивирование', 'description' => 'Массовое архивирование студентов без удаления.'],
             ['module' => 'Students', 'code' => 'students.bulk_export', 'name' => 'Студенты: массовый экспорт', 'description' => 'Экспорт выбранных студентов.'],
             ['module' => 'Groups', 'code' => 'groups.view', 'name' => 'Группы: просмотр', 'description' => 'Просмотр групп.'],
@@ -260,7 +261,7 @@ class RoleSeeder extends Seeder
             'dashboard.view', 'view_own_data', 'view_reports',
             'people.view', 'people.update', 'people.link',
             'students.view', 'students.create', 'students.update', 'students.delete',
-            'students.bulk_group', 'students.bulk_status', 'students.bulk_course', 'students.bulk_education', 'students.bulk_passes', 'students.bulk_archive', 'students.bulk_export',
+            'students.bulk_group', 'students.bulk_status', 'students.bulk_course', 'students.bulk_education', 'students.bulk_passes', 'students.bulk_accounts', 'students.bulk_archive', 'students.bulk_export',
             'groups.view', 'groups.create', 'groups.update', 'groups.delete',
             'journal.view', 'journal.view_all', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files',
             'journal.complete', 'journal.sign', 'journal.reopen', 'journal.export', 'manage_journal',
@@ -274,7 +275,7 @@ class RoleSeeder extends Seeder
     private function academicEditorPermissions(): array
     {
         return [
-            'dashboard.view', 'people.view', 'students.view', 'students.create', 'students.update', 'students.delete', 'students.bulk_group', 'students.bulk_status', 'students.bulk_course', 'students.bulk_education', 'students.bulk_passes', 'students.bulk_archive', 'students.bulk_export',
+            'dashboard.view', 'people.view', 'students.view', 'students.create', 'students.update', 'students.delete', 'students.bulk_group', 'students.bulk_status', 'students.bulk_course', 'students.bulk_education', 'students.bulk_passes', 'students.bulk_accounts', 'students.bulk_archive', 'students.bulk_export',
             'groups.view', 'groups.create', 'groups.update', 'groups.delete',
             'teachers.view', 'teachers.create', 'teachers.update', 'teachers.delete',
             'subjects.view', 'subjects.create', 'subjects.update', 'subjects.delete',

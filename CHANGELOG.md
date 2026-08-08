@@ -16,6 +16,7 @@
 ### Added
 
 - Buildings and access points are a reference book, and every scan is bound to the point it came through. Scanners keep sending the point as the string somebody typed into them at installation — no firmware is going to be reflashed for this — so the string is matched against the reference by name or code, ignoring case and stray spacing. A point that is not in the reference still records the pass; it just lands in a separate group rather than being lost.
+- Accounts can be issued to a whole group at once from the students screen. The password is shown exactly once, on the screen that reports the result: it is stored only as a hash, it is deliberately kept out of the audit log, and there is no way to read it back — a lost card means a reset, and the screen says so before the operator starts. Cards print three to a row from that same screen and the list downloads as CSV, both built from the single response that carried the passwords, so nothing has to store them to make them printable.
 - «Кто сейчас в здании» — a muster report: who is inside, by name, grouped by building. It opens with no filters and no parameters, because during an evacuation nobody is going to configure a query, and it refreshes itself every 30 seconds. Empty buildings stay on the list so that a building reads as checked and empty rather than as missing. People who came through a point outside the reference are listed under their own heading.
 
 ### Fixed

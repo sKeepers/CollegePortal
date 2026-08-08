@@ -57,6 +57,8 @@ const bulkDialogVisible = ref(false)
 const bulkAction = ref('')
 const bulkPayload = ref({})
 const bulkPreview = ref(null)
+const credentialsDialogVisible = ref(false)
+const issuedCredentials = ref([])
 
 const bulkActions = computed(() => [
   { label: 'Назначить группу', value: 'assign_group', permission: 'students.bulk_group' },
@@ -65,6 +67,7 @@ const bulkActions = computed(() => [
   { label: 'Изменить форму обучения', value: 'change_education_form', permission: 'students.bulk_education' },
   { label: 'Изменить финансирование', value: 'change_funding_form', permission: 'students.bulk_education' },
   { label: 'Выпустить QR', value: 'issue_digital_passes', permission: 'students.bulk_passes' },
+  { label: 'Создать учетные записи', value: 'issue_accounts', permission: 'students.bulk_accounts' },
   { label: 'Архивировать', value: 'archive_selected', permission: 'students.bulk_archive' },
   { label: 'Экспортировать', value: 'export_selected', permission: 'students.bulk_export' },
 ].filter((action) => permissions.hasPermission(action.permission)))
@@ -168,10 +171,38 @@ async function applyBulkAction() {
   const result = await store.applyBulk(bulkRequest())
   bulkPreview.value = result?.action === 'export_selected' ? bulkPreview.value : result
   notifySuccess(bulkAction.value === 'export_selected' ? 'Экспорт выбранных студентов подготовлен' : 'Массовая операция выполнена')
+
+  // Пароли приходят один раз и только здесь: окно результата закрывать нельзя,
+  // пока оператор не распечатал карточки или не выгрузил CSV.
+  if (bulkAction.value === 'issue_accounts' && result?.credentials?.length) {
+    issuedCredentials.value = result.credentials
+    credentialsDialogVisible.value = true
+  }
+
   if (bulkAction.value !== 'export_selected') {
     clearSelection()
     bulkDialogVisible.value = false
   }
+}
+
+function credentialsCsv() {
+  const rows = [['ФИО', 'Группа', 'Логин', 'Пароль']]
+  issuedCredentials.value.forEach((row) => rows.push([row.name, row.group || '', row.login, row.password]))
+  // BOM, иначе Excel открывает кириллицу как набор символов.
+  const csv = '﻿' + rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(';')).join('\r\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `accounts-${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+function printCredentials() {
+  window.print()
 }
 
 function tableRowClass(row) {
@@ -538,6 +569,10 @@ onMounted(async () => {
           <q-input v-if="bulkAction === 'change_education_form'" v-model="bulkPayload.education_form" outlined dense label="Форма обучения" />
           <q-input v-if="bulkAction === 'change_funding_form'" v-model="bulkPayload.funding_form" outlined dense label="Форма финансирования" />
           <q-banner v-if="bulkAction === 'issue_digital_passes'" rounded class="bg-blue-1 text-blue-10">Активные QR-пропуска не дублируются: такие студенты будут пропущены.</q-banner>
+          <q-banner v-if="bulkAction === 'issue_accounts'" rounded class="bg-orange-1 text-orange-10">
+            Пароль показывается один раз, сразу после создания. Восстановить его нельзя — только сбросить и выдать новый.
+            Распечатайте карточки или выгрузите CSV, не закрывая окно с результатом. Студенты, у которых учетная запись уже есть, будут пропущены.
+          </q-banner>
           <q-banner v-if="bulkAction === 'archive_selected'" rounded class="bg-orange-1 text-orange-10">Архивирование не удаляет студентов и не затрагивает legacy.</q-banner>
           <q-card v-if="bulkPreview" flat bordered>
             <q-card-section>
@@ -563,6 +598,42 @@ onMounted(async () => {
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="credentialsDialogVisible" persistent maximized>
+      <q-card class="issued-accounts">
+        <q-card-section class="issued-accounts__head">
+          <div class="text-h6">Учетные записи созданы: {{ issuedCredentials.length }}</div>
+          <q-banner rounded class="bg-orange-1 text-orange-10 q-mt-sm">
+            Пароль показан один раз. Он нигде не сохранен и восстановить его нельзя — если карточка потеряна,
+            остается только сбросить пароль и выдать новый. Распечатайте карточки или выгрузите CSV прямо сейчас.
+          </q-banner>
+        </q-card-section>
+
+        <q-card-section class="issued-accounts__sheet">
+          <div class="account-card-grid">
+            <div v-for="row in issuedCredentials" :key="row.id" class="account-card">
+              <div class="account-card__name">{{ row.name }}</div>
+              <div v-if="row.group" class="account-card__group">{{ row.group }}</div>
+              <dl class="account-card__creds">
+                <dt>Логин</dt>
+                <dd>{{ row.login }}</dd>
+                <dt>Пароль</dt>
+                <dd>{{ row.password }}</dd>
+              </dl>
+              <div class="account-card__hint">
+                portal.skki.ru · смените пароль после первого входа
+              </div>
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="issued-accounts__actions">
+          <q-btn flat label="Скачать CSV" @click="credentialsCsv" />
+          <q-btn flat label="Печать карточек" @click="printCredentials" />
+          <q-btn color="primary" label="Я сохранил пароли, закрыть" @click="credentialsDialogVisible = false" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <AppConfirmDialog
       v-model="deleteDialogVisible"
       title="Удалить студента?"
@@ -580,4 +651,55 @@ onMounted(async () => {
 .students-main { padding-right: 10px; }
 .students-side { max-width: none; padding-left: 10px; }
 @media (max-width: 1100px) { .students-layout { grid-template-columns: 1fr !important; gap: 16px; } .students-main, .students-side { padding: 0; } }
+
+.issued-accounts__sheet { overflow: auto; }
+
+.account-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.account-card {
+  border: 1px solid #999;
+  border-radius: 6px;
+  padding: 12px;
+  break-inside: avoid;
+}
+
+.account-card__name { font-size: 15px; font-weight: 600; }
+.account-card__group { font-size: 12px; opacity: 0.75; }
+
+.account-card__creds {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  margin: 10px 0 6px;
+}
+
+.account-card__creds dt { font-size: 12px; opacity: 0.7; }
+.account-card__creds dd { margin: 0; font-family: monospace; font-size: 15px; font-weight: 600; }
+.account-card__hint { font-size: 11px; opacity: 0.7; }
+</style>
+
+<!--
+  Печать идет через браузер: PDF-библиотеки в бэкенде нет, а карточки все равно
+  печатаются на бумагу и режутся. При печати со страницы убирается все, кроме
+  листа карточек, иначе на бумагу уходит вся таблица студентов.
+-->
+<style>
+@media print {
+  body * { visibility: hidden; }
+  .issued-accounts__sheet, .issued-accounts__sheet * { visibility: visible; }
+  .issued-accounts__sheet {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0;
+  }
+  .issued-accounts__head, .issued-accounts__actions { display: none !important; }
+  .account-card-grid { grid-template-columns: repeat(3, 1fr); }
+  .account-card { border-color: #000; }
+}
 </style>
