@@ -10,7 +10,7 @@
 | [TASK_EXPORT_IMPORT_SYMMETRY.md](TASK_EXPORT_IMPORT_SYMMETRY.md) | Свести экспорт и импорт по всем реестрам, экспорт расписания, полнота карточек педагогов и сотрудников | одобрено |
 | [TASK_SEC_002_COOKIE.md](TASK_SEC_002_COOKIE.md) | `SEC-002`: токен в httpOnly cookie с CSRF | подход выбран, срок не назначен |
 | [TASK_ARCH_001_PERMISSIONS.md](TASK_ARCH_001_PERMISSIONS.md) | `ARCH-001`: право объявляется у маршрута, а не выводится из URL | не обсуждалось со владельцем |
-| [../PORTAL_AUDIT_PROMPT.md](../PORTAL_AUDIT_PROMPT.md) | Аудит портала: поиск дефектов без исправления | можно запускать в любой момент |
+| [TASK_PORTAL_AUDIT.md](TASK_PORTAL_AUDIT.md) | Аудит портала: поиск дефектов без исправления | можно запускать в любой момент |
 
 ## Порядок
 
