@@ -10,6 +10,8 @@ const GroupsPage = () => import('../pages/groups/GroupsPage.vue')
 const TeachersPage = () => import('../pages/teachers/TeachersPage.vue')
 const SubjectsPage = () => import('../pages/subjects/SubjectsPage.vue')
 const ClassroomsPage = () => import('../pages/classrooms/ClassroomsPage.vue')
+const SpecialtiesPage = () => import('../pages/specialties/SpecialtiesPage.vue')
+const EducationProgramsPage = () => import('../pages/education-programs/EducationProgramsPage.vue')
 const CurriculaPage = () => import('../pages/curricula/CurriculaPage.vue')
 const SchedulePage = () => import('../pages/schedule/SchedulePage.vue')
 const JournalPage = () => import('../pages/journal/JournalPage.vue')
@@ -168,6 +170,20 @@ export const routes = [
         name: 'classrooms',
         component: ClassroomsPage,
         meta: { title: 'Аудитории', permission: 'classrooms.view' },
+      },
+      {
+        // Специальности и программы закрыты одним правом: в таблице
+        // EnsurePermission оба префикса отображаются в reference.manage.
+        path: 'specialties',
+        name: 'specialties',
+        component: SpecialtiesPage,
+        meta: { title: 'Специальности', permission: 'reference.manage' },
+      },
+      {
+        path: 'education-programs',
+        name: 'education-programs',
+        component: EducationProgramsPage,
+        meta: { title: 'Образовательные программы', permission: 'reference.manage' },
       },
       {
         path: 'schedule',
