@@ -6,6 +6,7 @@ use App\Models\ApplicantApplication;
 use App\Models\Classroom;
 use App\Models\EducationProgram;
 use App\Models\Exam;
+use App\Models\ExamResult;
 use App\Models\Graduate;
 use App\Models\Group;
 use App\Models\Specialty;
@@ -52,10 +53,62 @@ class FisPackageApiTest extends TestCase
         $classroom = Classroom::create(['number' => '201', 'type' => 'Учебная']);
         $exam = Exam::create(['academic_year' => '2026/2027', 'semester' => 2, 'group_id' => $group->id, 'subject_id' => $subject->id, 'teacher_id' => $teacher->id, 'classroom_id' => $classroom->id, 'exam_date' => '2027-06-20', 'starts_at' => '09:00', 'exam_type' => 'gia', 'status' => 'scheduled']);
         Graduate::create(['student_id' => $student->id, 'group_id' => $group->id, 'education_program_id' => $program->id, 'specialty_id' => $program->specialty_id, 'graduation_year' => 2027, 'qualification' => 'Артист', 'status' => 'ready']);
+        $result = ExamResult::create(['exam_id' => $exam->id, 'student_id' => $student->id, 'result' => 'отлично', 'score' => 5, 'status' => 'passed']);
 
         $packageId = $this->postJson('/api/fis-packages', ['package_type' => 'gia', 'year' => 2027, 'education_program_id' => $program->id])->assertCreated()->json('data.id');
-        $this->assertDatabaseHas('fis_records', ['fis_package_id' => $packageId, 'exam_id' => $exam->id]);
-        $this->postJson("/api/fis-packages/{$packageId}/validate")->assertOk()->assertJsonPath('data.status', 'ready');
+
+        // Единица отчётности — результат студента, а не экзамен.
+        $this->assertDatabaseHas('fis_records', [
+            'fis_package_id' => $packageId,
+            'exam_id' => $exam->id,
+            'student_id' => $student->id,
+            'exam_result_id' => $result->id,
+        ]);
+
+        $this->postJson("/api/fis-packages/{$packageId}/validate")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'ready')
+            ->assertJsonPath('data.records.0.payload.result', 'отлично')
+            ->assertJsonPath('data.records.0.payload.score', 5)
+            ->assertJsonPath('data.records.0.payload.person', 'Иванов Иван');
+    }
+
+    public function test_gia_package_reports_an_exam_without_results(): void
+    {
+        [$program, $group, $student] = $this->studentProgram();
+        $this->completeStudentCard($student);
+        $subject = Subject::create(['name' => 'ГИА', 'code' => 'GIA']);
+        $teacher = Teacher::create(['last_name' => 'Смирнова', 'first_name' => 'Елена', 'is_active' => true]);
+        $classroom = Classroom::create(['number' => '201', 'type' => 'Учебная']);
+        Exam::create(['academic_year' => '2026/2027', 'semester' => 2, 'group_id' => $group->id, 'subject_id' => $subject->id, 'teacher_id' => $teacher->id, 'classroom_id' => $classroom->id, 'exam_date' => '2027-06-20', 'starts_at' => '09:00', 'exam_type' => 'gia', 'status' => 'scheduled']);
+
+        $packageId = $this->postJson('/api/fis-packages', ['package_type' => 'gia', 'year' => 2027, 'education_program_id' => $program->id])->assertCreated()->json('data.id');
+
+        // Раньше такой экзамен попадал в пакет как «готовая» запись без единого
+        // человека внутри и молча уходил бы в выгрузку.
+        $this->postJson("/api/fis-packages/{$packageId}/validate")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'validation_failed');
+
+        $this->assertDatabaseHas('fis_validation_errors', [
+            'fis_package_id' => $packageId,
+            'field' => 'exam_results',
+        ]);
+    }
+
+    public function test_gia_package_blocks_a_student_with_an_incomplete_card(): void
+    {
+        [$program, $group, $student] = $this->studentProgram();
+        $subject = Subject::create(['name' => 'ГИА', 'code' => 'GIA']);
+        $teacher = Teacher::create(['last_name' => 'Смирнова', 'first_name' => 'Елена', 'is_active' => true]);
+        $classroom = Classroom::create(['number' => '201', 'type' => 'Учебная']);
+        $exam = Exam::create(['academic_year' => '2026/2027', 'semester' => 2, 'group_id' => $group->id, 'subject_id' => $subject->id, 'teacher_id' => $teacher->id, 'classroom_id' => $classroom->id, 'exam_date' => '2027-06-20', 'starts_at' => '09:00', 'exam_type' => 'gia', 'status' => 'scheduled']);
+        ExamResult::create(['exam_id' => $exam->id, 'student_id' => $student->id, 'result' => 'отлично', 'score' => 5, 'status' => 'passed']);
+
+        $packageId = $this->postJson('/api/fis-packages', ['package_type' => 'gia', 'year' => 2027, 'education_program_id' => $program->id])->json('data.id');
+
+        $this->postJson("/api/fis-packages/{$packageId}/validate")->assertOk()->assertJsonPath('data.status', 'validation_failed');
+        $this->postJson("/api/fis-packages/{$packageId}/mark-exported")->assertStatus(422);
     }
 
     public function test_validation_reports_missing_admission_data(): void

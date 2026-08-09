@@ -7,10 +7,12 @@ use App\Http\Requests\StoreFisPackageRequest;
 use App\Http\Resources\FisPackageResource;
 use App\Models\ApplicantApplication;
 use App\Models\Exam;
+use App\Models\ExamResult;
 use App\Models\FisPackage;
 use App\Models\Graduate;
 use App\Models\Student;
 use App\Services\Admissions\AdmissionDocumentReadinessService;
+use App\Services\Admissions\DocumentMaskingService;
 use App\Support\Csv\CsvExport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,14 +24,16 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class FisPackageController extends Controller
 {
-    public function __construct(private readonly AdmissionDocumentReadinessService $readiness)
-    {
+    public function __construct(
+        private readonly AdmissionDocumentReadinessService $readiness,
+        private readonly DocumentMaskingService $masking,
+    ) {
     }
 
     public function index(Request $request): AnonymousResourceCollection
     {
         $packages = FisPackage::query()
-            ->with(['educationProgram', 'records.applicantApplication.educationProgram.specialty', 'records.exam.subject', 'records.graduate.student', 'records.validationErrors', 'validationErrors'])
+            ->with(['educationProgram', 'records.applicantApplication.educationProgram.specialty', 'records.exam.subject', 'records.student', 'records.examResult', 'records.graduate.student', 'records.validationErrors', 'validationErrors'])
             ->withCount(['records', 'validationErrors'])
             ->when($request->string('package_type')->toString(), fn ($query, string $type) => $query->where('package_type', $type))
             ->when($request->integer('year'), fn ($query, int $year) => $query->where('year', $year))
@@ -67,7 +71,7 @@ class FisPackageController extends Controller
             foreach ($fisPackage->records as $record) {
                 $errors = $fisPackage->package_type === 'admission'
                     ? $this->validateAdmissionRecord($record->applicantApplication)
-                    : $this->validateGiaRecord($record->exam, $record->graduate);
+                    : $this->validateGiaRecord($record->exam, $record->student, $record->examResult, $record->graduate);
                 foreach ($errors as [$field, $message]) {
                     $fisPackage->validationErrors()->create(['fis_record_id' => $record->id, 'field' => $field, 'message' => $message, 'severity' => 'error']);
                 }
@@ -104,10 +108,12 @@ class FisPackageController extends Controller
     public function exportCsv(FisPackage $fisPackage): StreamedResponse
     {
         $package = $this->freshPackage($fisPackage);
-        return CsvExport::download('fis-package-'.$package->id.'.csv', ['record_id', 'type', 'person', 'birth_date', 'program', 'specialty', 'status', 'details'], function (callable $row) use ($package): void {
+        // Колонки ГИА добавлены к общим: в пакете приёма они остаются пустыми,
+        // зато один файл по-прежнему описывает пакет любого типа.
+        return CsvExport::download('fis-package-'.$package->id.'.csv', ['record_id', 'type', 'person', 'birth_date', 'snils', 'group', 'program', 'specialty', 'subject', 'exam_date', 'result', 'score', 'status', 'details'], function (callable $row) use ($package): void {
             foreach ($package->records as $record) {
                 $p = $record->payload ?: [];
-                $row([$record->id, $package->package_type, $p['person'] ?? null, $p['birth_date'] ?? null, $p['education_program'] ?? null, $p['specialty'] ?? null, $record->status, $p['details'] ?? null]);
+                $row([$record->id, $package->package_type, $p['person'] ?? null, $p['birth_date'] ?? null, $p['snils_masked'] ?? null, $p['group'] ?? null, $p['education_program'] ?? null, $p['specialty'] ?? null, $p['subject'] ?? null, $p['exam_date'] ?? null, $p['result'] ?? null, $p['score'] ?? null, $record->status, $p['details'] ?? null]);
             }
         });
     }
@@ -126,6 +132,13 @@ class FisPackageController extends Controller
             ->get()->each(fn (ApplicantApplication $app) => $package->records()->create(['applicant_application_id' => $app->id, 'education_program_id' => $app->education_program_id, 'specialty_id' => $app->educationProgram?->specialty_id, 'status' => 'draft', 'payload' => $this->admissionPayload($app)]));
     }
 
+    /**
+     * Единица отчётности ФИС ГИА — результат конкретного студента, а не экзамен.
+     * Раньше на экзамен создавалась одна запись и к ней подставлялся первый
+     * попавшийся выпускник группы, а сами результаты в пакет не попадали вовсе.
+     * Экзамен без выставленных результатов даёт одну запись-заглушку, чтобы
+     * проверка сказала о нём вслух, а не промолчала.
+     */
     private function fillGiaRecords(FisPackage $package): void
     {
         Exam::query()->with(['group.educationProgram.specialty', 'subject', 'teacher', 'results.student'])
@@ -133,8 +146,33 @@ class FisPackageController extends Controller
             ->whereYear('exam_date', $package->year)
             ->when($package->education_program_id, fn ($query, int $id) => $query->whereHas('group', fn ($group) => $group->where('education_program_id', $id)))
             ->get()->each(function (Exam $exam) use ($package): void {
-                $graduate = Graduate::where('group_id', $exam->group_id)->where('graduation_year', $package->year)->first();
-                $package->records()->create(['exam_id' => $exam->id, 'graduate_id' => $graduate?->id, 'education_program_id' => $exam->group?->education_program_id, 'specialty_id' => $exam->group?->educationProgram?->specialty_id, 'status' => 'draft', 'payload' => $this->giaPayload($exam, $graduate)]);
+                $common = [
+                    'exam_id' => $exam->id,
+                    'education_program_id' => $exam->group?->education_program_id,
+                    'specialty_id' => $exam->group?->educationProgram?->specialty_id,
+                    'status' => 'draft',
+                ];
+
+                if ($exam->results->isEmpty()) {
+                    $package->records()->create([...$common, 'payload' => $this->giaPayload($exam, null, null, null)]);
+
+                    return;
+                }
+
+                foreach ($exam->results as $result) {
+                    $student = $result->student;
+                    $graduate = $student
+                        ? Graduate::where('student_id', $student->id)->where('graduation_year', $package->year)->first()
+                        : null;
+
+                    $package->records()->create([
+                        ...$common,
+                        'student_id' => $student?->id,
+                        'exam_result_id' => $result->id,
+                        'graduate_id' => $graduate?->id,
+                        'payload' => $this->giaPayload($exam, $student, $result, $graduate),
+                    ]);
+                }
             });
     }
 
@@ -144,17 +182,24 @@ class FisPackageController extends Controller
         return collect($checks)->filter(fn ($item) => blank($item[1]))->map(fn ($item) => [$item[0], $item[2]])->values()->all();
     }
 
-    private function validateGiaRecord(?Exam $exam, ?Graduate $graduate): array
+    private function validateGiaRecord(?Exam $exam, ?Student $student, ?ExamResult $result, ?Graduate $graduate): array
     {
         $checks = [['exam', $exam?->id, 'Не указан экзамен/ГИА'], ['exam_date', $exam?->exam_date?->toDateString(), 'Не указана дата ГИА'], ['subject', $exam?->subject?->name, 'Не указана дисциплина/предмет'], ['group', $exam?->group?->name, 'Не указана группа'], ['education_program', $exam?->group?->educationProgram?->name ?: $graduate?->educationProgram?->name, 'Не указана образовательная программа'], ['specialty', $exam?->group?->educationProgram?->specialty?->name ?: $graduate?->specialty?->name, 'Не указана специальность']];
         $errors = collect($checks)->filter(fn ($item) => blank($item[1]))->map(fn ($item) => [$item[0], $item[2]])->values()->all();
 
+        // Экзамен без результатов в ФИС ГИА выгружать нечего: сдавших нет.
+        if (! $student) {
+            $errors[] = ['exam_results', 'По экзамену не выставлены результаты ГИА'];
+
+            return $errors;
+        }
+
+        if (blank($result?->result) && $result?->score === null) {
+            $errors[] = ['result', 'Не выставлен результат ГИА студента'];
+        }
+
         // Выгрузка в ФИС ГИА требует паспорта, документа об образовании и СНИЛС.
-        // Пакет по группе без выпускника проверять нечего — карточку смотрим,
-        // только когда запись относится к конкретному человеку.
-        return $graduate?->student
-            ? array_merge($errors, $this->studentCardErrors($graduate->student))
-            : $errors;
+        return array_merge($errors, $this->studentCardErrors($student));
     }
 
     /** @return list<array{0:string,1:string}> */
@@ -174,7 +219,9 @@ class FisPackageController extends Controller
 
     private function payloadForRecord(string $type, mixed $record): array
     {
-        return $type === 'admission' ? $this->admissionPayload($record->applicantApplication) : $this->giaPayload($record->exam, $record->graduate);
+        return $type === 'admission'
+            ? $this->admissionPayload($record->applicantApplication)
+            : $this->giaPayload($record->exam, $record->student, $record->examResult, $record->graduate);
     }
 
     private function admissionPayload(?ApplicantApplication $app): array
@@ -182,9 +229,34 @@ class FisPackageController extends Controller
         return ['person' => $this->applicantName($app), 'birth_date' => $app?->birth_date?->toDateString(), 'education_program' => $app?->educationProgram?->name, 'specialty' => $app?->educationProgram?->specialty?->name, 'status' => $app?->status, 'submitted_at' => $app?->submitted_at?->toDateString(), 'details' => $app?->email ?: $app?->phone];
     }
 
-    private function giaPayload(?Exam $exam, ?Graduate $graduate): array
+    /**
+     * СНИЛС в payload только маскированный: payload лежит в базе, показывается в
+     * интерфейсе и уходит в CSV. Полное значение понадобится настоящей выгрузке,
+     * и брать его она будет из Person, а не отсюда.
+     */
+    private function giaPayload(?Exam $exam, ?Student $student, ?ExamResult $result, ?Graduate $graduate): array
     {
-        return ['person' => $graduate ? trim(implode(' ', array_filter([$graduate->student?->last_name, $graduate->student?->first_name, $graduate->student?->middle_name]))) : ($exam?->group?->name ?: 'ГИА'), 'birth_date' => $graduate?->student?->birth_date?->toDateString(), 'education_program' => $exam?->group?->educationProgram?->name ?: $graduate?->educationProgram?->name, 'specialty' => $exam?->group?->educationProgram?->specialty?->name ?: $graduate?->specialty?->name, 'status' => $exam?->status, 'submitted_at' => $exam?->exam_date?->toDateString(), 'details' => $exam?->subject?->name];
+        $person = $student ?? $graduate?->student;
+
+        return [
+            'person' => $person
+                ? trim(implode(' ', array_filter([$person->last_name, $person->first_name, $person->middle_name])))
+                : ($exam?->group?->name ?: 'ГИА'),
+            'birth_date' => $person?->birth_date?->toDateString(),
+            'snils_masked' => $this->masking->snils($person?->person?->snils ?: $person?->snils),
+            'group' => $exam?->group?->name,
+            'education_program' => $exam?->group?->educationProgram?->name ?: $graduate?->educationProgram?->name,
+            'specialty' => $exam?->group?->educationProgram?->specialty?->name ?: $graduate?->specialty?->name,
+            'subject' => $exam?->subject?->name,
+            'exam_date' => $exam?->exam_date?->toDateString(),
+            'result' => $result?->result,
+            'score' => $result?->score,
+            'graduate_id' => $graduate?->id,
+            'qualification' => $graduate?->qualification,
+            'status' => $exam?->status,
+            'submitted_at' => $exam?->exam_date?->toDateString(),
+            'details' => $exam?->subject?->name,
+        ];
     }
 
     private function applicantName(?ApplicantApplication $app): string
@@ -194,11 +266,11 @@ class FisPackageController extends Controller
 
     private function recordRelations(): array
     {
-        return ['records.applicantApplication.educationProgram.specialty', 'records.exam.group.educationProgram.specialty', 'records.exam.subject', 'records.graduate.student', 'records.graduate.educationProgram', 'records.graduate.specialty'];
+        return ['records.applicantApplication.educationProgram.specialty', 'records.exam.group.educationProgram.specialty', 'records.exam.subject', 'records.student.person', 'records.examResult', 'records.graduate.student', 'records.graduate.educationProgram', 'records.graduate.specialty'];
     }
 
     private function freshPackage(FisPackage $package): FisPackage
     {
-        return $package->fresh(['educationProgram', 'records.applicantApplication.educationProgram.specialty', 'records.exam.subject', 'records.exam.group.educationProgram.specialty', 'records.graduate.student', 'records.validationErrors', 'validationErrors'])->loadCount(['records', 'validationErrors']);
+        return $package->fresh(['educationProgram', 'records.applicantApplication.educationProgram.specialty', 'records.exam.subject', 'records.exam.group.educationProgram.specialty', 'records.student', 'records.examResult', 'records.graduate.student', 'records.validationErrors', 'validationErrors'])->loadCount(['records', 'validationErrors']);
     }
 }

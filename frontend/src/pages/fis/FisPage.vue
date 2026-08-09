@@ -590,6 +590,13 @@ onMounted(async () => {
                   <div>
                     <span>{{ payload(record, "details") }}</span>
                   </div>
+                  <!-- Запись ГИА — это результат конкретного студента, поэтому
+                       дисциплина, дата и оценка видны прямо в списке. -->
+                  <div v-if="record.exam_id">
+                    <span>{{ payload(record, "exam_date") }}</span
+                    ><span>{{ payload(record, "result") }}</span
+                    ><span>{{ payload(record, "score") }}</span>
+                  </div>
                   <div class="fis-record-footer">
                     <AppStatusBadge
                       :label="
