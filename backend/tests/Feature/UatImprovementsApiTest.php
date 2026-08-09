@@ -141,18 +141,18 @@ class UatImprovementsApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('message', 'Демо-данные созданы или обновлены.');
 
-        $this->assertDatabaseHas('students', ['email' => 'student@college-portal.local']);
-        $this->assertDatabaseHas('teachers', ['email' => 'teacher@college-portal.local']);
-        $this->assertTrue(Hash::check('test1234', User::where('email', 'admin@college-portal.local')->firstOrFail()->password));
-        $this->assertTrue(Hash::check('test1234', User::where('email', 'teacher@college-portal.local')->firstOrFail()->password));
-        $this->assertTrue(Hash::check('test1234', User::where('email', 'student@college-portal.local')->firstOrFail()->password));
+        $this->assertDatabaseHas('students', ['email' => 'student@local']);
+        $this->assertDatabaseHas('teachers', ['email' => 'teacher@local']);
+        $this->assertTrue(Hash::check('test1234', User::where('email', 'admin@local')->firstOrFail()->password));
+        $this->assertTrue(Hash::check('test1234', User::where('email', 'teacher@local')->firstOrFail()->password));
+        $this->assertTrue(Hash::check('test1234', User::where('email', 'student@local')->firstOrFail()->password));
 
         $this->postJson('/api/admin/demo-data/clear')
             ->assertOk()
             ->assertJsonPath('message', 'Демо-данные очищены. Администратор не удаляется.');
 
-        $this->assertDatabaseMissing('students', ['email' => 'student@college-portal.local']);
-        $this->assertDatabaseMissing('teachers', ['email' => 'teacher@college-portal.local']);
+        $this->assertDatabaseMissing('students', ['email' => 'student@local']);
+        $this->assertDatabaseMissing('teachers', ['email' => 'teacher@local']);
     }
 
 

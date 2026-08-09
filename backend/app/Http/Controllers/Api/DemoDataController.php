@@ -58,11 +58,11 @@ class DemoDataController extends Controller
 
         $summary = DB::transaction(function (): array {
             $studentEmails = Student::query()
-                ->where('email', 'student@college-portal.local')
+                ->where('email', 'student@local')
                 ->orWhere('email', 'like', 'student.demo.%@demo.college.local')
                 ->pluck('email');
             $teacherEmails = Teacher::query()
-                ->where('email', 'teacher@college-portal.local')
+                ->where('email', 'teacher@local')
                 ->orWhere('email', 'like', 'teacher.demo.%@demo.college.local')
                 ->pluck('email');
             $applicationEmails = ApplicantApplication::query()
@@ -255,8 +255,8 @@ class DemoDataController extends Controller
             ->whereIn('id', $personIds)
             ->where(function ($query): void {
                 $query
-                    ->where('email', 'student@college-portal.local')
-                    ->orWhere('email', 'teacher@college-portal.local')
+                    ->where('email', 'student@local')
+                    ->orWhere('email', 'teacher@local')
                     ->orWhere('email', 'like', 'student.demo.%@demo.college.local')
                     ->orWhere('email', 'like', 'teacher.demo.%@demo.college.local');
             })

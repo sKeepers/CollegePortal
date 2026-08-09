@@ -96,7 +96,7 @@ Frontend:
 - DEV: `/srv/college-dev`, frontend `http://192.168.34.104:5174`, API `http://192.168.34.104:8001/api`, PostgreSQL `5433`;
 - PROD: `/home/andale/college_portal`, frontend `http://192.168.34.104:5173`, API `http://192.168.34.104:8080/api`, PostgreSQL `5432`;
 - Windows development: `C:\!Projects\CollegePortal`; дополнительные worktree только внутри `C:\!Projects\CollegePortal\.worktrees\<branch>`;
-- тестовые пользователи DEV описаны в `docs/TEST_USERS.md`; текущий DEV smoke пароль: `test1234`.
+- учетные записи DEV описаны в `docs/TEST_USERS.md`: один набор на роль, домен `@local`, пароль из `DEMO_USER_PASSWORD`.
 - активный стенд UAT-002 для проверки Admissions Foundation и role-based меню: `http://192.168.34.114:5174`; рабочий стенд с ранее проверенным QR-пропуском: `https://192.168.34.104:5443`.
 
 Окружения на Ubuntu:

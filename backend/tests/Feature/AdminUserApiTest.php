@@ -2,13 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\Group;
 use App\Models\Permission;
 use App\Models\Person;
 use App\Models\Teacher;
 use App\Models\AuditLog;
 use App\Models\Role;
 use App\Models\User;
-use Database\Seeders\UatUserSeeder;
+use Database\Seeders\PortalUserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -226,30 +227,57 @@ class AdminUserApiTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_uat_user_seeder_creates_demo_users_outside_production(): void
+    public function test_portal_user_seeder_creates_one_account_per_role_outside_production(): void
     {
-        Role::create(['name' => 'Администратор', 'code' => 'admin']);
-        Role::create(['name' => 'Директор', 'code' => 'director']);
-        Role::create(['name' => 'Заместитель директора', 'code' => 'deputy']);
-        Role::create(['name' => 'Учебная часть', 'code' => 'study']);
-        Role::create(['name' => 'Приемная комиссия', 'code' => 'admission']);
-        Role::create(['name' => 'Преподаватель', 'code' => 'teacher']);
-        Role::create(['name' => 'Студент', 'code' => 'student']);
-        Role::create(['name' => 'Сотрудник проходной', 'code' => 'security']);
+        foreach (PortalUserSeeder::accounts() as $account) {
+            Role::create(['name' => $account['name'], 'code' => $account['role']]);
+        }
 
-        $this->seed(UatUserSeeder::class);
+        Group::create(['name' => 'ТЕСТ-11', 'specialty' => 'Тестовая', 'course' => 1, 'year_start' => 2026]);
 
-        $this->assertDatabaseHas('users', ['email' => 'director.uat@college-portal.local']);
-        $this->assertTrue(Hash::check('demo12345', User::where('email', 'student1.uat@college-portal.local')->firstOrFail()->password));
+        $this->seed(PortalUserSeeder::class);
 
-        $teacherUser = User::where('email', 'teacher1.uat@college-portal.local')->firstOrFail();
-        $this->assertNotNull($teacherUser->person_id, 'UAT teacher must be linked to a Person');
-        $this->assertNotNull($teacherUser->teacher()->first(), 'UAT teacher must be linked to a Teacher profile');
+        // Приставки UAT в адресе больше нет, и пароль у всех ролей один: на стенде
+        // раньше жили два набора учетных записей с разными паролями сразу.
+        $this->assertDatabaseHas('users', ['email' => 'director@local', 'username' => 'director']);
+        $this->assertDatabaseHas('users', ['email' => 'study.records@local']);
+        $this->assertDatabaseHas('users', ['email' => 'hr@local']);
+        $this->assertDatabaseMissing('users', ['email' => 'director.uat@college-portal.local']);
+        $this->assertTrue(Hash::check('test1234', User::where('email', 'student@local')->firstOrFail()->password));
+        $this->assertTrue(Hash::check('test1234', User::where('email', 'director@local')->firstOrFail()->password));
 
-        $studentUser = User::where('email', 'student1.uat@college-portal.local')->firstOrFail();
-        $this->assertNotNull($studentUser->person_id, 'UAT student must be linked to a Person');
+        $teacherUser = User::where('email', 'teacher@local')->firstOrFail();
+        $this->assertNotNull($teacherUser->person_id, 'Учетная запись преподавателя должна быть связана с Person');
+        $this->assertNotNull($teacherUser->teacher()->first(), 'Учетная запись преподавателя должна быть связана с Teacher');
+
+        $studentUser = User::where('email', 'student@local')->firstOrFail();
+        $this->assertNotNull($studentUser->person_id, 'Учетная запись студента должна быть связана с Person');
         $student = $studentUser->student()->first();
-        $this->assertNotNull($student, 'UAT student must be linked to a Student profile');
-        $this->assertNotNull($student->group_id, 'UAT student must belong to a group');
+        $this->assertNotNull($student, 'Учетная запись студента должна быть связана со Student');
+        $this->assertNotNull($student->group_id, 'Студент стенда должен состоять в группе');
+    }
+
+    /**
+     * Имя, заполненное демо-данными, сидер перезаписывать не должен: teacher@local
+     * и student@local получают там настоящие ФИО вместе с расписанием и журналом.
+     */
+    public function test_portal_user_seeder_keeps_existing_names(): void
+    {
+        foreach (PortalUserSeeder::accounts() as $account) {
+            Role::create(['name' => $account['name'], 'code' => $account['role']]);
+        }
+
+        User::create([
+            'email' => 'teacher@local',
+            'name' => 'Смирнова Елена Викторовна',
+            'password' => Hash::make('old-password'),
+            'is_active' => true,
+        ]);
+
+        $this->seed(PortalUserSeeder::class);
+
+        $user = User::where('email', 'teacher@local')->firstOrFail();
+        $this->assertSame('Смирнова Елена Викторовна', $user->name);
+        $this->assertTrue(Hash::check('test1234', $user->password));
     }
 }

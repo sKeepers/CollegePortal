@@ -17,6 +17,13 @@ use LogicException;
 
 class AccountProvisioningService
 {
+    /**
+     * Служебный домен для тех, у кого своей почты нет. Раньше их было три сразу:
+     * college-portal.local, collegeportal.local и accounts.collegeportal.local —
+     * человек не мог продиктовать адрес и не понимал, какой из них его.
+     */
+    public const SERVICE_DOMAIN = 'local';
+
     public function __construct(private readonly DigitalIdentityService $digitalIdentities)
     {
     }
@@ -46,7 +53,7 @@ class AccountProvisioningService
             }
 
             $username = $this->username($profile, $person);
-            $email = $profile->email ?: $person->email ?: "{$username}@accounts.collegeportal.local";
+            $email = $profile->email ?: $person->email ?: "{$username}@".self::SERVICE_DOMAIN;
             $role = Role::query()->where('code', $roleCode)->firstOrFail();
             $password = (string) random_int(10000, 99999);
             $name = trim("{$person->last_name} {$person->first_name} {$person->middle_name}");
@@ -118,8 +125,8 @@ class AccountProvisioningService
     /**
      * Логин — это телефон в едином написании, а если телефона нет, то фамилия
      * с инициалами латиницей: ivanov.ds. Email логином не делаем: у студентов
-     * его обычно нет, а служебный адрес @accounts.collegeportal.local человек
-     * не запомнит и все равно не сможет им пользоваться.
+     * его обычно нет, а служебный адрес человек не запомнит и все равно
+     * не сможет им пользоваться.
      */
     private function username(Model $profile, Person $person): string
     {
@@ -192,7 +199,7 @@ class AccountProvisioningService
             return $email;
         }
 
-        [$local, $domain] = array_pad(explode('@', $email, 2), 2, 'accounts.collegeportal.local');
+        [$local, $domain] = array_pad(explode('@', $email, 2), 2, self::SERVICE_DOMAIN);
         $suffix = 2;
         do {
             $candidate = "{$local}+{$suffix}@{$domain}";

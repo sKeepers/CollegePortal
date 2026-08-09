@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Role;
 use App\Models\User;
+use Database\Seeders\PortalUserSeeder;
 use Database\Seeders\RoleSeeder;
-use Database\Seeders\UatUserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -70,16 +70,17 @@ class AdminRoleApiTest extends TestCase
         $this->assertDatabaseHas('role_user', ['user_id' => $user->id, 'role_id' => $extra->id, 'is_primary' => true]);
     }
 
-    public function test_seeders_create_required_uat_roles_and_assignments(): void
+    public function test_seeders_create_required_roles_and_assignments(): void
     {
         $this->seed(RoleSeeder::class);
-        $this->seed(UatUserSeeder::class);
+        $this->seed(PortalUserSeeder::class);
 
-        foreach (['admin', 'director', 'deputy', 'study', 'admission', 'teacher', 'student', 'security'] as $code) {
+        foreach (['admin', 'director', 'deputy', 'study', 'study_records', 'admission', 'hr', 'teacher', 'student', 'security'] as $code) {
             $this->assertDatabaseHas('roles', ['code' => $code]);
+            $this->assertDatabaseHas('users', ['role_id' => Role::where('code', $code)->value('id')]);
         }
 
-        $security = User::where('email', 'security.uat@college-portal.local')->firstOrFail();
+        $security = User::where('email', 'security@local')->firstOrFail();
         $this->assertTrue($security->roles()->where('code', 'security')->exists());
         $this->assertSame('security', $security->role()->first()?->code);
     }

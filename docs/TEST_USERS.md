@@ -1,14 +1,16 @@
-# Тестовые пользователи DEV
+# Учетные записи стенда DEV
 
 ## Назначение
 
-Эти учетные записи предназначены только для проверки DEV-стенда CollegePortal.
+Эти учетные записи предназначены только для проверки и демонстрации DEV-стенда CollegePortal.
 
 DEV URL:
 
 ```text
 https://192.168.34.114:5443/login
 ```
+
+Снаружи тот же стенд открывается по адресу `https://84.54.208.134:5443/login`.
 
 Порт `5174` — только локальный диагностический порт Vite на самом DEV-сервере, снаружи он не опубликован и по HTTPS не отвечает.
 
@@ -18,61 +20,68 @@ https://192.168.34.114:5443/login
 https://192.168.34.114:5443/access/mobile-scanner
 ```
 
-## Обычные smoke-пользователи
+## Один набор на роль
 
-| Роль | Логин |
-| --- | --- |
-| Администратор | `admin@college-portal.local` |
-| Приемная комиссия | `admission@college-portal.local` |
-| Преподаватель | `teacher@college-portal.local` |
-| Студент | `student@college-portal.local` |
+До 10.08.2026 наборов было два: смоук-пользователи `admin@college-portal.local` с одним паролем
+и параллельный набор `admin.uat@college-portal.local` с другим. Роль директора существовала дважды,
+и перед входом приходилось вспоминать, какая из двух учетных записей сейчас нужна.
+Теперь набор один: приставки UAT нет, домен `@local`, пароль общий.
 
-Пароль для DEV smoke:
+| Роль | Email | Логин | Кто это на стенде |
+| --- | --- | --- | --- |
+| Администратор | `admin@local` | `admin` | служебная |
+| Директор | `director@local` | `director` | названный сотрудник |
+| Заместитель директора | `deputy@local` | `deputy` | служебная |
+| Учебная часть 1 (расписание, нагрузка) | `study@local` | `study` | служебная |
+| Учебная часть 2 (контингент, журнал) | `study.records@local` | `study.records` | названный сотрудник |
+| Приемная комиссия | `admission@local` | `admission` | служебная |
+| Отдел кадров | `hr@local` | `hr` | названный сотрудник |
+| Преподаватель | `teacher@local` | `teacher` | демонстрационный преподаватель с расписанием и журналом |
+| Студент | `student@local` | `student` | демонстрационный студент с группой и оценками |
+| Сотрудник проходной | `security@local` | `security` | названный сотрудник |
 
-```text
-test1234
+Войти можно и по email, и по логину: `AuthController` принимает оба, а для учетных записей,
+выданных автоматически, — еще и телефон.
+
+Пароль задается переменной `DEMO_USER_PASSWORD` в `backend/.env` стенда и в документацию не выносится.
+Значение по умолчанию для чистой установки — `test1234`, действующее значение стенда лежит в `.local/`.
+
+## Как набор создается заново
+
+```bash
+php artisan db:seed --class=Database\\Seeders\\PortalUserSeeder
 ```
 
-## UAT-пользователи по ролям
+Сидер создает недостающие роли, выравнивает пароль и не трогает уже заполненные ФИО.
+На стенде, где остались исторические адреса, их сначала сводят в один набор:
 
-Эти учетные записи предназначены для сквозной проверки сценариев под разными ролями.
-Они отличаются от обычных smoke-пользователей выше.
-
-| Роль | Логин |
-| --- | --- |
-| Администратор UAT | `admin.uat@college-portal.local` |
-| Директор UAT | `director.uat@college-portal.local` |
-| Заместитель директора UAT | `deputy.uat@college-portal.local` |
-| Учебная часть UAT | `study.uat@college-portal.local` |
-| Приемная комиссия UAT | `admission.uat@college-portal.local` |
-| Преподаватель UAT | `teacher1.uat@college-portal.local` |
-| Студент UAT | `student1.uat@college-portal.local` |
-| Сотрудник проходной UAT | `security.uat@college-portal.local` |
-
-Пароль для UAT-пользователей DEV:
-
-```text
-demo12345
+```bash
+php artisan portal:merge-accounts          # план
+php artisan portal:merge-accounts --apply  # применение
 ```
 
-Например, для входа как директор UAT используйте логин
-`director.uat@college-portal.local` и пароль из этого раздела. Пароль `test1234`
-для этой учетной записи не подходит.
+Учетные записи названных сотрудников заводятся отдельной командой `portal:staff-account`,
+которая создает Person, карточку кадров, учетную запись с ролью и личный QR-пропуск.
+Список конкретных людей с ФИО и телефонами лежит вне репозитория, в `.local/ops/`.
 
 ## Ограничения
 
 - Использовать только на DEV.
-- Не использовать в PROD.
-- Перед production deployment пароль должен быть заменен или учетные записи должны быть отключены.
-- Реальные учетные записи студентов, сотрудников и администрации не должны использоваться для smoke-тестов.
+- Не использовать в PROD: `PortalUserSeeder` в окружении `production` ничего не создает.
+- Перед production deployment пароль должен быть заменен или учетные записи отключены.
+- Реальные учетные записи студентов и сотрудников не должны использоваться для smoke-тестов.
 
-## UAT-002 smoke routes
+## Smoke routes по ролям
 
 | Роль | Проверяемые страницы |
 | --- | --- |
 | Администратор | `/dashboard`, `/admissions/foundation`, `/identity/digital-passes`, `/access/gate`, `/access/mobile-scanner`, `/access/reports` |
+| Директор | `/dashboard`, `/students`, `/schedule`, `/journal`, `/access/reports` |
+| Отдел кадров | `/dashboard`, `/hr/employees`, `/hr/calendar` |
+| Учебная часть 2 | `/dashboard`, `/students`, `/groups`, `/journal`, `/graduation` |
 | Приемная комиссия | `/dashboard`, `/admissions/foundation` |
-| Преподаватель | `/dashboard`, `/identity/my-pass` |
+| Проходная | `/dashboard`, `/access/gate`, `/access/mobile-scanner`, `/access/reports` |
+| Преподаватель | `/dashboard`, `/journal`, `/identity/my-pass` |
 | Студент | `/dashboard`, `/identity/my-pass`, `/m/student/pass` |
 
 Обычные `teacher` и `student` не должны видеть административные страницы `/identity/digital-passes`, `/access/gate`, `/access/mobile-scanner` и `/access/reports`.

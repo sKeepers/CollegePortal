@@ -44,10 +44,10 @@ class DemoDataSeeder extends Seeder
             $demoPassword = env('DEMO_USER_PASSWORD', 'test1234');
 
             User::updateOrCreate(
-                ['email' => 'admin@college-portal.local'],
+                ['email' => 'admin@local'],
                 [
                     'role_id' => $adminRole->id,
-                    'name' => 'Администратор DEV',
+                    'name' => 'Администратор',
                     'password' => Hash::make($demoPassword),
                     'is_active' => true,
                 ]
@@ -194,7 +194,7 @@ class DemoDataSeeder extends Seeder
         $middleNames = ['Викторовна', 'Андреевич', 'Петровна', 'Сергеевич', 'Павловна', 'Ильич', 'Романовна', 'Олегович', 'Игоревна', 'Михайлович'];
 
         return collect(range(1, self::TEACHER_COUNT))->map(function (int $index) use ($teacherRole, $demoPassword, $lastNames, $firstNames, $middleNames, $hr): Teacher {
-            $email = $index === 1 ? 'teacher@college-portal.local' : sprintf('teacher.demo.%03d@%s', $index, self::DEMO_DOMAIN);
+            $email = $index === 1 ? 'teacher@local' : sprintf('teacher.demo.%03d@%s', $index, self::DEMO_DOMAIN);
             $lastName = $lastNames[($index - 1) % count($lastNames)];
             $firstName = $firstNames[intdiv($index - 1, count($lastNames)) % count($firstNames)];
             $middleName = $middleNames[intdiv($index - 1, count($lastNames) * count($firstNames)) % count($middleNames)];
@@ -265,7 +265,7 @@ class DemoDataSeeder extends Seeder
         $middleNames = ['Сергеевич', 'Павловна', 'Игоревич', 'Олеговна', 'Андреевич', 'Ильинична', 'Романович', 'Денисовна', 'Петрович', 'Алексеевна'];
 
         return collect(range(1, self::STUDENT_COUNT))->map(function (int $index) use ($studentRole, $demoPassword, $groups, $lastNames, $firstNames, $middleNames): Student {
-            $email = $index === 1 ? 'student@college-portal.local' : sprintf('student.demo.%03d@%s', $index, self::DEMO_DOMAIN);
+            $email = $index === 1 ? 'student@local' : sprintf('student.demo.%03d@%s', $index, self::DEMO_DOMAIN);
             $lastName = $lastNames[($index - 1) % count($lastNames)];
             $firstName = $firstNames[intdiv($index - 1, count($lastNames)) % count($firstNames)];
             $middleName = $middleNames[intdiv($index - 1, count($lastNames) * count($firstNames)) % count($middleNames)];

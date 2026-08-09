@@ -19,7 +19,11 @@ class DatabaseSeeder extends Seeder
             ReferenceDataSeeder::class,
             AdmissionReferenceSeeder::class,
             DemoDataSeeder::class,
-            UatUserSeeder::class,
+            // Идет после демо-данных: DemoDataSeeder дает teacher@local и
+            // student@local настоящие ФИО с расписанием и журналом, а
+            // PortalUserSeeder только досоздает недостающие роли и выравнивает
+            // пароль, не трогая уже заполненные имена.
+            PortalUserSeeder::class,
         ]);
     }
 }

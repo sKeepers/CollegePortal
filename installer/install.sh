@@ -87,7 +87,7 @@ write_env() {
   domain=$(ask "Domain or IP" "$(hostname -I | awk '{print $1}')")
   https_mode=$(ask "HTTPS mode (http/existing-cert/letsencrypt/self-signed)" "http")
   college_name=$(ask "College short name" "CollegePortal")
-  admin_email=$(ask "First admin email" "admin@college-portal.local")
+  admin_email=$(ask "First admin email" "admin@local")
   admin_password=$(secret "First admin password (min 10 chars)")
   [[ ${#admin_password} -ge 10 ]] || fail "Admin password must be at least 10 characters."
   db_password=$(secret "PostgreSQL password (leave empty to generate)")

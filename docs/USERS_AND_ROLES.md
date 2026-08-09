@@ -60,8 +60,10 @@
 - `admin` — полный доступ;
 - `director` — директор, просмотр отчетов;
 - `deputy` — заместитель директора, контроль учебного процесса и отчетов;
-- `study` — учебная часть, справочники, расписание и журнал;
+- `study` — учебная часть 1: расписание, замены, нагрузка и учебные планы;
+- `study_records` — учебная часть 2: контингент, журнал успеваемости, посещаемость и выпуск;
 - `admission` — приемная комиссия, абитуриенты и отчеты;
+- `hr` — отдел кадров: сотрудники, подразделения, должности, кадровый календарь;
 - `teacher` — журнал и личные данные;
 - `student` — личные данные;
 - `security` — проходная и отчеты по проходам.
@@ -70,26 +72,60 @@ Legacy-роли `academic_office` и `curator` сохраняются для с�
 
 На этапе CORE-001A роли в интерфейсе считаются подготовительной основой. Сложные сценарии RBAC пока не внедряются.
 
-## Demo-пользователи UAT
+## Служебные учетные записи стенда
 
-Seeder `UatUserSeeder` создает demo-пользователей только вне production.
+Seeder `PortalUserSeeder` создает по одной учетной записи на роль и только вне production.
 
-Пароль для всех demo-пользователей: `demo12345`.
+До 10.08.2026 наборов было два — с приставкой UAT и без нее, с разными паролями,
+поэтому одна и та же роль существовала дважды. Теперь набор один, домен один, пароль один.
 
-| Назначение | Email | Роль |
+Пароль задается переменной `DEMO_USER_PASSWORD`, по умолчанию `test1234`.
+
+| Роль | Email | Логин |
 |---|---|---|
-| admin | `admin.uat@college-portal.local` | admin |
-| director | `director.uat@college-portal.local` | director |
-| deputy | `deputy.uat@college-portal.local` | deputy |
-| study | `study.uat@college-portal.local` | study |
-| admission | `admission.uat@college-portal.local` | admission |
-| teacher1 | `teacher1.uat@college-portal.local` | teacher |
-| student1 | `student1.uat@college-portal.local` | student |
-| security | `security.uat@college-portal.local` | security |
+| admin | `admin@local` | `admin` |
+| director | `director@local` | `director` |
+| deputy | `deputy@local` | `deputy` |
+| study | `study@local` | `study` |
+| study_records | `study.records@local` | `study.records` |
+| admission | `admission@local` | `admission` |
+| hr | `hr@local` | `hr` |
+| teacher | `teacher@local` | `teacher` |
+| student | `student@local` | `student` |
+| security | `security@local` | `security` |
+
+Имя существующей учетной записи сидер не перезаписывает: `teacher@local` и `student@local`
+получают в `DemoDataSeeder` настоящие демонстрационные ФИО вместе с расписанием и журналом,
+а на стенде колледжа роли директора, кадров, учебной части 2 и проходной ведут названные сотрудники.
+
+Свести исторические адреса к этому набору на уже работающем стенде:
+
+```bash
+php artisan portal:merge-accounts          # показать план
+php artisan portal:merge-accounts --apply  # применить
+```
+
+Команда оставляет ту учетную запись, у которой есть профиль и Person, переносит на нее
+связи, удаляет дубли и приводит адрес к виду `<роль>@local`.
+
+## Учетная запись сотрудника с карточкой кадров
+
+`portal:staff-account` заводит контур целиком: Person, карточку сотрудника, учетную запись
+с нужной ролью и личный QR-пропуск. Персональные данные аргументами, в репозитории их нет.
+
+```bash
+php artisan portal:staff-account \
+  --email=director@local --role=director \
+  --last-name=Фамилия --first-name=Имя --middle-name=Отчество \
+  --phone=+70000000000 --position=Директор --password='...'
+```
+
+Повторный вызов не выпускает новый QR: уже распечатанный пропуск не должен переставать работать.
 
 ## Production-защита
 
-`UatUserSeeder` проверяет окружение приложения. В `production` demo-пользователи не создаются и существующие учетные записи не изменяются.
+`PortalUserSeeder` проверяет окружение приложения. В `production` служебные учетные записи
+не создаются и существующие не изменяются.
 
 ## API
 

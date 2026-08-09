@@ -29,6 +29,13 @@
         <server name="APP_ENV" value="testing"/>
         <server name="APP_MAINTENANCE_DRIVER" value="file"/>
         <server name="BCRYPT_ROUNDS" value="4"/>
+        <!--
+            Пароль служебных учетных записей закреплен здесь, потому что тесты
+            сверяют его значением. Без этого прогон зависел от `.env` стенда:
+            стоило задать на DEV собственный пароль, и три теста падали
+            «Failed asserting that false is true» без связи с правкой.
+        -->
+        <server name="DEMO_USER_PASSWORD" value="test1234"/>
         <server name="BROADCAST_CONNECTION" value="null"/>
         <server name="CACHE_STORE" value="array"/>
         <server name="DB_CONNECTION" value="sqlite"/>

@@ -122,7 +122,8 @@ class HrService
         $teacher->save();
     }
 
-    private function nextEmployeeNumber(): string
+    /** Публичный, потому что тем же правилом нумерует консольное заведение сотрудника. */
+    public function nextEmployeeNumber(): string
     {
         $next = ((int) Employee::query()->max('id')) + 1;
 

@@ -4,7 +4,7 @@ set -euo pipefail
 DEV_DIR="/srv/college-dev"
 DEV_FRONTEND_URL="http://127.0.0.1:5174/dashboard"
 DEV_API_URL="http://127.0.0.1:8001/api"
-ADMIN_EMAIL="admin@college-portal.local"
+ADMIN_EMAIL="admin@local"
 ADMIN_PASSWORD="password"
 
 log() {

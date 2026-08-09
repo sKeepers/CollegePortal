@@ -20,7 +20,7 @@ class UatApiTest extends TestCase
     {
         Storage::fake('local');
         $manager = $this->userWithPermissions('study', ['uat.manage']);
-        $tester = User::factory()->create(['email' => 'study.uat@college-portal.local', 'is_active' => true]);
+        $tester = User::factory()->create(['email' => 'study@local', 'is_active' => true]);
 
         $runId = $this->withApiAuth($manager)->postJson('/api/admin/uat/runs', [
             'title' => 'UAT учебная часть',

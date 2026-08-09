@@ -72,14 +72,16 @@ class UatScenarioService
     public function uatAccounts(): array
     {
         return [
-            ['email' => 'admin.uat@college-portal.local', 'role' => 'admin'],
-            ['email' => 'director.uat@college-portal.local', 'role' => 'director'],
-            ['email' => 'deputy.uat@college-portal.local', 'role' => 'deputy'],
-            ['email' => 'study.uat@college-portal.local', 'role' => 'study'],
-            ['email' => 'admission.uat@college-portal.local', 'role' => 'admission'],
-            ['email' => 'teacher1.uat@college-portal.local', 'role' => 'teacher'],
-            ['email' => 'student1.uat@college-portal.local', 'role' => 'student'],
-            ['email' => 'security.uat@college-portal.local', 'role' => 'security'],
+            ['email' => 'admin@local', 'role' => 'admin'],
+            ['email' => 'director@local', 'role' => 'director'],
+            ['email' => 'deputy@local', 'role' => 'deputy'],
+            ['email' => 'study@local', 'role' => 'study'],
+            ['email' => 'study.records@local', 'role' => 'study_records'],
+            ['email' => 'admission@local', 'role' => 'admission'],
+            ['email' => 'hr@local', 'role' => 'hr'],
+            ['email' => 'teacher@local', 'role' => 'teacher'],
+            ['email' => 'student@local', 'role' => 'student'],
+            ['email' => 'security@local', 'role' => 'security'],
         ];
     }
 
