@@ -18,6 +18,14 @@
         </include>
     </source>
     <php>
+        <!--
+            Набор давно шёл впритык: пик около 120 МБ при стандартном лимите 128 МБ,
+            и очередной добавленный тест ронял прогон целиком с «Allowed memory size
+            exhausted» — сообщением, по которому не видно, что дело не в правке.
+            Лимит задан здесь, а не флагом: `artisan test` запускает phpunit отдельным
+            процессом и `php -d memory_limit=...` до него не доходит.
+        -->
+        <ini name="memory_limit" value="512M"/>
         <server name="APP_ENV" value="testing"/>
         <server name="APP_MAINTENANCE_DRIVER" value="file"/>
         <server name="BCRYPT_ROUNDS" value="4"/>
