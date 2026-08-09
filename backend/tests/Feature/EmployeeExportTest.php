@@ -36,7 +36,7 @@ class EmployeeExportTest extends TestCase
         // BOM, иначе Excel открывает кириллицу набором символов.
         $this->assertStringStartsWith("\xEF\xBB\xBF", $csv);
         // fputcsv берет в кавычки поля с пробелами — это корректный CSV.
-        $this->assertStringContainsString('"Табельный номер";Фамилия;Имя;Отчество;Email;Телефон;Подразделение;Должность;"Дата приема";Статус;Занятость;Ставка;Преподаватель;"Рабочий график";"Создать учетную запись"', $csv);
+        $this->assertStringContainsString('"Табельный номер";Фамилия;Имя;Отчество;"Дата рождения";СНИЛС;Email;Телефон;Подразделение;Должность;"Дата приема";Статус;Занятость;Ставка;Преподаватель;"Рабочий график";"Создать учетную запись"', $csv);
         $this->assertStringContainsString('0042;Альгашова;Мария', $csv);
         $this->assertStringContainsString('"Учебная часть";Методист', $csv);
     }

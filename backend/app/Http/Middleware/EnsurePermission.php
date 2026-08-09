@@ -97,46 +97,66 @@ class EnsurePermission
         return in_array($method, ['GET', 'HEAD'], true) ? 'journal.view' : 'journal.edit';
     }
 
+    /**
+     * Префикс URL — требуемое право по методу: [чтение, создание, изменение, удаление].
+     *
+     * Таблица вынесена в константу, чтобы её полноту можно было проверить тестом:
+     * маршрут, префикс которого сюда не попал, молча получает reference.manage
+     * (см. domainPermission ниже) — законный пользователь получает необъяснимое
+     * «нет прав», а посторонний с reference.manage проходит. Это задача ARCH-001.
+     */
+    public const DOMAIN_RULES = [
+        'api/admin/reference' => ['reference.manage', 'reference.manage', 'reference.manage', 'reference.manage'],
+        'api/admin/import' => ['import.manage', 'import.manage', 'import.manage', 'import.manage'],
+        'api/admin/demo-data' => ['import.manage', 'import.manage', 'import.manage', 'import.manage'],
+        'api/people' => ['people.view', 'people.create', 'people.update', 'people.merge'],
+        'api/person-photos/student' => ['students.view', 'students.update', 'students.update', 'students.update'],
+        'api/person-photos/teacher' => ['teachers.view', 'teachers.update', 'teachers.update', 'teachers.update'],
+        // Контроллер принимает тип graduates, а здесь до 09.08.2026 стояло alumni:
+        // совпадения не было, и фото выпускника требовало reference.manage вместо
+        // graduation.edit. Роль «Учебная часть 2» получала отказ на своей же карточке.
+        'api/person-photos/graduates' => ['graduation.view', 'graduation.edit', 'graduation.edit', 'graduation.edit'],
+        'api/access/scan' => ['gate.scan', 'gate.scan', 'gate.scan', 'gate.scan'],
+        'api/access/events' => ['gate.reports', 'gate.reports', 'gate.reports', 'gate.reports'],
+        'api/access/reports' => ['gate.reports', 'gate.reports', 'gate.reports', 'gate.reports'],
+        // Список эвакуации читают все, кто и так видит отчеты проходной;
+        // справочник корпусов и точек правит только тот, кто им владеет.
+        'api/access/muster' => ['gate.reports', 'gate.reports', 'gate.reports', 'gate.reports'],
+        'api/access/buildings' => ['gate.reports', 'gate.points.manage', 'gate.points.manage', 'gate.points.manage'],
+        'api/access/points' => ['gate.reports', 'gate.points.manage', 'gate.points.manage', 'gate.points.manage'],
+        'api/digital-identities' => ['digitalpasses.manage', 'digitalpasses.manage', 'digitalpasses.manage', 'digitalpasses.manage'],
+        // Массовые операции проверяют право на каждое действие сами
+        // (AdmissionBulkController::authorizeAction, StudentBulkController тоже),
+        // поэтому на входе достаточно права просмотра: иначе директор с
+        // admissions.bulk_export не смог бы выгрузить выборку, которую видит.
+        'api/admissions/bulk' => ['admissions.view', 'admissions.view', 'admissions.view', 'admissions.view'],
+        'api/applicant-applications/bulk' => ['admissions.view', 'admissions.view', 'admissions.view', 'admissions.view'],
+        'api/applicant-applications' => ['admissions.view', 'admissions.edit', 'admissions.edit', 'admissions.edit'],
+        'api/admissions' => ['admissions.view', 'admissions.edit', 'admissions.edit', 'admissions.edit'],
+        'api/curriculum-items' => ['curricula.view', 'curricula.edit', 'curricula.edit', 'curricula.edit'],
+        'api/curriculum-subjects' => ['curricula.subjects.view', 'curricula.subjects.create', 'curricula.subjects.update', 'curricula.subjects.delete'],
+        'api/curricula' => ['curricula.view', 'curricula.edit', 'curricula.edit', 'curricula.edit'],
+        'api/education-programs' => ['reference.manage', 'reference.manage', 'reference.manage', 'reference.manage'],
+        'api/exam-results' => ['exams.view', 'exams.edit', 'exams.edit', 'exams.edit'],
+        'api/exams' => ['exams.view', 'exams.edit', 'exams.edit', 'exams.edit'],
+        'api/frdo-packages' => ['frdo.view', 'frdo.export', 'frdo.export', 'frdo.export'],
+        'api/fis/outbound' => ['fis.outbound.view', 'fis.outbound.create', 'fis.outbound.generate', 'fis.outbound.generate'],
+        'api/fis-packages' => ['fis.view', 'fis.export', 'fis.export', 'fis.export'],
+        'api/groups' => ['groups.view', 'groups.create', 'groups.update', 'groups.delete'],
+        'api/graduates' => ['graduation.view', 'graduation.edit', 'graduation.edit', 'graduation.edit'],
+        'api/specialties' => ['reference.manage', 'reference.manage', 'reference.manage', 'reference.manage'],
+        'api/students' => ['students.view', 'students.create', 'students.update', 'students.delete'],
+        'api/subjects' => ['subjects.view', 'subjects.create', 'subjects.update', 'subjects.delete'],
+        'api/teaching-load-items' => ['teachingload.view', 'teachingload.edit', 'teachingload.edit', 'teachingload.edit'],
+        'api/teaching-loads' => ['teachingload.view', 'teachingload.edit', 'teachingload.edit', 'teachingload.edit'],
+        'api/teaching-load' => ['teachingload.view', 'teaching_load.generate', 'teaching_load.assign', 'teaching_load.assign'],
+        'api/teachers' => ['teachers.view', 'teachers.create', 'teachers.update', 'teachers.delete'],
+        'api/classrooms' => ['classrooms.view', 'classrooms.create', 'classrooms.update', 'classrooms.delete'],
+    ];
+
     private function domainPermission(string $path, string $method): string
     {
-        $rules = [
-            'api/admin/reference' => ['reference.manage', 'reference.manage', 'reference.manage', 'reference.manage'],
-            'api/admin/import' => ['import.manage', 'import.manage', 'import.manage', 'import.manage'],
-            'api/admin/demo-data' => ['import.manage', 'import.manage', 'import.manage', 'import.manage'],
-            'api/people' => ['people.view', 'people.create', 'people.update', 'people.merge'],
-            'api/person-photos/student' => ['students.view', 'students.update', 'students.update', 'students.update'],
-            'api/person-photos/teacher' => ['teachers.view', 'teachers.update', 'teachers.update', 'teachers.update'],
-            'api/person-photos/alumni' => ['graduation.view', 'graduation.edit', 'graduation.edit', 'graduation.edit'],
-            'api/access/scan' => ['gate.scan', 'gate.scan', 'gate.scan', 'gate.scan'],
-            'api/access/events' => ['gate.reports', 'gate.reports', 'gate.reports', 'gate.reports'],
-            'api/access/reports' => ['gate.reports', 'gate.reports', 'gate.reports', 'gate.reports'],
-            // Список эвакуации читают все, кто и так видит отчеты проходной;
-            // справочник корпусов и точек правит только тот, кто им владеет.
-            'api/access/muster' => ['gate.reports', 'gate.reports', 'gate.reports', 'gate.reports'],
-            'api/access/buildings' => ['gate.reports', 'gate.points.manage', 'gate.points.manage', 'gate.points.manage'],
-            'api/access/points' => ['gate.reports', 'gate.points.manage', 'gate.points.manage', 'gate.points.manage'],
-            'api/digital-identities' => ['digitalpasses.manage', 'digitalpasses.manage', 'digitalpasses.manage', 'digitalpasses.manage'],
-            'api/applicant-applications' => ['admissions.view', 'admissions.edit', 'admissions.edit', 'admissions.edit'],
-            'api/curriculum-items' => ['curricula.view', 'curricula.edit', 'curricula.edit', 'curricula.edit'],
-            'api/curricula' => ['curricula.view', 'curricula.edit', 'curricula.edit', 'curricula.edit'],
-            'api/education-programs' => ['reference.manage', 'reference.manage', 'reference.manage', 'reference.manage'],
-            'api/exam-results' => ['exams.view', 'exams.edit', 'exams.edit', 'exams.edit'],
-            'api/exams' => ['exams.view', 'exams.edit', 'exams.edit', 'exams.edit'],
-            'api/frdo-packages' => ['frdo.view', 'frdo.export', 'frdo.export', 'frdo.export'],
-            'api/fis/outbound' => ['fis.outbound.view', 'fis.outbound.create', 'fis.outbound.generate', 'fis.outbound.generate'],
-            'api/fis-packages' => ['fis.view', 'fis.export', 'fis.export', 'fis.export'],
-            'api/groups' => ['groups.view', 'groups.create', 'groups.update', 'groups.delete'],
-            'api/graduates' => ['graduation.view', 'graduation.edit', 'graduation.edit', 'graduation.edit'],
-            'api/specialties' => ['reference.manage', 'reference.manage', 'reference.manage', 'reference.manage'],
-            'api/students' => ['students.view', 'students.create', 'students.update', 'students.delete'],
-            'api/subjects' => ['subjects.view', 'subjects.create', 'subjects.update', 'subjects.delete'],
-            'api/teaching-load-items' => ['teachingload.view', 'teachingload.edit', 'teachingload.edit', 'teachingload.edit'],
-            'api/teaching-loads' => ['teachingload.view', 'teachingload.edit', 'teachingload.edit', 'teachingload.edit'],
-            'api/teachers' => ['teachers.view', 'teachers.create', 'teachers.update', 'teachers.delete'],
-            'api/classrooms' => ['classrooms.view', 'classrooms.create', 'classrooms.update', 'classrooms.delete'],
-        ];
-
-        foreach ($rules as $prefix => $permissions) {
+        foreach (self::DOMAIN_RULES as $prefix => $permissions) {
             if (str_starts_with($path, $prefix)) {
                 return $this->methodPermission($method, $path, $permissions);
             }

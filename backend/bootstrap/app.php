@@ -19,6 +19,27 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.token' => AuthenticateApiToken::class,
             'permission' => EnsurePermission::class,
         ]);
+
+        // Без этого за обратным прокси $request->ip() возвращает адрес прокси, а
+        // не человека: на DEV журнал аудита писал 172.18.0.4 для трёх запросов из
+        // четырёх, и ограничитель входа считал попытки всего портала как с одного
+        // адреса. На PROD nginx ходит в backend через fastcgi и адрес пока верный —
+        // до дня, когда перед ним появится ещё один прокси.
+        //
+        // Доверяем не всем: заголовку X-Forwarded-For можно верить только от того,
+        // кто его ставит. По умолчанию — сеть Docker Compose, где и живёт прокси.
+        // Локальную сеть колледжа сюда включать нельзя: её клиенты ходят напрямую
+        // и смогли бы подменить свой адрес в журнале аудита.
+        $middleware->trustProxies(
+            at: array_values(array_filter(array_map(
+                'trim',
+                explode(',', (string) env('TRUSTED_PROXIES', '127.0.0.1,172.16.0.0/12')),
+            ))),
+            headers: Request::HEADER_X_FORWARDED_FOR
+                | Request::HEADER_X_FORWARDED_HOST
+                | Request::HEADER_X_FORWARDED_PORT
+                | Request::HEADER_X_FORWARDED_PROTO,
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(function (Request $request, Throwable $e): bool {

@@ -72,9 +72,9 @@ class UniversalImportApiTest extends TestCase
         file_put_contents($path, $response->getContent());
         $rows = IOFactory::load($path)->getActiveSheet()->toArray();
 
-        $this->assertSame(['Табельный номер', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон', 'Подразделение', 'Должность', 'Дата приема', 'Статус', 'Занятость', 'Ставка', 'Преподаватель', 'Рабочий график', 'Создать учетную запись'], $rows[0]);
+        $this->assertSame(['Табельный номер', 'Фамилия', 'Имя', 'Отчество', 'Дата рождения', 'СНИЛС', 'Email', 'Телефон', 'Подразделение', 'Должность', 'Дата приема', 'Статус', 'Занятость', 'Ставка', 'Преподаватель', 'Рабочий график', 'Создать учетную запись'], $rows[0]);
         $this->assertSame('Примерова', $rows[1][1]);
-        $this->assertSame('employee@example.test', $rows[1][4]);
+        $this->assertSame('employee@example.test', $rows[1][6]);
     }
 
     public function test_it_imports_employee_xlsx_with_generated_number_and_references(): void

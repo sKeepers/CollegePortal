@@ -21,6 +21,8 @@ class EmployeeController extends Controller {
                  $employee->person?->last_name,
                  $employee->person?->first_name,
                  $employee->person?->middle_name,
+                 $employee->person?->birth_date?->format('Y-m-d'),
+                 $employee->person?->snils,
                  $employee->person?->email,
                  $employee->person?->phone,
                  $employee->primaryDepartment?->name,
