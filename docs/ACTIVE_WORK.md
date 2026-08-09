@@ -12,8 +12,11 @@
 - Рабочая копия: `C:\!Projects\CollegePortal`, ветка `develop`
 - Ствол до работы: `a0ed4f13e DOCS: the FIS blockers were not blockers`
 - Ветка сессии: `feature/fis-xml-official-xsd` — сборка XML по официальной XSD ФИС 4.9
-- DEV checkout: `/home/andale/CollegePortal`; worktree сессии — `.worktrees/fis-xml-official-xsd`, зеркальный локальный worktree с тем же именем.
-- **На DEV изменён `backend/.env`:** `FIS_API_SCHEMA_VERSION` очищен, чтобы приложение брало версию 4.9 из кода. Других изменений DEV нет, PROD не трогался.
+- Ветка влита в `develop` fast-forward после rebase на `440e71872`; HEAD локально и на DEV совпадают: `d1186e643 FEAT: build the FIS package from the official 4.9 XSD`
+- **`origin` не обновлён:** push с DEV в этой сессии выполнить не удалось, работа существует в двух местах — на DEV и в локальной копии. Опубликовать нужно вручную: `ssh andale@192.168.34.114 "cd /home/andale/CollegePortal && git push origin develop"`.
+- **На DEV изменён `backend/.env`:** `FIS_API_SCHEMA_VERSION` очищен, чтобы приложение брало версию 4.9 из кода; прежний файл сохранён как `backend/.env.bak-fis-20260809`. Кэш настроек сброшен, `php artisan fis:spec-info` на живом DEV показывает `4.9` и `xsd_loaded: true`.
+- **На рабочей базе DEV применена миграция `2026_08_09_000003_add_admission_year_to_fis_outbound_packages`.** Резервная копия снята заранее: `backups/pre-fis-xml-20260809.dump`, 474905 байт, SHA-256 `0546e1a1e82c9ac52946dd0047af5ebce2c747445c119d31bd3f914d44c47bd3`.
+- PROD не трогался.
 
 ## Итог сессии 09.08.2026
 
