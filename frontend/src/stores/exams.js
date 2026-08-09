@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
+import { loadReferences } from '../services/referenceLoader'
 
 const initialFilters = { academic_year: '', group_id: '', subject_id: '', teacher_id: '', exam_type: '' }
 export const EXAM_TYPE_OPTIONS = [
@@ -80,10 +81,12 @@ export const useExamsStore = defineStore('exams', () => {
   async function load() {
     loading.value = true; error.value = ''
     try {
-      const [examsPayload, groupsPayload, subjectsPayload, teachersPayload, classroomsPayload, studentsPayload] = await Promise.all([
-        api.list('exams'), api.list('groups'), api.list('subjects'), api.list('teachers'), api.list('classrooms'), api.list('students'),
-      ])
-      exams.value = extractRows(examsPayload); groups.value = extractRows(groupsPayload); subjects.value = extractRows(subjectsPayload); teachers.value = extractRows(teachersPayload); classrooms.value = extractRows(classroomsPayload); students.value = extractRows(studentsPayload)
+      // Экзамены — сам экран, остальное — справочники его форм: преподаватель
+      // без прав на них обязан увидеть расписание ГИА, а не пустой экран.
+      const { payloads } = await loadReferences({
+        exams: api.list('exams'), groups: api.list('groups'), subjects: api.list('subjects'), teachers: api.list('teachers'), classrooms: api.list('classrooms'), students: api.list('students'),
+      })
+      exams.value = extractRows(payloads.exams); groups.value = extractRows(payloads.groups); subjects.value = extractRows(payloads.subjects); teachers.value = extractRows(payloads.teachers); classrooms.value = extractRows(payloads.classrooms); students.value = extractRows(payloads.students)
       if (selectedId.value && !selectedExam.value) selectedId.value = null
     } catch (err) { error.value = err.message || 'Не удалось загрузить экзамены и ГИА' }
     finally { loading.value = false }

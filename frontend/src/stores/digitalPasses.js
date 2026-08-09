@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
+import { loadReferences } from '../services/referenceLoader'
 
 export const ENTITY_OPTIONS = [
   { label: 'Студент', value: 'student' },
@@ -52,16 +53,18 @@ export const useDigitalPassesStore = defineStore('digitalPasses', () => {
     error.value = ''
     try {
       const identitiesParams = options.mine ? { mine: 1, status: options.status || 'active' } : {}
-      const [identitiesPayload, studentsPayload, teachersPayload, employeesPayload] = await Promise.all([
-        api.list('digital-identities', identitiesParams),
-        options.includeOwners === false ? Promise.resolve({ data: [] }) : api.list('students'),
-        options.includeOwners === false ? Promise.resolve({ data: [] }) : api.list('teachers'),
-        options.includeOwners === false ? Promise.resolve({ data: [] }) : api.list('employees'),
-      ])
-      identities.value = extractRows(identitiesPayload)
-      students.value = extractRows(studentsPayload)
-      teachers.value = extractRows(teachersPayload)
-      employees.value = extractRows(employeesPayload)
+      // Пропуска — сам экран, владельцы — справочник для выдачи: охрана без прав
+      // на реестры обязана видеть пропуска, а не пустой экран.
+      const { payloads } = await loadReferences({
+        identities: api.list('digital-identities', identitiesParams),
+        students: options.includeOwners === false ? Promise.resolve({ data: [] }) : api.list('students'),
+        teachers: options.includeOwners === false ? Promise.resolve({ data: [] }) : api.list('teachers'),
+        employees: options.includeOwners === false ? Promise.resolve({ data: [] }) : api.list('employees'),
+      })
+      identities.value = extractRows(payloads.identities)
+      students.value = extractRows(payloads.students)
+      teachers.value = extractRows(payloads.teachers)
+      employees.value = extractRows(payloads.employees)
       if (selectedId.value && !selectedIdentity.value) { selectedId.value = null; qrSvg.value = ''; qrExpiresAt.value = null }
       if (!identities.value.length) { selectedId.value = null; qrSvg.value = ''; qrExpiresAt.value = null }
     } catch (err) {

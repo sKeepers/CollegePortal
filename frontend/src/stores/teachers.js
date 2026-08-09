@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
+import { loadReferences } from '../services/referenceLoader'
 
 const initialFilters = {
   search: '',
@@ -115,16 +116,18 @@ export const useTeachersStore = defineStore('teachers', () => {
     error.value = ''
 
     try {
-      const [teachersPayload, subjectsPayload, lessonsPayload] = await Promise.all([
-        api.list('teachers'),
-        api.list('subjects'),
-        api.list('schedule-lessons'),
-      ])
+      // Преподаватели — сам экран, дисциплины и занятия — его справочники:
+      // кадровик без прав на них обязан увидеть список преподавателей.
+      const { payloads } = await loadReferences({
+        teachers: api.list('teachers'),
+        subjects: api.list('subjects'),
+        lessons: api.list('schedule-lessons'),
+      })
 
-      teachers.value = extractRows(teachersPayload)
-      subjects.value = extractRows(subjectsPayload)
-      scheduleLessons.value = extractRows(lessonsPayload)
-      pagination.value = extractMeta(teachersPayload)
+      teachers.value = extractRows(payloads.teachers)
+      subjects.value = extractRows(payloads.subjects)
+      scheduleLessons.value = extractRows(payloads.lessons)
+      pagination.value = extractMeta(payloads.teachers)
 
       if (selectedId.value && !selectedTeacher.value) {
         selectedId.value = null

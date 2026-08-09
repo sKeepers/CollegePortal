@@ -1,6 +1,7 @@
 import { computed, reactive, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
+import { loadReferences } from '../services/referenceLoader'
 
 function extractRows(payload) {
   return Array.isArray(payload?.data) ? payload.data : []
@@ -110,12 +111,14 @@ export const useAttendanceAnalysisStore = defineStore('attendanceAnalysis', () =
   async function loadOptions() {
     loadingOptions.value = true
     try {
-      const [groupsPayload, teachersPayload] = await Promise.all([
-        api.list('groups'),
-        api.list('teachers'),
-      ])
-      groups.value = extractRows(groupsPayload)
-      teacherOptionsSource.value = extractRows(teachersPayload)
+      // Здесь оба запроса — справочники фильтров. Куратор и охрана прав на них
+      // не имеют, и раньше отказ ронял загрузку экрана целиком.
+      const { payloads } = await loadReferences({
+        groups: api.list('groups'),
+        teachers: api.list('teachers'),
+      })
+      groups.value = extractRows(payloads.groups)
+      teacherOptionsSource.value = extractRows(payloads.teachers)
     } finally {
       loadingOptions.value = false
     }

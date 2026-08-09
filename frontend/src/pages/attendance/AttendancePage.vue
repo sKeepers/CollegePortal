@@ -152,7 +152,9 @@ watch(() => route.query, async (query) => {
 
 onMounted(async () => {
   store.applyQuery(route.query)
-  await store.loadOptions()
+  // Справочники фильтров не должны решать судьбу отчёта: раньше отказ по ним
+  // прерывал onMounted до store.load(), и экран оставался пустым без сообщения.
+  await store.loadOptions().catch(() => {})
   await store.load()
 })
 </script>

@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
+import { loadReferences } from '../services/referenceLoader'
 
 const initialFilters = { search: '', education_program_id: '', specialty_id: '', year_start: '' }
 export const CURRICULUM_STATUS_OPTIONS = [
@@ -85,14 +86,19 @@ export const useCurriculaStore = defineStore('curricula', () => {
   async function load() {
     loading.value = true; error.value = ''
     try {
-      const [curriculaPayload, programsPayload, specialtiesPayload, subjectsPayload, controlTypesPayload] = await Promise.all([
-        api.list('curricula'), api.list('education-programs'), api.list('specialties'), api.list('subjects'), api.list('admin/reference/items', { catalog_code: 'control_types', is_active: 1 }),
-      ])
-      curricula.value = extractRows(curriculaPayload)
-      educationPrograms.value = extractRows(programsPayload)
-      specialties.value = extractRows(specialtiesPayload)
-      subjects.value = extractRows(subjectsPayload)
-      controlTypes.value = extractRows(controlTypesPayload)
+      // Учебные планы — сам экран, остальное — справочники его форм.
+      const { payloads } = await loadReferences({
+        curricula: api.list('curricula'),
+        programs: api.list('education-programs'),
+        specialties: api.list('specialties'),
+        subjects: api.list('subjects'),
+        controlTypes: api.list('admin/reference/items', { catalog_code: 'control_types', is_active: 1 }),
+      })
+      curricula.value = extractRows(payloads.curricula)
+      educationPrograms.value = extractRows(payloads.programs)
+      specialties.value = extractRows(payloads.specialties)
+      subjects.value = extractRows(payloads.subjects)
+      controlTypes.value = extractRows(payloads.controlTypes)
       if (selectedId.value && !selectedCurriculum.value) selectedId.value = null
       if (selectedId.value) await loadEngine(selectedId.value)
     } catch (err) { error.value = err.message || 'Не удалось загрузить учебные планы' }

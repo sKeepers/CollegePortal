@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
+import { loadReferences } from '../services/referenceLoader'
 
 const initialFilters = {
   search: '',
@@ -100,16 +101,18 @@ export const useGroupsStore = defineStore('groups', () => {
     error.value = ''
 
     try {
-      const [groupsPayload, programsPayload, teachersPayload] = await Promise.all([
-        api.list('groups'),
-        api.list('education-programs'),
-        api.list('teachers', { active_only: 1 }),
-      ])
+      // Группы — сам экран, справочники — его выпадающие списки: отсутствие права
+      // на справочник обязано оставить список пустым, а не закрыть экран.
+      const { payloads } = await loadReferences({
+        groups: api.list('groups'),
+        programs: api.list('education-programs'),
+        teachers: api.list('teachers', { active_only: 1 }),
+      })
 
-      groups.value = extractRows(groupsPayload)
-      educationPrograms.value = extractRows(programsPayload)
-      teachers.value = extractRows(teachersPayload)
-      pagination.value = extractMeta(groupsPayload)
+      groups.value = extractRows(payloads.groups)
+      educationPrograms.value = extractRows(payloads.programs)
+      teachers.value = extractRows(payloads.teachers)
+      pagination.value = extractMeta(payloads.groups)
 
       if (selectedId.value && !selectedGroup.value) {
         selectedId.value = null
