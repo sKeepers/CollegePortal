@@ -7,6 +7,7 @@ use App\Http\Requests\StoreTeacherRequest;
 use App\Http\Requests\UpdateTeacherRequest;
 use App\Http\Resources\TeacherResource;
 use App\Models\Teacher;
+use App\Services\PersonService;
 use App\Services\TeacherCsvService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,8 +17,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TeacherController extends Controller
 {
-    public function __construct(private readonly TeacherCsvService $teacherCsvService)
-    {
+    public function __construct(
+        private readonly TeacherCsvService $teacherCsvService,
+        private readonly PersonService $people,
+    ) {
     }
 
     public function index(Request $request): AnonymousResourceCollection
@@ -58,7 +61,16 @@ class TeacherController extends Controller
 
     public function update(UpdateTeacherRequest $request, Teacher $teacher): TeacherResource
     {
-        $teacher->update($request->validated());
+        $data = $request->validated();
+        $teacher->update($data);
+
+        // ФИО и контакты преподавателя — копия общих данных человека. Без записи в Person
+        // исправление оставалось только здесь, а «Люди» и «Сотрудники» продолжали показывать
+        // прежнее и при следующем сохранении кадровой карточки возвращали его обратно.
+        if ($teacher->person) {
+            $this->people->updateFromProfile($teacher->person, $data);
+            $teacher->refresh();
+        }
 
         return new TeacherResource($teacher);
     }

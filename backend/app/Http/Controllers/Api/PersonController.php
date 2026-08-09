@@ -99,25 +99,10 @@ class PersonController extends Controller
     public function update(UpdatePersonRequest $request, Person $person): PersonResource
     {
         $old = $this->safePersonSnapshot($person);
-        $payload = array_merge([
-            'uuid' => $person->uuid,
-            'last_name' => $person->last_name,
-            'first_name' => $person->first_name,
-            'middle_name' => $person->middle_name,
-            'birth_date' => $person->birth_date?->toDateString(),
-            'gender' => $person->gender,
-            'citizenship' => $person->citizenship,
-            'place_birth' => $person->place_birth,
-            'phone' => $person->phone,
-            'email' => $person->email,
-            'address' => $person->address,
-            'photo_path' => $person->photo_path,
-            'snils' => $person->snils,
-            'inn' => $person->inn,
-            'status' => $person->status,
-        ], $request->validated());
 
-        $person = $this->people->updateSharedData($person, $payload);
+        // Карточка человека — единственное место, где общее поле можно очистить:
+        // здесь оператор видит всё, что меняет. Недостающее сервис добирает сам.
+        $person = $this->people->updateSharedData($person, $request->validated());
 
         AuditLogService::log('Identity', 'person_updated', $person, $old, $this->safePersonSnapshot($person), $request);
 

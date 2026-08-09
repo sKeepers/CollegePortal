@@ -24,9 +24,17 @@ class HrService
 
     public function updateEmployee(Employee $employee, array $data): Employee
     {
-        $employee->update($this->employeePayload($data, $employee->person, true));
-        $this->syncTeacher($employee, $employee->person);
-        return $employee->fresh(['person', 'primaryDepartment', 'primaryPosition', 'assignments.department', 'assignments.position', 'statusPeriods', 'teacher']);
+        return DB::transaction(function () use ($employee, $data): Employee {
+            // Карточка сотрудника присылает ФИО и контакты, но собственных таких полей
+            // у `employees` нет — они принадлежат человеку. Раньше присланное просто
+            // отбрасывалось: форма показывала «Карточка сохранена», а правка никуда не шла.
+            $person = $this->personService->updateFromProfile($this->personForUpdate($employee, $data), $data);
+            $employee->update($this->employeePayload($data, $person, true));
+            $employee->setRelation('person', $person);
+            $this->syncTeacher($employee, $person);
+
+            return $employee->fresh(['person', 'primaryDepartment', 'primaryPosition', 'assignments.department', 'assignments.position', 'statusPeriods', 'teacher']);
+        });
     }
 
     public function teacherAvailability(?int $teacherId, ?string $date): ?array
@@ -39,6 +47,20 @@ class HrService
         $status = $employee->statusOn($date);
         if (! in_array($status, Employee::UNAVAILABLE_STATUSES, true)) { return ['available' => true, 'status' => $status]; }
         return ['available' => false, 'status' => $status, 'warning' => 'Преподаватель недоступен по кадровым данным'];
+    }
+
+    /**
+     * В форме сотрудника личную карточку можно переключить на другую. Тогда ФИО
+     * из формы относятся к выбранному человеку, а не к прежнему: писать их в старую
+     * карточку значило бы испортить постороннюю запись.
+     */
+    private function personForUpdate(Employee $employee, array $data): Person
+    {
+        $selected = $data['person_id'] ?? null;
+
+        return $selected && (int) $selected !== $employee->person_id
+            ? Person::findOrFail($selected)
+            : $employee->person;
     }
 
     private function resolvePerson(array $data): Person

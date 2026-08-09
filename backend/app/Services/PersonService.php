@@ -16,6 +16,12 @@ use Illuminate\Support\Str;
 
 class PersonService
 {
+    /** Общие поля, которые профильная карточка вправе записать в Person. */
+    private const PROFILE_EDITABLE_FIELDS = ['last_name', 'first_name', 'middle_name', 'phone', 'email', 'snils'];
+
+    /** Поля Person, копии которых профили держат у себя и обязаны получать из Person. */
+    private const PROFILE_MIRRORED_FIELDS = ['last_name', 'first_name', 'middle_name', 'phone', 'email'];
+
     public function createPerson(array $data): Person
     {
         return Person::create($this->normalizePersonData($data));
@@ -80,11 +86,85 @@ class PersonService
         }
     }
 
+    /**
+     * Обновление общих данных человека. Единственная точка записи ФИО и контактов:
+     * профильные карточки приходят сюда, а не правят свои копии в обход Person.
+     *
+     * Набор полей почти всегда частичный — карточка сотрудника шлёт ФИО и контакты,
+     * карточка человека шлёт всё. Недостающее берётся из текущей записи: без этого
+     * `normalizePersonData` обнулял бы всё, чего не было в запросе.
+     */
     public function updateSharedData(Person $person, array $data): Person
     {
-        $person->update($this->normalizePersonData($data));
+        $person->update($this->normalizePersonData(array_merge($this->currentSharedData($person), $data)));
+        $this->syncProfiles($person, array_keys($person->getChanges()));
 
         return $person->fresh();
+    }
+
+    /**
+     * Обновление общих данных из профильной карточки — сотрудника или преподавателя.
+     *
+     * Профильная карточка видит человека не целиком: СНИЛС в ней скрыт без права
+     * `people.update`. Поэтому пустое поле здесь означает «не менять», а не «очистить»,
+     * иначе сохранение карточки сотрудника стирало бы то, чего оператор даже не видел.
+     * Очистить общее поле можно в карточке человека, где видно всё, что меняется.
+     */
+    public function updateFromProfile(Person $person, array $data): Person
+    {
+        $filled = array_filter(
+            array_intersect_key($data, array_flip(self::PROFILE_EDITABLE_FIELDS)),
+            static fn (mixed $value): bool => filled(is_string($value) ? trim($value) : $value),
+        );
+
+        return $filled === [] ? $person : $this->updateSharedData($person, $filled);
+    }
+
+    /**
+     * Раскладывает общие данные по профилям, которые хранят собственную копию ФИО и контактов.
+     *
+     * Копия в `teachers` оставлена намеренно: на ней держатся журнал, расписание, нагрузка,
+     * экзамены и выгрузки. Значит, она обязана быть зеркалом, а не вторым источником правды.
+     *
+     * @param list<string> $changed поля, которые действительно изменились; пустой список — все общие.
+     *                              Синхронизация ровно изменённого не даёт правке фамилии
+     *                              заодно затереть телефон, которого в Person ещё нет.
+     */
+    public function syncProfiles(Person $person, array $changed = []): void
+    {
+        $fields = $changed === []
+            ? self::PROFILE_MIRRORED_FIELDS
+            : array_values(array_intersect(self::PROFILE_MIRRORED_FIELDS, $changed));
+
+        if ($fields === []) {
+            return;
+        }
+
+        $mirror = collect($fields)->mapWithKeys(fn (string $field): array => [$field => $person->{$field}])->all();
+
+        Teacher::query()->where('person_id', $person->id)->update($mirror);
+    }
+
+    /** @return array<string, mixed> */
+    private function currentSharedData(Person $person): array
+    {
+        return [
+            'uuid' => $person->uuid,
+            'last_name' => $person->last_name,
+            'first_name' => $person->first_name,
+            'middle_name' => $person->middle_name,
+            'birth_date' => $person->birth_date?->toDateString(),
+            'gender' => $person->gender,
+            'citizenship' => $person->citizenship,
+            'place_birth' => $person->place_birth,
+            'phone' => $person->phone,
+            'email' => $person->email,
+            'address' => $person->address,
+            'photo_path' => $person->photo_path,
+            'snils' => $person->snils,
+            'inn' => $person->inn,
+            'status' => $person->status,
+        ];
     }
 
     public function profiles(Person $person): array
