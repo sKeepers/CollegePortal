@@ -4,11 +4,14 @@ namespace App\Services;
 
 use App\Models\Group;
 use App\Models\Student;
+use App\Services\Admissions\EducationDocumentService;
+use App\Services\Admissions\IdentityDocumentService;
 use App\Services\Admissions\PersonDocumentService;
 use App\Services\Import\StudentImportHandler;
 use DateTimeImmutable;
 use App\Support\Csv\CsvExport;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use RuntimeException;
@@ -17,8 +20,12 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StudentCsvService
 {
-    public function __construct(private readonly PersonDocumentService $personDocuments)
-    {
+    public function __construct(
+        private readonly PersonDocumentService $personDocuments,
+        private readonly StudentPersonService $studentPeople,
+        private readonly IdentityDocumentService $identityDocuments,
+        private readonly EducationDocumentService $educationDocuments,
+    ) {
     }
 
     /** Колонки, которые принимает собственный CSV-импорт студентов. */
@@ -27,6 +34,14 @@ class StudentCsvService
         'phone', 'email', 'snils', 'address', 'passport_series', 'passport_number',
         'passport_issue_date', 'passport_issued_by', 'status', 'course', 'education_form',
         'enrollment_date', 'enrollment_order_number', 'enrollment_order_date',
+        'education_document_type', 'education_document_series', 'education_document_number',
+        'education_document_issue_date', 'education_document_organization', 'education_graduation_year',
+    ];
+
+    /** Колонки документа об образовании: у студента таких полей нет, они уходят человеку. */
+    private const EDUCATION_DOCUMENT_COLUMNS = [
+        'education_document_type', 'education_document_series', 'education_document_number',
+        'education_document_issue_date', 'education_document_organization', 'education_graduation_year',
     ];
 
     /**
@@ -54,6 +69,12 @@ class StudentCsvService
         'номер паспорта' => 'passport_number',
         'дата выдачи паспорта' => 'passport_issue_date',
         'кем выдан паспорт' => 'passport_issued_by',
+        'тип документа об образовании' => 'education_document_type',
+        'серия документа об образовании' => 'education_document_series',
+        'номер документа об образовании' => 'education_document_number',
+        'дата выдачи документа об образовании' => 'education_document_issue_date',
+        'учебное заведение' => 'education_document_organization',
+        'год окончания' => 'education_graduation_year',
     ];
 
     /**
@@ -162,15 +183,19 @@ class StudentCsvService
             $validated = $validator->validated();
             $student = isset($validated['id']) ? Student::find($validated['id']) : $this->findExisting($validated);
 
-            unset($validated['id'], $validated['group']);
+            // Документ об образовании — не поле студента, а документ человека.
+            $educationDocument = Arr::only($validated, self::EDUCATION_DOCUMENT_COLUMNS);
+            $validated = Arr::except($validated, [...self::EDUCATION_DOCUMENT_COLUMNS, 'id', 'group']);
 
             if ($student) {
                 $student->update($validated);
                 $updated++;
             } else {
-                Student::create($validated);
+                $student = Student::create($validated);
                 $created++;
             }
+
+            $this->syncDocuments($student, $validated, $educationDocument);
         }
 
         if ($headers === null) {
@@ -182,6 +207,36 @@ class StudentCsvService
             'updated' => $updated,
             'errors' => $errors,
         ];
+    }
+
+    /**
+     * Паспорт и документ об образовании принадлежат человеку, поэтому загрузка через
+     * реестр обязана делать то же, что «Универсальный импорт»: завести человека и
+     * положить документы ему. Иначе один и тот же файл давал бы разный результат
+     * в зависимости от того, какой кнопкой его загрузили.
+     *
+     * @param array<string, mixed> $student данные строки, уже отфильтрованные под модель
+     * @param array<string, mixed> $educationDocument колонки документа об образовании
+     */
+    private function syncDocuments(Student $model, array $student, array $educationDocument): void
+    {
+        $person = $this->studentPeople->ensureForStudent($model)['person'];
+
+        $this->identityDocuments->syncPassportForPerson($person->id, [
+            'series' => $student['passport_series'] ?? null,
+            'number' => $student['passport_number'] ?? null,
+            'issue_date' => $student['passport_issue_date'] ?? null,
+            'issued_by' => $student['passport_issued_by'] ?? null,
+        ]);
+
+        $this->educationDocuments->syncForPerson($person->id, [
+            'document_type' => $educationDocument['education_document_type'] ?? null,
+            'series' => $educationDocument['education_document_series'] ?? null,
+            'number' => $educationDocument['education_document_number'] ?? null,
+            'issue_date' => $educationDocument['education_document_issue_date'] ?? null,
+            'document_organization' => $educationDocument['education_document_organization'] ?? null,
+            'graduation_year' => $educationDocument['education_graduation_year'] ?? null,
+        ]);
     }
 
     private function detectDelimiter(UploadedFile $file): string
@@ -235,6 +290,7 @@ class StudentCsvService
         $payload['enrollment_date'] = $this->normalizeDate($payload['enrollment_date'] ?? null);
         $payload['enrollment_order_date'] = $this->normalizeDate($payload['enrollment_order_date'] ?? null);
         $payload['passport_issue_date'] = $this->normalizeDate($payload['passport_issue_date'] ?? null);
+        $payload['education_document_issue_date'] = $this->normalizeDate($payload['education_document_issue_date'] ?? null);
         $payload['snils'] = isset($payload['snils']) ? preg_replace('/\D+/', '', (string) $payload['snils']) ?: null : null;
 
         if (empty($payload['status'])) {
@@ -285,6 +341,12 @@ class StudentCsvService
             'enrollment_date' => ['nullable', 'date'],
             'enrollment_order_number' => ['nullable', 'string', 'max:100'],
             'enrollment_order_date' => ['nullable', 'date'],
+            'education_document_type' => ['nullable', 'string', 'max:255'],
+            'education_document_series' => ['nullable', 'string', 'max:20'],
+            'education_document_number' => ['nullable', 'string', 'max:100'],
+            'education_document_issue_date' => ['nullable', 'date'],
+            'education_document_organization' => ['nullable', 'string', 'max:1000'],
+            'education_graduation_year' => ['nullable', 'integer', 'min:1950', 'max:2100'],
         ];
     }
 
