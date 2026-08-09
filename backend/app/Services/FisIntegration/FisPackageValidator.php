@@ -3,21 +3,30 @@
 namespace App\Services\FisIntegration;
 
 use App\Models\FisOutboundPackage;
+use App\Services\FisIntegration\Exceptions\FisIntegrationException;
+use App\Services\FisIntegration\Xml\FisXsdSchema;
 use Illuminate\Support\Facades\Storage;
 use DOMDocument;
 
 class FisPackageValidator
 {
-    public function __construct(private readonly FisSpecificationRegistry $registry) {}
+    public function __construct(private readonly FisXsdSchema $schema)
+    {
+    }
 
     public function validate(FisOutboundPackage $package): array
     {
         if (! $package->payload_path || ! Storage::disk('local')->exists($package->payload_path)) {
             return $this->fail($package, 'payload_missing', 'XML payload is missing.');
         }
-        $xsd = $this->registry->xsdPath();
-        if (! $xsd) {
+        if (! $this->schema->loaded()) {
             return $this->fail($package, 'xsd_missing', 'Official FIS XSD is not loaded. Validation is blocked.');
+        }
+
+        try {
+            $schemaSource = $this->schema->source();
+        } catch (FisIntegrationException $exception) {
+            return $this->fail($package, 'xsd_not_usable', $exception->getMessage());
         }
 
         $xml = Storage::disk('local')->get($package->payload_path);
@@ -27,7 +36,7 @@ class FisPackageValidator
         $dom->resolveExternals = false;
         $dom->substituteEntities = false;
         $loaded = $dom->loadXML($xml, LIBXML_NONET);
-        $valid = $loaded && $dom->schemaValidate($xsd);
+        $valid = $loaded && $dom->schemaValidateSource($schemaSource);
         $errors = collect(libxml_get_errors())->map(fn ($error) => ['level' => $error->level, 'line' => $error->line, 'column' => $error->column, 'code' => $error->code, 'message' => trim($error->message)])->values()->all();
         libxml_clear_errors();
         libxml_use_internal_errors($previous);
@@ -39,7 +48,12 @@ class FisPackageValidator
         }
 
         $package->update(['status' => 'validated', 'validated_at' => now(), 'last_error_code' => null, 'last_error_message' => null]);
-        $this->event($package, 'validated', ['xsd' => basename($xsd)]);
+        $this->event($package, 'validated', [
+            'schema_version' => config('fis_api.schema_version'),
+            'xsd' => basename((string) $this->schema->path()),
+            'xsd_sha256' => $this->schema->fingerprint(),
+            'xsd_compatibility_fixes' => $this->schema->compatibilityNotes(),
+        ]);
         return ['ok' => true, 'errors' => []];
     }
 

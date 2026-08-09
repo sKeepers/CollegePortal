@@ -24,10 +24,11 @@
 
 ## Безопасная архитектурная позиция
 
-До загрузки официальной спецификации:
+Состояние на 09.08.2026: XSD и спецификация 4.9 подключены, XML собирается и проверяется по официальной схеме — см. [FIS_OUTBOUND_PACKAGES.md](FIS_OUTBOUND_PACKAGES.md) и [FIS_DATA_MAPPING.md](FIS_DATA_MAPPING.md). WSDL по-прежнему нет.
 
-- `SoapFisTransport` не формирует SOAP envelope и не отправляет payload;
-- `FisPackageBuilder` блокирует генерацию официального XML при `schema_version=pending-official-spec`;
+- `SoapFisTransport` не формирует SOAP envelope и не отправляет payload: конверт описан в WSDL, которого нет;
+- `FisPackageBuilder` блокирует сборку, если официальная схема не настроена (`FIS_API_XSD_PATH`, `FIS_API_SCHEMA_VERSION`), и отказывается собирать пакет, для которого в схеме нет раздела;
+- ни один идентификатор справочника не подставляется по догадке: чего нет в сопоставлениях — то причина отказа сборки;
 - XSD validation блокируется, если `FIS_API_XSD_PATH` не указывает на локальную официальную XSD;
 - production endpoint заблокирован feature flag `FIS_API_ALLOW_PRODUCTION_SEND=false`.
 

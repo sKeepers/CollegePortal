@@ -2,8 +2,17 @@
 
 namespace App\Services\FisIntegration;
 
+use App\Services\FisIntegration\Xml\FisXsdSchema;
+use App\Services\FisIntegration\Xml\PackageDataComposer;
+
 class FisSpecificationRegistry
 {
+    public const PENDING = 'pending-official-spec';
+
+    public function __construct(private readonly FisXsdSchema $schema)
+    {
+    }
+
     public function manifest(): array
     {
         $path = config('fis_api.spec_manifest_path');
@@ -16,12 +25,31 @@ class FisSpecificationRegistry
 
     public function xsdPath(): ?string
     {
-        $path = config('fis_api.xsd_path');
-        return $path && is_file($path) ? $path : null;
+        return $this->schema->path();
     }
 
     public function schemaVersion(): string
     {
-        return (string) config('fis_api.schema_version', 'pending-official-spec');
+        return (string) config('fis_api.schema_version', self::PENDING);
+    }
+
+    /**
+     * Официальная схема считается загруженной, когда есть и файл XSD, и версия,
+     * отличная от заглушки.
+     */
+    public function officialSchemaLoaded(): bool
+    {
+        return $this->xsdPath() !== null && $this->schemaVersion() !== self::PENDING;
+    }
+
+    public function xsdFingerprint(): ?string
+    {
+        return $this->schema->fingerprint();
+    }
+
+    /** @return list<string> */
+    public function supportedPackageTypes(): array
+    {
+        return PackageDataComposer::SUPPORTED_TYPES;
     }
 }

@@ -1,5 +1,9 @@
 * text=auto eol=lf
 
+# Официальные материалы ФИС лежат байт в байт: перевод строк не трогаем, иначе
+# копия схемы перестаёт совпадать с оригиналом в docs и с его контрольной суммой.
+resources/fis/** -text
+
 *.blade.php diff=html
 *.css diff=css
 *.html diff=html

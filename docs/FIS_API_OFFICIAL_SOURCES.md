@@ -1,66 +1,51 @@
 # Официальные источники ФИС API
 
-Задача: FIS-API-001.
+Задача: FIS-API-001. **Закрыта 09.08.2026: спецификация есть, схема подключена.**
 
-## Источник
+## Где лежит спецификация
 
-- Официальная страница: <https://priem.rustest.ru/instructions>
-- Ожидаемые материалы: тестовый клиент, спецификация сервиса автоматизированного взаимодействия, XSD метода импорта, обзоры изменений, рекомендации по ошибкам.
-
-## Результат проверки 13.07.2026
-
-С DEV-сервера `/srv/college-dev` официальный сайт недоступен для автоматической загрузки:
-
-- `curl https://priem.rustest.ru/instructions` завершился ошибкой проверки TLS CA: `unable to get local issuer certificate`.
-- `curl -k https://priem.rustest.ru/instructions` вернул `Forbidden` с request id.
-- Без JS обычный browser fetch показывает SPA-заглушку, а не список материалов.
-
-Вывод: нужна загрузка материалов через разрешенный браузер/АРМ/шлюз, либо настройка доверенной TLS-цепочки и доступа к сайту. Это не дефект CollegePortal.
-
-## Скрипт загрузки
-
-Подготовлен скрипт:
-
-```bash
-scripts/fis/download-official-specs.sh
-```
-
-Он сохраняет материалы и manifest в private storage:
+В самом репозитории, с 14.07.2026:
 
 ```text
-backend/storage/app/private/fis-specs/4.9/
+docs/external-services/ФИС ГИА и Приема/
+├── XSD схема метода импорта Сервиса автоматизированного взаимодействия.xsd
+├── Спецификация сервиса автоматизированного взаимодействия с информационными системами.pdf
+└── Функциональные изменения ФИС ГИА и Приема.pdf
 ```
 
-Эта папка добавлена в `.gitignore`, потому что официальные документы и XSD могут иметь ограничения на распространение.
+Версия — **4.9 от 15.06.2026**. Скачивать заново не нужно.
 
-## Manifest
-
-Manifest должен хранить:
-
-- название;
-- версию;
-- дату;
-- URL;
-- SHA-256;
-- дату загрузки;
-- статус загрузки.
-
-Текущий статус: `READY FOR OFFICIAL SPECS`.
-
-
-## Manual Intake For Version 4.9
-
-If DEV cannot download files, download them through an approved browser/ARM and copy them to:
+Рабочая копия XSD, которую читает приложение:
 
 ```text
-/srv/college-dev/backend/storage/app/private/fis-specs/4.9/
+backend/resources/fis/gia-priem/4.9/import-package.xsd
+backend/resources/fis/gia-priem/4.9/manifest.json
 ```
 
-Then run:
+Копия нужна потому, что контейнер бэкенда монтирует только каталог `backend/` и до `docs/` не дотягивается. Копия обязана совпадать с оригиналом байт в байт:
 
 ```bash
-scripts/fis/build-spec-manifest.sh
+bash scripts/fis/verify-official-xsd-copy.sh
+```
+
+Чтобы git не переписал переводы строк и копия не разошлась с оригиналом, в `backend/.gitattributes` для `resources/fis/**` выключена нормализация (`-text`).
+
+## Изменения версии 4.9
+
+- из `Campaign` удалён `YearEnd`;
+- из `Application` удалён `NoSnilsComment`; перечень причин отсутствия СНИЛС изменён, добавлена «На уточнении (до внесения в приказ)»;
+- в `ApplicationDocument` и `DocumentReason` добавлен `RequestTargetDocuments` — заявки на заключение договора о целевом обучении;
+- в заявление, включённое в приказ, добавлен `BenefitDocumentUID`;
+- добавлен раздел проверки сведений о результатах ОГЭ.
+
+## Прежний путь загрузки
+
+Ранее ожидалось, что материалы попадут в private storage `backend/storage/app/private/fis-specs/4.9/` через `scripts/fis/download-official-specs.sh` и `scripts/fis/build-spec-manifest.sh`. С DEV сайт `priem.rustest.ru` недоступен: проверка TLS CA не проходит, а `-k` отдаёт `Forbidden`. Скрипты оставлены на случай обновления спецификации через разрешённый АРМ; по умолчанию приложение читает файл из `resources` и в private storage не заглядывает.
+
+## Проверка настройки
+
+```bash
 php artisan fis:spec-info
 ```
 
-Do not commit binary documents until redistribution terms are reviewed.
+Ожидается `schema_version: 4.9`, `xsd_loaded: true` и манифест со статусом `bundled`.

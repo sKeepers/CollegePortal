@@ -9,6 +9,7 @@ use App\Jobs\RefreshFisPackageStatusJob;
 use App\Jobs\SendFisPackageJob;
 use App\Models\FisOutboundPackage;
 use App\Services\AuditLogService;
+use App\Services\FisIntegration\Exceptions\FisCompositionBlockedException;
 use App\Services\FisIntegration\Exceptions\FisIntegrationException;
 use App\Services\FisIntegration\FisPackageBuilder;
 use App\Services\FisIntegration\FisPackageSender;
@@ -42,6 +43,7 @@ class FisOutboundPackageController extends Controller
         $data = $request->validate([
             'package_type' => ['required','string','max:100'],
             'external_campaign_id' => ['nullable','string','max:100'],
+            'admission_year' => ['nullable','integer','min:2000','max:2100'],
             'source_entity_type' => ['nullable','string','max:100'],
             'source_entity_id' => ['nullable','integer'],
             'schema_version' => ['nullable','string','max:100'],
@@ -54,6 +56,7 @@ class FisOutboundPackageController extends Controller
         $package = FisOutboundPackage::create([
             'package_type' => $data['package_type'],
             'external_campaign_id' => $data['external_campaign_id'] ?? null,
+            'admission_year' => $data['admission_year'] ?? null,
             'source_entity_type' => $data['source_entity_type'] ?? null,
             'source_entity_id' => $data['source_entity_id'] ?? null,
             'schema_version' => $data['schema_version'] ?? $registry->schemaVersion(),
@@ -78,6 +81,13 @@ class FisOutboundPackageController extends Controller
             $package = $builder->generate($package);
             AuditLogService::log('fis_outbound', 'generated', $package, null, ['payload_sha256' => $package->payload_sha256]);
             return response()->json(['data' => new FisOutboundPackageResource($package)]);
+        } catch (FisCompositionBlockedException $exception) {
+            // Событие уже записано сборщиком вместе со списком причин: второй
+            // раз писать его не нужно, а вот показать список оператору — нужно.
+            return response()->json([
+                'message' => $exception->getMessage(),
+                'blockers' => $exception->blockers(),
+            ], Response::HTTP_CONFLICT);
         } catch (FisIntegrationException $exception) {
             $package->events()->create(['event_type' => 'generation_blocked', 'status' => $package->status, 'metadata' => ['message' => $exception->getMessage()], 'user_id' => auth()->id()]);
             return response()->json(['message' => $exception->getMessage()], Response::HTTP_CONFLICT);
@@ -212,6 +222,16 @@ class FisOutboundPackageController extends Controller
 
     public function specInfo(FisSpecificationRegistry $registry): JsonResponse
     {
-        return response()->json(['enabled' => config('fis_api.enabled'), 'mode' => config('fis_api.mode'), 'schema_version' => $registry->schemaVersion(), 'manifest' => $registry->manifest(), 'xsd_loaded' => (bool) $registry->xsdPath(), 'production_send_allowed' => (bool) config('fis_api.allow_production_send')]);
+        return response()->json([
+            'enabled' => config('fis_api.enabled'),
+            'mode' => config('fis_api.mode'),
+            'schema_version' => $registry->schemaVersion(),
+            'manifest' => $registry->manifest(),
+            'xsd_loaded' => (bool) $registry->xsdPath(),
+            'xsd_sha256' => $registry->xsdFingerprint(),
+            'official_schema_loaded' => $registry->officialSchemaLoaded(),
+            'supported_package_types' => $registry->supportedPackageTypes(),
+            'production_send_allowed' => (bool) config('fis_api.allow_production_send'),
+        ]);
     }
 }

@@ -3,35 +3,56 @@
 namespace App\Services\FisIntegration;
 
 use App\Models\FisOutboundPackage;
+use App\Services\FisIntegration\Exceptions\FisCompositionBlockedException;
 use App\Services\FisIntegration\Exceptions\FisIntegrationException;
+use App\Services\FisIntegration\Xml\PackageDataComposer;
 use Illuminate\Support\Facades\Storage;
-use XMLWriter;
 
 class FisPackageBuilder
 {
-    public function __construct(private readonly FisSpecificationRegistry $registry) {}
+    public function __construct(
+        private readonly FisSpecificationRegistry $registry,
+        private readonly PackageDataComposer $composer,
+    ) {
+    }
 
     public function generate(FisOutboundPackage $package): FisOutboundPackage
     {
-        if ($this->registry->schemaVersion() === 'pending-official-spec') {
-            throw new FisIntegrationException('Official FIS schema is not loaded. XML generation is blocked to avoid inventing namespaces or formats.');
+        if (! $this->registry->officialSchemaLoaded()) {
+            throw new FisIntegrationException('Официальная схема ФИС не загружена: проверьте FIS_API_XSD_PATH и FIS_API_SCHEMA_VERSION. Сборка XML заблокирована, чтобы не выдумывать формат.');
         }
 
-        $writer = new XMLWriter();
-        $writer->openMemory();
-        $writer->startDocument('1.0', 'UTF-8');
-        $writer->startElement('FisPackage');
-        $writer->writeAttribute('schemaVersion', $package->schema_version);
-        $writer->writeElement('PackageType', $package->package_type);
-        $writer->writeElement('ExternalCampaignId', (string) $package->external_campaign_id);
-        $writer->endElement();
-        $writer->endDocument();
-        $xml = $writer->outputMemory();
+        $composition = $this->composer->compose($package);
+
+        if ($composition->blocked()) {
+            $this->event($package, 'generation_blocked', [
+                'blocker_count' => count($composition->blockers),
+                'blockers' => $composition->blockers,
+            ]);
+
+            throw new FisCompositionBlockedException($composition->blockers);
+        }
 
         $path = 'fis/outbound/package-'.$package->id.'/payload.xml';
-        Storage::disk('local')->put($path, $xml);
-        $package->update(['payload_path' => $path, 'payload_sha256' => hash('sha256', $xml), 'status' => 'generated']);
-        $this->event($package, 'generated', ['payload_sha256' => $package->payload_sha256]);
+        Storage::disk('local')->put($path, $composition->xml);
+
+        $package->update([
+            'payload_path' => $path,
+            'payload_sha256' => hash('sha256', $composition->xml),
+            'schema_version' => $this->registry->schemaVersion(),
+            'status' => 'generated',
+            'last_error_code' => null,
+            'last_error_message' => null,
+        ]);
+
+        // В событии только счётчики и хэш: сам пакет содержит персональные
+        // данные, и журналу они не нужны.
+        $this->event($package, 'generated', [
+            'payload_sha256' => $package->payload_sha256,
+            'schema_version' => $package->schema_version,
+            'counts' => $composition->counts,
+        ]);
+
         return $package->fresh();
     }
 

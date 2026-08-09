@@ -53,11 +53,14 @@ class FisOutboundApiTest extends TestCase
         Storage::fake('local');
         $user = $this->userWith(['fis.outbound.view','fis.outbound.create','fis.outbound.generate','fis.outbound.validate']);
         $this->withApiAuth($user);
-        $package = FisOutboundPackage::create(['package_type' => 'admission', 'schema_version' => 'pending-official-spec', 'environment' => 'test', 'status' => 'draft', 'payload_path' => 'fis/outbound/missing.xml']);
+        // Схема поставляется вместе с приложением, поэтому «не загружена» здесь
+        // приходится воспроизводить настройкой — иначе случай не проверить.
+        config(['fis_api.xsd_path' => null, 'fis_api.schema_version' => 'pending-official-spec']);
+        $package = FisOutboundPackage::create(['package_type' => 'institution-programs', 'schema_version' => 'pending-official-spec', 'environment' => 'test', 'status' => 'draft', 'payload_path' => 'fis/outbound/missing.xml']);
 
         $this->postJson("/api/fis/outbound/packages/{$package->id}/generate")
             ->assertStatus(409)
-            ->assertJsonFragment(['message' => 'Official FIS schema is not loaded. XML generation is blocked to avoid inventing namespaces or formats.']);
+            ->assertJsonFragment(['message' => 'Официальная схема ФИС не загружена: проверьте FIS_API_XSD_PATH и FIS_API_SCHEMA_VERSION. Сборка XML заблокирована, чтобы не выдумывать формат.']);
 
         Storage::disk('local')->put($package->payload_path, '<Package/>');
         $this->postJson("/api/fis/outbound/packages/{$package->id}/validate")
