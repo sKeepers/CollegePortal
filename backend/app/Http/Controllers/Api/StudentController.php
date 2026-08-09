@@ -6,16 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreStudentRequest;
 use App\Http\Requests\UpdateStudentRequest;
 use App\Http\Resources\StudentResource;
+use App\Models\Person;
 use App\Models\Student;
 use App\Services\Admissions\AdmissionDocumentReadinessService;
 use App\Services\Admissions\IdentityDocumentService;
 use App\Services\Admissions\SnilsService;
+use App\Services\PersonService;
 use App\Services\StudentCsvService;
 use App\Services\StudentPersonService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -29,6 +32,7 @@ class StudentController extends Controller
         private readonly StudentPersonService $studentPeople,
         private readonly AdmissionDocumentReadinessService $readiness,
         private readonly IdentityDocumentService $identityDocuments,
+        private readonly PersonService $people,
     ) {
     }
 
@@ -122,6 +126,8 @@ class StudentController extends Controller
             $student->refresh();
 
             $resolved = $this->studentPeople->ensureForStudent($student);
+            $this->pushSharedDataToPerson($resolved['person'], $data);
+            $student->refresh();
             $this->syncPassport($resolved['person']->id, $data, $request);
             $this->assertOrderAllowed($student, $orderChanged);
 
@@ -171,6 +177,21 @@ class StudentController extends Controller
             'message' => 'Импорт студентов завершен.',
             'data' => $summary,
         ]);
+    }
+
+    /**
+     * ФИО и контакты студента — копия общих данных человека. Без записи в Person
+     * исправление оставалось бы в карточке студента, а «Люди» показывали бы прежнее.
+     *
+     * СНИЛС отсюда намеренно не идёт: по нему человек находится и к нему привязываются
+     * документы, поэтому подменять его правкой учебной карточки нельзя. Для этого есть
+     * карточка человека.
+     *
+     * @param array<string, mixed> $data
+     */
+    private function pushSharedDataToPerson(Person $person, array $data): void
+    {
+        $this->people->updateFromProfile($person, Arr::only($data, ['last_name', 'first_name', 'middle_name', 'phone', 'email']));
     }
 
     /**

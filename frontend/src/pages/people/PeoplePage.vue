@@ -1,7 +1,8 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
-import { RefreshCw, Search, UserRound } from '@lucide/vue'
+import { PencilLine, RefreshCw, Search, UserRound } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -15,9 +16,12 @@ import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
 import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import { TABLE_ROWS_PER_PAGE_OPTIONS, createTablePagination, persistTablePagination } from '../../services/tableSettings'
+import { useAuthStore } from '../../stores/auth'
 import { usePeopleStore } from '../../stores/people'
 
 const store = usePeopleStore()
+const auth = useAuthStore()
+const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
 const syncingQuery = ref(false)
@@ -88,6 +92,47 @@ const actions = computed(() => {
   if (person.digital_identities?.length) items.push({ label: 'Цифровой пропуск', to: '/identity/digital-passes' })
   return items
 })
+
+// Карточка человека — единственное место записи общих данных и единственное место,
+// где общее поле можно очистить: профильные карточки видят человека не целиком.
+const canUpdate = computed(() => auth.can('people.update'))
+const editDialog = ref(false)
+const editForm = reactive({
+  last_name: '', first_name: '', middle_name: '', birth_date: '', gender: null,
+  citizenship: '', place_birth: '', phone: '', email: '', address: '', snils: '', inn: '', status: 'active',
+})
+const editValid = computed(() => Boolean(editForm.last_name.trim() && editForm.first_name.trim()))
+const genderOptions = [{ label: 'Мужской', value: 'male' }, { label: 'Женский', value: 'female' }]
+const statusOptions = [{ label: 'Активен', value: 'active' }, { label: 'Неактивен', value: 'inactive' }, { label: 'Архив', value: 'archived' }]
+
+function openEditDialog() {
+  const person = selected.value
+  if (!person) return
+  Object.assign(editForm, {
+    last_name: person.last_name || '',
+    first_name: person.first_name || '',
+    middle_name: person.middle_name || '',
+    birth_date: person.birth_date || '',
+    gender: person.gender || null,
+    citizenship: person.citizenship || '',
+    place_birth: person.place_birth || '',
+    phone: person.phone || '',
+    email: person.email || '',
+    address: person.address || '',
+    snils: person.snils || '',
+    inn: person.inn || '',
+    status: person.status || 'active',
+  })
+  editDialog.value = true
+}
+
+async function saveEditedPerson() {
+  // Пустое поле здесь значит «очистить», а не «не менять»: оператор видит всё, что меняет.
+  const payload = Object.fromEntries(Object.entries(editForm).map(([key, value]) => [key, value === '' ? null : value]))
+  await store.savePerson(selected.value.id, payload)
+  editDialog.value = false
+  $q.notify({ type: 'positive', message: 'Карточка человека сохранена. Исправление разошлось по связанным профилям.' })
+}
 
 function profileCount(person, key) { return person?.profiles_count?.[key] || 0 }
 function statusTone(status) { return status === 'active' ? 'success' : status === 'inactive' ? 'warning' : 'info' }
@@ -208,6 +253,14 @@ onMounted(async () => {
             </q-avatar>
           </template>
           <template #status><AppStatusBadge :label="statusLabel(selected.status)" :tone="statusTone(selected.status)" /></template>
+          <template #actions>
+            <div class="workspace-panel__actions">
+              <q-btn v-if="canUpdate" no-caps unelevated color="primary" :disable="store.saving" @click="openEditDialog">
+                <PencilLine :size="16" class="q-mr-xs" /> Изменить данные
+              </q-btn>
+              <q-btn v-for="action in actions" :key="action.label" no-caps unelevated class="workspace-panel__action" :to="action.to">{{ action.label }}</q-btn>
+            </div>
+          </template>
           <dl class="people-details">
             <div><dt>Дата рождения</dt><dd>{{ selected.birth_date || '—' }}</dd></div>
             <div><dt>Гражданство</dt><dd>{{ selected.citizenship || '—' }}</dd></div>
@@ -217,6 +270,34 @@ onMounted(async () => {
         </WorkspacePanel>
       </aside>
     </div>
+
+    <q-dialog v-model="editDialog" persistent>
+      <q-card class="people-dialog">
+        <q-card-section>
+          <div class="text-h6">Данные человека</div>
+          <div class="text-caption text-grey-7">ФИО и контакты хранятся здесь. Исправление разойдётся по карточкам студента, преподавателя и сотрудника.</div>
+        </q-card-section>
+        <q-card-section class="people-form-grid">
+          <q-input v-model="editForm.last_name" outlined dense label="Фамилия *" :error="!editForm.last_name.trim()" hide-bottom-space />
+          <q-input v-model="editForm.first_name" outlined dense label="Имя *" :error="!editForm.first_name.trim()" hide-bottom-space />
+          <q-input v-model="editForm.middle_name" outlined dense label="Отчество" />
+          <q-input v-model="editForm.birth_date" outlined dense type="date" label="Дата рождения" />
+          <q-select v-model="editForm.gender" outlined dense clearable emit-value map-options label="Пол" :options="genderOptions" />
+          <q-input v-model="editForm.citizenship" outlined dense label="Гражданство" />
+          <q-input v-model="editForm.place_birth" outlined dense label="Место рождения" />
+          <q-input v-model="editForm.phone" outlined dense label="Телефон" />
+          <q-input v-model="editForm.email" outlined dense label="Email" />
+          <q-input v-model="editForm.snils" outlined dense label="СНИЛС" />
+          <q-input v-model="editForm.inn" outlined dense label="ИНН" />
+          <q-select v-model="editForm.status" outlined dense emit-value map-options label="Статус" :options="statusOptions" />
+          <q-input v-model="editForm.address" outlined dense type="textarea" autogrow label="Адрес" class="people-form-wide" />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat no-caps label="Отмена" v-close-popup />
+          <q-btn color="primary" no-caps label="Сохранить" :disable="!editValid" :loading="store.saving" @click="saveEditedPerson" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </AppPage>
 </template>
 
@@ -230,6 +311,9 @@ onMounted(async () => {
 .people-details div { display: grid; gap: 2px; }
 .people-details dt { color: #64748b; font-size: 12px; }
 .people-details dd { margin: 0; color: #0f172a; overflow-wrap: anywhere; }
+.people-dialog { width: 720px; max-width: 92vw; }
+.people-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.people-form-wide { grid-column: 1 / -1; }
 :deep(.people-row--selected) { background: #eef6ff; }
 @media (max-width: 1100px) {
   .people-workspace { grid-template-columns: 1fr !important; gap: 16px; }

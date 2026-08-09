@@ -19,8 +19,15 @@ class PersonService
     /** Общие поля, которые профильная карточка вправе записать в Person. */
     private const PROFILE_EDITABLE_FIELDS = ['last_name', 'first_name', 'middle_name', 'phone', 'email', 'snils'];
 
-    /** Поля Person, копии которых профили держат у себя и обязаны получать из Person. */
-    private const PROFILE_MIRRORED_FIELDS = ['last_name', 'first_name', 'middle_name', 'phone', 'email'];
+    /**
+     * Профили, держащие собственную копию общих данных, и поля этой копии.
+     * `employees` здесь нет намеренно: своих ФИО и контактов у кадровой записи не бывает,
+     * она читает человека напрямую — списывать ей нечего.
+     */
+    private const PROFILE_MIRRORS = [
+        Teacher::class => ['last_name', 'first_name', 'middle_name', 'phone', 'email'],
+        Student::class => ['last_name', 'first_name', 'middle_name', 'phone', 'email'],
+    ];
 
     public function createPerson(array $data): Person
     {
@@ -123,8 +130,9 @@ class PersonService
     /**
      * Раскладывает общие данные по профилям, которые хранят собственную копию ФИО и контактов.
      *
-     * Копия в `teachers` оставлена намеренно: на ней держатся журнал, расписание, нагрузка,
-     * экзамены и выгрузки. Значит, она обязана быть зеркалом, а не вторым источником правды.
+     * Копии в `teachers` и `students` оставлены намеренно: на них держатся журнал,
+     * расписание, нагрузка, экзамены, реестры и выгрузки. Значит, они обязаны быть
+     * зеркалом, а не вторым источником правды.
      *
      * @param list<string> $changed поля, которые действительно изменились; пустой список — все общие.
      *                              Синхронизация ровно изменённого не даёт правке фамилии
@@ -132,17 +140,17 @@ class PersonService
      */
     public function syncProfiles(Person $person, array $changed = []): void
     {
-        $fields = $changed === []
-            ? self::PROFILE_MIRRORED_FIELDS
-            : array_values(array_intersect(self::PROFILE_MIRRORED_FIELDS, $changed));
+        foreach (self::PROFILE_MIRRORS as $model => $mirrored) {
+            $fields = $changed === [] ? $mirrored : array_values(array_intersect($mirrored, $changed));
 
-        if ($fields === []) {
-            return;
+            if ($fields === []) {
+                continue;
+            }
+
+            $mirror = collect($fields)->mapWithKeys(fn (string $field): array => [$field => $person->{$field}])->all();
+
+            $model::query()->where('person_id', $person->id)->update($mirror);
         }
-
-        $mirror = collect($fields)->mapWithKeys(fn (string $field): array => [$field => $person->{$field}])->all();
-
-        Teacher::query()->where('person_id', $person->id)->update($mirror);
     }
 
     /** @return array<string, mixed> */

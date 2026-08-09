@@ -3,17 +3,19 @@
 namespace Tests\Feature;
 
 use App\Models\Employee;
+use App\Models\Group;
 use App\Models\Person;
+use App\Models\Student;
 use App\Models\Teacher;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * ФИО человека показывают три раздела: «Люди», «Сотрудники» и «Преподаватели».
- * «Люди» и «Сотрудники» читают `people`, «Преподаватели» — собственную копию в `teachers`.
- * Тесты закрепляют одно правило: Person — единственный источник записи, копия обязана
- * приходить из него, откуда бы ни пришла правка.
+ * ФИО человека показывают четыре раздела: «Люди», «Сотрудники», «Преподаватели» и «Студенты».
+ * «Люди» и «Сотрудники» читают `people`, «Преподаватели» и «Студенты» — собственные копии
+ * в `teachers` и `students`. Тесты закрепляют одно правило: Person — единственный источник
+ * записи, копия обязана приходить из него, откуда бы ни пришла правка.
  */
 class PersonSharedDataSyncTest extends TestCase
 {
@@ -130,6 +132,62 @@ class PersonSharedDataSyncTest extends TestCase
 
         $this->assertDatabaseHas('employees', ['id' => $employee->id, 'person_id' => $other->id]);
         $this->assertDatabaseHas('people', ['id' => $person->id, 'last_name' => 'Горбачева', 'first_name' => 'Татьяна']);
+    }
+
+    public function test_student_card_correction_reaches_person_and_the_people_section(): void
+    {
+        [$person, $student] = $this->personWithStudentProfile();
+
+        $this->patchJson("/api/students/{$student->id}", ['middle_name' => 'Владимировна'])
+            ->assertOk();
+
+        $this->assertDatabaseHas('people', ['id' => $person->id, 'middle_name' => 'Владимировна']);
+        $this->assertDatabaseHas('students', ['id' => $student->id, 'middle_name' => 'Владимировна']);
+    }
+
+    public function test_person_card_correction_reaches_student_profile(): void
+    {
+        [$person, $student] = $this->personWithStudentProfile();
+
+        $this->patchJson("/api/people/{$person->id}", ['middle_name' => 'Владимировна'])->assertOk();
+
+        $this->assertDatabaseHas('students', ['id' => $student->id, 'middle_name' => 'Владимировна']);
+    }
+
+    public function test_student_card_does_not_move_the_snils_of_the_person(): void
+    {
+        [$person, $student] = $this->personWithStudentProfile();
+        $person->forceFill(['snils' => '11223344595'])->save();
+
+        // По СНИЛС человек находится и к нему привязываются документы, поэтому учебная
+        // карточка его не переносит: для этого есть карточка человека.
+        $this->patchJson("/api/students/{$student->id}", ['snils' => '99988877775'])->assertOk();
+
+        $this->assertDatabaseHas('people', ['id' => $person->id, 'snils' => '11223344595']);
+    }
+
+    /** @return array{0: Person, 1: Student} */
+    private function personWithStudentProfile(): array
+    {
+        $group = Group::create(['name' => 'ИСП-101', 'specialty' => 'Инструментальное исполнительство', 'course' => 1, 'year_start' => 2026]);
+
+        $person = Person::create([
+            'last_name' => 'Горбачева',
+            'first_name' => 'Татьяна',
+            'middle_name' => 'Вледимировна',
+            'status' => 'active',
+        ]);
+
+        $student = Student::create([
+            'person_id' => $person->id,
+            'group_id' => $group->id,
+            'last_name' => 'Горбачева',
+            'first_name' => 'Татьяна',
+            'middle_name' => 'Вледимировна',
+            'status' => 'active',
+        ]);
+
+        return [$person, $student];
     }
 
     /** @return array{0: Person, 1: Employee, 2: Teacher} */

@@ -17,6 +17,7 @@ export const usePeopleStore = defineStore('people', () => {
   const selectedPerson = ref(null)
   const loading = ref(false)
   const detailsLoading = ref(false)
+  const saving = ref(false)
   const error = ref('')
 
   const selected = computed(() => selectedPerson.value || people.value.find((person) => Number(person.id) === Number(selectedId.value)) || null)
@@ -57,6 +58,27 @@ export const usePeopleStore = defineStore('people', () => {
     }
   }
 
+  // Карточка человека — единственное место, где общее поле можно очистить: профильные
+  // карточки видят человека не целиком и пустое поле в них значит «не менять».
+  async function savePerson(id, payload) {
+    saving.value = true
+    error.value = ''
+    try {
+      const updated = (await api.update('people', id, payload))?.data || null
+      if (updated) {
+        selectedPerson.value = updated
+        const index = people.value.findIndex((person) => Number(person.id) === Number(id))
+        if (index !== -1) people.value.splice(index, 1, { ...people.value[index], ...updated })
+      }
+      return updated
+    } catch (err) {
+      error.value = err.message || 'Не удалось сохранить карточку человека'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
   function select(id) {
     selectedId.value = id ? Number(id) : null
     selectedPerson.value = null
@@ -68,5 +90,5 @@ export const usePeopleStore = defineStore('people', () => {
     filters.value = { ...initialFilters }
   }
 
-  return { people, filters, pagination, selectedId, selectedPerson, selected, loading, detailsLoading, error, load, loadPerson, select, resetFilters }
+  return { people, filters, pagination, selectedId, selectedPerson, selected, loading, detailsLoading, saving, error, load, loadPerson, savePerson, select, resetFilters }
 })
