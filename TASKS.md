@@ -946,3 +946,17 @@ SEC-004 блокирует четыре из девяти задач этих д
 ## INTEGRATION-HUB-001
 
 CollegePortal Gateway foundation added: FIS Gateway Agent is generalized into a modular Windows service architecture for protected integrations. FIS remains the only implemented adapter; future FRDO/Moodle/LDAP/MAX/Telegram/Email adapters are planned. Windows repo path is `C:\!Projects\CollegePortal`; ViPNet installation remains a separate task.
+
+## Студенты
+
+Замечания владельца системы от 09.08.2026 по разделу `/students`.
+
+- [ ] GUI-018: добавить в фильтры раздела «Студенты» «Курс» (год обучения) и «Специальность».
+  - Сейчас в `frontend/src/pages/students/StudentFilters.vue` есть только поиск по ФИО, группа, статус и полнота карточки.
+  - `StudentController::index` понимает `group_id`, `status`, `completeness` и `search`; фильтров по курсу и специальности нет — их нужно добавить в запрос.
+  - Данные уже под рукой: курс лежит в `groups.course`, специальность берётся по цепочке `group.educationProgram.specialty`, которую список и так подгружает. Фильтровать студентов через связь с группой, отдельных полей в `students` не заводить.
+  - Источник значений для выпадающих списков не должен требовать `reference.manage`: `api/specialties` закрыт этим правом в `EnsurePermission::DOMAIN_RULES`, и у роли со `students.view` список окажется пустым — ровно та же беда, что в BUG-010.
+- [ ] BUG-010: в фильтрах раздела «Студенты» выпадающий список «Статус» пуст, нажатие ничего не показывает.
+  - Значения приходят из справочника `student_statuses` через `admin/reference/items` (`StudentsPage.vue:412`). Проверить две причины: префикс `api/admin/reference` требует `reference.manage`, поэтому роль со `students.view`, но без прав на справочники получает 403; и отдельно — есть ли записи справочника в базе (на пустой базе PROD сидер справочников мог не отрабатывать).
+  - Симптом чинить в любом случае: `referenceOptions.loadCatalog` кладёт ошибку в `error` и возвращает пустой список, поэтому отказ в правах и пустой справочник выглядят на экране одинаково — молчащим списком. Пустой или недоступный справочник обязан объяснять причину.
+  - Проверить заодно остальные экраны на этом же store: те же грабли ждут «Преподавателей», «Выпускников» и «Приемную комиссию».
