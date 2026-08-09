@@ -14,6 +14,7 @@ export function statusTone(options, value) { return options.find((item) => item.
 export function formatRuDateTime(value) { if (!value) return '—'; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }
 export const useFisStore = defineStore('fis', () => {
   const packages = ref([]), outboundPackages = ref([]), specInfo = ref(null), gatewayStatus = ref({ health: null, version: null, zkspd: null, dictionaries: null, institution: null, lastCheckAt: null }), programs = ref([]), applications = ref([]), exams = ref([]), graduates = ref([])
+  const dictionaryIntake = ref(null)
   const filters = ref({ ...initialFilters })
   const selectedId = ref(null), loading = ref(false), saving = ref(false), error = ref('')
   const selectedPackage = computed(() => packages.value.find((item) => Number(item.id) === Number(selectedId.value)) || null)
@@ -38,9 +39,28 @@ export const useFisStore = defineStore('fis', () => {
   async function checkZkspd() { return gatewayPost('zkspd', 'fis/outbound/gateway/zkspd-check') }
   async function loadGatewayDictionaries() { return gatewayPost('dictionaries', 'fis/outbound/gateway/dictionaries/list') }
   async function loadGatewayInstitution() { return gatewayPost('institution', 'fis/outbound/gateway/institution/info') }
+  // Загрузка справочников ФИС. Разбор и применение разделены: сначала оператор
+  // видит, что приедет в справочники портала, и только потом соглашается.
+  async function sendDictionaryFile(resource, file, extra = {}) {
+    saving.value = true; error.value = ''
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      Object.entries(extra).forEach(([key, value]) => { if (value) form.append(key, value) })
+      const response = await api.upload(`/fis/dictionaries/${resource}`, form)
+      dictionaryIntake.value = { ...(response?.data || {}), stage: resource, at: new Date().toISOString() }
+      return dictionaryIntake.value
+    } catch (err) {
+      error.value = err.message || 'Справочник ФИС загрузить не удалось'
+      throw err
+    } finally { saving.value = false }
+  }
+  async function previewDictionary(file, catalog = '') { return sendDictionaryFile('preview', file, { catalog }) }
+  async function applyDictionary(file, catalog = '', dictionary = '') { const result = await sendDictionaryFile('apply', file, { catalog, dictionary }); await load(); return result }
+  function clearDictionaryIntake() { dictionaryIntake.value = null }
   function setFilters(next) { filters.value = { ...filters.value, ...next } }
   function resetFilters() { filters.value = { ...initialFilters } }
   function select(item) { selectedId.value = item?.id || null }
   function selectById(id) { selectedId.value = id || null }
-  return { packages, outboundPackages, outboundSummary, specInfo, gatewayStatus, filteredPackages, programs, applications, exams, graduates, filters, selectedId, selectedPackage, records, errors, loading, saving, error, yearOptions, programOptions, load, createPackage, validatePackage, markExported, archive, exportCsv, exportJson, checkGatewayHealth, checkGatewayVersion, checkZkspd, loadGatewayDictionaries, loadGatewayInstitution, setFilters, resetFilters, select, selectById }
+  return { packages, outboundPackages, outboundSummary, specInfo, gatewayStatus, dictionaryIntake, filteredPackages, programs, applications, exams, graduates, filters, selectedId, selectedPackage, records, errors, loading, saving, error, yearOptions, programOptions, load, createPackage, validatePackage, markExported, archive, exportCsv, exportJson, checkGatewayHealth, checkGatewayVersion, checkZkspd, loadGatewayDictionaries, loadGatewayInstitution, previewDictionary, applyDictionary, clearDictionaryIntake, setFilters, resetFilters, select, selectById }
 })

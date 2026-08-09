@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\DatabaseBackupController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\ExamController;
 use App\Http\Controllers\Api\FrdoPackageController;
+use App\Http\Controllers\Api\FisDictionaryIntakeController;
 use App\Http\Controllers\Api\FisPackageController;
 use App\Http\Controllers\Api\FisOutboundPackageController;
 use App\Http\Controllers\Api\FisAdmissionsImportController;
@@ -412,6 +413,8 @@ Route::middleware(['api.token', 'throttle:api.authenticated'])->group(function (
         Route::get('frdo-packages/{frdoPackage}/export.csv', [FrdoPackageController::class, 'exportCsv']);
         Route::get('frdo-packages/{frdoPackage}/export.json', [FrdoPackageController::class, 'exportJson']);
         Route::apiResource('frdo-packages', FrdoPackageController::class)->only(['index', 'store', 'show']);
+        Route::post('fis/dictionaries/preview', [FisDictionaryIntakeController::class, 'preview'])->middleware('permission:fis.outbound.view');
+        Route::post('fis/dictionaries/apply', [FisDictionaryIntakeController::class, 'apply'])->middleware('permission:fis.settings.manage');
         Route::get('fis/outbound/spec-info', [FisOutboundPackageController::class, 'specInfo'])->middleware('permission:fis.outbound.view');
         Route::get('fis/outbound/gateway/health', [FisOutboundPackageController::class, 'gatewayHealth'])->middleware('permission:fis.outbound.view');
         Route::get('fis/outbound/gateway/version', [FisOutboundPackageController::class, 'gatewayVersion'])->middleware('permission:fis.outbound.view');

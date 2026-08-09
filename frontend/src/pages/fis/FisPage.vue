@@ -262,6 +262,34 @@ async function runGateway(action, label) {
   await action();
   notify(label);
 }
+const dictionaryFile = ref(null);
+const dictionaryCatalog = ref("");
+const intake = computed(() => store.dictionaryIntake);
+const intakeApplied = computed(() => intake.value?.stage === "apply");
+const intakeSubtitle = computed(() => {
+  const value = intake.value;
+  if (!value) return "—";
+  if (value.kind === "dictionary_list")
+    return `${value.dictionaries?.length ?? 0} шт.`;
+  return value.dictionary?.name || value.dictionary?.code || "—";
+});
+async function previewDictionary() {
+  if (!dictionaryFile.value) return;
+  await store.previewDictionary(dictionaryFile.value, dictionaryCatalog.value);
+  notify("Файл разобран, ничего не записано");
+}
+async function applyDictionary() {
+  if (!dictionaryFile.value) return;
+  const result = await store.applyDictionary(
+    dictionaryFile.value,
+    dictionaryCatalog.value,
+  );
+  notify(
+    result?.kind === "directions"
+      ? `Специальности: создано ${result.created}, обновлено ${result.updated}`
+      : `Сопоставлено записей: ${result?.mapped ?? 0}`,
+  );
+}
 async function applyFilters() {
   store.setFilters({ ...store.filters });
   await syncQuery("");
@@ -397,6 +425,110 @@ onMounted(async () => {
           <span>{{ item.label }}</span
           ><AppStatusBadge :label="item.value" :tone="item.tone" /><small>{{
             item.detail
+          }}</small>
+        </article>
+      </div>
+    </section>
+    <section class="fis-gateway-panel">
+      <div class="fis-gateway-panel__header">
+        <div>
+          <h2>Справочники ФИС</h2>
+          <p>
+            Ответ метода получения элементов справочника. Справочник направлений
+            подготовки становится специальностями портала, остальные —
+            сопоставлениями с идентификаторами ФИС. Разбор ничего не пишет:
+            запись происходит только по кнопке «Применить».
+          </p>
+        </div>
+        <div class="fis-gateway-panel__actions">
+          <q-file
+            v-model="dictionaryFile"
+            dense
+            outlined
+            clearable
+            accept=".xml"
+            label="XML-ответ ФИС"
+            style="min-width: 220px"
+          />
+          <q-input
+            v-model="dictionaryCatalog"
+            dense
+            outlined
+            clearable
+            label="Справочник портала"
+            hint="Только для обычных справочников"
+            style="min-width: 220px"
+          />
+          <q-btn
+            dense
+            outline
+            :disable="!dictionaryFile"
+            :loading="store.saving"
+            @click="previewDictionary"
+            >Разобрать</q-btn
+          ><q-btn
+            dense
+            color="primary"
+            :disable="!dictionaryFile || !canManage"
+            :loading="store.saving"
+            @click="applyDictionary"
+            >Применить</q-btn
+          >
+        </div>
+      </div>
+      <div v-if="intake" class="fis-gateway-grid">
+        <article class="fis-gateway-card">
+          <span>Справочник</span
+          ><AppStatusBadge
+            :label="
+              intake.kind === 'directions'
+                ? 'Направления подготовки'
+                : intake.kind === 'dictionary_list'
+                  ? 'Список справочников'
+                  : 'Записи справочника'
+            "
+            tone="info"
+          /><small>{{ intakeSubtitle }}</small>
+        </article>
+        <article v-if="intake.kind === 'directions'" class="fis-gateway-card">
+          <span>Специальности</span
+          ><AppStatusBadge
+            :label="
+              intakeApplied
+                ? `создано ${intake.created}, обновлено ${intake.updated}`
+                : `новых ${intake.will_create?.length ?? 0}, изменится ${intake.will_update?.length ?? 0}`
+            "
+            :tone="intakeApplied ? 'success' : 'warning'"
+          /><small>{{
+            intakeApplied
+              ? `сопоставлено ${intake.mapped}`
+              : "запись не выполнена"
+          }}</small>
+        </article>
+        <article v-if="intake.kind === 'plain'" class="fis-gateway-card">
+          <span>Сопоставление</span
+          ><AppStatusBadge
+            :label="
+              intakeApplied
+                ? `записано ${intake.mapped}`
+                : `совпало ${intake.will_map?.length ?? 0}`
+            "
+            :tone="intakeApplied ? 'success' : 'warning'"
+          /><small>не совпало {{ intake.unmatched?.length ?? 0 }}</small>
+        </article>
+        <article
+          v-if="intake.unmatched?.length"
+          class="fis-gateway-card"
+        >
+          <span>Без пары в портале</span
+          ><AppStatusBadge
+            :label="String(intake.unmatched.length)"
+            tone="warning"
+          /><small>{{
+            intake.unmatched
+              .slice(0, 3)
+              .map((item) => item.fis_name)
+              .join(", ")
           }}</small>
         </article>
       </div>
