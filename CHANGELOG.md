@@ -20,6 +20,14 @@
 - A spreadsheet that has been through Excel loads back in. Curricula, teaching load and exams were read straight out of the file without stripping the byte order mark Excel writes when it saves as «CSV UTF-8», and that mark lands on the first heading — which is `id`, the column telling an update from an insert. Losing it, the import reported success and created a fresh record for every line: a teaching load exported as thirty rows came back as thirty new loads. Curricula with a code were spared only by a unique index, which turned the same file into a page of raw SQL errors instead. The four imports written by hand in their controllers now read through one place that strips the mark, accepts a comma as well as a semicolon, and tolerates a stray trailing separator rather than failing with a five hundred.
 - Every export opens in Excel with its Russian text intact. Nine of the thirteen registers wrote the byte order mark and four did not, so curricula, teaching load, exams and the gate report arrived as mojibake — and a person looking at mojibake re-saves the file, which is how the mark got into the import in the first place. The two halves of that seam were one defect. Writing a CSV is now done in a single place that settles the mark, the separator and the content type once; the journal and UAT exports, which had been quietly using a comma, join the rest on a semicolon.
 
+### Added
+
+- Specialties and education programmes have screens. Both registers had a full API — list, create, change, delete, CSV in and out — and nothing in the portal that reached it: the only forms for them lived in the old interface, which no menu item and no link leads to. So a new specialty could not be entered at all except through the database, and without a programme there is no group, without a group no students, and without a specialty no FRDO package. The screens follow the registers already there: filters that survive a page reload, a card showing what hangs off the record, CSV either way. A programme card counts its groups; a specialty card counts its programmes and says plainly when it has none, because that is the state that blocks everything downstream. A test pins the condition the screens depend on — the role shown the menu item can reach every request they make.
+
+### Fixed
+
+- Creating a specialty or a subject without a code no longer fails with a server error. The code may be omitted — the portal makes one up — but the code that made it up read a field that was not there when nothing was sent. The new screens send an empty code rather than no code, so they never hit it; anything else calling the API did.
+
 ## 0.8.0-rc7 - Private Release Candidate
 
 ### Added

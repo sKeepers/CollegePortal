@@ -45,7 +45,9 @@ class SpecialtyController extends Controller
     public function store(StoreSpecialtyRequest $request): JsonResponse
     {
         $data = $request->validated();
-        $data['code'] = $data['code'] ?: $this->autoCodeService->specialtyCode($data['name'] ?? null);
+        // Код необязателен, поэтому ключа может не быть вовсе: клиент, который
+        // просто не прислал поле, не должен получать пятисотую.
+        $data['code'] = ($data['code'] ?? null) ?: $this->autoCodeService->specialtyCode($data['name'] ?? null);
         $specialty = Specialty::create($data);
 
         return (new SpecialtyResource($specialty))

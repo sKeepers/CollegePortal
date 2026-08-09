@@ -91,6 +91,8 @@ const navGroups = [
   {
     label: 'Справочники',
     items: [
+      { label: 'Специальности', to: '/specialties', icon: GraduationCap, permission: 'reference.manage' },
+      { label: 'Образовательные программы', to: '/education-programs', icon: BookOpen, permission: 'reference.manage' },
       { label: 'Преподаватели', to: '/teachers', icon: UserRound, permission: 'teachers.view' },
       { label: 'Дисциплины', to: '/subjects', icon: BookOpen, permission: 'subjects.view' },
       { label: 'Аудитории', to: '/classrooms', icon: Building2, permission: 'classrooms.view' },

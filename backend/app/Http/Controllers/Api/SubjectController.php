@@ -48,7 +48,9 @@ class SubjectController extends Controller
         $data = $request->validated();
         $teacherIds = $data['teacher_ids'] ?? [];
         unset($data['teacher_ids']);
-        $data['code'] = $data['code'] ?: $this->autoCodeService->subjectCode($data['name'] ?? null);
+        // Код необязателен, поэтому ключа может не быть вовсе: клиент, который
+        // просто не прислал поле, не должен получать пятисотую.
+        $data['code'] = ($data['code'] ?? null) ?: $this->autoCodeService->subjectCode($data['name'] ?? null);
 
         $subject = Subject::create($data);
         $subject->teachers()->sync($teacherIds);
