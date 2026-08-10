@@ -74,6 +74,10 @@ class PermissionInventory
                     'via' => $onlyUmbrella ? 'umbrella' : 'concrete',
                     'concrete' => array_values(array_unique($concrete)),
                     'umbrella' => array_values(array_unique($umbrella)),
+                    // Каким конкретным правом маршрут закрывается — независимо
+                    // от того, есть ли оно у роли. Это и есть то, что предстоит
+                    // раздать, чтобы снять зонтик.
+                    'required' => $this->required($checks),
                 ];
             }
         }
@@ -158,6 +162,21 @@ class PermissionInventory
         }
 
         return $roles;
+    }
+
+    /**
+     * @param  list<list<string>>  $checks
+     * @return list<string>
+     */
+    private function required(array $checks): array
+    {
+        $required = [];
+
+        foreach ($checks as $candidates) {
+            $required = [...$required, ...$this->concrete($candidates)];
+        }
+
+        return array_values(array_unique($required));
     }
 
     /**

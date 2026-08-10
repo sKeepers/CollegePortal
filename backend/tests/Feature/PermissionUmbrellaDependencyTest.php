@@ -24,25 +24,30 @@ class PermissionUmbrellaDependencyTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * Замер от 10.08.2026 на составе прав из `RoleSeeder`.
+     * Замер от 10.08.2026, после того как роли получили свои права.
+     *
+     * Осталось только то, что владелец решил забрать: у «Учебной части» это
+     * правка справочников (18 маршрутов), раздел администрирования (17) и три
+     * удаления. Когда зонтик снимут, этот доступ и должен пропасть.
      *
      * @var array<string, int>
      */
-    private const CEILING = [
-        'study' => 112,
-        'deputy' => 44,
-        'academic_office' => 44,
-        'admission' => 5,
-    ];
+    private const CEILING = ['study' => 38];
 
     public function test_no_role_leans_on_an_umbrella_more_than_it_did(): void
     {
         $this->seed(RoleSeeder::class);
 
+        $inventory = app(PermissionInventory::class);
         $counts = [];
-        foreach (app(PermissionInventory::class)->dependentOnUmbrella() as $row) {
+
+        foreach ($inventory->dependentOnUmbrella() as $row) {
             $counts[$row['role']] = ($counts[$row['role']] ?? 0) + 1;
         }
+
+        // Пустой замер прошёл бы любую проверку ниже, поэтому сначала
+        // убеждаемся, что мерить вообще было что.
+        $this->assertNotEmpty($inventory->reachable(), 'Замер пуст: роли без прав или маршруты не загрузились.');
 
         foreach ($counts as $role => $count) {
             $ceiling = self::CEILING[$role] ?? 0;
@@ -50,16 +55,8 @@ class PermissionUmbrellaDependencyTest extends TestCase
             $this->assertLessThanOrEqual(
                 $ceiling,
                 $count,
-                "Роль {$role} стала опираться на право-зонтик в {$count} местах вместо {$ceiling}: ".
+                "Роль {$role} опирается на право-зонтик в {$count} местах вместо {$ceiling}: ".
                 'маршрут добавили в группу, не дав роли конкретного права. Посмотрите `php artisan permissions:inventory --umbrella-only`.',
-            );
-        }
-
-        foreach (array_keys(self::CEILING) as $role) {
-            $this->assertArrayHasKey(
-                $role,
-                $counts + array_fill_keys(array_keys(self::CEILING), 0),
-                "Роль {$role} исчезла из замера — обновите потолки.",
             );
         }
     }

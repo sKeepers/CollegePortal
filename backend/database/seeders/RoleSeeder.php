@@ -249,6 +249,22 @@ class RoleSeeder extends Seeder
             'groups.view', 'teachers.view', 'students.view', 'people.view',
             'attendance.view',
             'hr.calendar.view', 'hr.replacements.view', 'hr.replacements.manage',
+            // `ARCH-001`, шаг 2: то, до чего роль дотягивалась только через
+            // право-зонтик `manage_dictionaries`, названо своими правами.
+            // Владелец подтвердил состав 10.08.2026.
+            //
+            // Намеренно **не выданы**: `students.delete`, `teachers.delete`,
+            // `groups.delete` — удаляет только администратор; `reference.manage`
+            // и `import.manage` — правка справочников и раздел администрирования
+            // за владельцем справочников.
+            'admissions.view', 'admissions.edit',
+            'students.create', 'students.update',
+            'teachers.create', 'teachers.update',
+            'groups.create', 'groups.update',
+            'graduation.view', 'graduation.edit',
+            'frdo.view', 'frdo.export', 'fis.view', 'fis.export',
+            'attendance.reports',
+            'gate.scan', 'gate.reports', 'gate.points.manage', 'digitalpasses.manage',
         ];
     }
 
@@ -286,6 +302,12 @@ class RoleSeeder extends Seeder
             'teachingload.view', 'teachingload.edit', 'teaching_load.generate', 'teaching_load.assign', 'teaching_load.bulk_assign', 'teaching_load.view_coverage', 'exams.view', 'exams.edit',
             'graduation.view', 'graduation.edit', 'people.update', 'people.link', 'frdo.view', 'fis.view', 'fis.outbound.view', 'fis.outbound.create', 'fis.outbound.generate', 'fis.outbound.validate', 'fis.outbound.send_test', 'fis.outbound.status', 'reference.manage', 'import.manage',
             'manage_dictionaries', 'manage_schedule', 'manage_journal', 'uat.manage', 'hr.employees.view', 'hr.calendar.view', 'hr.statuses.manage', 'hr.replacements.view', 'hr.replacements.manage', 'hr.reports.view', 'view_reports',
+            // `ARCH-001`, шаг 2: названо своими правами то, до чего заместитель
+            // и учебная часть дотягивались только через право-зонтик.
+            // Владелец подтвердил состав 10.08.2026. Прав на удаление среди них
+            // не было и не появилось.
+            'admissions.view', 'admissions.edit', 'frdo.export', 'fis.export',
+            'gate.scan', 'gate.reports', 'gate.points.manage', 'digitalpasses.manage', 'view_own_data',
         ];
     }
 
@@ -302,7 +324,10 @@ class RoleSeeder extends Seeder
 
     private function admissionPermissions(): array
     {
-        return ['dashboard.view', 'people.view', 'people.create', 'people.update', 'admissions.view', 'admissions.edit', 'admissions.applicant.view', 'admissions.applicant.manage', 'admissions.applicant.create', 'admissions.applicant.update', 'admissions.applicant.archive', 'admissions.application.view', 'admissions.application.create', 'admissions.application.update', 'admissions.application.register', 'admissions.application.manage', 'admissions.choice.view', 'admissions.choice.create', 'admissions.choice.update', 'admissions.choice.delete', 'admissions.document.view', 'admissions.document.create', 'admissions.document.update', 'admissions.document.delete', 'admissions.document.verify', 'admissions.document.download_sensitive', 'admissions.documents.view', 'admissions.documents.receive', 'admissions.documents.upload', 'admissions.documents.verify', 'admissions.documents.reject', 'admissions.documents.download', 'admissions.bulk_status', 'admissions.bulk_documents', 'admissions.bulk_recommend', 'admissions.bulk_assign', 'admissions.bulk_export', 'admissions.bulk_enroll', 'admissions.reference.view', 'students.view', 'groups.view', 'fis.outbound.view', 'fis.outbound.create', 'fis.outbound.generate', 'fis.outbound.validate', 'fis.outbound.send_test', 'fis.outbound.status', 'reference.manage', 'import.manage', 'view_reports'];
+        return ['dashboard.view', 'people.view', 'people.create', 'people.update', 'admissions.view', 'admissions.edit', 'admissions.applicant.view', 'admissions.applicant.manage', 'admissions.applicant.create', 'admissions.applicant.update', 'admissions.applicant.archive', 'admissions.application.view', 'admissions.application.create', 'admissions.application.update', 'admissions.application.register', 'admissions.application.manage', 'admissions.choice.view', 'admissions.choice.create', 'admissions.choice.update', 'admissions.choice.delete', 'admissions.document.view', 'admissions.document.create', 'admissions.document.update', 'admissions.document.delete', 'admissions.document.verify', 'admissions.document.download_sensitive', 'admissions.documents.view', 'admissions.documents.receive', 'admissions.documents.upload', 'admissions.documents.verify', 'admissions.documents.reject', 'admissions.documents.download', 'admissions.bulk_status', 'admissions.bulk_documents', 'admissions.bulk_recommend', 'admissions.bulk_assign', 'admissions.bulk_export', 'admissions.bulk_enroll', 'admissions.reference.view', 'students.view', 'groups.view', 'fis.outbound.view', 'fis.outbound.create', 'fis.outbound.generate', 'fis.outbound.validate', 'fis.outbound.send_test', 'fis.outbound.status', 'reference.manage', 'import.manage', 'view_reports',
+            // `ARCH-001`, шаг 2: отчёт посещаемости приёмная комиссия открывала
+            // только через право-зонтик `view_reports`.
+            'attendance.reports'];
     }
 
     private function teacherPermissions(): array
