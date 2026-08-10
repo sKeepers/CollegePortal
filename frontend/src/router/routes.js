@@ -3,6 +3,7 @@ import AppLayout from '../layouts/AppLayout.vue'
 import PublicLayout from '../layouts/PublicLayout.vue'
 import MobileStudentLayout from '../layouts/MobileStudentLayout.vue'
 import MobileTeacherLayout from '../layouts/MobileTeacherLayout.vue'
+import MobileCuratorLayout from '../layouts/MobileCuratorLayout.vue'
 const LoginPage = () => import('../pages/auth/LoginPage.vue')
 const DashboardPage = () => import('../pages/dashboard/DashboardPage.vue')
 const MyAccountPage = () => import('../pages/account/MyAccountPage.vue')
@@ -54,6 +55,8 @@ const MobileStudentPassPage = () => import('../pages/mobile/student/MobileStuden
 const MobileTeacherHomePage = () => import('../pages/mobile/teacher/MobileTeacherHomePage.vue')
 const MobileTeacherPassPage = () => import('../pages/mobile/teacher/MobileTeacherPassPage.vue')
 const MobileTeacherLessonPage = () => import('../pages/mobile/teacher/MobileTeacherLessonPage.vue')
+const MobileCuratorHomePage = () => import('../pages/mobile/curator/MobileCuratorHomePage.vue')
+const MobileCuratorGroupPage = () => import('../pages/mobile/curator/MobileCuratorGroupPage.vue')
 const StudentCabinetPage = () => import('../pages/student/StudentCabinetPage.vue')
 
 export const routes = [
@@ -129,6 +132,26 @@ export const routes = [
         name: 'mobile-teacher-journal',
         component: MobileTeacherLessonPage,
         meta: { title: 'Журнал занятия' },
+      },
+    ],
+  },
+
+  {
+    path: '/m/curator',
+    component: MobileCuratorLayout,
+    meta: { permission: 'mobile.curator.view' },
+    children: [
+      {
+        path: '',
+        name: 'mobile-curator-home',
+        component: MobileCuratorHomePage,
+        meta: { title: 'Кабинет куратора' },
+      },
+      {
+        path: 'groups/:groupId',
+        name: 'mobile-curator-group',
+        component: MobileCuratorGroupPage,
+        meta: { title: 'Моя группа' },
       },
     ],
   },

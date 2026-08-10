@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\AdmissionBulkController;
 use App\Http\Controllers\Api\BuildingController;
 use App\Http\Controllers\Api\GroupController;
 use App\Http\Controllers\Api\HrCalendarController;
+use App\Http\Controllers\Api\MobileCuratorController;
 use App\Http\Controllers\Api\MobileStudentController;
 use App\Http\Controllers\Api\MobileTeacherController;
 use App\Http\Controllers\Api\PersonController;
@@ -99,6 +100,15 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         ->middleware('permission:mobile.student.view');
     Route::get('mobile/teacher', [MobileTeacherController::class, 'show'])
         ->middleware('permission:mobile.teacher.view');
+    // Право открывает раздел всем кураторам сразу и потому ничего не
+    // разграничивает: чья это группа, проверяет сам контроллер по
+    // `groups.curator_id` на каждом запросе.
+    Route::middleware('permission:mobile.curator.view')->group(function (): void {
+        Route::get('mobile/curator', [MobileCuratorController::class, 'index']);
+        Route::get('mobile/curator/groups/{group}', [MobileCuratorController::class, 'group']);
+        Route::get('mobile/curator/groups/{group}/attendance', [MobileCuratorController::class, 'attendance']);
+        Route::get('mobile/curator/groups/{group}/access', [MobileCuratorController::class, 'access']);
+    });
     Route::get('dashboard/layouts', [DashboardLayoutController::class, 'index']);
     Route::post('dashboard/layouts', [DashboardLayoutController::class, 'store']);
     Route::post('dashboard/layouts/reset', [DashboardLayoutController::class, 'reset']);

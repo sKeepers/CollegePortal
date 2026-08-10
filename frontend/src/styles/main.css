@@ -7608,3 +7608,92 @@ body {
   color: #64748b;
   font-weight: 700;
 }
+
+/* Кабинет куратора: сводка, признаки статуса и контакты студентов. */
+
+.mobile-cabinet-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.mobile-cabinet-metrics article {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.mobile-cabinet-metrics span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.mobile-cabinet-metrics strong {
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.mobile-cabinet-range {
+  margin-bottom: 10px;
+}
+
+.mobile-cabinet-tag {
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.mobile-cabinet-tag--present {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.mobile-cabinet-tag--late {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.mobile-cabinet-tag--absent {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.mobile-cabinet-roster-note {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+/* Контакты переносятся и разрываются по словам: длинный адрес почты — самая
+   частая причина, по которой мобильная страница уезжает вбок. */
+.mobile-cabinet-contacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.mobile-cabinet-contacts a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.mobile-cabinet-contacts span {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+}
