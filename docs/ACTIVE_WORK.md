@@ -53,13 +53,16 @@
 
 ### Чат 3 — «Единая карточка человека» (занято с 09.08.2026)
 
-Ветка: `docs/task-ownership` — только эта запись, кода в ней нет.
+Ветка: `fix/rate-limit-per-user`, worktree `.worktrees/rate-limit`.
 
 **Про номер.** Владелец называет этот чат вторым, но номер 2 на доске к тому времени занял чат ФИС. Переименовывать соседа посреди работы вреднее, чем взять свободный номер, поэтому здесь он третий. Если владелец говорит «второй чат» — речь об этом. Ориентируйтесь на название, а не на цифру.
 
 | Задача | Файлы, которые трогает | Состояние |
 | --- | --- | --- |
-| `SEC-006` — ограничитель частоты считает по адресу, а не по человеку | `app/Providers/AppServiceProvider.php`, `bootstrap/app.php`, новый тест | следующая |
+| `SEC-006` — ограничитель частоты считает по адресу, а не по человеку | `app/Providers/AppServiceProvider.php`, `app/Http/Middleware/AuthenticateApiToken.php`, новый `app/Support/Auth/ApiTokenResolver.php`, новый тест | **в работе**, код готов и проверен, идёт вливание |
+| `SEC-002` — токен в httpOnly cookie с CSRF | контур авторизации, состав определится планом | следующая, начинать только после вливания `SEC-006` |
+
+`bootstrap/app.php` из списка ушёл: порядок middleware менять не понадобилось, ключ счётчика берётся из общего резолвера токена.
 
 Уже сделано и влито чатом 3, повторно не трогать: ФИО, телефон и email пишутся только в Person, а копии в `teachers` и `students` приходят зеркалом (`PersonService`, `HrService`, `TeacherController`, `StudentController::update`, `PersonController`); форма редактирования человека в разделе «Люди» (`pages/people/PeoplePage.vue`, `stores/people.js`); лимит памяти прогона в `phpunit.xml` и `phpunit.pgsql.xml`. Поведение закреплено `PersonSharedDataSyncTest` — десять случаев.
 
