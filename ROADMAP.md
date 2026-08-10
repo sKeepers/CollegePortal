@@ -361,7 +361,7 @@ QR-пропуска и проходная уже реализованы в ра�
 - [x] Добавить `/admin/permissions`.
 - [x] Защитить API точечными permissions.
 - [ ] RBAC-002: ownership-политики для преподавателей и студентов.
-- [ ] RBAC-003: скрытие action-level кнопок во всех CRUD-разделах.
+- [ ] RBAC-003: скрытие action-level кнопок во всех CRUD-разделах. Инструмент для этого уже написан и лежит без дела — `frontend/src/components/PermissionGuard.vue` принимает `permission`, `any` или `all` и опирается на используемый повсюду `composables/usePermissions`. Не пишите его заново и не удаляйте как неиспользуемый: разбор находки 12 это проверял, см. [LEGACY_INTERFACE_REVIEW.md](docs/LEGACY_INTERFACE_REVIEW.md).
 
 
 ## PERSON-001 завершено

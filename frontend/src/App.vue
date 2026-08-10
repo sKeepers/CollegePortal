@@ -912,7 +912,8 @@ async function logout() {
   try {
     await api.logout()
   } catch {
-    // Local logout should still clear the stale token.
+    // Даже если сервер не ответил, признак сессии на стороне браузера снять надо:
+    // сам токен лежит в httpOnly cookie и отсюда недостижим.
   } finally {
     api.clearSession()
     authUser.value = null
