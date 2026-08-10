@@ -382,6 +382,15 @@ watch(
             </div>
           </template>
           <q-list dense>
+            <!-- Своя учётная запись доступна любой роли, поэтому живёт здесь,
+                 а не в боковом меню под правом. -->
+            <q-item clickable v-close-popup to="/account">
+              <q-item-section avatar>
+                <UserRound :size="18" />
+              </q-item-section>
+              <q-item-section>Моя учётная запись</q-item-section>
+            </q-item>
+            <q-separator />
             <q-item clickable v-close-popup @click="logout">
               <q-item-section avatar>
                 <LogOut :size="18" />

@@ -1,0 +1,126 @@
+<script setup>
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useQuasar } from 'quasar'
+import { KeyRound, Mail, Phone, UserRound } from '@lucide/vue'
+import AppPage from '../../components/ui/AppPage.vue'
+import PageHeader from '../../components/ui/PageHeader.vue'
+import AppCard from '../../components/ui/AppCard.vue'
+import AppLoading from '../../components/ui/AppLoading.vue'
+import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
+import { formatPhone } from '../../utils/phone'
+import { useAccountStore } from '../../stores/account'
+
+const store = useAccountStore()
+const $q = useQuasar()
+
+const contacts = reactive({ email: '', phone: '' })
+const password = reactive({ current_password: '', password: '', password_confirmation: '' })
+const showPassword = ref(false)
+
+const account = computed(() => store.account)
+const passwordValid = computed(() =>
+  Boolean(password.current_password && password.password.length >= 8 && password.password === password.password_confirmation),
+)
+
+watch(account, (value) => {
+  contacts.email = value?.email || ''
+  contacts.phone = value?.phone || ''
+}, { immediate: true })
+
+onMounted(() => store.load())
+
+async function saveContacts() {
+  // Пустое поле здесь значит «очистить»: человек видит, что стирает.
+  await store.saveContacts({ email: contacts.email || null, phone: contacts.phone || null })
+  $q.notify({ type: 'positive', message: 'Контакты сохранены' })
+}
+
+async function savePassword() {
+  await store.changePassword({ ...password })
+  Object.assign(password, { current_password: '', password: '', password_confirmation: '' })
+  showPassword.value = false
+  $q.notify({ type: 'positive', message: 'Пароль изменён' })
+}
+
+function formatDateTime(value) {
+  if (!value) return 'нет данных'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('ru-RU')
+}
+</script>
+
+<template>
+  <AppPage>
+    <PageHeader title="Моя учётная запись" subtitle="Здесь вы меняете свои контакты и пароль. ФИО и документы правит кадровая или учебная часть." />
+    <AppErrorBanner :message="store.error" />
+    <AppLoading v-if="store.loading" label="Загрузка учётной записи..." />
+
+    <div v-else-if="account" class="account-grid">
+      <AppCard>
+        <template #header><div class="account-card-title"><UserRound :size="18" /> Кто вы в портале</div></template>
+        <dl class="account-details">
+          <div><dt>Имя</dt><dd>{{ account.name || '—' }}</dd></div>
+          <div><dt>Вход</dt><dd>{{ account.login || '—' }}</dd></div>
+          <div><dt>Роль</dt><dd>{{ account.role || '—' }}</dd></div>
+          <div><dt>Последний вход</dt><dd>{{ formatDateTime(account.last_login_at) }}</dd></div>
+        </dl>
+      </AppCard>
+
+      <AppCard>
+        <template #header><div class="account-card-title"><Mail :size="18" /> Контакты</div></template>
+        <p v-if="!account.has_person" class="account-note">
+          К учётной записи не привязана личная карточка, поэтому контакты хранить негде. Обратитесь к администратору.
+        </p>
+        <template v-else>
+          <div class="account-form">
+            <q-input v-model="contacts.email" outlined dense type="email" label="Email" />
+            <q-input v-model="contacts.phone" outlined dense label="Телефон">
+              <template #prepend><Phone :size="16" /></template>
+              <template #hint>Сейчас: {{ formatPhone(account.phone, 'не указан') }}</template>
+            </q-input>
+          </div>
+          <p class="account-note">
+            Это общие данные человека: исправление здесь появится и в вашей карточке преподавателя, студента или сотрудника.
+          </p>
+          <div class="account-actions">
+            <q-btn color="primary" no-caps :loading="store.saving" @click="saveContacts">Сохранить контакты</q-btn>
+          </div>
+        </template>
+      </AppCard>
+
+      <AppCard>
+        <template #header><div class="account-card-title"><KeyRound :size="18" /> Пароль</div></template>
+        <template v-if="!showPassword">
+          <p class="account-note">Пароль меняется только вами и только с подтверждением текущего.</p>
+          <div class="account-actions"><q-btn outline no-caps @click="showPassword = true">Изменить пароль</q-btn></div>
+        </template>
+        <template v-else>
+          <div class="account-form">
+            <q-input v-model="password.current_password" outlined dense type="password" label="Текущий пароль" autocomplete="current-password" />
+            <q-input v-model="password.password" outlined dense type="password" label="Новый пароль" autocomplete="new-password" hint="Не короче восьми символов" />
+            <q-input v-model="password.password_confirmation" outlined dense type="password" label="Новый пароль ещё раз" autocomplete="new-password" />
+          </div>
+          <div class="account-actions">
+            <q-btn flat no-caps @click="showPassword = false">Отмена</q-btn>
+            <q-btn color="primary" no-caps :disable="!passwordValid" :loading="store.saving" @click="savePassword">Сохранить пароль</q-btn>
+          </div>
+        </template>
+      </AppCard>
+    </div>
+  </AppPage>
+</template>
+
+<style scoped>
+.account-grid { display: grid; gap: 16px; max-width: 720px; }
+.account-card-title { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.account-details { display: grid; gap: 10px; margin: 0; }
+.account-details div { display: grid; grid-template-columns: 180px 1fr; gap: 8px; }
+.account-details dt { color: #64748b; font-size: 13px; }
+.account-details dd { margin: 0; color: #0f172a; overflow-wrap: anywhere; }
+.account-form { display: grid; gap: 12px; }
+.account-note { color: #64748b; font-size: 13px; margin: 12px 0 0; }
+.account-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+@media (max-width: 640px) {
+  .account-details div { grid-template-columns: 1fr; gap: 2px; }
+}
+</style>

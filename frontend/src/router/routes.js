@@ -4,6 +4,7 @@ import PublicLayout from '../layouts/PublicLayout.vue'
 import MobileStudentLayout from '../layouts/MobileStudentLayout.vue'
 const LoginPage = () => import('../pages/auth/LoginPage.vue')
 const DashboardPage = () => import('../pages/dashboard/DashboardPage.vue')
+const MyAccountPage = () => import('../pages/account/MyAccountPage.vue')
 const PeoplePage = () => import('../pages/people/PeoplePage.vue')
 const StudentsPage = () => import('../pages/students/StudentsPage.vue')
 const GroupsPage = () => import('../pages/groups/GroupsPage.vue')
@@ -116,6 +117,13 @@ export const routes = [
         name: 'dashboard',
         component: DashboardPage,
         meta: { title: 'Панель' },
+      },
+      {
+        // Без права намеренно: свою учётную запись открывает любой вошедший.
+        path: 'account',
+        name: 'account',
+        component: MyAccountPage,
+        meta: { title: 'Моя учётная запись' },
       },
       {
         path: 'people',

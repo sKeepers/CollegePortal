@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AccessGateController;
 use App\Http\Controllers\Api\AccessPointController;
@@ -77,6 +78,11 @@ Route::get('public/education-programs', [EducationProgramController::class, 'ind
 Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->group(function (): void {
     Route::get('auth/me', [AuthController::class, 'me']);
     Route::post('auth/logout', [AuthController::class, 'logout']);
+    // Раздел «Моя учётная запись» — без права: своей почтой, телефоном и паролем
+    // распоряжается любой вошедший, независимо от роли.
+    Route::get('account', [AccountController::class, 'show']);
+    Route::patch('account/contacts', [AccountController::class, 'updateContacts']);
+    Route::post('account/password', [AccountController::class, 'changePassword']);
     Route::get('mobile/student', [MobileStudentController::class, 'show']);
     Route::get('dashboard/layouts', [DashboardLayoutController::class, 'index']);
     Route::post('dashboard/layouts', [DashboardLayoutController::class, 'store']);
