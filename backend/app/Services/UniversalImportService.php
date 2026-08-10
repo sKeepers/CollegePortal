@@ -42,6 +42,7 @@ class UniversalImportService
         HrService $hrService,
         AccountProvisioningService $accounts,
         SnilsService $snils,
+        PersonService $people,
         StudentPersonService $studentPeople,
         IdentityDocumentService $identityDocuments,
         EducationDocumentService $educationDocuments,
@@ -49,7 +50,7 @@ class UniversalImportService
         foreach ([
             new StudentImportHandler($snils, $studentPeople, $identityDocuments, $educationDocuments, $accounts),
             new GroupImportHandler(),
-            new TeacherImportHandler($accounts),
+            new TeacherImportHandler($accounts, $people, $snils),
             new SubjectImportHandler($autoCodeService),
             new ClassroomImportHandler(),
             new AdmissionImportHandler(),

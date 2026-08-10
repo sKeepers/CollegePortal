@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Teacher;
+use App\Services\Import\TeacherImportHandler;
 use App\Support\Csv\CsvExport;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Validator;
@@ -12,36 +13,79 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TeacherCsvService
 {
+    /** Колонки, которые принимает собственный CSV-импорт преподавателей. */
     private const HEADERS = [
         'id',
         'last_name',
         'first_name',
         'middle_name',
+        'birth_date',
+        'snils',
         'phone',
         'email',
+        'address',
         'position',
         'department',
         'is_active',
     ];
 
+    /**
+     * Заголовки шаблона импорта в технические имена этого сервиса. Нужно, чтобы
+     * выгрузка грузилась не только «Универсальным импортом», но и сюда: файл
+     * отдают как заготовку, и он обязан приниматься там, откуда его взяли.
+     * Прежние английские заголовки продолжают работать — файлы по старому
+     * образцу никуда не делись.
+     */
+    private const LABEL_TO_COLUMN = [
+        'фамилия' => 'last_name',
+        'имя' => 'first_name',
+        'отчество' => 'middle_name',
+        'дата рождения' => 'birth_date',
+        'снилс' => 'snils',
+        'телефон' => 'phone',
+        'email' => 'email',
+        'почта' => 'email',
+        'адрес' => 'address',
+        'должность' => 'position',
+        'отделение' => 'department',
+        'кафедра' => 'department',
+        'активен' => 'is_active',
+        'создать учетную запись' => 'auto_account',
+    ];
+
+    /**
+     * Выгрузка идёт колонками шаблона импорта, а не машинными именами полей.
+     * Владелец использует файл как заготовку: выгрузил, дополнил в Excel,
+     * загрузил обратно — и он обязан приниматься там, откуда его взяли.
+     *
+     * Столбец «Создать учетную запись» выгружается пустым намеренно: обратная
+     * загрузка не должна переоформлять учётные записи.
+     */
     public function export(): StreamedResponse
     {
-        return CsvExport::download('teachers.csv', self::HEADERS, function (callable $row): void {
+        $handler = app(TeacherImportHandler::class);
+
+        return CsvExport::download('teachers.csv', $handler->templateHeaders(), function (callable $row): void {
             Teacher::query()
+                ->with('person')
                 ->orderBy('last_name')
                 ->orderBy('first_name')
                 ->chunk(200, function ($teachers) use ($row): void {
                     foreach ($teachers as $teacher) {
+                        // Порядок обязан совпадать с templateHeaders() обработчика импорта.
                         $row([
-                            $teacher->id,
                             $teacher->last_name,
                             $teacher->first_name,
                             $teacher->middle_name,
+                            $teacher->person?->birth_date?->format('d.m.Y'),
+                            $teacher->person?->snils,
                             $teacher->phone,
                             $teacher->email,
+                            $teacher->person?->address,
                             $teacher->position,
                             $teacher->department,
-                            $teacher->is_active ? '1' : '0',
+                            $teacher->is_active ? 'да' : 'нет',
+                            '',
                         ]);
                     }
                 });
@@ -87,13 +131,21 @@ class TeacherCsvService
             $teacher = $this->findTeacher($validated);
             unset($validated['id']);
 
+            // Раскладку полей делает обработчик универсального импорта: дата
+            // рождения, СНИЛС и адрес принадлежат человеку, а не преподавателю,
+            // и второй такой же раскладки здесь заводить не нужно.
+            $handler = app(TeacherImportHandler::class);
+            $prepared = $handler->prepare($validated);
+
             if ($teacher) {
-                $teacher->update($validated);
+                $teacher->update($handler->payload($prepared, true));
                 $updated++;
             } else {
-                Teacher::create($validated);
+                $teacher = Teacher::create($handler->payload($prepared));
                 $created++;
             }
+
+            $handler->applyPerson($teacher, $prepared);
         }
 
         if ($headers === null) {
@@ -127,11 +179,17 @@ class TeacherCsvService
 
         foreach ($headers as $index => $header) {
             if ($header !== '') {
-                $payload[$header] = $row[$index] ?? null;
+                $payload[$this->canonicalColumn($header)] = $row[$index] ?? null;
             }
         }
 
         return $payload;
+    }
+
+    /** Русская подпись шаблона или машинное имя — оба приводятся к одному ключу. */
+    private function canonicalColumn(string $header): string
+    {
+        return self::LABEL_TO_COLUMN[mb_strtolower(trim($header))] ?? $header;
     }
 
     private function normalizePayload(array $payload): array
@@ -179,17 +237,12 @@ class TeacherCsvService
             ->first();
     }
 
+    /** Правила берутся у обработчика импорта: два списка неизбежно разошлись бы. */
     private function rules(): array
     {
         return [
             'id' => ['nullable', 'integer', 'exists:teachers,id'],
-            'last_name' => ['required', 'string', 'max:255'],
-            'first_name' => ['required', 'string', 'max:255'],
-            'middle_name' => ['nullable', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'position' => ['nullable', 'string', 'max:255'],
-            'department' => ['nullable', 'string', 'max:255'],
+            ...app(TeacherImportHandler::class)->rules(),
             'is_active' => ['required', 'boolean'],
         ];
     }

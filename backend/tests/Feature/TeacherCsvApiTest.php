@@ -38,7 +38,10 @@ class TeacherCsvApiTest extends TestCase
 
         $content = $response->streamedContent();
 
-        $this->assertStringContainsString('last_name', $content);
+        // Колонки выгрузки — подписи шаблона импорта, а не машинные имена полей:
+        // файл отдают как заготовку и грузят обратно. Прежний заголовок
+        // `last_name` тут закреплялся именно потому, что симметрии не было.
+        $this->assertStringContainsString('Фамилия', $content);
         $this->assertStringContainsString('Смирнова', $content);
         $this->assertStringContainsString('Теоретическое отделение', $content);
     }
