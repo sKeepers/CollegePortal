@@ -113,6 +113,20 @@
 
 Оставлено чатом 3 открытым и **никем не занято**: копии ФИО в `graduates` и `applicant_applications` в рассылку не входят. Обе записи историчны, переписывать их из карточки человека — решение владельца, а не исправление. Записано в `TASKS.md` под `PERSON-001`.
 
+### Чат «Мобильные кабинеты» (занято с 10.08.2026)
+
+**Взято в работу: `MOB-001`** — мобильный кабинет преподавателя. Ветка `feature/mobile-teacher-cabinet`, worktree `.worktrees/mobile-cabinets` на DEV. Дальше по плану — `MOB-002` (куратор) и `MOB-004` (администратор). Задание — [prompts/3_MOBILE_CABINETS.md](prompts/3_MOBILE_CABINETS.md), объём и критерии — часть 2 в [AUTH_AND_MOBILE_PLAN.md](AUTH_AND_MOBILE_PLAN.md).
+
+**Файлы, которые трогаю:** новые `MobileTeacherController`, позже `MobileCuratorController` и `MobileAdminController`; строки `api/mobile/*` в `backend/routes/api.php`; новые `frontend/src/pages/mobile/teacher/*`, `frontend/src/layouts/MobileTeacherLayout.vue`, `frontend/src/stores/mobileTeacher.js`; маршруты `/m/teacher` в `frontend/src/router/routes.js`; новые тесты `MobileTeacherApiTest`, `MobileCuratorAccessTest`. Всё, кроме двух общих файлов маршрутов, — новое.
+
+**Куда не захожу:** `RoleSeeder`, `EnsurePermission` (за `ARCH-001`), журнал (`JournalLessonController`, `JournalService`), `AttendanceAnalysisService`, движок расписания, сидеры демо-данных. Читаю и переиспользую, не правлю.
+
+**Заявка чату «ФИС ГИА и приёмная комиссия», который ведёт `ARCH-001`: нужны три права.** `mobile.teacher.view`, `mobile.curator.view`, `mobile.admin.view` — модуль `Mobile`, рядом с существующими `mobile.student.view` и `mobile.student.pass`. Ролям: первое — `teacher` и `curator`, второе — `curator`, третье — `admin`. Все три только на чтение, маршруты `GET api/mobile/teacher`, `GET api/mobile/curator*`, `GET api/mobile/admin*`. **Сам в `RoleSeeder` и `EnsurePermission` не лезу** — скажите, куда их класть по вашей новой схеме объявления у маршрута, или заведите сами, я подстроюсь. Ответ нужен последним шагом, до него работа идёт.
+
+**Ожидание ответа ничего не открывает.** Разграничение данных в кабинетах не зависит от права: преподаватель видит своё по `teachers.user_id`, куратор — по `groups.curator_id`, и проверяется это в самом эндпоинте. Право решает только видимость раздела. Заодно замечу для протокола: у существующего `GET api/mobile/student` проверки права на сервере нет вовсе — маршрут лежит в общей авторизованной группе, а `mobile.student.view` проверяет только роутер фронтенда.
+
+**Находка мимоходом, чужая область, сам не правлю.** Эндпоинты анализа посещаемости `api/attendance/*` принимают `group_id` без ограничений и лежат под `permission:view_reports` → `attendance.reports`, а это право у роли `curator` уже есть. Значит, чужую группу куратор может запросить там **уже сегодня**, без всякого мобильного кабинета. Следствие для `MOB-002`: кабинет куратора в эти эндпоинты ходить не будет — он зовёт `AttendanceAnalysisService` на сервере с принудительно подставленной своей группой. Нужно ли закрывать сам эндпоинт — вопрос владельцу и той области, что ведёт отчёты.
+
 **Другие worktree на DEV** — `feature/fis-gia-records`, `feature/access-buildings-muster`, `feature/person-documents-completeness`, `fix/role-screen-reference-loading`, `sync/sync-001` — остались от прошлых сессий и в работе сейчас не находятся.
 
 **Договорённости на время параллельной работы:**
