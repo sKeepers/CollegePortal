@@ -98,12 +98,6 @@ export const routes = [
     ],
   },
   {
-    path: '/legacy',
-    name: 'legacy',
-    component: () => import('../pages/legacy/LegacyPage.vue'),
-    meta: { public: true, title: 'Старый интерфейс' },
-  },
-  {
     path: '/forbidden',
     name: 'forbidden',
     component: ForbiddenPage,
