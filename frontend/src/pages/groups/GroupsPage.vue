@@ -34,7 +34,10 @@ const syncingQueryFromUi = ref(false)
 const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.groups.splitter.v1', resizeBodyClass: 'groups-splitter-resizing' })
 const canCreate = computed(() => permissions.hasPermission('groups.create') || permissions.hasPermission('groups.edit'))
 const canUpdate = computed(() => permissions.hasPermission('groups.update') || permissions.hasPermission('groups.edit'))
-const canDelete = computed(() => permissions.hasPermission('groups.delete') || permissions.hasPermission('groups.edit'))
+// Удаляет группу только администратор. Кнопки «Пометить на удаление» здесь нет
+// намеренно: в корзину кладутся карточки людей, а группа — не карточка, у
+// `groups` нет мягкого удаления, и на неё ссылается `students.group_id`.
+const canDelete = computed(() => permissions.hasPermission('trash.manage'))
 const canImport = computed(() => canUpdate.value)
 const canExport = computed(() => permissions.hasPermission('groups.update') || permissions.hasPermission('groups.edit') || permissions.hasPermission('groups.view'))
 

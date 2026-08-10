@@ -144,6 +144,51 @@ class DeletionRequestApiTest extends TestCase
             ->assertJsonPath('data.0.subject_label', 'Первый Проверочный');
     }
 
+    /**
+     * Правило владельца соблюдается целиком только тогда, когда прямое удаление
+     * закрыто. До 11.08.2026 маршруты `DELETE` требовали `students.delete`,
+     * `teachers.delete` и `groups.delete`, эти права были у «Учебной части 2» и
+     * заместителя, и удаление шло мимо заявки: карточка уходила в корзину, но
+     * без проверки администратором.
+     */
+    public function test_direct_deletion_is_closed_to_everyone_but_the_administrator(): void
+    {
+        $this->seed(RoleSeeder::class);
+        $student = $this->createStudent('Ошибочный');
+        $group = Group::query()->firstOrFail();
+
+        // Полный набор прав на ведение карточек — и всё равно не удаляет.
+        $this->withApiAuth($this->userWith([
+            'students.view', 'students.create', 'students.update',
+            'teachers.view', 'teachers.create', 'teachers.update',
+            'groups.view', 'groups.create', 'groups.update',
+            'trash.request',
+        ]));
+
+        $this->deleteJson("/api/students/{$student->id}")->assertForbidden();
+        $this->deleteJson("/api/groups/{$group->id}")->assertForbidden();
+        $this->assertNotNull(Student::query()->find($student->id));
+
+        $this->withApiAuth($this->userWith(['trash.manage']));
+        $this->deleteJson("/api/students/{$student->id}")->assertSuccessful();
+    }
+
+    /**
+     * Права удаления выведены из употребления, и вернуть их роли уже нечем:
+     * неактивное право не проходит `User::hasPermission`. Проверяем, что
+     * маршрут не открывается тем, кто держит старое право.
+     */
+    public function test_the_retired_delete_permissions_no_longer_open_the_route(): void
+    {
+        $this->seed(RoleSeeder::class);
+        $student = $this->createStudent('Ошибочный');
+
+        $this->withApiAuth($this->userWith(['students.view', 'students.delete']));
+
+        $this->deleteJson("/api/students/{$student->id}")->assertForbidden();
+        $this->assertNotNull(Student::query()->find($student->id));
+    }
+
     private function requestDeletion(Student $student, string $reason = 'Карточка заведена дважды, эта лишняя.'): DeletionRequest
     {
         $this->withApiAuth($this->userWith(['students.view', 'trash.request']));

@@ -65,7 +65,10 @@ class RoleSeeder extends Seeder
             ['module' => 'Students', 'code' => 'students.view', 'name' => 'Студенты: просмотр', 'description' => 'Просмотр списка и карточек студентов.'],
             ['module' => 'Students', 'code' => 'students.create', 'name' => 'Студенты: создание', 'description' => 'Создание студентов.'],
             ['module' => 'Students', 'code' => 'students.update', 'name' => 'Студенты: изменение', 'description' => 'Редактирование студентов, импорт и фото.'],
-            ['module' => 'Students', 'code' => 'students.delete', 'name' => 'Студенты: удаление', 'description' => 'Удаление студентов.'],
+            // `students.delete`, `teachers.delete` и `groups.delete` выведены из
+            // употребления 11.08.2026: удаляет только администратор, и решает
+            // это право `trash.manage`. На установленных системах их отвязывает
+            // и гасит миграция `2026_08_11_000001`.
             ['module' => 'Students', 'code' => 'students.bulk_group', 'name' => 'Студенты: массовое назначение группы', 'description' => 'Массовое назначение группы студентам.'],
             ['module' => 'Students', 'code' => 'students.bulk_status', 'name' => 'Студенты: массовое изменение статуса', 'description' => 'Массовое изменение статуса студентов.'],
             ['module' => 'Students', 'code' => 'students.bulk_course', 'name' => 'Студенты: массовое изменение курса', 'description' => 'Массовое изменение курса студентов.'],
@@ -77,11 +80,9 @@ class RoleSeeder extends Seeder
             ['module' => 'Groups', 'code' => 'groups.view', 'name' => 'Группы: просмотр', 'description' => 'Просмотр групп.'],
             ['module' => 'Groups', 'code' => 'groups.create', 'name' => 'Группы: создание', 'description' => 'Создание групп.'],
             ['module' => 'Groups', 'code' => 'groups.update', 'name' => 'Группы: изменение', 'description' => 'Редактирование групп и импорт.'],
-            ['module' => 'Groups', 'code' => 'groups.delete', 'name' => 'Группы: удаление', 'description' => 'Удаление групп.'],
             ['module' => 'Teachers', 'code' => 'teachers.view', 'name' => 'Преподаватели: просмотр', 'description' => 'Просмотр преподавателей.'],
             ['module' => 'Teachers', 'code' => 'teachers.create', 'name' => 'Преподаватели: создание', 'description' => 'Создание преподавателей.'],
             ['module' => 'Teachers', 'code' => 'teachers.update', 'name' => 'Преподаватели: изменение', 'description' => 'Редактирование преподавателей, импорт и фото.'],
-            ['module' => 'Teachers', 'code' => 'teachers.delete', 'name' => 'Преподаватели: удаление', 'description' => 'Удаление преподавателей.'],
             ['module' => 'Subjects', 'code' => 'subjects.view', 'name' => 'Дисциплины: просмотр', 'description' => 'Просмотр дисциплин.'],
             ['module' => 'Subjects', 'code' => 'subjects.create', 'name' => 'Дисциплины: создание', 'description' => 'Создание дисциплин.'],
             ['module' => 'Subjects', 'code' => 'subjects.update', 'name' => 'Дисциплины: изменение', 'description' => 'Редактирование дисциплин и импорт.'],
@@ -305,9 +306,9 @@ class RoleSeeder extends Seeder
         return [
             'dashboard.view', 'view_own_data',
             'people.view', 'people.update', 'people.link',
-            'students.view', 'students.create', 'students.update', 'students.delete',
+            'students.view', 'students.create', 'students.update',
             'students.bulk_group', 'students.bulk_status', 'students.bulk_course', 'students.bulk_education', 'students.bulk_passes', 'students.bulk_accounts', 'students.bulk_archive', 'students.bulk_export',
-            'groups.view', 'groups.create', 'groups.update', 'groups.delete',
+            'groups.view', 'groups.create', 'groups.update',
             'journal.view', 'journal.view_all', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files',
             'journal.complete', 'journal.sign', 'journal.reopen', 'journal.export',
             'attendance.view', 'attendance.reports',
@@ -321,9 +322,9 @@ class RoleSeeder extends Seeder
     private function academicEditorPermissions(): array
     {
         return [
-            'dashboard.view', 'people.view', 'students.view', 'students.create', 'students.update', 'students.delete', 'students.bulk_group', 'students.bulk_status', 'students.bulk_course', 'students.bulk_education', 'students.bulk_passes', 'students.bulk_accounts', 'students.bulk_archive', 'students.bulk_export',
-            'groups.view', 'groups.create', 'groups.update', 'groups.delete',
-            'teachers.view', 'teachers.create', 'teachers.update', 'teachers.delete',
+            'dashboard.view', 'people.view', 'students.view', 'students.create', 'students.update', 'students.bulk_group', 'students.bulk_status', 'students.bulk_course', 'students.bulk_education', 'students.bulk_passes', 'students.bulk_accounts', 'students.bulk_archive', 'students.bulk_export',
+            'groups.view', 'groups.create', 'groups.update',
+            'teachers.view', 'teachers.create', 'teachers.update',
             'subjects.view', 'subjects.create', 'subjects.update', 'subjects.delete',
             'classrooms.view', 'classrooms.create', 'classrooms.update', 'classrooms.delete',
             'schedule.view', 'schedule.create', 'schedule.update', 'schedule.delete', 'schedule.validate', 'schedule.manage_templates', 'schedule.manage_replacements', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.reopen', 'journal.view_all', 'journal.export',

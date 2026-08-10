@@ -38,6 +38,7 @@ const ApplicantPublicPage = () => import('../pages/public/ApplicantPublicPage.vu
 const UiFoundationPage = () => import('../pages/system/UiFoundationPage.vue')
 const ForbiddenPage = () => import('../pages/system/ForbiddenPage.vue')
 const DataManagementPage = () => import('../pages/admin/DataManagementPage.vue')
+const TrashPage = () => import('../pages/admin/TrashPage.vue')
 const UniversalImportPage = () => import('../pages/admin/UniversalImportPage.vue')
 const UsersPage = () => import('../pages/admin/users/UsersPage.vue')
 const RolesPage = () => import('../pages/admin/roles/RolesPage.vue')
@@ -405,6 +406,12 @@ export const routes = [
         name: 'admin-data-management',
         component: DataManagementPage,
         meta: { title: 'Управление данными', permissionsAny: ['demo_data.manage', 'settings.manage'] },
+      },
+      {
+        path: 'admin/trash',
+        name: 'admin-trash',
+        component: TrashPage,
+        meta: { title: 'Корзина', permission: 'trash.manage' },
       },
       {
         path: 'admin/uat',

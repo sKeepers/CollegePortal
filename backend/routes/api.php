@@ -559,7 +559,11 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         ->middlewareFor(['index', 'show'], 'permission:groups.view')
         ->middlewareFor('store', 'permission:groups.create')
         ->middlewareFor('update', 'permission:groups.update')
-        ->middlewareFor('destroy', 'permission:groups.delete');
+        // Группа — не карточка человека, и в корзину она не кладётся: мягкого
+        // удаления у `groups` нет, а `students.group_id` на неё ссылается.
+        // Поэтому пометить группу на удаление нельзя, а удалить её может только
+        // администратор. Заводить группы в корзину — отдельное решение владельца.
+        ->middlewareFor('destroy', 'permission:trash.manage');
 
     // Выпуск и дипломы.
     Route::get('graduates/export', [GraduateController::class, 'export'])->middleware('permission:graduation.view');
@@ -635,7 +639,10 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         ->middlewareFor(['index', 'show'], 'permission:students.view')
         ->middlewareFor('store', 'permission:students.create')
         ->middlewareFor('update', 'permission:students.update')
-        ->middlewareFor('destroy', 'permission:students.delete');
+        // Удаление в два шага: карточку помечает тот, кто её ведёт
+        // (`POST deletion-requests`), а удаляет администратор. Прямое удаление
+        // осталось за `trash.manage` — им же чистится корзина.
+        ->middlewareFor('destroy', 'permission:trash.manage');
 
     Route::get('subjects/export', [SubjectController::class, 'export'])->middleware('permission:subjects.view');
     Route::post('subjects/import', [SubjectController::class, 'import'])->middleware('permission:subjects.update');
@@ -668,7 +675,8 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         ->middlewareFor(['index', 'show'], 'permission:teachers.view')
         ->middlewareFor('store', 'permission:teachers.create')
         ->middlewareFor('update', 'permission:teachers.update')
-        ->middlewareFor('destroy', 'permission:teachers.delete');
+        // Как у студентов: пометить может ведущий карточку, удаляет администратор.
+        ->middlewareFor('destroy', 'permission:trash.manage');
 
     Route::middleware('permission:schedule.view')->group(function (): void {
         Route::get('schedule/entries', [ScheduleEngineController::class, 'index']);

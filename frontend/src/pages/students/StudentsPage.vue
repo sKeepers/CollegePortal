@@ -13,6 +13,7 @@ import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
+import DeletionRequestDialog from '../../components/trash/DeletionRequestDialog.vue'
 import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import StudentDetailsPanel from './StudentDetailsPanel.vue'
 import StudentFilters from './StudentFilters.vue'
@@ -38,7 +39,9 @@ const syncingQueryFromUi = ref(false)
 const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.students.splitter.v1', resizeBodyClass: 'students-splitter-resizing' })
 const canCreate = computed(() => permissions.hasPermission('students.create') || permissions.hasPermission('students.edit'))
 const canUpdate = computed(() => permissions.hasPermission('students.update') || permissions.hasPermission('students.edit'))
-const canDelete = computed(() => permissions.hasPermission('students.delete') || permissions.hasPermission('students.edit'))
+// Удаление в два шага: помечает тот, кто ведёт карточку, удаляет администратор.
+const canDelete = computed(() => permissions.hasPermission('trash.manage'))
+const canRequestDeletion = computed(() => !canDelete.value && permissions.hasPermission('trash.request'))
 const canImport = computed(() => canUpdate.value)
 const canExport = computed(() => permissions.hasPermission('students.update') || permissions.hasPermission('students.edit') || permissions.hasPermission('students.view'))
 
@@ -47,6 +50,8 @@ const formVisible = ref(false)
 const editingStudent = ref(null)
 const deletingStudent = ref(null)
 const deleteDialogVisible = ref(false)
+const deletionRequestStudent = ref(null)
+const deletionRequestVisible = ref(false)
 const tablePagination = ref(createTablePagination(STUDENTS_ROWS_PER_PAGE_KEY, {
   sortBy: 'full_name',
   rowsPerPage: 20,
@@ -357,6 +362,18 @@ async function confirmDelete() {
   notifySuccess(`${name}: запись удалена`)
 }
 
+function askDeletionRequest(student) {
+  if (!canRequestDeletion.value) return
+  deletionRequestStudent.value = student
+  deletionRequestVisible.value = true
+}
+
+function onDeletionRequested() {
+  const name = deletionRequestStudent.value ? fullName(deletionRequestStudent.value) : 'Карточка'
+  deletionRequestStudent.value = null
+  notifySuccess(`${name}: заявка на удаление отправлена администратору`)
+}
+
 async function applyFilters(filters) {
   requestSelectionReset()
   store.setFilters(filters)
@@ -594,6 +611,9 @@ onMounted(async () => {
                 <q-btn v-if="canDelete" flat round dense color="negative" title="Удалить" @click.stop="requestDelete(props.row)">
                   <Trash2 :size="16" />
                 </q-btn>
+                <q-btn v-else-if="canRequestDeletion" flat round dense color="negative" title="Пометить на удаление" @click.stop="askDeletionRequest(props.row)">
+                  <Trash2 :size="16" />
+                </q-btn>
               </div>
             </q-td>
           </template>
@@ -727,6 +747,14 @@ onMounted(async () => {
       confirm-label="Удалить"
       tone="negative"
       @confirm="confirmDelete"
+    />
+
+    <DeletionRequestDialog
+      v-model="deletionRequestVisible"
+      subject-type="student"
+      :subject-id="deletionRequestStudent?.id ?? null"
+      :subject-label="deletionRequestStudent ? fullName(deletionRequestStudent) : ''"
+      @requested="onDeletionRequested"
     />
   </AppPage>
 </template>

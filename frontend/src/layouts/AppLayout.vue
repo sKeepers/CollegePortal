@@ -30,6 +30,7 @@ import {
   UsersRound,
   MessageSquareWarning,
   Bell,
+  Trash2,
 } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import { useWorkspaceStore } from '../stores/workspace'
@@ -138,6 +139,7 @@ const navGroups = [
       { label: 'Справочники', to: '/admin/reference', icon: Tags, permission: 'reference.manage' },
       { label: 'Импорт данных', to: '/admin/import', icon: FileSpreadsheet, permission: 'import.manage' },
       { label: 'Управление данными', to: '/admin/data-management', icon: Database, permission: 'demo_data.manage' },
+      { label: 'Корзина', to: '/admin/trash', icon: Trash2, permission: 'trash.manage' },
       { label: 'UAT', to: '/admin/uat', icon: MessageSquareWarning, permission: 'uat.manage' },
       { label: 'Библиотека интерфейса', to: '/system/ui-foundation', icon: Settings, adminOnly: true },
     ],
@@ -177,7 +179,7 @@ const pageTitle = computed(() => route.meta.title || 'CollegePortal')
 // о студентах с неполной карточкой.
 const canReceiveStudentCardReminder = computed(() => auth.hasRole('study_records') && auth.can('students.view'))
 const canReceiveAdminNotifications = computed(() => (
-  auth.can('uat.manage') || auth.can('journal.reopen') || canReceiveStudentCardReminder.value
+  auth.can('uat.manage') || auth.can('journal.reopen') || auth.can('trash.manage') || canReceiveStudentCardReminder.value
 ))
 const unreadNotificationCount = computed(() => adminNotifications.value.length)
 const collegeShortName = computed(() => settingsStore.publicValue('general', 'college_short_name', 'Колледж искусств'))
@@ -269,6 +271,14 @@ async function loadAdminNotifications() {
       title: 'Запрос на редактирование журнала',
       description: `${item.lesson?.subject || 'Занятие'} · ${item.lesson?.group || 'Группа'}`,
       to: { path: '/journal', query: { journalLesson: item.journal_lesson_id } },
+    }))))
+  }
+  if (auth.can('trash.manage')) {
+    requests.push(api.list('deletion-requests/pending').then((payload) => (payload?.data || []).map((item) => ({
+      id: `trash-${item.id}`,
+      title: 'Заявка на удаление карточки',
+      description: `${item.subject_label || 'Карточка'} · ${item.requested_by || 'неизвестно'}`,
+      to: { path: '/admin/trash' },
     }))))
   }
   if (canReceiveStudentCardReminder.value) {
