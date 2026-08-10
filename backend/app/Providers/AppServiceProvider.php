@@ -8,6 +8,7 @@ use App\Models\Teacher;
 use App\Observers\StudentObserver;
 use App\Observers\TeacherObserver;
 use App\Observers\UserObserver;
+use App\Support\Auth\ApiTokenResolver;
 use App\Support\LoginIdentifier;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -22,7 +23,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Один резолвер на запрос: его спрашивают и ограничитель частоты, и `api.token`.
+        $this->app->scoped(ApiTokenResolver::class);
     }
 
     /**
@@ -57,7 +59,20 @@ class AppServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('api.authenticated', function (Request $request) {
-            return Limit::perMinute(120)->by((string) ($request->user()?->id ?: $request->ip()));
+            // Считаем по человеку, а не по адресу: снаружи весь колледж приходит через
+            // один NAT, и общий счётчик несколько одновременно работающих выбивали бы
+            // друг у друга. `$request->user()` здесь спрашивать бесполезно —
+            // ограничитель по приоритету идёт раньше `api.token`, — поэтому владельца
+            // токена берём у общего резолвера; он же отдаст готовый ответ middleware.
+            //
+            // Неопознанный токен считается по адресу. Выводить ключ прямо из токена
+            // нельзя: перебор случайных значений давал бы каждому запросу собственный
+            // счётчик и снимал ограничение вовсе.
+            $user = app(ApiTokenResolver::class)->resolve($request);
+
+            // Порог не менялся. Он и был рассчитан на одного человека — просто
+            // доставался всему адресу сразу.
+            return Limit::perMinute(120)->by($user ? 'user|'.$user->id : 'ip|'.$request->ip());
         });
 
         Gate::before(function (User $user): ?bool {

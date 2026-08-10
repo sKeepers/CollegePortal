@@ -2,7 +2,7 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\User;
+use App\Support\Auth\ApiTokenResolver;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -10,22 +10,16 @@ use Symfony\Component\HttpFoundation\Response;
 
 class AuthenticateApiToken
 {
+    public function __construct(private readonly ApiTokenResolver $tokens)
+    {
+    }
+
     public function handle(Request $request, Closure $next): Response
     {
-        $token = $request->bearerToken();
-
-        if ($token === null) {
-            return response()->json(['message' => 'Unauthenticated.'], Response::HTTP_UNAUTHORIZED);
-        }
-
-        $lookupHash = hash('sha256', $token);
-
-        $user = User::query()
-            ->where('is_active', true)
-            ->where('api_token_lookup_hash', $lookupHash)
-            ->whereNotNull('api_token_expires_at')
-            ->where('api_token_expires_at', '>', now())
-            ->first();
+        // Разбор вынесен в общий резолвер: ограничитель частоты спрашивает того же
+        // владельца токена раньше по цепочке, и ответ переиспользуется — обращение
+        // к базе остаётся одно на запрос.
+        $user = $request->bearerToken() === null ? null : $this->tokens->resolve($request);
 
         if ($user === null) {
             return response()->json(['message' => 'Unauthenticated.'], Response::HTTP_UNAUTHORIZED);
