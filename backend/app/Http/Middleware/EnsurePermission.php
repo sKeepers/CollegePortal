@@ -22,6 +22,19 @@ class EnsurePermission
         return response()->json(['message' => 'У вас нет доступа к этому действию.'], Response::HTTP_FORBIDDEN);
     }
 
+    /**
+     * Право на чтение перекрывается правом на правку: кто может изменить
+     * справочник, тот тем более может его прочитать.
+     *
+     * Без этого таблица работала бы в одну сторону. Она только сужает доступ,
+     * и перевод чтения с `reference.manage` на `reference.view` отнял бы
+     * чтение у роли, которой выдали правку, но не выдали просмотр, — например
+     * у заведённой вручную уже после миграции, раздавшей `reference.view`.
+     *
+     * @var array<string, string>
+     */
+    private const COVERED_BY = ['reference.view' => 'reference.manage'];
+
     /** @return list<string> */
     private function resolvePermissions(Request $request, string $permission): array
     {
@@ -44,7 +57,7 @@ class EnsurePermission
             return array_values(array_unique(array_filter(['teachingload.view', 'view_own_data', $permission])));
         }
 
-        return array_values(array_unique(array_filter([$mapped, $permission])));
+        return array_values(array_unique(array_filter([$mapped, self::COVERED_BY[$mapped] ?? null, $permission])));
     }
 
     private function systemPermission(string $path, string $method): string
@@ -141,7 +154,10 @@ class EnsurePermission
         'api/curriculum-items' => ['curricula.view', 'curricula.edit', 'curricula.edit', 'curricula.edit'],
         'api/curriculum-subjects' => ['curricula.subjects.view', 'curricula.subjects.create', 'curricula.subjects.update', 'curricula.subjects.delete'],
         'api/curricula' => ['curricula.view', 'curricula.edit', 'curricula.edit', 'curricula.edit'],
-        'api/education-programs' => ['reference.manage', 'reference.manage', 'reference.manage', 'reference.manage'],
+        // Программы и специальности читают все, кто ведёт группы и выпуск:
+        // без них не собрать ни группу, ни пакет ФРДО. Правит их по-прежнему
+        // владелец справочников.
+        'api/education-programs' => ['reference.view', 'reference.manage', 'reference.manage', 'reference.manage'],
         'api/exam-results' => ['exams.view', 'exams.edit', 'exams.edit', 'exams.edit'],
         'api/exams' => ['exams.view', 'exams.edit', 'exams.edit', 'exams.edit'],
         'api/frdo-packages' => ['frdo.view', 'frdo.export', 'frdo.export', 'frdo.export'],
@@ -152,7 +168,7 @@ class EnsurePermission
         'api/fis-packages' => ['fis.view', 'fis.export', 'fis.export', 'fis.export'],
         'api/groups' => ['groups.view', 'groups.create', 'groups.update', 'groups.delete'],
         'api/graduates' => ['graduation.view', 'graduation.edit', 'graduation.edit', 'graduation.edit'],
-        'api/specialties' => ['reference.manage', 'reference.manage', 'reference.manage', 'reference.manage'],
+        'api/specialties' => ['reference.view', 'reference.manage', 'reference.manage', 'reference.manage'],
         'api/students' => ['students.view', 'students.create', 'students.update', 'students.delete'],
         'api/subjects' => ['subjects.view', 'subjects.create', 'subjects.update', 'subjects.delete'],
         'api/teaching-load-items' => ['teachingload.view', 'teachingload.edit', 'teachingload.edit', 'teachingload.edit'],

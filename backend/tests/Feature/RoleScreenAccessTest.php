@@ -34,10 +34,6 @@ class RoleScreenAccessTest extends TestCase
     public static function screens(): array
     {
         return [
-            'study_records: Группы' => ['study_records', 'groups', ['education-programs']],
-            'study_records: Учебные планы' => ['study_records', 'curricula', ['education-programs', 'specialties']],
-            'study_records: Выпускники' => ['study_records', 'graduates', ['education-programs', 'specialties']],
-            'study_records: ФРДО' => ['study_records', 'frdo-packages', ['education-programs']],
             'admission: Группы' => ['admission', 'groups', ['teachers']],
             'teacher: Экзамены и ГИА' => ['teacher', 'exams', ['groups', 'subjects', 'teachers', 'classrooms', 'students']],
             'curator: Группы' => ['curator', 'groups', ['education-programs', 'teachers']],
@@ -68,6 +64,43 @@ class RoleScreenAccessTest extends TestCase
             $denied,
             "Экран {$screen} роли {$roleCode} больше не упирается в справочники: строку аудита пора удалить.",
         );
+    }
+
+    /**
+     * Четыре экрана «Учебной части 2» из той же таблицы аудита. Открытый
+     * вопрос находки 2 — должна ли роль видеть образовательные программы и
+     * специальности — владелец закрыл 10.08.2026: должна, она ведёт группы и
+     * выпуск. Устойчивости к отказу этим экранам больше не нужно, нужен сам
+     * доступ, поэтому проверяется он.
+     *
+     * @return array<string, array{0:string,1:string,2:list<string>}>
+     */
+    public static function resolvedScreens(): array
+    {
+        return [
+            'study_records: Группы' => ['study_records', 'groups', ['education-programs']],
+            'study_records: Учебные планы' => ['study_records', 'curricula', ['education-programs', 'specialties']],
+            'study_records: Выпускники' => ['study_records', 'graduates', ['education-programs', 'specialties']],
+            'study_records: ФРДО' => ['study_records', 'frdo-packages', ['education-programs']],
+        ];
+    }
+
+    /**
+     * @param list<string> $references
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('resolvedScreens')]
+    public function test_screen_and_its_references_are_both_open_after_the_decision(string $roleCode, string $screen, array $references): void
+    {
+        $this->seed(RoleSeeder::class);
+        $this->withApiAuth($this->userWithRole($roleCode));
+
+        $this->getJson('/api/'.$screen)->assertOk();
+
+        foreach ($references as $reference) {
+            $this->getJson('/api/'.$reference)->assertOk(
+                "Справочник {$reference} снова закрыт для роли {$roleCode}: экран {$screen} останется с пустым списком.",
+            );
+        }
     }
 
     private function userWithRole(string $roleCode): User
