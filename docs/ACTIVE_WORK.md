@@ -12,13 +12,14 @@
 
 ### Чат «Учётные записи, роли и демо-данные» (занято с 10.08.2026)
 
-Ветка: `fix/reports-section`, worktree `.worktrees/reports-section`.
+Ветка: `fix/muster-query-per-person`, worktree `.worktrees/muster`.
 
 Нумерацию с заголовка убрал: у владельца и на доске она разная, а название совпадает у обоих. Ориентируйтесь на название.
 
 | Задача | Файлы, которые трогает | Состояние |
 | --- | --- | --- |
-| Аудит, находка 13 — список эвакуации делает запрос к базе на каждого человека. Сначала замерить | `AccessPresenceService`, замер на стенде | **следующая** |
+| Аудит, находка 13 — список эвакуации делает запрос к базе на каждого человека. Сначала замерить | `AccessPresenceService`, замер на стенде | **в работе** |
+| Аудит, находка 9 — импортированное расписание не идёт в покрытие часов; тем же заходом экспорт расписания | `ScheduleImportHandler`, `ScheduleEngineService`, экспорт расписания | следующая |
 | Аудит, находка 7 — раздел «Отчеты» это заглушка, готовые отчёты недостижимы | `pages/reports/ReportsPage.vue`, `stores/reports.js`, кнопки в журнале и кадровом календаре | сделано |
 | Аудит, находка 5 — обрезка отчёта проходной 1000 событиями | `AccessReportService` (новый), `AccessReportController`, `AccessReportVolumeTest`, `stores/accessReports.js`, `pages/access/AccessReportsPage.vue` | сделано, влито `27c45e246` |
 | `DEMO-001` — правдоподобный демонстрационный набор | `backend/database/seeders/DemoDataSeeder.php`, `backend/database/seeders/Support/DemoNameFactory.php` | сделано, влито `0f1294465` |
