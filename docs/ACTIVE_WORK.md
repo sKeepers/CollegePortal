@@ -12,13 +12,13 @@
 
 ### Чат «Учётные записи, роли и демо-данные» (занято с 10.08.2026)
 
-Ветка: `fix/muster-query-per-person`, worktree `.worktrees/muster`.
+Ветка: `feature/schedule-engine-import-export`, worktree `.worktrees/schedule-engine`.
 
 Нумерацию с заголовка убрал: у владельца и на доске она разная, а название совпадает у обоих. Ориентируйтесь на название.
 
 | Задача | Файлы, которые трогает | Состояние |
 | --- | --- | --- |
-| Аудит, находка 9 — импортированное расписание не идёт в покрытие часов; тем же заходом экспорт расписания | `ScheduleImportHandler`, `ScheduleEngineService`, экспорт расписания | **следующая** |
+| Аудит, находка 9 — импортированное расписание не идёт в покрытие часов; тем же заходом экспорт расписания | `ScheduleImportHandler`, `ScheduleEngineService`, `ScheduleLessonController`, экспорт расписания | **в работе** |
 | Аудит, находка 13 — список эвакуации делал запрос на каждого человека | `AccessPresenceService`, `AccessMusterQueryCountTest` | сделано, замерено: 598 человек — было 1129 запросов и 684 мс, стало 5 и 109 мс |
 | Аудит, находка 7 — раздел «Отчеты» это заглушка, готовые отчёты недостижимы | `pages/reports/ReportsPage.vue`, `stores/reports.js`, кнопки в журнале и кадровом календаре | сделано |
 | Аудит, находка 5 — обрезка отчёта проходной 1000 событиями | `AccessReportService` (новый), `AccessReportController`, `AccessReportVolumeTest`, `stores/accessReports.js`, `pages/access/AccessReportsPage.vue` | сделано, влито `27c45e246` |
