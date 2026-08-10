@@ -41,6 +41,20 @@ class StudentController extends Controller
         $students = Student::query()
             ->with('group.educationProgram.specialty')
             ->when($request->integer('group_id'), fn ($query, int $groupId) => $query->where('group_id', $groupId))
+            // Курс и специальность — свойства группы, а не студента. Заводить
+            // их копией в `students` нельзя: перевод группы на следующий курс
+            // тогда пришлось бы разносить по всем её студентам вручную.
+            ->when(
+                $request->integer('course'),
+                fn ($query, int $course) => $query->whereHas('group', fn ($group) => $group->where('course', $course)),
+            )
+            ->when(
+                $request->integer('specialty_id'),
+                fn ($query, int $specialtyId) => $query->whereHas(
+                    'group.educationProgram',
+                    fn ($program) => $program->where('specialty_id', $specialtyId),
+                ),
+            )
             ->when($request->string('status')->toString(), fn ($query, string $status) => $query->where('status', $status))
             // Фильтр «неполные карточки» берёт идентификаторы у сервиса готовности:
             // признак в строке и список в фильтре обязаны считаться одинаково.

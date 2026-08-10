@@ -205,6 +205,7 @@ class RoleSeeder extends Seeder
             ['module' => 'System', 'code' => 'settings.manage', 'name' => 'Настройки: управление', 'description' => 'Управление настройками колледжа.'],
             ['module' => 'System', 'code' => 'audit.view', 'name' => 'Аудит: просмотр', 'description' => 'Просмотр журнала аудита.'],
             ['module' => 'UAT', 'code' => 'uat.manage', 'name' => 'UAT: управление', 'description' => 'Управление закрытым пользовательским тестированием и реестром замечаний.'],
+            ['module' => 'System', 'code' => 'reference.view', 'name' => 'Справочники: просмотр', 'description' => 'Чтение нормативно-справочной информации для подписей и фильтров.'],
             ['module' => 'System', 'code' => 'reference.manage', 'name' => 'Справочники: управление', 'description' => 'Управление нормативно-справочной информацией.'],
             ['module' => 'System', 'code' => 'import.manage', 'name' => 'Импорт: управление', 'description' => 'Универсальный импорт и демо-данные.'],
             ['module' => 'System', 'code' => 'ui.foundation.view', 'name' => 'UI Foundation: просмотр', 'description' => 'Просмотр витрины UI-компонентов.'],
@@ -319,9 +320,20 @@ class RoleSeeder extends Seeder
         return ['dashboard.view', 'gate.scan', 'gate.reports', 'gate.points.manage', 'digitalpasses.manage', 'attendance.view', 'attendance.reports', 'view_reports'];
     }
 
+    /**
+     * Права, которые получает каждая роль.
+     *
+     * Чтение справочников — не доступ к данным: справочник это перечень
+     * подписей (статусы студентов, формы обучения, типы документов), и роль,
+     * которая видит подпись в списке, обязана видеть её и в фильтре. Пока
+     * права не было, у «Учебной части» и «Учебной части 2» выпадающий список
+     * статусов оставался пустым и молчал о причине.
+     */
+    private const BASELINE_PERMISSIONS = ['reference.view'];
+
     private function ids(array $codes)
     {
-        return Permission::whereIn('code', $codes)->pluck('id');
+        return Permission::whereIn('code', array_values(array_unique([...$codes, ...self::BASELINE_PERMISSIONS])))->pluck('id');
     }
 
     private function syncPermissions(string $roleCode, $permissionIds): void

@@ -5,6 +5,8 @@ import { api } from '../services/api'
 const initialFilters = {
   search: '',
   group_id: '',
+  course: '',
+  specialty_id: '',
   status: '',
   completeness: '',
 }
@@ -84,6 +86,31 @@ export const useStudentsStore = defineStore('students', () => {
     group,
   })))
 
+  // Курс и специальность берём из уже загруженных групп, а не из справочника
+  // специальностей: `api/specialties` закрыт правом на управление справочниками,
+  // и у роли, ведущей контингент, список оказался бы пуст.
+  const courseOptions = computed(() => (
+    [...new Set(groups.value.map((group) => group.course).filter((course) => course !== null && course !== undefined))]
+      .sort((a, b) => a - b)
+      .map((course) => ({ label: `${course} курс`, value: course }))
+  ))
+
+  const specialtyOptions = computed(() => {
+    const found = new Map()
+
+    groups.value.forEach((group) => {
+      const specialty = group.education_program?.specialty
+      if (specialty?.id && !found.has(specialty.id)) {
+        found.set(specialty.id, {
+          label: specialty.code ? `${specialty.code} ${specialty.name}` : specialty.name,
+          value: specialty.id,
+        })
+      }
+    })
+
+    return [...found.values()].sort((a, b) => a.label.localeCompare(b.label, 'ru'))
+  })
+
   const attendanceSummary = computed(() => {
     const summary = {
       total: selectedAttendance.value.length,
@@ -125,7 +152,9 @@ export const useStudentsStore = defineStore('students', () => {
     try {
       const [studentsPayload, groupsPayload] = await Promise.all([
         api.list('students', filters.value),
-        api.list('groups'),
+        // Группы питают три выпадающих списка сразу — группа, курс и
+        // специальность. Страницы в двадцать строк для этого мало.
+        api.list('groups', { per_page: 200 }),
       ])
 
       students.value = extractRows(studentsPayload)
@@ -395,6 +424,8 @@ export const useStudentsStore = defineStore('students', () => {
     selectedId,
     selectedStudent,
     groupOptions,
+    courseOptions,
+    specialtyOptions,
     loading,
     detailsLoading,
     saving,

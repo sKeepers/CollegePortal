@@ -77,6 +77,9 @@ const selectedCount = computed(() => (selectAllFiltered.value ? (store.paginatio
 const hasBulkSelection = computed(() => selectedCount.value > 0)
 
 const statusOptions = computed(() => referenceOptions.options('student_statuses'))
+// Пустой список статусов обязан объяснить причину: нет прав, справочник пуст
+// или запрос не прошёл. Раньше все три случая выглядели одинаково.
+const statusHint = computed(() => referenceOptions.hint('student_statuses'))
 const statusLabels = computed(() => Object.fromEntries(statusOptions.value.map((option) => [option.value, option.label])))
 const statusTones = computed(() => Object.fromEntries(statusOptions.value.map((option) => [option.value, option.tone || 'neutral'])))
 
@@ -445,6 +448,9 @@ onMounted(async () => {
       :model-value="store.filters"
       :group-options="store.groupOptions"
       :status-options="statusOptions"
+      :course-options="store.courseOptions"
+      :specialty-options="store.specialtyOptions"
+      :status-hint="statusHint"
       :loading="store.loading"
       @apply="applyFilters"
       @reset="resetFilters"

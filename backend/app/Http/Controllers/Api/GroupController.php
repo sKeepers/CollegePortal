@@ -23,14 +23,20 @@ class GroupController extends Controller
     ) {
     }
 
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
+        // Список групп питает выпадающие списки на чужих экранах — фильтры
+        // студентов берут из него и курс, и специальность. На странице в
+        // двадцать строк половина групп в них не попадала, и фильтр молча
+        // предлагал неполный выбор.
+        $perPage = min(max((int) ($request->integer('per_page') ?: 20), 1), 200);
+
         $groups = Group::query()
             ->with('curator')
             ->with('educationProgram.specialty')
             ->withCount('students')
             ->orderBy('name')
-            ->paginate(20);
+            ->paginate($perPage);
 
         return GroupResource::collection($groups);
     }

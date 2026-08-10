@@ -106,7 +106,12 @@ class EnsurePermission
      * «нет прав», а посторонний с reference.manage проходит. Это задача ARCH-001.
      */
     public const DOMAIN_RULES = [
-        'api/admin/reference' => ['reference.manage', 'reference.manage', 'reference.manage', 'reference.manage'],
+        // Чтение справочников отделено от правки. Справочник — это подписи к
+        // значениям: статусы студентов, формы обучения, типы документов. Роль,
+        // которая видит статус в списке, обязана видеть его и в фильтре, иначе
+        // выпадающий список молча пуст. Правка по-прежнему только у владельца
+        // справочников.
+        'api/admin/reference' => ['reference.view', 'reference.manage', 'reference.manage', 'reference.manage'],
         'api/admin/import' => ['import.manage', 'import.manage', 'import.manage', 'import.manage'],
         'api/admin/demo-data' => ['import.manage', 'import.manage', 'import.manage', 'import.manage'],
         'api/people' => ['people.view', 'people.create', 'people.update', 'people.merge'],

@@ -15,6 +15,20 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  courseOptions: {
+    type: Array,
+    default: () => [],
+  },
+  specialtyOptions: {
+    type: Array,
+    default: () => [],
+  },
+  // Почему список статусов пуст: «нет прав» и «справочник не заполнен» —
+  // разные вещи, и молчащий список не должен выдавать их за одно и то же.
+  statusHint: {
+    type: String,
+    default: '',
+  },
   loading: {
     type: Boolean,
     default: false,
@@ -31,6 +45,8 @@ const completenessOptions = [
 const localFilters = reactive({
   search: '',
   group_id: '',
+  course: '',
+  specialty_id: '',
   status: '',
   completeness: '',
 })
@@ -39,6 +55,7 @@ const activeChips = computed(() => {
   const chips = []
   const selectedGroup = props.groupOptions.find((group) => Number(group.value) === Number(localFilters.group_id))
   const selectedStatus = props.statusOptions.find((status) => status.value === localFilters.status)
+  const selectedSpecialty = props.specialtyOptions.find((item) => Number(item.value) === Number(localFilters.specialty_id))
 
   if (localFilters.search) {
     chips.push({ key: 'search', label: `Поиск: ${localFilters.search}` })
@@ -46,6 +63,14 @@ const activeChips = computed(() => {
 
   if (localFilters.group_id) {
     chips.push({ key: 'group_id', label: `Группа: ${selectedGroup?.label || localFilters.group_id}` })
+  }
+
+  if (localFilters.course) {
+    chips.push({ key: 'course', label: `Курс: ${localFilters.course}` })
+  }
+
+  if (localFilters.specialty_id) {
+    chips.push({ key: 'specialty_id', label: `Специальность: ${selectedSpecialty?.label || localFilters.specialty_id}` })
   }
 
   if (localFilters.status) {
@@ -65,6 +90,8 @@ watch(
     Object.assign(localFilters, {
       search: value.search || '',
       group_id: value.group_id || '',
+      course: value.course || '',
+      specialty_id: value.specialty_id || '',
       status: value.status || '',
       completeness: value.completeness || '',
     })
@@ -81,6 +108,8 @@ function resetFilters() {
   Object.assign(localFilters, {
     search: '',
     group_id: '',
+    course: '',
+    specialty_id: '',
     status: '',
     completeness: '',
   })
@@ -116,6 +145,26 @@ function removeChip(key) {
       :options="groupOptions"
     />
     <q-select
+      v-model="localFilters.course"
+      dense
+      outlined
+      clearable
+      emit-value
+      map-options
+      label="Курс"
+      :options="courseOptions"
+    />
+    <q-select
+      v-model="localFilters.specialty_id"
+      dense
+      outlined
+      clearable
+      emit-value
+      map-options
+      label="Специальность"
+      :options="specialtyOptions"
+    />
+    <q-select
       v-model="localFilters.status"
       dense
       outlined
@@ -124,6 +173,8 @@ function removeChip(key) {
       map-options
       label="Статус"
       :options="statusOptions"
+      :hint="statusOptions.length ? '' : statusHint"
+      :disable="!statusOptions.length && !!statusHint"
     />
     <q-select
       v-model="localFilters.completeness"
