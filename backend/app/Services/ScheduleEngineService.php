@@ -372,6 +372,16 @@ class ScheduleEngineService
         return $conflicts;
     }
 
+    /**
+     * Строка нагрузки для сырого набора полей — тем же правилом, что и внутри
+     * движка. Нужна импорту: он решает, можно ли провести занятие через движок,
+     * и обязан спрашивать об этом здесь, а не заводить второй такой же поиск.
+     */
+    public function loadItemFor(array $payload): ?TeachingLoadItem
+    {
+        return $this->resolveLoadItem($this->normalize($payload));
+    }
+
     private function resolveLoadItem(array $entry): ?TeachingLoadItem
     {
         if ($entry['teaching_load_item_id']) {

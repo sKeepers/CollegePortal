@@ -38,6 +38,7 @@ class UniversalImportService
     public function __construct(
         AutoCodeService $autoCodeService,
         ScheduleLessonService $scheduleLessonService,
+        ScheduleEngineService $scheduleEngine,
         HrService $hrService,
         AccountProvisioningService $accounts,
         SnilsService $snils,
@@ -54,7 +55,7 @@ class UniversalImportService
             new AdmissionImportHandler(),
             new CurriculumImportHandler($autoCodeService),
             new TeachingLoadImportHandler(),
-            new ScheduleImportHandler($scheduleLessonService),
+            new ScheduleImportHandler($scheduleLessonService, $scheduleEngine),
             new EmployeeImportHandler($hrService, $accounts),
         ] as $handler) {
             $this->handlers[$handler->type()] = $handler;

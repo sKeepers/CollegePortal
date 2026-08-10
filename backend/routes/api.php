@@ -489,6 +489,10 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         Route::post('schedule/entries/{scheduleEntry}/restore', [ScheduleEngineController::class, 'restore'])->middleware('permission:schedule.manage_replacements');
     });
 
+    // Строго до apiResource: иначе параметр {schedule_lesson} перехватит слово export.
+    Route::get('schedule-lessons/export', [ScheduleLessonController::class, 'export'])
+        ->middleware('permission:manage_schedule');
+
     Route::apiResource('schedule-lessons', ScheduleLessonController::class)
         ->middleware('permission:manage_schedule');
 

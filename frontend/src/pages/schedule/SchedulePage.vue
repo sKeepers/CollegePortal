@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, Plus, RefreshCw } from '@lucide/vue'
+import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, Download, Plus, RefreshCw } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -14,6 +14,7 @@ import ScheduleDetailsPanel from './ScheduleDetailsPanel.vue'
 import ScheduleFilters from './ScheduleFilters.vue'
 import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import { usePermissions } from '../../composables/usePermissions'
+import { api } from '../../services/api'
 import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import { useAuthStore } from '../../stores/auth'
 import {
@@ -79,6 +80,40 @@ const longDateFormatter = new Intl.DateTimeFormat('ru-RU', {
 const canCreate = computed(() => permissions.hasPermission('schedule.create'))
 const canUpdate = computed(() => permissions.hasPermission('schedule.update'))
 const canManageTemplates = computed(() => permissions.hasPermission('schedule.manage_templates'))
+const exporting = ref(false)
+
+/**
+ * Выгрузка берёт период и фильтры прямо с экрана: человек уже отобрал то, что
+ * ему нужно, и повторять отбор в другом месте незачем.
+ */
+async function exportSchedule() {
+  exporting.value = true
+  try {
+    const params = new URLSearchParams(Object.fromEntries(
+      Object.entries({
+        date_from: periodRange.value.date_from,
+        date_to: periodRange.value.date_to,
+        group_id: store.filters.group_id,
+        teacher_id: store.filters.teacher_id,
+        subject_id: store.filters.subject_id,
+        classroom_id: store.filters.classroom_id,
+      }).filter(([, value]) => value !== '' && value !== null && value !== undefined),
+    ))
+    const blob = await api.download(`/schedule-lessons/export?${params.toString()}`)
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `schedule-${periodRange.value.date_from || 'all'}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  } catch (err) {
+    store.error = err.message || 'Файл не удалось скачать'
+  } finally {
+    exporting.value = false
+  }
+}
 const isMobileReadonly = computed(() => window.innerWidth < 700)
 
 const lessonSlots = [
@@ -630,6 +665,15 @@ onMounted(async () => {
           </template>
         </q-btn>
         <AppLoading v-if="store.loading" label="Загрузка расписания..." />
+        <!-- Выгрузки расписания не было вовсе: импорт есть, обратной стороны нет.
+             Файл принимается тем же импортом без правок. -->
+        <q-btn v-if="canUpdate" flat :loading="exporting" :disable="store.loading" @click="exportSchedule">
+          <template #default>
+            <Download :size="16" />
+            <span>Выгрузить CSV</span>
+            <q-tooltip>Занятия за выбранный период и по текущим фильтрам. Файл принимается «Универсальным импортом».</q-tooltip>
+          </template>
+        </q-btn>
         <q-btn flat @click="resetSplitter">Сбросить размер</q-btn>
         <q-btn flat :disable="store.loading" @click="refresh">
           <template #default>
