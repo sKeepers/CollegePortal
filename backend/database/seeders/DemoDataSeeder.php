@@ -22,6 +22,7 @@ use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\User;
+use Database\Seeders\Support\DemoNameFactory;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -35,8 +36,15 @@ class DemoDataSeeder extends Seeder
     private const GROUP_COUNT = 30;
     private const DEMO_DOMAIN = 'demo.college.local';
 
+    /** Сколько прошедших дней наполняется занятиями, журналом и проходами. */
+    private const HISTORY_DAYS = 14;
+
+    private DemoNameFactory $names;
+
     public function run(): void
     {
+        $this->names = new DemoNameFactory();
+
         DB::transaction(function (): void {
             $adminRole = Role::where('code', 'admin')->firstOrFail();
             $teacherRole = Role::where('code', 'teacher')->firstOrFail();
@@ -189,15 +197,11 @@ class DemoDataSeeder extends Seeder
      */
     private function seedTeachers(Role $teacherRole, string $demoPassword, array $hr)
     {
-        $lastNames = ['Смирнова', 'Петров', 'Орлова', 'Климов', 'Соколова', 'Никитин', 'Федорова', 'Лебедев', 'Егорова', 'Макаров'];
-        $firstNames = ['Елена', 'Алексей', 'Марина', 'Игорь', 'Анна', 'Павел', 'Ольга', 'Дмитрий', 'Наталья', 'Сергей'];
-        $middleNames = ['Викторовна', 'Андреевич', 'Петровна', 'Сергеевич', 'Павловна', 'Ильич', 'Романовна', 'Олегович', 'Игоревна', 'Михайлович'];
-
-        return collect(range(1, self::TEACHER_COUNT))->map(function (int $index) use ($teacherRole, $demoPassword, $lastNames, $firstNames, $middleNames, $hr): Teacher {
+        return collect(range(1, self::TEACHER_COUNT))->map(function (int $index) use ($teacherRole, $demoPassword, $hr): Teacher {
             $email = $index === 1 ? 'teacher@local' : sprintf('teacher.demo.%03d@%s', $index, self::DEMO_DOMAIN);
-            $lastName = $lastNames[($index - 1) % count($lastNames)];
-            $firstName = $firstNames[intdiv($index - 1, count($lastNames)) % count($firstNames)];
-            $middleName = $middleNames[intdiv($index - 1, count($lastNames) * count($firstNames)) % count($middleNames)];
+            // В колледже искусств преподавательский состав преимущественно
+            // женский, и набор, где ровно половина мужчин, выглядит неправдой.
+            ['last_name' => $lastName, 'first_name' => $firstName, 'middle_name' => $middleName] = $this->names->next($index % 3 === 0 ? 'male' : 'female');
             $positionName = $index % 6 === 0 ? 'Заведующий отделением' : 'Преподаватель';
             $departmentName = $index % 4 === 0 ? 'Общеобразовательное отделение' : 'Музыкальное отделение';
             $person = $this->seedPerson($lastName, $firstName, $middleName, null, $email, sprintf('+7900%07d', 1000000 + $index));
@@ -260,17 +264,14 @@ class DemoDataSeeder extends Seeder
      */
     private function seedStudents(Role $studentRole, string $demoPassword, $groups)
     {
-        $lastNames = ['Иванов', 'Соколова', 'Миронов', 'Кузнецова', 'Попов', 'Васильева', 'Новиков', 'Романова', 'Крылов', 'Зайцева'];
-        $firstNames = ['Дмитрий', 'Анна', 'Кирилл', 'Полина', 'Илья', 'Софья', 'Артем', 'Дарья', 'Максим', 'Ева'];
-        $middleNames = ['Сергеевич', 'Павловна', 'Игоревич', 'Олеговна', 'Андреевич', 'Ильинична', 'Романович', 'Денисовна', 'Петрович', 'Алексеевна'];
-
-        return collect(range(1, self::STUDENT_COUNT))->map(function (int $index) use ($studentRole, $demoPassword, $groups, $lastNames, $firstNames, $middleNames): Student {
+        return collect(range(1, self::STUDENT_COUNT))->map(function (int $index) use ($studentRole, $demoPassword, $groups): Student {
             $email = $index === 1 ? 'student@local' : sprintf('student.demo.%03d@%s', $index, self::DEMO_DOMAIN);
-            $lastName = $lastNames[($index - 1) % count($lastNames)];
-            $firstName = $firstNames[intdiv($index - 1, count($lastNames)) % count($firstNames)];
-            $middleName = $middleNames[intdiv($index - 1, count($lastNames) * count($firstNames)) % count($middleNames)];
+            ['last_name' => $lastName, 'first_name' => $firstName, 'middle_name' => $middleName] = $this->names->next();
             $group = $groups[($index - 1) % $groups->count()];
-            $birthDate = Carbon::create(2006 + ($group->course % 4), (($index - 1) % 12) + 1, (($index - 1) % 24) + 1)->toDateString();
+            // Ровесники в группе, но не одного дня рождения: возраст пляшет
+            // на пару лет, как в настоящем наборе.
+            $birthYear = 2027 - $group->course - 16 - ($index % 3);
+            $birthDate = Carbon::create($birthYear, (($index * 7) % 12) + 1, (($index * 13) % 28) + 1)->toDateString();
             $person = $this->seedPerson($lastName, $firstName, $middleName, $birthDate, $email, sprintf('+7910%07d', 1000000 + $index));
 
             $user = $index === 1
@@ -311,31 +312,48 @@ class DemoDataSeeder extends Seeder
         }
     }
 
+    /**
+     * Расписание строится на две недели назад и на текущую неделю: отчёты,
+     * журнал и проходная без прошлого показывают пустые экраны, а показать
+     * нужно работу, а не форму.
+     */
     private function seedWeeklySchedule($groups, $teachers, $subjects, $classrooms)
     {
-        $startDate = Carbon::today()->startOfWeek();
+        $startDate = Carbon::today()->startOfWeek()->subDays(self::HISTORY_DAYS);
         $times = [['08:30', '10:00'], ['10:10', '11:40'], ['12:10', '13:40'], ['13:50', '15:20']];
         $lessons = collect();
+        $days = range(0, self::HISTORY_DAYS + 4);
 
         foreach ($groups as $groupIndex => $group) {
-            foreach (range(0, 4) as $dayOffset) {
-                foreach ($times as $slotIndex => [$startsAt, $endsAt]) {
-                    $teacher = $teachers[($groupIndex + $slotIndex + $dayOffset) % $teachers->count()];
-                    $subject = $subjects[($groupIndex + $slotIndex) % $subjects->count()];
+            foreach ($days as $dayOffset) {
+                $date = $startDate->copy()->addDays($dayOffset);
+
+                if ($date->isWeekend()) {
+                    continue;
+                }
+
+                // Первая пара не у всех и не каждый день: расписание, где у всех
+                // тридцати групп занятия с 8:30 до 15:20 ровно пять дней в неделю,
+                // сразу выдаёт генератор.
+                $slots = ($groupIndex + $dayOffset) % 5 === 0 ? array_slice($times, 1) : $times;
+
+                foreach ($slots as $slotIndex => [$startsAt, $endsAt]) {
+                    $teacher = $teachers[($groupIndex * 3 + $slotIndex * 7 + $dayOffset) % $teachers->count()];
+                    $subject = $subjects[($groupIndex + $slotIndex + intdiv($dayOffset, 5)) % $subjects->count()];
                     $classroom = $classrooms[($groupIndex + $slotIndex + $dayOffset) % $classrooms->count()];
                     $lessons->push(ScheduleLesson::updateOrCreate(
                         [
                             'group_id' => $group->id,
                             'teacher_id' => $teacher->id,
                             'subject_id' => $subject->id,
-                            'lesson_date' => $startDate->copy()->addDays($dayOffset)->toDateString(),
+                            'lesson_date' => $date->toDateString(),
                             'starts_at' => $startsAt,
                         ],
                         [
                             'classroom_id' => $classroom->id,
                             'ends_at' => $endsAt,
                             'lesson_type' => $slotIndex === 3 ? 'practice' : 'lesson',
-                            'topic' => 'Демонстрационная тема занятия',
+                            'topic' => $this->lessonTopic($subject->name, $dayOffset + $slotIndex),
                         ]
                     ));
                 }
@@ -345,26 +363,134 @@ class DemoDataSeeder extends Seeder
         return $lessons;
     }
 
+    /**
+     * Журнал заполняется только по прошедшим занятиям и по профилю студента.
+     *
+     * Прежний набор ставил оценки по остатку от деления: у всех выходила
+     * одинаковая ровная успеваемость, отличников и отстающих не было, и
+     * отчёт по группе показывал прямую линию. Здесь у каждого студента свой
+     * уровень, а у части — провал по одной дисциплине: именно так выглядят
+     * настоящие ведомости, и именно на них видно, зачем нужны отчёты.
+     */
     private function seedJournalSamples($lessons, $students): void
     {
         $studentsByGroup = $students->groupBy('group_id');
+        $past = $lessons->filter(fn (ScheduleLesson $lesson): bool => $lesson->lesson_date <= Carbon::today()->toDateString());
+        $lessonIds = $past->pluck('id');
 
-        foreach ($lessons->take(180) as $lessonIndex => $lesson) {
-            foreach (($studentsByGroup[$lesson->group_id] ?? collect())->take(12) as $studentIndex => $student) {
-                $status = $studentIndex % 11 === 0 ? 'late' : ($studentIndex % 17 === 0 ? 'absent' : 'present');
-                Attendance::updateOrCreate(
-                    ['schedule_lesson_id' => $lesson->id, 'student_id' => $student->id],
-                    ['status' => $status, 'comment' => $status === 'late' ? 'Опоздание 10 минут.' : null]
-                );
+        Attendance::query()->whereIn('schedule_lesson_id', $lessonIds)->delete();
+        Grade::query()->whereIn('schedule_lesson_id', $lessonIds)->delete();
 
-                if ($studentIndex % 4 !== 0) {
-                    Grade::updateOrCreate(
-                        ['schedule_lesson_id' => $lesson->id, 'student_id' => $student->id, 'grade_type' => 'classwork'],
-                        ['grade' => (string) (3 + (($lessonIndex + $studentIndex) % 3)), 'comment' => 'Демо-оценка за работу на занятии.']
-                    );
+        $now = now();
+        $attendanceRows = [];
+        $gradeRows = [];
+
+        foreach ($past as $lesson) {
+            foreach (($studentsByGroup[$lesson->group_id] ?? collect()) as $student) {
+                $profile = $this->studentProfile($student->id);
+                // Провальная дисциплина своя у каждого пятого: ровный студент,
+                // просевший на одном предмете, — обычная картина ведомости.
+                $struggles = $student->id % 5 === 0 && $lesson->subject_id % 4 === $student->id % 4;
+                $status = $this->attendanceStatus($struggles ? 'weak' : $profile);
+
+                $attendanceRows[] = [
+                    'schedule_lesson_id' => $lesson->id,
+                    'student_id' => $student->id,
+                    'status' => $status,
+                    'comment' => $status === 'late' ? 'Опоздание '.mt_rand(5, 25).' минут.' : null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+
+                if ($status === 'absent' || mt_rand(1, 100) > 45) {
+                    continue;
                 }
+
+                $gradeRows[] = [
+                    'schedule_lesson_id' => $lesson->id,
+                    'student_id' => $student->id,
+                    'grade' => (string) $this->gradeFor($struggles ? 'weak' : $profile),
+                    'grade_type' => 'classwork',
+                    'comment' => null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
             }
         }
+
+        // Вставка пачками: построчный updateOrCreate на десятках тысяч записей
+        // превращал наполнение стенда в многоминутное ожидание.
+        foreach (array_chunk($attendanceRows, 1000) as $chunk) {
+            Attendance::query()->insert($chunk);
+        }
+
+        foreach (array_chunk($gradeRows, 1000) as $chunk) {
+            Grade::query()->insert($chunk);
+        }
+    }
+
+    /**
+     * Уровень студента устойчив между запусками: он выводится из его же
+     * идентификатора, а не бросается заново. Иначе отличник при следующем
+     * наполнении стенда становится отстающим, и сравнить два прогона нельзя.
+     */
+    private function studentProfile(int $studentId): string
+    {
+        $bucket = ($studentId * 7919) % 100;
+
+        return match (true) {
+            $bucket < 12 => 'excellent',
+            $bucket < 45 => 'good',
+            $bucket < 82 => 'average',
+            default => 'weak',
+        };
+    }
+
+    /**
+     * Преподаватели приходят раньше студентов, но не поголовно: у кого-то не
+     * вышел автобус. Без этого сводка «Посещаемость» показывала ноль
+     * опоздавших — экран есть, а показывать на нём нечего.
+     */
+    private function teacherProfile(int $teacherId): string
+    {
+        $bucket = ($teacherId * 6421) % 100;
+
+        return match (true) {
+            $bucket < 70 => 'excellent',
+            $bucket < 92 => 'good',
+            default => 'weak',
+        };
+    }
+
+    private function attendanceStatus(string $profile): string
+    {
+        $roll = mt_rand(1, 100);
+
+        return match ($profile) {
+            'excellent' => $roll <= 96 ? 'present' : ($roll <= 99 ? 'late' : 'absent'),
+            'good' => $roll <= 90 ? 'present' : ($roll <= 97 ? 'late' : 'absent'),
+            'average' => $roll <= 82 ? 'present' : ($roll <= 92 ? 'late' : 'absent'),
+            default => $roll <= 65 ? 'present' : ($roll <= 80 ? 'late' : 'absent'),
+        };
+    }
+
+    private function gradeFor(string $profile): int
+    {
+        $roll = mt_rand(1, 100);
+
+        return match ($profile) {
+            'excellent' => $roll <= 70 ? 5 : ($roll <= 98 ? 4 : 3),
+            'good' => $roll <= 30 ? 5 : ($roll <= 80 ? 4 : ($roll <= 98 ? 3 : 2)),
+            'average' => $roll <= 10 ? 5 : ($roll <= 50 ? 4 : ($roll <= 92 ? 3 : 2)),
+            default => $roll <= 2 ? 5 : ($roll <= 20 ? 4 : ($roll <= 70 ? 3 : 2)),
+        };
+    }
+
+    private function lessonTopic(string $subjectName, int $index): string
+    {
+        $topics = ['Введение в тему', 'Разбор материала', 'Практическая работа', 'Контрольная работа', 'Повторение', 'Подготовка к зачёту'];
+
+        return $topics[$index % count($topics)].': '.$subjectName;
     }
 
     private function seedDigitalIdentities($students, $teachers): void
@@ -384,76 +510,105 @@ class DemoDataSeeder extends Seeder
         }
     }
 
+    /**
+     * Проходы за две недели, а не один шаблон на всех.
+     *
+     * Прежний набор ставил всем один и тот же вход в 8:30 с поправкой по
+     * остатку от деления и только за сегодня. Отчёт проходной на таких данных
+     * показывает ровный частокол: не видно ни опоздавших, ни тех, кто вышел на
+     * обед и вернулся, ни отсутствующих, ни выходных. Здесь у человека есть
+     * привычка приходить вовремя или опаздывать, часть людей в конкретный день
+     * не приходит вовсе, по выходным здание почти пустое, а часть пропусков
+     * с первого раза не читается и человек прикладывает его повторно.
+     */
     private function seedAccessEvents($students, $teachers): void
     {
         $identities = DigitalIdentity::query()
-            ->where(function ($query) use ($students, $teachers): void {
-                $query
-                    ->where(fn ($studentQuery) => $studentQuery->where('entity_type', DigitalIdentity::ENTITY_STUDENT)->whereIn('entity_id', $students->take(120)->pluck('id')))
-                    ->orWhere(fn ($teacherQuery) => $teacherQuery->where('entity_type', DigitalIdentity::ENTITY_TEACHER)->whereIn('entity_id', $teachers->take(25)->pluck('id')));
-            })
-            ->get();
+            ->where(fn ($query) => $query
+                ->where(fn ($q) => $q->where('entity_type', DigitalIdentity::ENTITY_STUDENT)->whereIn('entity_id', $students->pluck('id')))
+                ->orWhere(fn ($q) => $q->where('entity_type', DigitalIdentity::ENTITY_TEACHER)->whereIn('entity_id', $teachers->pluck('id'))))
+            ->get(['id', 'entity_type', 'entity_id']);
 
-        if ($identities->isNotEmpty()) {
-            AccessEvent::query()
-                ->whereIn('digital_identity_id', $identities->pluck('id'))
-                ->where('device_name', 'Демо-турникет')
-                ->delete();
+        if ($identities->isEmpty()) {
+            return;
         }
 
-        foreach ($identities->values() as $index => $identity) {
-            if ($index % 17 === 0) {
-                AccessEvent::create([
-                    'digital_identity_id' => $identity->id,
-                    'entity_type' => $identity->entity_type,
-                    'entity_id' => $identity->entity_id,
-                    'access_point' => 'Главный вход',
-                    'device_name' => 'Демо-турникет',
-                    'direction' => AccessEvent::DIRECTION_IN,
-                    'event_time' => Carbon::today()->setTime(8, 15)->addMinutes($index % 8),
-                    'result' => AccessEvent::RESULT_DENIED,
-                    'reason' => 'Демо-отказ: пропуск требует проверки.',
-                ]);
-                continue;
-            }
+        AccessEvent::query()
+            ->whereIn('digital_identity_id', $identities->pluck('id'))
+            ->where('device_name', 'Демо-турникет')
+            ->delete();
 
-            if ($index % 13 === 0) {
-                continue;
-            }
+        $points = ['Главный вход', 'Главный вход', 'Главный вход', 'Служебный вход', 'Концертный зал'];
+        $now = now();
+        $rows = [];
 
-            $offset = match (true) {
-                $index % 11 === 0 => 16 + ($index % 22),
-                $index % 7 === 0 => 1 + ($index % 12),
-                default => -25 + ($index % 20),
-            };
-            $entryTime = Carbon::today()->setTime(8, 30)->addMinutes($offset);
+        foreach (range(self::HISTORY_DAYS, 0) as $daysAgo) {
+            $day = Carbon::today()->subDays($daysAgo);
+            $weekend = $day->isWeekend();
 
-            AccessEvent::create([
-                'digital_identity_id' => $identity->id,
-                'entity_type' => $identity->entity_type,
-                'entity_id' => $identity->entity_id,
-                'access_point' => 'Главный вход',
-                'device_name' => 'Демо-турникет',
-                'direction' => AccessEvent::DIRECTION_IN,
-                'event_time' => $entryTime,
-                'result' => AccessEvent::RESULT_ALLOWED,
-                'reason' => null,
-            ]);
+            foreach ($identities as $identity) {
+                $teacher = $identity->entity_type === DigitalIdentity::ENTITY_TEACHER;
+                $profile = $teacher ? $this->teacherProfile($identity->entity_id) : $this->studentProfile($identity->entity_id);
 
-            if ($index % 5 !== 0) {
-                AccessEvent::create([
-                    'digital_identity_id' => $identity->id,
-                    'entity_type' => $identity->entity_type,
-                    'entity_id' => $identity->entity_id,
-                    'access_point' => 'Главный вход',
-                    'device_name' => 'Демо-турникет',
-                    'direction' => AccessEvent::DIRECTION_OUT,
-                    'event_time' => Carbon::today()->setTime(14, 20)->addMinutes($index % 70),
-                    'result' => AccessEvent::RESULT_ALLOWED,
-                    'reason' => null,
-                ]);
+                // По выходным в здании репетиции: приходят единицы.
+                if (mt_rand(1, 100) > ($weekend ? 8 : ($teacher ? 94 : 88))) {
+                    continue;
+                }
+
+                $point = $points[mt_rand(0, count($points) - 1)];
+                $base = $day->copy()->setTime(8, 30);
+                $shift = match ($profile) {
+                    'excellent' => mt_rand(-40, -5),
+                    'good' => mt_rand(-30, 0),
+                    'average' => mt_rand(-20, 8),
+                    default => mt_rand(-10, 35),
+                };
+                $entry = $base->copy()->addMinutes($weekend ? mt_rand(60, 240) : $shift);
+
+                // Пропуск не прочитался с первого раза — человек прикладывает снова.
+                if (mt_rand(1, 100) <= 2) {
+                    $rows[] = $this->accessRow($identity, $point, AccessEvent::DIRECTION_IN, $entry->copy()->subMinutes(1), $now, AccessEvent::RESULT_DENIED, 'Пропуск не прочитан, повторное прикладывание.');
+                }
+
+                $rows[] = $this->accessRow($identity, $point, AccessEvent::DIRECTION_IN, $entry, $now);
+
+                // Выход на обед и возвращение.
+                if (! $weekend && mt_rand(1, 100) <= 12) {
+                    $lunch = $day->copy()->setTime(11, 45)->addMinutes(mt_rand(0, 40));
+                    $rows[] = $this->accessRow($identity, $point, AccessEvent::DIRECTION_OUT, $lunch, $now);
+                    $rows[] = $this->accessRow($identity, $point, AccessEvent::DIRECTION_IN, $lunch->copy()->addMinutes(mt_rand(20, 55)), $now);
+                }
+
+                // Часть людей уходит, не отметившись: в отчёте они остаются
+                // «в здании», и это настоящая, а не выдуманная проблема проходной.
+                if (mt_rand(1, 100) <= 88) {
+                    $exit = $day->copy()->setTime($teacher ? 16 : 14, 20)->addMinutes(mt_rand(0, 150));
+                    $rows[] = $this->accessRow($identity, $point, AccessEvent::DIRECTION_OUT, $exit, $now);
+                }
             }
         }
+
+        foreach (array_chunk($rows, 1000) as $chunk) {
+            AccessEvent::query()->insert($chunk);
+        }
+    }
+
+    /** @return array<string, mixed> */
+    private function accessRow(DigitalIdentity $identity, string $point, string $direction, Carbon $time, Carbon $now, string $result = AccessEvent::RESULT_ALLOWED, ?string $reason = null): array
+    {
+        return [
+            'digital_identity_id' => $identity->id,
+            'entity_type' => $identity->entity_type,
+            'entity_id' => $identity->entity_id,
+            'access_point' => $point,
+            'device_name' => 'Демо-турникет',
+            'direction' => $direction,
+            'event_time' => $time,
+            'result' => $result,
+            'reason' => $reason,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ];
     }
 
     private function seedPerson(string $lastName, string $firstName, ?string $middleName, ?string $birthDate, string $email, string $phone): Person
