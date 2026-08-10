@@ -10,18 +10,24 @@
 
 Раздел для параллельных чатов: за 09.08.2026 ствол уезжал под ногами по четыре раза за задачу. Перед началом работы посмотрите сюда, а начав — допишите себя. Закончив, уберите строку.
 
-**Чат «Учётные записи и роли» (занято с 10.08.2026):**
+### Чат 1 — «Учётные записи, роли и демо-данные» (занято с 10.08.2026)
+
+Ветка: `feature/demo-data-realism`, worktree `.worktrees/demo-data-realism`.
 
 | Задача | Файлы, которые трогает | Состояние |
 | --- | --- | --- |
 | `DEMO-001` — правдоподобный демонстрационный набор | `backend/database/seeders/DemoDataSeeder.php`, `backend/database/seeders/Support/DemoNameFactory.php` | **в работе** |
 | Аудит, находка 5 — обрезка отчёта проходной 1000 событиями | `backend/app/Http/Controllers/Api/AccessReportController.php` | следующая |
 
-Уже сделано и влито этим чатом сегодня, повторно не трогать: сведение учётных записей в один набор на `@local` (`PortalUserSeeder`, `portal:merge-accounts`, `portal:staff-account`), обход прав по всем ролям и три исправления по его итогам (`stores/audit.js`, `stores/schedule.js`, `stores/hr.js`), единый формат телефона (`utils/phone.js` и места показа).
+Уже сделано и влито чатом 1 сегодня, повторно не трогать: сведение учётных записей в один набор на `@local` (`PortalUserSeeder`, `portal:merge-accounts`, `portal:staff-account`), обход прав по всем ролям и три исправления по его итогам (`stores/audit.js`, `stores/schedule.js`, `stores/hr.js`), единый формат телефона (`utils/phone.js` и места показа).
 
-**Занято другим чатом**, судя по веткам и worktree на DEV: `feature/fis-dictionary-intake`, `feature/fis-gia-records`, `feature/access-buildings-muster`, `feature/person-documents-completeness`. Задачи ФИС ГИА ведутся отдельно и этим чатом не трогаются.
+**Чат 1 в файлы чата 2 не заходит.** `RoleSeeder`, `EnsurePermission`, `StudentController`, `stores/students.js` и страницы студентов — за чатом 2. Единственное пересечение уже в стволе: в `RoleSeeder::hrPermissions()` от чата 1 остался поясняющий комментарий про то, почему кадрам не выдаётся `people.view`, — при правке под `reference.view` его достаточно сохранить.
 
-**Чат «ФИС ГИА и приёмная комиссия» (занято с 09.08.2026):** ветка `fix/student-filters-and-status`.
+`DEMO-001` меняет только генератор демонстрационных данных. Пересечение возможно единственное: если чат 2 будет наполнять стенд, набор перезапишет демо-студентов, демо-преподавателей, расписание, журнал и события проходной. Учётных записей, реальных людей и справочников он не трогает.
+
+### Чат 2 — «ФИС ГИА и приёмная комиссия» (занято с 09.08.2026)
+
+Ветка: `fix/student-filters-and-status`, worktree `.worktrees/student-filters`.
 
 | Задача | Файлы, которые трогает | Состояние |
 | --- | --- | --- |
@@ -29,9 +35,11 @@
 | `GUI-018` — фильтры «Курс» и «Специальность» | `StudentController::index`, `GroupController::index`, `stores/students.js`, `pages/students/*` | **в работе**, одной правкой с `BUG-010` |
 | ФИС: конкурсы (`CompetitiveGroupUID`) из `InstitutionExport` | `app/Services/FisIntegration/Xml/*` | следующая |
 
-**Осторожно, общие файлы.** `BUG-010` вводит право `reference.view`: правится `RoleSeeder` (базовое право всем ролям), `EnsurePermission::DOMAIN_RULES` (чтение справочников отделено от правки) и добавляется миграция — сидер на обновлении установленного стенда не запускается. Если ваш чат трогает эти же файлы, напишите здесь.
+**Осторожно, общие файлы.** `BUG-010` вводит право `reference.view`: правится `RoleSeeder` (базовое право всем ролям), `EnsurePermission::DOMAIN_RULES` (чтение справочников отделено от правки) и добавляется миграция — сидер на обновлении установленного стенда не запускается. Если ваш чат трогает эти же файлы, напишите здесь. Чат 1 подтверждает: эти файлы за чатом 2, заходить не будет.
 
-Уже сделано и влито этим чатом, повторно не трогать: сборка XML по официальной XSD ФИС 4.9 (`resources/fis/gia-priem/4.9/`, `FisXsdSchema`, `PackageDataComposer`), загрузка справочников ФИС (`FisDictionaryIntakeService`, раздел на экране ФИС).
+Уже сделано и влито чатом 2, повторно не трогать: сборка XML по официальной XSD ФИС 4.9 (`resources/fis/gia-priem/4.9/`, `FisXsdSchema`, `PackageDataComposer`), загрузка справочников ФИС (`FisDictionaryIntakeService`, раздел на экране ФИС).
+
+**Другие worktree на DEV** — `feature/fis-gia-records`, `feature/access-buildings-muster`, `feature/person-documents-completeness`, `fix/role-screen-reference-loading`, `sync/sync-001` — остались от прошлых сессий и в работе сейчас не находятся.
 
 **Договорённости на время параллельной работы:**
 
