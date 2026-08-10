@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import { formatPhone } from '../../utils/phone'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import { Download, Edit3, Plus, RefreshCw, Trash2, Upload } from '@lucide/vue'
@@ -611,7 +612,7 @@ onMounted(async () => {
                 {{ applicationTitle(props.row) }}
               </button>
               <div class="admissions-secondary-cell">
-                <small>{{ [props.row.phone, props.row.email].filter(Boolean).join(' · ') || 'Контакты не указаны' }}</small>
+                <small>{{ [formatPhone(props.row.phone), props.row.email].filter(Boolean).join(' · ') || 'Контакты не указаны' }}</small>
                 <small>{{ educationBaseLabel(props.row.education_base) }} · подано {{ formatDate(props.row.submitted_at) }}</small>
               </div>
             </q-td>

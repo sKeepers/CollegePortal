@@ -11,6 +11,7 @@ import PersonAccountActions from '../../components/identity/PersonAccountActions
 import { api } from '../../services/api'
 import { useAuthStore } from '../../stores/auth'
 import { useHrStore } from '../../stores/hr'
+import { formatPhone } from '../../utils/phone'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -425,7 +426,7 @@ watch(() => route.path, (path) => {
         <q-tab-panels v-model="workspaceTab" animated class="bg-transparent">
           <q-tab-panel name="general" class="q-px-none">
             <div class="hr-info-grid">
-              <span>Телефон</span><strong>{{ selected.person?.phone || '—' }}</strong>
+              <span>Телефон</span><strong>{{ formatPhone(selected.person?.phone, "—") }}</strong>
               <span>Email</span><strong>{{ selected.person?.email || '—' }}</strong>
               <span>Принят</span><strong>{{ formatDate(selected.hired_at) }}</strong>
               <span>Уволен</span><strong>{{ formatDate(selected.dismissed_at) }}</strong>
@@ -495,7 +496,10 @@ watch(() => route.path, (path) => {
       <q-card class="hr-dialog">
         <q-card-section><div class="text-h6">{{ editingEmployeeId ? 'Редактировать сотрудника' : 'Новый сотрудник' }}</div></q-card-section>
         <q-card-section class="hr-form-grid">
-          <q-select v-model="employeeForm.person_id" outlined dense clearable emit-value map-options label="Личная карточка (выбрать существующую)" :options="store.personOptions" class="hr-form-wide" @update:model-value="selectExistingPerson" />
+          <!-- Реестр людей открыт не каждой роли, а пустой список без объяснения
+               читается как поломка. Нет доступа — нет и подсказки: существующего
+               человека всё равно найдёт сервер при сохранении карточки. -->
+          <q-select v-if="store.personOptions.length" v-model="employeeForm.person_id" outlined dense clearable emit-value map-options label="Личная карточка (выбрать существующую)" :options="store.personOptions" class="hr-form-wide" @update:model-value="selectExistingPerson" />
           <q-input v-model="employeeForm.employee_number" outlined dense label="Табельный номер" />
           <q-input v-model="employeeForm.last_name" outlined dense label="Фамилия" />
           <q-input v-model="employeeForm.first_name" outlined dense label="Имя" />

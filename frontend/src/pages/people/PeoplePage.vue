@@ -18,6 +18,7 @@ import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import { TABLE_ROWS_PER_PAGE_OPTIONS, createTablePagination, persistTablePagination } from '../../services/tableSettings'
 import { useAuthStore } from '../../stores/auth'
 import { usePeopleStore } from '../../stores/people'
+import { formatPhone } from '../../utils/phone'
 
 const store = usePeopleStore()
 const auth = useAuthStore()
@@ -224,7 +225,7 @@ onMounted(async () => {
             <q-td :props="props"><q-btn flat dense no-caps color="primary" @click.stop="selectPerson(props.row)">{{ props.row.full_name }}</q-btn></q-td>
           </template>
           <template #body-cell-contacts="props">
-            <q-td :props="props"><div>{{ props.row.phone || '—' }}</div><small>{{ props.row.email || 'email не указан' }}</small></q-td>
+            <q-td :props="props"><div>{{ formatPhone(props.row.phone, "—") }}</div><small>{{ props.row.email || 'email не указан' }}</small></q-td>
           </template>
           <template #body-cell-profiles="props">
             <q-td :props="props" class="people-profile-chips">
@@ -245,7 +246,7 @@ onMounted(async () => {
 
       <aside class="people-side">
         <AppEmptyState v-if="!selected" title="Человек не выбран" description="Выберите строку, чтобы открыть связанные профили." />
-        <WorkspacePanel v-else :title="selected.full_name" :subtitle="[selected.phone, selected.email].filter(Boolean)" :metrics="metrics" :actions="actions">
+        <WorkspacePanel v-else :title="selected.full_name" :subtitle="[formatPhone(selected.phone), selected.email].filter(Boolean)" :metrics="metrics" :actions="actions">
           <template #photo>
             <q-avatar size="72px" color="grey-2" text-color="grey-8">
               <img v-if="selected.photo_url" :src="selected.photo_url" alt="Фото" />

@@ -1,4 +1,5 @@
 import { api } from './api'
+import { formatPhone } from '../utils/phone'
 
 const MAX_RESULTS_PER_PROVIDER = 5
 
@@ -77,7 +78,7 @@ async function searchStudents(query) {
       group: 'Студенты',
       title: fullName(student) || `Студент #${student.id}`,
       subtitle: [student.group?.name, student.status].filter(Boolean).join(' · ') || 'Карточка студента',
-      meta: [student.phone, student.email].filter(Boolean),
+      meta: [formatPhone(student.phone), student.email].filter(Boolean),
       route: {
         path: '/students',
         query: {
@@ -113,7 +114,7 @@ async function searchTeachers(query) {
       group: 'Преподаватели',
       title: fullName(teacher) || `Преподаватель #${teacher.id}`,
       subtitle: [teacher.department, teacher.position].filter(Boolean).join(' · ') || 'Карточка преподавателя',
-      meta: [teacher.phone, teacher.email, teacher.is_active ? 'Активен' : 'Неактивен'].filter(Boolean),
+      meta: [formatPhone(teacher.phone), teacher.email, teacher.is_active ? 'Активен' : 'Неактивен'].filter(Boolean),
       route: {
         path: '/teachers',
         query: {
@@ -240,7 +241,7 @@ async function searchApplicantApplications(query) {
         application.education_program?.specialty?.name,
         application.education_program?.name,
       ].filter(Boolean).join(' · ') || 'Заявление абитуриента',
-      meta: [application.phone, application.email, application.status].filter(Boolean),
+      meta: [formatPhone(application.phone), application.email, application.status].filter(Boolean),
       route: {
         path: '/admissions',
         query: {

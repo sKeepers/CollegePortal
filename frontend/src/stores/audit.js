@@ -33,9 +33,13 @@ export const useAuditStore = defineStore('audit', () => {
     error.value = ''
 
     try {
+      // Список пользователей нужен только фильтру «Пользователь», а лежит он под
+      // правом users.manage. У директора есть audit.view, но нет users.manage,
+      // и общий Promise.all ронял весь экран сообщением «У вас нет доступа
+      // к этому действию» — при том, что журнал отдавался целиком.
       const [logsPayload, usersPayload] = await Promise.all([
         api.list('admin/audit', { ...filters.value, per_page: 200 }),
-        api.list('admin/users', { per_page: 300 }),
+        api.list('admin/users', { per_page: 300 }).catch(() => null),
       ])
       logs.value = extractRows(logsPayload)
       users.value = extractRows(usersPayload)

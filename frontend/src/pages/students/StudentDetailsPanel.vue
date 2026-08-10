@@ -5,6 +5,7 @@ import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import PersonPhotoManager from '../../components/person/PersonPhotoManager.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
 import PersonAccountActions from '../../components/identity/PersonAccountActions.vue'
+import { formatPhone } from '../../utils/phone'
 
 const props = defineProps({
   student: { type: Object, default: null },
@@ -156,7 +157,7 @@ function removePhoto() {
           <section class="student-details__section">
             <h3>Контакты</h3>
             <dl class="student-details__list">
-              <div><dt>Телефон</dt><dd>{{ student.phone || '—' }}</dd></div>
+              <div><dt>Телефон</dt><dd>{{ formatPhone(student.phone, "—") }}</dd></div>
               <div><dt>Email</dt><dd>{{ student.email || '—' }}</dd></div>
               <div><dt>Адрес</dt><dd>{{ student.address || '—' }}</dd></div>
             </dl>

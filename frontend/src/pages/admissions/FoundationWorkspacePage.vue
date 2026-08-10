@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { formatPhone } from '../../utils/phone'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import {
@@ -531,7 +532,7 @@ function applicantLabel(applicant) {
 
 function personOptionLabel(person) {
   const fullName = person?.full_name || [person?.last_name, person?.first_name, person?.middle_name].filter(Boolean).join(' ')
-  return [fullName || `Человек #${person?.id}`, person?.birth_date ? formatDate(person.birth_date) : '', person?.email || '', person?.phone || ''].filter(Boolean).join(' · ')
+  return [fullName || `Человек #${person?.id}`, person?.birth_date ? formatDate(person.birth_date) : '', person?.email || '', formatPhone(person?.phone)].filter(Boolean).join(' · ')
 }
 
 function resetPersonForm() {
@@ -1356,7 +1357,7 @@ onMounted(async () => {
                   <div><dt>Дата рождения</dt><dd>{{ formatDate(selectedPerson?.birth_date) }}</dd></div>
                   <div><dt>Пол</dt><dd>{{ genderLabel(selectedPerson?.gender) }}</dd></div>
                   <div><dt>Гражданство</dt><dd>{{ selectedPerson?.citizenship || '—' }}</dd></div>
-                  <div><dt>Телефон</dt><dd>{{ selectedPerson?.phone || '—' }}</dd></div>
+                  <div><dt>Телефон</dt><dd>{{ formatPhone(selectedPerson?.phone, '—') }}</dd></div>
                   <div><dt>Email</dt><dd>{{ selectedPerson?.email || '—' }}</dd></div>
                   <div><dt>СНИЛС</dt><dd>{{ selectedPerson?.snils_masked || 'Не указан' }}</dd></div>
                 </dl>
@@ -1377,7 +1378,7 @@ onMounted(async () => {
                   <div><dt>Пол</dt><dd>{{ genderLabel(selectedPerson?.gender) }}</dd></div>
                   <div><dt>Место рождения</dt><dd>{{ selectedPerson?.place_birth || '—' }}</dd></div>
                   <div><dt>Гражданство</dt><dd>{{ selectedPerson?.citizenship || '—' }}</dd></div>
-                  <div><dt>Телефон</dt><dd>{{ selectedPerson?.phone || '—' }}</dd></div>
+                  <div><dt>Телефон</dt><dd>{{ formatPhone(selectedPerson?.phone, '—') }}</dd></div>
                   <div><dt>Email</dt><dd>{{ selectedPerson?.email || '—' }}</dd></div>
                   <div><dt>СНИЛС</dt><dd>{{ selectedPerson?.snils_masked || 'Не указан' }}</dd></div>
                   <div><dt>Статус</dt><dd>{{ personStatusLabel(selectedPerson?.status) }}</dd></div>

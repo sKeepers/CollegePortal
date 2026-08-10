@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
+import { useAuthStore } from './auth'
 
 const initialFilters = {
   academic_year: '',
@@ -225,7 +226,13 @@ export const useScheduleStore = defineStore('schedule', () => {
         api.list('classrooms'),
         api.list('schedule/conflicts', apiFilters),
         api.list('schedule/coverage', apiFilters),
-        api.list('schedule/templates', apiFilters),
+        // Шаблоны запрашиваются только тем, кому они разрешены. Директор,
+        // преподаватель, студент и учебная часть 2 видят расписание, но
+        // шаблонами не управляют: запрос всё равно отдавал им 403 и просто
+        // тратил место в счётчике частоты запросов.
+        useAuthStore().can('schedule.manage_templates')
+          ? api.list('schedule/templates', apiFilters)
+          : Promise.resolve({ data: [] }),
       ])
 
       if (lessonsResult.status === 'rejected') {

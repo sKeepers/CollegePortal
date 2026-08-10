@@ -92,7 +92,10 @@ onMounted(async () => {
 
     <AppFilterBar>
       <q-input v-model="store.filters.search" dense outlined clearable label="Поиск" @keyup.enter="applyFilters" />
-      <q-select v-model="store.filters.user_id" dense outlined clearable emit-value map-options label="Пользователь" :options="store.userOptions" />
+      <!-- Список пользователей открыт только под users.manage. Директор журнал
+           видит, а список нет: пустой фильтр без объяснения выглядит поломкой,
+           поэтому он просто не показывается. -->
+      <q-select v-if="store.userOptions.length" v-model="store.filters.user_id" dense outlined clearable emit-value map-options label="Пользователь" :options="store.userOptions" />
       <q-select v-model="store.filters.module" dense outlined clearable emit-value map-options label="Модуль" :options="store.moduleOptions" />
       <q-select v-model="store.filters.action" dense outlined clearable emit-value map-options label="Действие" :options="store.actionOptions" />
       <q-input v-model="store.filters.date_from" dense outlined clearable label="С даты" type="date" />

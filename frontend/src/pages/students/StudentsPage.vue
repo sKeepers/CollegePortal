@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import { formatPhone } from '../../utils/phone'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import { Download, Edit3, Plus, RefreshCw, Trash2, Upload } from '@lucide/vue'
@@ -558,7 +559,7 @@ onMounted(async () => {
           <template #body-cell-contacts="props">
             <q-td :props="props">
               <div class="students-contact-cell">
-                <span>{{ props.row.phone || '—' }}</span>
+                <span>{{ formatPhone(props.row.phone, "—") }}</span>
                 <small>{{ props.row.email || '—' }}</small>
               </div>
             </q-td>

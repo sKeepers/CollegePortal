@@ -1,5 +1,6 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
+import { formatPhone } from '../../utils/phone'
 import { BookOpen, CheckCircle2, ClipboardList, Download, FileText, GraduationCap, History, Mail, Phone, Upload, UserPlus, XCircle } from '@lucide/vue'
 import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
@@ -245,7 +246,7 @@ function toggleDocument(document) {
             <dl class="admission-details__list">
               <div>
                 <dt>Телефон</dt>
-                <dd>{{ application.phone || '—' }}</dd>
+                <dd>{{ formatPhone(application.phone, "—") }}</dd>
               </div>
               <div>
                 <dt>Email</dt>

@@ -288,6 +288,12 @@ class RoleSeeder extends Seeder
         ];
     }
 
+    /**
+     * `people.view` кадрам намеренно не выдаётся: реестр людей — это ещё и
+     * студенты с абитуриентами, а кадрам они не нужны. Дубли при этом не
+     * появляются: `HrService::resolvePerson` сам находит существующего человека
+     * по ФИО и контактам и заводит нового только тогда, когда совпадений нет.
+     */
     private function hrPermissions(): array
     {
         return ['dashboard.view', 'hr.employees.view', 'hr.employees.create', 'hr.employees.update', 'hr.employees.dismiss', 'hr.employees.digital_pass.issue', 'hr.assignments.manage', 'hr.statuses.manage', 'hr.departments.manage', 'hr.positions.manage', 'hr.documents.view', 'hr.calendar.view', 'hr.calendar.manage', 'hr.absences.manage', 'hr.dismissals.manage', 'hr.replacements.view', 'hr.replacements.manage', 'hr.reports.view', 'teachers.view', 'gate.reports', 'view_own_data'];

@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
+import { useAuthStore } from './auth'
 
 function rows(payload) {
   return Array.isArray(payload?.data) ? payload.data : []
@@ -127,7 +128,13 @@ export const useHrStore = defineStore('hr', () => {
 
   async function loadDictionaries() {
     const [depPayload, posPayload] = await Promise.all([api.list('departments'), api.list('positions')])
-    const peoplePayload = await api.list('people', { per_page: 100 }).catch(() => ({ data: [] }))
+    // Реестр людей закрыт кадрам намеренно: там же студенты и абитуриенты.
+    // Раньше запрос уходил всё равно и всегда отвечал 403 — подсказка «выбрать
+    // существующего человека» молча оставалась пустой. Дубли это не создаёт:
+    // существующего человека находит HrService при сохранении карточки.
+    const peoplePayload = useAuthStore().can('people.view')
+      ? await api.list('people', { per_page: 100 }).catch(() => ({ data: [] }))
+      : { data: [] }
     departments.value = rows(depPayload)
     positions.value = rows(posPayload)
     people.value = rows(peoplePayload)
