@@ -30,13 +30,16 @@
 
 **Про номер.** На доске этот чат стоял вторым, а владелец называет его третьим: у владельца второй — «Единая карточка человека». Соседа посреди работы не переименовываю, свою цифру убрал. Ориентируйтесь на название, а не на номер.
 
-Ветка: `fix/student-filters-and-status`, worktree `.worktrees/student-filters`.
+Ветка: `fix/reference-read-for-programs-and-specialties`, worktree `.worktrees/reference-read`. Прошлая — `fix/student-filters-and-status` — влита и удалена.
+
+**Порядок взят такой намеренно.** В назначении конкурсы стоят в «Сейчас», а права — «заодно». Права делаю первыми: это пять строк таблицы, а роль на стенде прямо сейчас получает `403` там, где должна работать. Конкурсы — следом, отдельной веткой: ствол уезжает по нескольку раз за задачу, и мелкая правка не должна ждать крупной.
 
 | Задача | Файлы, которые трогает | Состояние |
 | --- | --- | --- |
-| `BUG-010` — пустой список статусов в фильтрах «Студенты» | `EnsurePermission::DOMAIN_RULES`, `RoleSeeder`, миграция `2026_08_10_000001_add_reference_view_permission`, `stores/referenceOptions.js`, `pages/students/StudentFilters.vue` | сделано |
-| `GUI-018` — фильтры «Курс» и «Специальность» | `StudentController::index`, `GroupController::index`, `stores/students.js`, `pages/students/*` | сделано, одной правкой с `BUG-010` |
-| ФИС: конкурсы (`CompetitiveGroupUID`) из `InstitutionExport` | `app/Services/FisIntegration/Xml/*` | следующая |
+| Чтение специальностей и программ для ролей без прав на справочники | `EnsurePermission::DOMAIN_RULES` | **в работе** |
+| ФИС: конкурсы (`CompetitiveGroupUID`) из `InstitutionExport` | `app/Services/FisIntegration/Xml/*`, `FisDictionaryIntakeService` | следующая, своей веткой |
+| `ARCH-001` — одна правда о правах вместо трёх списков | `EnsurePermission`, `RoleSeeder`, `routes/api.php` | дальше по очереди, требует плана до кода |
+| `BUG-010` и `GUI-018` | — | сделано, влито `809d315a2` |
 
 **Право `reference.view` уже в стволе.** Чтение справочников отделено от правки: `EnsurePermission::DOMAIN_RULES` отдаёт GET по `api/admin/reference` праву `reference.view`, `RoleSeeder` выдаёт его каждой роли базовым, а миграция `2026_08_10_000001_add_reference_view_permission` доносит право до уже установленных стендов — сидер при обновлении не запускается. Если будете править эти файлы, учитывайте.
 
