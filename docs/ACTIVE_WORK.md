@@ -18,7 +18,8 @@
 
 | Задача | Файлы, которые трогает | Состояние |
 | --- | --- | --- |
-| Аудит, находка 7 — раздел «Отчеты» это заглушка `PageStub`, готовые отчёты недостижимы | `frontend/src/pages/reports/*`, `frontend/src/router`, кнопки экспорта в журнале и кадровом календаре | **в работе** |
+| Аудит, находка 13 — список эвакуации делает запрос к базе на каждого человека. Сначала замерить | `AccessPresenceService`, замер на стенде | **следующая** |
+| Аудит, находка 7 — раздел «Отчеты» это заглушка, готовые отчёты недостижимы | `pages/reports/ReportsPage.vue`, `stores/reports.js`, кнопки в журнале и кадровом календаре | сделано |
 | Аудит, находка 5 — обрезка отчёта проходной 1000 событиями | `AccessReportService` (новый), `AccessReportController`, `AccessReportVolumeTest`, `stores/accessReports.js`, `pages/access/AccessReportsPage.vue` | сделано, влито `27c45e246` |
 | `DEMO-001` — правдоподобный демонстрационный набор | `backend/database/seeders/DemoDataSeeder.php`, `backend/database/seeders/Support/DemoNameFactory.php` | сделано, влито `0f1294465` |
 

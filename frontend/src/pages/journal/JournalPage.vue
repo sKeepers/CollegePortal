@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute } from 'vue-router'
-import { RefreshCw, Save, UserCheck, UserX, Wand2 } from '@lucide/vue'
+import { Download, RefreshCw, Save, UserCheck, UserX, Wand2 } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -15,6 +15,7 @@ import JournalFilters from './JournalFilters.vue'
 import JournalLessonPanel from './JournalLessonPanel.vue'
 import { useJournalStore } from '../../stores/journal'
 import { usePermissions } from '../../composables/usePermissions'
+import { api } from '../../services/api'
 
 const store = useJournalStore()
 const route = useRoute()
@@ -26,6 +27,42 @@ const attendanceDraft = reactive({})
 const gradeDraft = reactive({})
 const signDialogVisible = ref(false)
 const historyFilters = reactive({ status: '' })
+const exporting = ref(false)
+const canExport = computed(() => hasPermission('journal.export'))
+
+/**
+ * Выгрузка берёт период и группу прямо из фильтров журнала: человек уже свёл
+ * экран к тому, что ему нужно, и просить его повторить тот же отбор в другом
+ * месте незачем. Без выбранной группы уходит выгрузка по преподавателям.
+ */
+async function exportJournal() {
+  exporting.value = true
+  try {
+    const filters = store.filters
+    const params = new URLSearchParams(Object.fromEntries(
+      Object.entries({
+        group_id: filters.group_id,
+        teacher_id: filters.group_id ? '' : filters.teacher_id,
+        date_from: filters.date_from || filters.date,
+        date_to: filters.date_to || filters.date,
+      }).filter(([, value]) => value !== '' && value !== null && value !== undefined),
+    ))
+    const path = filters.group_id ? 'journal/export/group.csv' : 'journal/export/teacher.csv'
+    const blob = await api.download(`/${path}?${params.toString()}`)
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `journal-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  } catch (err) {
+    $q.notify({ type: 'negative', message: err.message || 'Файл не удалось скачать' })
+  } finally {
+    exporting.value = false
+  }
+}
 
 const modeOptions = [
   { label: 'Мои занятия', value: 'mine' },
@@ -233,6 +270,12 @@ onMounted(async () => {
       <span>{{ tableSubtitle }}</span>
       <template #actions>
         <AppLoading v-if="store.loading || store.detailsLoading" label="Загрузка журнала..." />
+        <!-- Право «Журнал: экспорт» выдано пяти ролям и до 10.08.2026 не вело
+             никуда: кнопки не было ни на одном экране журнала. -->
+        <q-btn v-if="canExport" flat :loading="exporting" :disable="store.loading" @click="exportJournal">
+          <Download :size="16" /><span>Выгрузить CSV</span>
+          <q-tooltip>Занятия за выбранный период. Группа берётся из фильтра, без неё выгружаются все.</q-tooltip>
+        </q-btn>
         <q-btn flat :disable="store.loading" @click="refresh"><RefreshCw :size="16" /><span>Обновить</span></q-btn>
       </template>
     </AppToolbar>

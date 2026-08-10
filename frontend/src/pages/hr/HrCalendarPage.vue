@@ -7,6 +7,7 @@ import WorkspaceSplitter from "../../components/workspace/WorkspaceSplitter.vue"
 import { useResizableWorkspace } from "../../composables/useResizableWorkspace";
 import { useAuthStore } from "../../stores/auth";
 import { useHrStore } from "../../stores/hr";
+import { api } from "../../services/api";
 
 const $q = useQuasar();
 const auth = useAuthStore();
@@ -69,6 +70,32 @@ const employeeOptions = computed(() =>
   })),
 );
 const canManage = computed(() => auth.can("hr.absences.manage"));
+const canExportAbsences = computed(() => auth.can("hr.reports.view"));
+const exporting = ref(false);
+
+/** Выгрузка идёт за тот же период, который сейчас показан на экране. */
+async function exportAbsences() {
+  exporting.value = true;
+  try {
+    const params = new URLSearchParams({
+      date_from: filters.date_from,
+      date_to: filters.date_to,
+    });
+    const blob = await api.download(`/hr/reports/absences.csv?${params.toString()}`);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `hr-absences-${filters.date_from}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    $q.notify({ type: "negative", message: err.message || "Файл не удалось скачать" });
+  } finally {
+    exporting.value = false;
+  }
+}
 const canReplace = computed(() => auth.can("hr.replacements.manage"));
 const metrics = computed(() =>
   selectedPeriod.value
@@ -285,6 +312,11 @@ onMounted(load);
           unelevated
           toggle-color="primary"
         />
+        <!-- Выгрузка отсутствий работала на бэкенде с rc2, а вызвать её из
+             интерфейса было неоткуда: право `hr.reports.view` не вело никуда. -->
+        <q-btn v-if="canExportAbsences" flat no-caps :loading="exporting" @click="exportAbsences"
+          >Выгрузить CSV</q-btn
+        >
         <q-btn v-if="canManage" color="primary" no-caps @click="openCreate()"
           >Оформить период</q-btn
         >
