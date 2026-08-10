@@ -3,11 +3,19 @@
 namespace Tests\Feature;
 
 use App\Models\AccessEvent;
+use App\Models\Attendance;
+use App\Models\Curriculum;
 use App\Models\Employee;
+use App\Models\Group;
+use App\Models\JournalAttendance;
+use App\Models\JournalGrade;
+use App\Models\JournalLesson;
 use App\Models\Person;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\Teacher;
+use App\Models\TeachingLoad;
+use App\Models\TeachingLoadItem;
 use App\Services\AttendanceAnalysisService;
 use Carbon\Carbon;
 use Database\Seeders\DemoDataSeeder;
@@ -63,6 +71,29 @@ class DemoDataSeederTest extends TestCase
 
         $this->assertGreaterThan(0, AccessEvent::query()->where('result', AccessEvent::RESULT_DENIED)->count());
         $this->assertGreaterThan(0, AccessEvent::query()->where('direction', AccessEvent::DIRECTION_OUT)->count());
+
+        // Журнал, учебные планы и нагрузка: экраны открывались пустыми при
+        // полутора тысячах занятий в расписании, потому что их сущностей набор
+        // не создавал вовсе.
+        $this->assertGreaterThan(0, JournalLesson::query()->count(), 'Журнал обязан быть наполнен');
+        $this->assertGreaterThan(0, JournalAttendance::query()->count());
+        $this->assertGreaterThan(0, JournalGrade::query()->count());
+        $this->assertGreaterThan(0, JournalLesson::query()->where('status', JournalLesson::STATUS_SIGNED)->count(), 'Без подписанных занятий не видно запрета на правку');
+        $this->assertGreaterThan(0, JournalLesson::query()->where('status', JournalLesson::STATUS_IN_PROGRESS)->count(), 'Последний день журнала остаётся открытым');
+
+        // Отметки в журнале и в отчётах — одни и те же: движок наполняется из
+        // уже разложенной посещаемости, а не бросается заново.
+        $this->assertSame(
+            Attendance::query()->count(),
+            JournalAttendance::query()->count(),
+            'Посещаемость в журнале и в отчётах обязана совпадать'
+        );
+
+        $this->assertSame(12, Curriculum::query()->count(), 'По плану на каждую образовательную программу');
+        $this->assertSame(0, Group::query()->whereNull('curriculum_id')->count(), 'Без плана у группы нагрузка не построится');
+        $this->assertGreaterThan(0, TeachingLoad::query()->count());
+        $this->assertGreaterThan(0, TeachingLoadItem::query()->whereNotNull('teacher_id')->count());
+        $this->assertGreaterThan(0, TeachingLoadItem::query()->whereNull('teacher_id')->count(), 'Покрытие часов без нераспределённых строк ничего не показывает');
 
         $summary = app(AttendanceAnalysisService::class)->teachersToday()['summary'];
         $this->assertGreaterThan(0, $summary['late']);

@@ -6,6 +6,9 @@ use App\Models\AccessEvent;
 use App\Models\Attendance;
 use App\Models\ApplicantApplication;
 use App\Models\Classroom;
+use App\Models\Curriculum;
+use App\Models\CurriculumItem;
+use App\Models\CurriculumSubject;
 use App\Models\DigitalIdentity;
 use App\Models\Department;
 use App\Models\EducationProgram;
@@ -13,6 +16,9 @@ use App\Models\Employee;
 use App\Models\EmployeeAssignment;
 use App\Models\Grade;
 use App\Models\Group;
+use App\Models\JournalAttendance;
+use App\Models\JournalGrade;
+use App\Models\JournalLesson;
 use App\Models\Person;
 use App\Models\Position;
 use App\Models\Role;
@@ -21,7 +27,10 @@ use App\Models\Specialty;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Teacher;
+use App\Models\TeachingLoadItem;
 use App\Models\User;
+use App\Services\SettingService;
+use App\Services\TeachingLoadGenerationService;
 use Database\Seeders\Support\DemoNameFactory;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -54,6 +63,9 @@ class DemoDataSeeder extends Seeder
     /** @var array<int, int> */
     private array $teacherOrdinals = [];
 
+    /** @var array<int, int> */
+    private array $subjectOrdinals = [];
+
     public function run(): void
     {
         $this->names = new DemoNameFactory();
@@ -83,10 +95,14 @@ class DemoDataSeeder extends Seeder
             $students = $this->seedStudents($studentRole, $demoPassword, $groups);
 
             $this->seedTeacherSubjects($teachers, $subjects);
+            $curricula = $this->seedCurricula($programs, $subjects);
+            $this->attachCurriculaToGroups($groups, $curricula);
             $lessons = $this->seedWeeklySchedule($groups, $teachers, $subjects, $classrooms);
-            $this->seedJournalSamples($lessons, $students);
+            $marks = $this->seedJournalSamples($lessons, $students);
+            $this->seedJournalEngine($lessons, $marks);
+            $this->seedTeachingLoads($groups, $teachers);
             $this->seedDigitalIdentities($students, $teachers);
-            $this->seedAccessEvents($students, $teachers);
+            $this->seedAccessEvents($students, $teachers, $lessons);
             $this->seedApplicantApplications($programs);
         });
     }
@@ -154,14 +170,20 @@ class DemoDataSeeder extends Seeder
             'Практика исполнительская', 'Консультация к экзамену',
         ];
 
-        return collect($items)->map(fn (string $name, int $index): Subject => Subject::updateOrCreate(
-            ['code' => $index === 0 ? 'MUS-101' : sprintf('DEMO-SUB-%02d', $index + 1)],
-            [
-                'name' => $name,
-                'department' => $index % 3 === 0 ? 'Музыкальное отделение' : 'Общеобразовательное отделение',
-                'description' => 'Демонстрационная дисциплина.',
-            ]
-        ))->values();
+        return collect($items)->map(function (string $name, int $index): Subject {
+            $subject = Subject::updateOrCreate(
+                ['code' => $index === 0 ? 'MUS-101' : sprintf('DEMO-SUB-%02d', $index + 1)],
+                [
+                    'name' => $name,
+                    'department' => $index % 3 === 0 ? 'Музыкальное отделение' : 'Общеобразовательное отделение',
+                    'description' => 'Демонстрационная дисциплина.',
+                ]
+            );
+
+            $this->subjectOrdinals[$subject->id] = $index;
+
+            return $subject;
+        })->values();
     }
 
     /**
@@ -390,10 +412,11 @@ class DemoDataSeeder extends Seeder
      * уровень, а у части — провал по одной дисциплине: именно так выглядят
      * настоящие ведомости, и именно на них видно, зачем нужны отчёты.
      */
-    private function seedJournalSamples($lessons, $students): void
+    /** @return array{attendance: array<int, array<string, mixed>>, grades: array<int, array<string, mixed>>} */
+    private function seedJournalSamples($lessons, $students): array
     {
         $studentsByGroup = $students->groupBy('group_id');
-        $past = $lessons->filter(fn (ScheduleLesson $lesson): bool => $lesson->lesson_date <= Carbon::today()->toDateString());
+        $past = $this->startedLessons($lessons);
         $lessonIds = $past->pluck('id');
 
         Attendance::query()->whereIn('schedule_lesson_id', $lessonIds)->delete();
@@ -408,8 +431,14 @@ class DemoDataSeeder extends Seeder
                 $profile = $this->studentProfile($student->id);
                 // Провальная дисциплина своя у каждого пятого: ровный студент,
                 // просевший на одном предмете, — обычная картина ведомости.
+                // И студент, и дисциплина берутся по порядковому номеру в наборе:
+                // от идентификатора строки зависеть нельзя. Через `subject_id`
+                // эта зависимость оставалась незамеченной — а она сдвигала
+                // раскладку оценок и весь дальнейший поток случайных значений,
+                // и проверка снова мигала в полном прогоне.
                 $ordinal = $this->ordinal($this->studentOrdinals, $student->id);
-                $struggles = $ordinal % 5 === 0 && $lesson->subject_id % 4 === $ordinal % 4;
+                $subjectOrdinal = $this->ordinal($this->subjectOrdinals, $lesson->subject_id);
+                $struggles = $ordinal % 5 === 0 && $subjectOrdinal % 4 === $ordinal % 4;
                 $status = $this->attendanceStatus($struggles ? 'weak' : $profile);
 
                 $attendanceRows[] = [
@@ -445,6 +474,307 @@ class DemoDataSeeder extends Seeder
 
         foreach (array_chunk($gradeRows, 1000) as $chunk) {
             Grade::query()->insert($chunk);
+        }
+
+        // Те же отметки уходят и в движок журнала: два экрана об одном занятии
+        // обязаны показывать одно и то же.
+        return ['attendance' => $attendanceRows, 'grades' => $gradeRows];
+    }
+
+    /**
+     * Журнал преподавателя: занятия, отметки и оценки в движке журнала.
+     *
+     * Раньше набор наполнял только старые таблицы, привязанные к расписанию, а
+     * экран «Журнал» читает движок — и открывался пустым при 1710 занятиях в
+     * расписании. Записи движка выводятся из уже разложенных отметок, а не
+     * бросаются заново: посещаемость в журнале и в отчётах должна совпадать.
+     *
+     * Прошедшие занятия закрыты, последний день оставлен открытым — так и
+     * выглядит журнал в работе. Занятия преподавателя с учётной записью
+     * подписаны: без подписанных занятий не видно ни запрета на правку, ни
+     * заявок на переоткрытие.
+     *
+     * @param array{attendance: array<int, array<string, mixed>>, grades: array<int, array<string, mixed>>} $marks
+     */
+    private function seedJournalEngine($lessons, array $marks): void
+    {
+        $today = Carbon::today();
+        $past = $this->startedLessons($lessons);
+
+        if ($past->isEmpty()) {
+            return;
+        }
+
+        $lessonIds = $past->pluck('id');
+        JournalLesson::query()->whereIn('legacy_schedule_lesson_id', $lessonIds)->delete();
+
+        $signingTeacherId = Teacher::query()->whereNotNull('user_id')->value('id');
+        $signerUserId = Teacher::query()->whereNotNull('user_id')->value('user_id');
+        $now = now();
+        $rows = [];
+
+        foreach ($past as $lesson) {
+            $isToday = (string) $lesson->lesson_date->toDateString() === $today->toDateString();
+            $signed = ! $isToday && (int) $lesson->teacher_id === (int) $signingTeacherId;
+            $status = match (true) {
+                $isToday => JournalLesson::STATUS_IN_PROGRESS,
+                $signed => JournalLesson::STATUS_SIGNED,
+                default => JournalLesson::STATUS_COMPLETED,
+            };
+            $openedAt = $lesson->lesson_date->copy()->setTimeFromTimeString($this->timeString($lesson->starts_at));
+
+            $rows[] = [
+                'legacy_schedule_lesson_id' => $lesson->id,
+                'group_id' => $lesson->group_id,
+                'subject_id' => $lesson->subject_id,
+                'teacher_id' => $lesson->teacher_id,
+                'lesson_date' => $lesson->lesson_date->toDateString(),
+                'starts_at' => $this->timeString($lesson->starts_at),
+                'ends_at' => $this->timeString($lesson->ends_at),
+                'topic' => $lesson->topic,
+                'status' => $status,
+                'opened_at' => $openedAt,
+                'completed_at' => $isToday ? null : $openedAt->copy()->addMinutes(90),
+                'signed_at' => $signed ? $openedAt->copy()->addHours(3) : null,
+                'signed_by' => $signed ? $signerUserId : null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        foreach (array_chunk($rows, 500) as $chunk) {
+            JournalLesson::query()->insert($chunk);
+        }
+
+        $journalIds = JournalLesson::query()
+            ->whereIn('legacy_schedule_lesson_id', $lessonIds)
+            ->pluck('id', 'legacy_schedule_lesson_id');
+
+        $attendanceRows = [];
+        foreach ($marks['attendance'] as $mark) {
+            $journalId = $journalIds[$mark['schedule_lesson_id']] ?? null;
+            if ($journalId === null) {
+                continue;
+            }
+
+            $attendanceRows[] = [
+                'journal_lesson_id' => $journalId,
+                'student_id' => $mark['student_id'],
+                'status' => $mark['status'],
+                'minutes_late' => $mark['status'] === 'late' ? 10 : null,
+                'comment' => $mark['comment'],
+                'source' => 'teacher',
+                'marked_by' => $signerUserId,
+                'marked_at' => $now,
+            ];
+        }
+
+        $gradeRows = [];
+        foreach ($marks['grades'] as $mark) {
+            $journalId = $journalIds[$mark['schedule_lesson_id']] ?? null;
+            if ($journalId === null) {
+                continue;
+            }
+
+            $gradeRows[] = [
+                'journal_lesson_id' => $journalId,
+                'student_id' => $mark['student_id'],
+                'value' => $mark['grade'],
+                'weight' => 1,
+                'marked_by' => $signerUserId,
+                'marked_at' => $now,
+            ];
+        }
+
+        foreach (array_chunk($attendanceRows, 1000) as $chunk) {
+            JournalAttendance::query()->insert($chunk);
+        }
+
+        foreach (array_chunk($gradeRows, 1000) as $chunk) {
+            JournalGrade::query()->insert($chunk);
+        }
+    }
+
+    /**
+     * Занятия, которые уже начались: только по ним есть отметки и журнал.
+     *
+     * Сравнение вынесено сюда, потому что на нём легко ошибиться, и ошибка
+     * была: `lesson_date` приведён к дате и в сравнении со строкой `Y-m-d`
+     * превращается в `Y-m-d H:i:s`, то есть оказывается больше её. Сегодняшние
+     * занятия из-за этого молча выпадали, и сегодняшнего дня в журнале и в
+     * оценках не было вовсе.
+     *
+     * @param \Illuminate\Support\Collection<int, ScheduleLesson> $lessons
+     * @return \Illuminate\Support\Collection<int, ScheduleLesson>
+     */
+    private function startedLessons($lessons)
+    {
+        $today = Carbon::today();
+
+        return $lessons->filter(fn (ScheduleLesson $lesson): bool => $lesson->lesson_date->lessThanOrEqualTo($today));
+    }
+
+    /** Время занятия строкой «ЧЧ:ММ»: в модели это может быть и строка, и дата. */
+    private function timeString(mixed $value): string
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('H:i');
+        }
+
+        return substr((string) $value, 0, 5);
+    }
+
+    /**
+     * Нагрузка преподавателей: строится тем же генератором, что и в портале.
+     *
+     * Своей раскладки здесь нет намеренно — иначе демонстрация показывала бы
+     * не то, что делает кнопка «Сформировать из учебного плана». Часть строк
+     * оставлена без преподавателя: покрытие часов, показывающее сплошные сто
+     * процентов, не показывает ничего.
+     *
+     * @param \Illuminate\Support\Collection<int, Group> $groups
+     * @param \Illuminate\Support\Collection<int, Teacher> $teachers
+     */
+    private function seedTeachingLoads($groups, $teachers): void
+    {
+        $academicYear = (string) (SettingService::value('academic', 'current_academic_year', '') ?: '2026/2027');
+        $generator = app(TeachingLoadGenerationService::class);
+
+        foreach ($groups as $groupIndex => $group) {
+            $generator->apply($group->id, $academicYear);
+
+            $items = TeachingLoadItem::query()
+                ->where('group_id', $group->id)
+                ->whereNull('teacher_id')
+                ->orderBy('id')
+                ->get(['id', 'planned_hours', 'hours_total']);
+
+            foreach ($items as $itemIndex => $item) {
+                // Каждая седьмая строка остаётся нераспределённой: именно их
+                // ищет методист на экране покрытия часов.
+                if (($groupIndex + $itemIndex) % 7 === 0) {
+                    continue;
+                }
+
+                $planned = (int) ($item->planned_hours ?: $item->hours_total);
+                $teacher = $teachers[($groupIndex * 5 + $itemIndex) % $teachers->count()];
+
+                TeachingLoadItem::query()->whereKey($item->id)->update([
+                    'teacher_id' => $teacher->id,
+                    'assigned_hours' => $planned,
+                    'unassigned_hours' => 0,
+                    'overassigned_hours' => 0,
+                    'assignment_status' => 'assigned',
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Учебные планы: по одному на образовательную программу.
+     *
+     * План нужен не сам по себе, а как основание нагрузки: генератор
+     * (`TeachingLoadGenerationService`) строит её из дисциплин плана по
+     * семестрам и без плана возвращает «У группы не назначен учебный план».
+     *
+     * Дисциплины пишутся в две таблицы. `curriculum_subjects` читает движок —
+     * из неё берётся нагрузка; `curriculum_items` читает выгрузка планов и
+     * старый экран. Это те же строки, а не два разных плана: разойдись они —
+     * и выгрузка показывала бы одно, а нагрузка считалась бы по другому.
+     *
+     * @param \Illuminate\Support\Collection<int, EducationProgram> $programs
+     * @param \Illuminate\Support\Collection<int, Subject> $subjects
+     * @return \Illuminate\Support\Collection<int, Curriculum>
+     */
+    private function seedCurricula($programs, $subjects)
+    {
+        $controlForms = ['Экзамен', 'Зачет', 'Дифференцированный зачет', 'Контрольная работа'];
+
+        return $programs->map(function (EducationProgram $program, int $index) use ($subjects, $controlForms): Curriculum {
+            $curriculum = Curriculum::updateOrCreate(
+                ['code' => sprintf('УП-ДЕМО-%02d', $index + 1)],
+                [
+                    'education_program_id' => $program->id,
+                    'name' => 'Учебный план: '.$program->name,
+                    'year_start' => $program->year_start,
+                    'status' => 'active',
+                    'description' => 'Демонстрационный учебный план без реальных данных.',
+                ]
+            );
+
+            $engineRows = [];
+            $legacyRows = [];
+            $now = now();
+            $semesters = range(1, 8);
+
+            foreach ($semesters as $semester) {
+                $course = intdiv($semester + 1, 2);
+
+                foreach (range(0, 5) as $slot) {
+                    $subject = $subjects[($index * 7 + $semester * 3 + $slot) % $subjects->count()];
+                    // Часы кратны 18: столько же длится семестровый курс в
+                    // расписании, и суммы в нагрузке выглядят как настоящие.
+                    $hours = 36 + (($index + $semester + $slot) % 4) * 18;
+
+                    $engineRows[] = [
+                        'curriculum_id' => $curriculum->id,
+                        'semester' => $semester,
+                        'subject_id' => $subject->id,
+                        'lecture_hours' => intdiv($hours, 3),
+                        'practice_hours' => $hours - intdiv($hours, 3),
+                        'laboratory_hours' => 0,
+                        'independent_hours' => intdiv($hours, 6),
+                        'total_hours' => $hours,
+                        'control_type' => $controlForms[($semester + $slot) % count($controlForms)],
+                        'sequence' => $slot,
+                        'is_optional' => false,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+
+                    $legacyRows[] = [
+                        'curriculum_id' => $curriculum->id,
+                        'subject_id' => $subject->id,
+                        'course' => $course,
+                        'semester' => $semester,
+                        'hours_total' => $hours,
+                        'control_form' => $controlForms[($semester + $slot) % count($controlForms)],
+                        'sort_order' => $slot,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+            }
+
+            // Пачками, а не построчным updateOrCreate: на двенадцати планах это
+            // разница между секундой и минутой, и набор уже наступал на эти грабли.
+            CurriculumSubject::query()->where('curriculum_id', $curriculum->id)->delete();
+            CurriculumItem::query()->where('curriculum_id', $curriculum->id)->delete();
+            foreach (array_chunk($engineRows, 500) as $chunk) {
+                CurriculumSubject::query()->insert($chunk);
+            }
+            foreach (array_chunk($legacyRows, 500) as $chunk) {
+                CurriculumItem::query()->insert($chunk);
+            }
+
+            return $curriculum;
+        })->values();
+    }
+
+    /**
+     * @param \Illuminate\Support\Collection<int, Group> $groups
+     * @param \Illuminate\Support\Collection<int, Curriculum> $curricula
+     */
+    private function attachCurriculaToGroups($groups, $curricula): void
+    {
+        $byProgram = $curricula->keyBy('education_program_id');
+
+        foreach ($groups as $group) {
+            $curriculum = $byProgram->get($group->education_program_id);
+
+            if ($curriculum && (int) $group->curriculum_id !== (int) $curriculum->id) {
+                $group->forceFill(['curriculum_id' => $curriculum->id])->save();
+            }
         }
     }
 
@@ -559,8 +889,12 @@ class DemoDataSeeder extends Seeder
      * не приходит вовсе, по выходным здание почти пустое, а часть пропусков
      * с первого раза не читается и человек прикладывает его повторно.
      */
-    private function seedAccessEvents($students, $teachers): void
+    private function seedAccessEvents($students, $teachers, $lessons): void
     {
+        $firstLesson = $this->firstLessonStarts($lessons);
+        $groupByStudent = $students->pluck('group_id', 'id');
+        $now = now();
+
         $identities = DigitalIdentity::query()
             ->where(fn ($query) => $query
                 ->where(fn ($q) => $q->where('entity_type', DigitalIdentity::ENTITY_STUDENT)->whereIn('entity_id', $students->pluck('id')))
@@ -580,7 +914,6 @@ class DemoDataSeeder extends Seeder
             ->delete();
 
         $points = ['Главный вход', 'Главный вход', 'Главный вход', 'Служебный вход', 'Концертный зал'];
-        $now = now();
         $rows = [];
 
         foreach (range(self::HISTORY_DAYS, 0) as $daysAgo) {
@@ -597,7 +930,16 @@ class DemoDataSeeder extends Seeder
                 }
 
                 $point = $points[mt_rand(0, count($points) - 1)];
-                $base = $day->copy()->setTime(8, 30);
+                // Человек приходит к своей первой паре, а не к общим 8:30.
+                // Пока приход был привязан к фиксированному времени, опоздать
+                // мог только тот, у кого первая пара ровно в 8:30, — таких на
+                // день двое, и «опоздал» на экране почти никогда не появлялся.
+                // Когда первой пары нет, остаётся прежнее начало дня.
+                $key = $teacher
+                    ? 'teacher:'.$identity->entity_id
+                    : 'group:'.($groupByStudent[$identity->entity_id] ?? 0);
+                $startsAt = $firstLesson[$day->toDateString().'|'.$key] ?? '08:30';
+                $base = $day->copy()->setTimeFromTimeString($startsAt);
                 $shift = match ($profile) {
                     'excellent' => mt_rand(-40, -5),
                     'good' => mt_rand(-30, 0),
@@ -605,6 +947,13 @@ class DemoDataSeeder extends Seeder
                     default => mt_rand(-10, 35),
                 };
                 $entry = $base->copy()->addMinutes($weekend ? mt_rand(60, 240) : $shift);
+
+                // Событий из будущего не бывает: у кого пара после полудня, тот
+                // сегодня ещё не пришёл, и на экране он «Не пришёл» — состояние
+                // настоящее, а не выдуманное.
+                if ($entry->greaterThan($now)) {
+                    continue;
+                }
 
                 // Пропуск не прочитался с первого раза — человек прикладывает снова.
                 if (mt_rand(1, 100) <= 2) {
@@ -616,15 +965,22 @@ class DemoDataSeeder extends Seeder
                 // Выход на обед и возвращение.
                 if (! $weekend && mt_rand(1, 100) <= 12) {
                     $lunch = $day->copy()->setTime(11, 45)->addMinutes(mt_rand(0, 40));
-                    $rows[] = $this->accessRow($identity, $point, AccessEvent::DIRECTION_OUT, $lunch, $now);
-                    $rows[] = $this->accessRow($identity, $point, AccessEvent::DIRECTION_IN, $lunch->copy()->addMinutes(mt_rand(20, 55)), $now);
+                    $back = $lunch->copy()->addMinutes(mt_rand(20, 55));
+
+                    if ($back->lessThanOrEqualTo($now)) {
+                        $rows[] = $this->accessRow($identity, $point, AccessEvent::DIRECTION_OUT, $lunch, $now);
+                        $rows[] = $this->accessRow($identity, $point, AccessEvent::DIRECTION_IN, $back, $now);
+                    }
                 }
 
                 // Часть людей уходит, не отметившись: в отчёте они остаются
                 // «в здании», и это настоящая, а не выдуманная проблема проходной.
                 if (mt_rand(1, 100) <= 88) {
                     $exit = $day->copy()->setTime($teacher ? 16 : 14, 20)->addMinutes(mt_rand(0, 150));
-                    $rows[] = $this->accessRow($identity, $point, AccessEvent::DIRECTION_OUT, $exit, $now);
+
+                    if ($exit->lessThanOrEqualTo($now)) {
+                        $rows[] = $this->accessRow($identity, $point, AccessEvent::DIRECTION_OUT, $exit, $now);
+                    }
                 }
             }
         }
@@ -632,6 +988,35 @@ class DemoDataSeeder extends Seeder
         foreach (array_chunk($rows, 1000) as $chunk) {
             AccessEvent::query()->insert($chunk);
         }
+    }
+
+    /**
+     * Начало первой пары по дням: у преподавателя своё, у группы своё.
+     *
+     * Ключ — «дата|teacher:N» или «дата|group:N». Студент берёт время у своей
+     * группы: расписание составляется на группу, а не на человека.
+     *
+     * @param \Illuminate\Support\Collection<int, ScheduleLesson> $lessons
+     * @return array<string, string>
+     */
+    private function firstLessonStarts($lessons): array
+    {
+        $starts = [];
+
+        foreach ($lessons as $lesson) {
+            $date = $lesson->lesson_date->toDateString();
+            $time = $this->timeString($lesson->starts_at);
+
+            foreach (['teacher:'.$lesson->teacher_id, 'group:'.$lesson->group_id] as $key) {
+                $index = $date.'|'.$key;
+
+                if (! isset($starts[$index]) || $time < $starts[$index]) {
+                    $starts[$index] = $time;
+                }
+            }
+        }
+
+        return $starts;
     }
 
     /** @return array<string, mixed> */

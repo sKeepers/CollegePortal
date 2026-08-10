@@ -7,17 +7,25 @@ use App\Models\AccessEvent;
 use App\Models\ApplicantApplication;
 use App\Models\Attendance;
 use App\Models\Classroom;
+use App\Models\Curriculum;
+use App\Models\CurriculumItem;
+use App\Models\CurriculumSubject;
 use App\Models\DigitalIdentity;
 use App\Models\Employee;
 use App\Models\EmployeeAssignment;
 use App\Models\EmployeeStatusPeriod;
 use App\Models\Grade;
 use App\Models\Group;
+use App\Models\JournalAttendance;
+use App\Models\JournalGrade;
+use App\Models\JournalLesson;
 use App\Models\Person;
 use App\Models\ScheduleLesson;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Teacher;
+use App\Models\TeachingLoad;
+use App\Models\TeachingLoadItem;
 use App\Models\User;
 use App\Services\AuditLogService;
 use Database\Seeders\DemoDataSeeder;
@@ -105,9 +113,36 @@ class DemoDataController extends Controller
                 ->orWhere(fn ($query) => $query->where('entity_type', DigitalIdentity::ENTITY_TEACHER)->whereIn('entity_id', $teacherIds))
                 ->pluck('id');
 
+            // Журнал, нагрузка и учебные планы появились в наборе 11.08.2026, и
+            // очистка обязана снимать их первой: пока она этого не делала,
+            // преподавателя держали строки нагрузки и занятия журнала, и
+            // удаление падало нарушением внешнего ключа. Что набор создаёт, то
+            // он и убирает — иначе стенд нельзя вернуть в исходное состояние.
+            $journalLessonIds = JournalLesson::query()
+                ->whereIn('legacy_schedule_lesson_id', $lessonIds)
+                ->orWhereIn('teacher_id', $teacherIds)
+                ->orWhereIn('group_id', $groupIds)
+                ->pluck('id');
+            $curriculumIds = Curriculum::query()->where('code', 'like', 'УП-ДЕМО-%')->pluck('id');
+            $loadIds = TeachingLoad::query()
+                ->whereIn('curriculum_id', $curriculumIds)
+                ->orWhereIn('group_id', $groupIds)
+                ->orWhereIn('teacher_id', $teacherIds)
+                ->pluck('id');
+
+            Group::query()->whereIn('curriculum_id', $curriculumIds)->update(['curriculum_id' => null]);
+
             $deleted = [
                 'access_events' => AccessEvent::query()->whereIn('digital_identity_id', $identityIds)->delete(),
                 'digital_identities' => DigitalIdentity::query()->whereIn('id', $identityIds)->delete(),
+                'journal_grades' => JournalGrade::query()->whereIn('journal_lesson_id', $journalLessonIds)->delete(),
+                'journal_attendance' => JournalAttendance::query()->whereIn('journal_lesson_id', $journalLessonIds)->delete(),
+                'journal_lessons' => JournalLesson::query()->whereIn('id', $journalLessonIds)->delete(),
+                'teaching_load_items' => TeachingLoadItem::query()->whereIn('teaching_load_id', $loadIds)->orWhereIn('teacher_id', $teacherIds)->delete(),
+                'teaching_loads' => TeachingLoad::query()->whereIn('id', $loadIds)->delete(),
+                'curriculum_subjects' => CurriculumSubject::query()->whereIn('curriculum_id', $curriculumIds)->delete(),
+                'curriculum_items' => CurriculumItem::query()->whereIn('curriculum_id', $curriculumIds)->delete(),
+                'curricula' => Curriculum::query()->whereIn('id', $curriculumIds)->delete(),
                 'grades' => Grade::query()->whereIn('schedule_lesson_id', $lessonIds)->delete(),
                 'attendance' => Attendance::query()->whereIn('schedule_lesson_id', $lessonIds)->delete(),
                 'schedule_lessons' => ScheduleLesson::query()->whereIn('id', $lessonIds)->delete(),
