@@ -26,7 +26,8 @@ if [ -z "$PASSWORD" ]; then
 fi
 
 JAR=$(mktemp)
-trap 'rm -f "$JAR"' EXIT
+JAR_SESSION=$(mktemp)
+trap 'rm -f "$JAR" "$JAR_SESSION"' EXIT
 fail=0
 
 code() { curl -sk -b "$JAR" -o /dev/null -w '%{http_code}' "$@"; }
@@ -52,6 +53,25 @@ check "изменение без признака CSRF"     "419" "$(code -X POS
 check "изменение с чужим признаком"     "419" "$(code -X POST -H 'X-CSRF-Token: чужой' "$BASE/auth/logout")"
 check "выход с верным признаком"        "200" "$(code -X POST -H "X-CSRF-Token: $CSRF" "$BASE/auth/logout")"
 check "после выхода не пускает"         "401" "$(code "$BASE/auth/me")"
+
+# «Не выходить на этом устройстве»: снятая галочка обязана давать cookie без срока —
+# такую браузер удаляет при закрытии сам. В формате cookie jar срок это пятое поле, у
+# сеансовой там ноль. Проверка машинная, потому что в браузере «сеансовая» и «на 12 часов»
+# выглядят одинаково, пока его не закроешь, — а именно на этом месте возникло сомнение
+# в поведении Firefox, см. docs/SEC_002_BROWSER_CHECK.md.
+expiry() { awk -v name="$1" '$6 == name { print $5 }' "$2"; }
+dated() { if [ "${1:-0}" -gt 0 ]; then echo "со сроком"; else echo "без срока"; fi; }
+
+curl -sk -c "$JAR_SESSION" -o /dev/null -X POST "$BASE/auth/login" -H 'Content-Type: application/json' \
+  -d "{\"login\":\"$LOGIN\",\"password\":\"$PASSWORD\",\"staySignedIn\":false}"
+
+check "галочка снята: cp_session"       "без срока" "$(dated "$(expiry cp_session "$JAR_SESSION")")"
+check "галочка снята: cp_persist"       "без срока" "$(dated "$(expiry cp_persist "$JAR_SESSION")")"
+check "галочка стоит: cp_session"       "со сроком" "$(dated "$(expiry cp_session "$JAR")")"
+
+# За собой прибираем: вторая сессия остаётся живой в базе, если её не закрыть.
+curl -sk -b "$JAR_SESSION" -o /dev/null -X POST "$BASE/auth/logout" \
+  -H "X-CSRF-Token: $(awk '$6 == "cp_csrf" { print $7 }' "$JAR_SESSION")"
 
 if [ "$fail" -eq 0 ]; then echo "Контур авторизации в порядке."; else echo "Есть расхождения, смотрите строки СБОЙ." >&2; fi
 exit "$fail"
