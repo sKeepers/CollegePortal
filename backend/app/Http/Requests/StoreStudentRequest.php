@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\Snils;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -23,7 +24,7 @@ class StoreStudentRequest extends FormRequest
             'birth_date' => ['nullable', 'date'],
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
-            'snils' => ['nullable', 'string', 'max:32'],
+            'snils' => ['nullable', 'string', 'max:32', app(Snils::class)],
             'address' => ['nullable', 'string', 'max:2000'],
             'passport_series' => ['nullable', 'string', 'max:20'],
             'passport_number' => ['nullable', 'string', 'max:100'],

@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\Inn;
+use App\Rules\Snils;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -26,8 +28,8 @@ class UpdatePersonRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string', 'max:2000'],
             'photo_path' => ['nullable', 'string', 'max:255'],
-            'snils' => ['nullable', 'string', 'max:32'],
-            'inn' => ['nullable', 'string', 'max:32'],
+            'snils' => ['nullable', 'string', 'max:32', app(Snils::class)],
+            'inn' => ['nullable', 'string', 'max:32', new Inn],
             'status' => ['nullable', Rule::in(['active', 'inactive', 'archived'])],
         ];
     }

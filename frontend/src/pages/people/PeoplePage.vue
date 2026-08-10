@@ -98,6 +98,7 @@ const actions = computed(() => {
 // где общее поле можно очистить: профильные карточки видят человека не целиком.
 const canUpdate = computed(() => auth.can('people.update'))
 const editDialog = ref(false)
+const saveError = ref('')
 const editForm = reactive({
   last_name: '', first_name: '', middle_name: '', birth_date: '', gender: null,
   citizenship: '', place_birth: '', phone: '', email: '', address: '', snils: '', inn: '', status: 'active',
@@ -109,6 +110,7 @@ const statusOptions = [{ label: 'Активен', value: 'active' }, { label: '�
 function openEditDialog() {
   const person = selected.value
   if (!person) return
+  saveError.value = ''
   Object.assign(editForm, {
     last_name: person.last_name || '',
     first_name: person.first_name || '',
@@ -130,7 +132,15 @@ function openEditDialog() {
 async function saveEditedPerson() {
   // Пустое поле здесь значит «очистить», а не «не менять»: оператор видит всё, что меняет.
   const payload = Object.fromEntries(Object.entries(editForm).map(([key, value]) => [key, value === '' ? null : value]))
-  await store.savePerson(selected.value.id, payload)
+  saveError.value = ''
+  try {
+    await store.savePerson(selected.value.id, payload)
+  } catch (err) {
+    // Отказ проверки показываем в самом окне: баннер страницы остаётся за ним, и
+    // без этого неверный СНИЛС выглядел бы как «кнопка не работает».
+    saveError.value = err.message || 'Не удалось сохранить карточку человека'
+    return
+  }
   editDialog.value = false
   $q.notify({ type: 'positive', message: 'Карточка человека сохранена. Исправление разошлось по связанным профилям.' })
 }
@@ -288,10 +298,13 @@ onMounted(async () => {
           <q-input v-model="editForm.place_birth" outlined dense label="Место рождения" />
           <q-input v-model="editForm.phone" outlined dense label="Телефон" />
           <q-input v-model="editForm.email" outlined dense label="Email" />
-          <q-input v-model="editForm.snils" outlined dense label="СНИЛС" />
-          <q-input v-model="editForm.inn" outlined dense label="ИНН" />
+          <q-input v-model="editForm.snils" outlined dense label="СНИЛС" hint="11 цифр, контрольное число проверяется" />
+          <q-input v-model="editForm.inn" outlined dense label="ИНН" hint="10 цифр у организации, 12 у человека" />
           <q-select v-model="editForm.status" outlined dense emit-value map-options label="Статус" :options="statusOptions" />
           <q-input v-model="editForm.address" outlined dense type="textarea" autogrow label="Адрес" class="people-form-wide" />
+        </q-card-section>
+        <q-card-section v-if="saveError" class="q-pt-none">
+          <AppErrorBanner :message="saveError" />
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat no-caps label="Отмена" v-close-popup />
