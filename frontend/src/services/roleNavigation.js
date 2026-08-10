@@ -1,7 +1,7 @@
 const ROLE_ROUTE_PREFIXES = {
   admission: ['/dashboard', '/admissions/foundation'],
   student: ['/dashboard', '/schedule', '/student', '/identity/my-pass', '/m/student'],
-  teacher: ['/dashboard', '/schedule', '/journal', '/attendance', '/teaching-load', '/identity/my-pass'],
+  teacher: ['/dashboard', '/schedule', '/journal', '/attendance', '/teaching-load', '/identity/my-pass', '/m/teacher'],
 }
 
 function matchesPrefix(path, prefix) {

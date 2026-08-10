@@ -2,6 +2,7 @@ import AuthLayout from '../layouts/AuthLayout.vue'
 import AppLayout from '../layouts/AppLayout.vue'
 import PublicLayout from '../layouts/PublicLayout.vue'
 import MobileStudentLayout from '../layouts/MobileStudentLayout.vue'
+import MobileTeacherLayout from '../layouts/MobileTeacherLayout.vue'
 const LoginPage = () => import('../pages/auth/LoginPage.vue')
 const DashboardPage = () => import('../pages/dashboard/DashboardPage.vue')
 const MyAccountPage = () => import('../pages/account/MyAccountPage.vue')
@@ -49,6 +50,9 @@ const HrEmployeesPage = () => import('../pages/hr/HrEmployeesPage.vue')
 const HrCalendarPage = () => import('../pages/hr/HrCalendarPage.vue')
 const MobileStudentHomePage = () => import('../pages/mobile/student/MobileStudentHomePage.vue')
 const MobileStudentPassPage = () => import('../pages/mobile/student/MobileStudentPassPage.vue')
+const MobileTeacherHomePage = () => import('../pages/mobile/teacher/MobileTeacherHomePage.vue')
+const MobileTeacherPassPage = () => import('../pages/mobile/teacher/MobileTeacherPassPage.vue')
+const MobileTeacherLessonPage = () => import('../pages/mobile/teacher/MobileTeacherLessonPage.vue')
 const StudentCabinetPage = () => import('../pages/student/StudentCabinetPage.vue')
 
 export const routes = [
@@ -95,6 +99,35 @@ export const routes = [
         name: 'mobile-student-pass',
         component: MobileStudentPassPage,
         meta: { title: 'QR-пропуск студента', permission: 'mobile.student.pass' },
+      },
+    ],
+  },
+
+  {
+    // Право `mobile.teacher.view` встанет сюда после ARCH-001: пока его нет в
+    // каталоге, объявление отправило бы преподавателя на «нет прав». До тех пор
+    // раздел ограничен ролью, а чьи данные видно — решает сервер.
+    path: '/m/teacher',
+    component: MobileTeacherLayout,
+    meta: { roles: ['teacher', 'curator', 'admin'] },
+    children: [
+      {
+        path: '',
+        name: 'mobile-teacher-home',
+        component: MobileTeacherHomePage,
+        meta: { title: 'Кабинет преподавателя' },
+      },
+      {
+        path: 'pass',
+        name: 'mobile-teacher-pass',
+        component: MobileTeacherPassPage,
+        meta: { title: 'QR-пропуск преподавателя' },
+      },
+      {
+        path: 'journal/:lessonId',
+        name: 'mobile-teacher-journal',
+        component: MobileTeacherLessonPage,
+        meta: { title: 'Журнал занятия' },
       },
     ],
   },

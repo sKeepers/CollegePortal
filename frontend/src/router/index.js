@@ -44,6 +44,13 @@ router.beforeEach(async (to) => {
     return { path: '/m/student', hash: '#schedule' }
   }
 
+  // Преподаватель и куратор на телефоне попадают в свой кабинет, а не в
+  // рабочий стол и не в журнал с таблицами: отметка посещаемости делается стоя
+  // в аудитории, одной рукой. На большом экране обе страницы остаются прежними.
+  if (layoutService.isMobile.value && auth.hasRole(['teacher', 'curator']) && ['/dashboard', '/journal'].includes(to.path)) {
+    return { path: '/m/teacher' }
+  }
+
   if (layoutService.isMobile.value && auth.hasRole(['admin', 'security']) && to.path === '/access/gate') {
     return { path: '/access/mobile-scanner' }
   }

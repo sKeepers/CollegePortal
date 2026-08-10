@@ -7021,3 +7021,590 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* Мобильные кабинеты: общая оболочка для преподавателя, куратора и
+   администратора. Правило раздела — ничего шире экрана: ни одной строки с
+   горизонтальной прокруткой, все ряды кнопок переносятся. */
+
+.mobile-cabinet-layout {
+  min-height: 100vh;
+  background: #eef2f7;
+}
+
+.mobile-cabinet-header {
+  background: #ffffff;
+  color: #0f172a;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.mobile-cabinet-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.mobile-cabinet-brand img {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.mobile-cabinet-brand strong,
+.mobile-cabinet-brand span {
+  display: block;
+  line-height: 1.15;
+}
+
+.mobile-cabinet-brand strong {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.mobile-cabinet-brand span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mobile-cabinet-bottom-nav {
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.mobile-cabinet-bottom-nav nav {
+  display: flex;
+  width: min(100%, 430px);
+  margin: 0 auto;
+}
+
+.mobile-cabinet-nav-item {
+  display: grid;
+  flex: 1 1 0;
+  gap: 3px;
+  justify-items: center;
+  padding: 9px 4px;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.mobile-cabinet-nav-item--active {
+  color: #1d4ed8;
+}
+
+.mobile-cabinet-page {
+  width: min(100%, 430px);
+  min-height: calc(100vh - 112px);
+  margin: 0 auto;
+  padding: 14px 12px calc(150px + env(safe-area-inset-bottom));
+  color: #0f172a;
+  overflow-x: hidden;
+}
+
+.mobile-cabinet-loading {
+  display: grid;
+  min-height: 260px;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  color: #475569;
+  font-weight: 800;
+}
+
+.mobile-cabinet-banner {
+  margin-top: 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #1e40af;
+  font-weight: 800;
+}
+
+.mobile-cabinet-banner--error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.mobile-cabinet-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 18px;
+  padding: 18px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 58%, #334155 100%);
+  color: #ffffff;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18);
+}
+
+.mobile-cabinet-avatar {
+  display: grid;
+  flex: 0 0 58px;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.mobile-cabinet-hero p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mobile-cabinet-hero h1 {
+  margin: 3px 0;
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+
+.mobile-cabinet-hero span {
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.mobile-cabinet-card {
+  margin-top: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 14px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+.mobile-cabinet-card > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: #1d4ed8;
+}
+
+.mobile-cabinet-card > header h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.mobile-cabinet-card > header small {
+  margin-left: auto;
+  color: #64748b;
+  font-weight: 800;
+}
+
+.mobile-cabinet-day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.mobile-cabinet-day-header > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: #1d4ed8;
+}
+
+.mobile-cabinet-day-header h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+/* Семь дней всегда занимают ровно ширину экрана: колонки долевые, поэтому
+   строка не может уехать вбок ни при каком размере телефона. */
+.mobile-cabinet-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.mobile-cabinet-week-day {
+  display: grid;
+  gap: 1px;
+  justify-items: center;
+  min-height: 58px;
+  padding: 6px 2px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.mobile-cabinet-week-day span {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: lowercase;
+}
+
+.mobile-cabinet-week-day strong {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.mobile-cabinet-week-day small {
+  color: #1d4ed8;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.mobile-cabinet-week-day--empty small {
+  color: #94a3b8;
+}
+
+.mobile-cabinet-week-day--today {
+  border-color: #bfdbfe;
+}
+
+.mobile-cabinet-week-day--selected {
+  border-color: #1d4ed8;
+  background: #1d4ed8;
+  color: #ffffff;
+}
+
+.mobile-cabinet-week-day--selected span,
+.mobile-cabinet-week-day--selected small {
+  color: #dbeafe;
+}
+
+.mobile-cabinet-lessons {
+  display: grid;
+  gap: 8px;
+}
+
+.mobile-cabinet-lesson {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #0f172a;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mobile-cabinet-lesson--static {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.mobile-cabinet-lesson--next {
+  border-color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.mobile-cabinet-lesson time {
+  flex: 0 0 58px;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.mobile-cabinet-lesson-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.mobile-cabinet-lesson-body strong {
+  font-size: 14px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.mobile-cabinet-lesson-body span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.mobile-cabinet-lesson-body em {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #0f766e;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.mobile-cabinet-lesson-hint--signed {
+  color: #92400e;
+}
+
+.mobile-cabinet-empty {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.mobile-cabinet-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1d4ed8;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.mobile-cabinet-lesson-hero {
+  border-radius: 18px;
+  padding: 16px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 58%, #334155 100%);
+  color: #ffffff;
+}
+
+.mobile-cabinet-lesson-hero h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.mobile-cabinet-lesson-hero p {
+  margin: 4px 0 0;
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.mobile-cabinet-signed {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(251, 191, 36, 0.18);
+  color: #fde68a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mobile-cabinet-roster {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mobile-cabinet-roster-row {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.mobile-cabinet-roster-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mobile-cabinet-roster-name strong {
+  flex: 1 1 auto;
+  font-size: 14px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.mobile-cabinet-roster-name small {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* Ряд кнопок переносится, а не уезжает вбок: на узком телефоне он встанет в
+   две строки, и до последней кнопки по-прежнему можно дотянуться. */
+.mobile-cabinet-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mobile-cabinet-choice-item {
+  flex: 1 1 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.mobile-cabinet-choice-item--on {
+  border-color: #1d4ed8;
+  background: #1d4ed8;
+  color: #ffffff;
+}
+
+.mobile-cabinet-choice-item--absent.mobile-cabinet-choice-item--on {
+  border-color: #b91c1c;
+  background: #b91c1c;
+}
+
+.mobile-cabinet-choice-item--late.mobile-cabinet-choice-item--on {
+  border-color: #b45309;
+  background: #b45309;
+}
+
+.mobile-cabinet-choice-item--excused.mobile-cabinet-choice-item--on {
+  border-color: #0f766e;
+  background: #0f766e;
+}
+
+.mobile-cabinet-choice-item--clear {
+  color: #64748b;
+}
+
+.mobile-cabinet-choice--grades {
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 6px;
+}
+
+.mobile-cabinet-pass-preview,
+.mobile-cabinet-pass-button {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.mobile-cabinet-pass-button {
+  grid-auto-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  color: #1d4ed8;
+}
+
+.mobile-cabinet-pass-preview span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #1d4ed8;
+}
+
+.mobile-cabinet-pass-preview small {
+  color: #64748b;
+  font-weight: 800;
+}
+
+.mobile-cabinet-pass-preview svg {
+  width: 148px;
+  height: 148px;
+}
+
+.mobile-cabinet-qr-card {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  margin-top: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 16px;
+  background: #ffffff;
+  text-align: center;
+}
+
+.mobile-cabinet-qr svg {
+  width: min(72vw, 280px);
+  height: auto;
+}
+
+.mobile-cabinet-qr-card dl {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+}
+
+.mobile-cabinet-qr-card dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mobile-cabinet-qr-card dt {
+  color: #64748b;
+  font-weight: 800;
+}
+
+.mobile-cabinet-qr-card dd {
+  margin: 0;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.mobile-cabinet-qr-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mobile-cabinet-no-pass {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  text-align: center;
+  color: #b45309;
+}
+
+.mobile-cabinet-no-pass h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.mobile-cabinet-no-pass p {
+  margin: 0;
+  color: #64748b;
+  font-weight: 700;
+}

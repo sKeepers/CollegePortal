@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\BuildingController;
 use App\Http\Controllers\Api\GroupController;
 use App\Http\Controllers\Api\HrCalendarController;
 use App\Http\Controllers\Api\MobileStudentController;
+use App\Http\Controllers\Api\MobileTeacherController;
 use App\Http\Controllers\Api\PersonController;
 use App\Http\Controllers\Api\PositionController;
 use App\Http\Controllers\Api\PersonPhotoController;
@@ -89,6 +90,11 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     Route::post('account/identities', [AccountIdentityController::class, 'store']);
     Route::delete('account/identities/{identity}', [AccountIdentityController::class, 'destroy']);
     Route::get('mobile/student', [MobileStudentController::class, 'show']);
+    // Кабинет отдаёт только данные вошедшего: преподаватель находится по
+    // `teachers.user_id`, чужой день не открывается подстановкой параметра.
+    // Право `mobile.teacher.view` будет объявлено здесь после ARCH-001 — оно
+    // решает видимость раздела, а не то, чьи данные видно.
+    Route::get('mobile/teacher', [MobileTeacherController::class, 'show']);
     Route::get('dashboard/layouts', [DashboardLayoutController::class, 'index']);
     Route::post('dashboard/layouts', [DashboardLayoutController::class, 'store']);
     Route::post('dashboard/layouts/reset', [DashboardLayoutController::class, 'reset']);
