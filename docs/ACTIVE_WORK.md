@@ -91,7 +91,7 @@
 | --- | --- | --- |
 | Доказать, что `SEC-002` работает | `scripts/deploy/check-auth-cookie.sh`, `docs/SEC_002_BROWSER_CHECK.md` | **проверено владельцем 10.08.2026, блокер релиза снят**; три замечания розданы по областям |
 | Замечание: Firefox не разлогинивает при снятой галочке | `CookieSessionTest`, `SEC_002_BROWSER_CHECK.md`, `check-auth-cookie.sh` | разобрано и закреплено тестами, **дефекта у нас нет**; два шага в Firefox — за владельцем |
-| Замечание: карточка приняла неверные ИНН и СНИЛС | проверка ввода, `SnilsService` | следующая |
+| Замечание: карточка приняла неверные ИНН и СНИЛС | `app/Rules`, `Store/UpdatePersonRequest`, `Store/UpdateStudentRequest`, `PeoplePage.vue` | **в работе**, ветка `fix/person-identifier-validation` |
 | Политика выдаваемых паролей | решение владельцу, а не молчаливая правка | после проверки ИНН и СНИЛС |
 | Маршрут `/legacy` и остаток находки 12 | разбор, ничего не удалено | разобрано, **ждёт решения владельца** — [LEGACY_INTERFACE_REVIEW.md](LEGACY_INTERFACE_REVIEW.md) |
 | Раздел «Моя учётная запись» и `AUTH-001` | `AccountController`, `/account`, меню пользователя | сделано, влито |
