@@ -9,7 +9,7 @@ use App\Models\Employee;
 use App\Models\Student;
 use App\Models\Teacher;
 use App\Services\AccessPresenceService;
-use App\Services\AttendanceAnalysisService;
+use App\Services\AccessReportService;
 use App\Support\Csv\CsvExport;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -21,24 +21,14 @@ class AccessReportController extends Controller
 {
     public function __construct(
         private readonly AccessPresenceService $presence,
-        private readonly AttendanceAnalysisService $attendance,
+        private readonly AccessReportService $report,
     ) {
     }
 
     public function summary(Request $request): array
     {
-        $events = $this->filteredEvents($request);
-        $todayEvents = $events->filter(fn (AccessEvent $event) => $event->event_time?->isToday());
-        $allowedEvents = $events->where('result', AccessEvent::RESULT_ALLOWED);
-
         return [
-            'data' => [
-                'today_events' => $todayEvents->count(),
-                'entries' => $allowedEvents->where('direction', AccessEvent::DIRECTION_IN)->count(),
-                'exits' => $allowedEvents->where('direction', AccessEvent::DIRECTION_OUT)->count(),
-                'denied' => $events->where('result', AccessEvent::RESULT_DENIED)->count(),
-                'inside_now' => $this->presence->insideNowCount(),
-            ],
+            'data' => $this->report->summary($request) + ['inside_now' => $this->presence->insideNowCount()],
         ];
     }
 
@@ -63,88 +53,17 @@ class AccessReportController extends Controller
 
     public function events(Request $request): AnonymousResourceCollection|StreamedResponse
     {
-        $events = $this->filteredEvents($request)
-            ->sortByDesc('event_time')
-            ->values();
-
         if ($request->string('export')->toString() === 'csv') {
-            return $this->exportCsv($events);
+            return $this->exportCsv($this->report->stream($request));
         }
 
-        return AccessEventResource::collection($events->take(200));
-    }
+        ['rows' => $rows, 'total' => $total, 'limit' => $limit] = $this->report->screenEvents($request);
 
-    /**
-     * «Только опоздавшие» считается разбором посещаемости, а не заново: опоздание
-     * там уже определено по расписанию человека, и второй расчет неизбежно начал
-     * бы расходиться с журналом. Сотрудников это не охватывает: их опоздание
-     * зависит от рабочего графика, который с порогом опоздания пока не связан.
-     *
-     * @return list<string> ключи вида «student-17»
-     */
-    private function lateKeys(Request $request): array
-    {
-        $filters = [
-            'date_from' => $request->string('date_from')->toString() ?: $request->string('date')->toString(),
-            'date_to' => $request->string('date_to')->toString() ?: $request->string('date')->toString(),
-        ];
-
-        $requested = $request->string('entity_type')->toString();
-        $types = $requested !== '' ? [$requested] : ['student', 'teacher'];
-
-        $keys = [];
-        foreach (array_intersect($types, ['student', 'teacher']) as $type) {
-            foreach ($this->attendance->history($filters + ['type' => $type])['data'] as $row) {
-                // Именно late_count, а не сводный статус: сводный ставит
-                // «незакрытый вход» выше опоздания, и опоздавший, забывший
-                // отсканировать выход, из отчета об опозданиях выпадал бы.
-                if (($row['late_count'] ?? 0) > 0) {
-                    $keys[] = $row['entity_type'].'-'.$row['entity_id'];
-                }
-            }
-        }
-
-        return $keys;
-    }
-
-    private function filteredEvents(Request $request)
-    {
-        $query = AccessEvent::query()
-            ->with(['digitalIdentity', 'accessPoint.building'])
-            ->when($request->string('entity_type')->toString(), fn ($query, string $type) => $query->where('entity_type', $type))
-            ->when($request->string('result')->toString(), fn ($query, string $result) => $query->where('result', $result))
-            ->when($request->string('date')->toString(), function ($query, string $date): void {
-                $query->whereBetween('event_time', [Carbon::parse($date)->startOfDay(), Carbon::parse($date)->endOfDay()]);
-            })
-            ->when($request->string('date_from')->toString(), fn ($query, string $date) => $query->where('event_time', '>=', Carbon::parse($date)->startOfDay()))
-            ->when($request->string('date_to')->toString(), fn ($query, string $date) => $query->where('event_time', '<=', Carbon::parse($date)->endOfDay()));
-
-        $events = $query->orderByDesc('event_time')->limit(1000)->get();
-
-        if ($request->boolean('only_late')) {
-            $lateKeys = $this->lateKeys($request);
-            $events = $events->filter(
-                fn (AccessEvent $event): bool => in_array($event->entity_type.'-'.$event->entity_id, $lateKeys, true)
-            )->values();
-        }
-
-        $search = mb_strtolower(trim($request->string('search')->toString()));
-
-        if ($search === '') {
-            return $events;
-        }
-
-        return $events->filter(function (AccessEvent $event) use ($search): bool {
-            $owner = $event->owner;
-            $person = $owner instanceof Employee ? $owner->person : $owner;
-            $name = mb_strtolower(implode(' ', array_filter([
-                $person?->last_name,
-                $person?->first_name,
-                $person?->middle_name,
-            ])));
-
-            return str_contains($name, $search);
-        })->values();
+        // Общее число едет рядом со списком: экран показывает последние события,
+        // и без этого числа обрезанный список читается как полный.
+        return AccessEventResource::collection($rows)->additional([
+            'meta' => ['total' => $total, 'limit' => $limit, 'truncated' => $total > $limit],
+        ]);
     }
 
     /**
@@ -161,6 +80,13 @@ class AccessReportController extends Controller
         };
     }
 
+    /**
+     * Выгрузка отдаёт всё, что подошло под фильтры, а не первую страницу:
+     * до 10.08.2026 сюда приходила уже обрезанная тысяча, и файл молча
+     * оказывался неполным. Строки идут курсором и в память не собираются.
+     *
+     * @param \Illuminate\Support\LazyCollection<int, AccessEvent> $events
+     */
     private function exportCsv($events): StreamedResponse
     {
         $filename = 'access-events-'.now()->format('Ymd-His').'.csv';

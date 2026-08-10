@@ -53,7 +53,12 @@ onMounted(() => store.load())
     <PageHeader title="Отчеты по проходам" subtitle="События проходной, входы и выходы за период, отказы и текущие присутствующие в здании." />
 
     <AppToolbar>
-      <span>Событий в отчете: {{ store.events.length }}</span>
+      <!-- Пока обрезка списка не была подписана, последние 200 строк читались
+           как весь отчёт, и по ним же делались выводы. -->
+      <span>Событий в отчете: {{ store.totalEvents }}</span>
+      <span v-if="store.truncated" class="access-reports__note">
+        В таблице последние {{ store.shownEvents }}. Выгрузка CSV содержит все {{ store.totalEvents }}.
+      </span>
       <template #actions>
         <AppLoading v-if="store.loading" label="Загрузка отчета..." />
         <q-btn flat @click="resetSplitter">Сбросить размер</q-btn>
@@ -155,3 +160,10 @@ onMounted(() => store.load())
     </div>
   </AppPage>
 </template>
+
+<style scoped>
+.access-reports__note {
+  color: var(--q-color-warning, #b26a00);
+  font-size: 12px;
+}
+</style>

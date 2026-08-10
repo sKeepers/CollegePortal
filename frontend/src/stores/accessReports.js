@@ -40,6 +40,7 @@ export const ACCESS_RESULT_OPTIONS = [
 
 export const useAccessReportsStore = defineStore('accessReports', () => {
   const events = ref([])
+  const meta = ref({ total: 0, limit: 0, truncated: false })
   const summary = ref({ today_events: 0, entries: 0, exits: 0, denied: 0, inside_now: 0 })
   const loading = ref(false)
   const exporting = ref(false)
@@ -54,6 +55,12 @@ export const useAccessReportsStore = defineStore('accessReports', () => {
   // «Только опоздавшие» опирается на расписание, а у сотрудников оно не заведено:
   // рабочий график с порогом опоздания пока не связан.
   const lateFilterAvailable = computed(() => filters.entity_type !== 'employee')
+
+  // Сколько событий подошло под фильтры и сколько из них показано. Раньше на
+  // экране стояло число строк таблицы, и обрезанный список выдавался за весь отчёт.
+  const totalEvents = computed(() => meta.value.total ?? events.value.length)
+  const shownEvents = computed(() => events.value.length)
+  const truncated = computed(() => Boolean(meta.value.truncated))
 
   function setPeriod(value) {
     period.value = value
@@ -82,6 +89,7 @@ export const useAccessReportsStore = defineStore('accessReports', () => {
       ])
       summary.value = summaryPayload?.data || summary.value
       events.value = extractRows(eventsPayload)
+      meta.value = eventsPayload?.meta || { total: events.value.length, limit: events.value.length, truncated: false }
     } catch (err) {
       error.value = err.message || 'Не удалось загрузить отчет по проходам'
     } finally {
@@ -121,5 +129,5 @@ export const useAccessReportsStore = defineStore('accessReports', () => {
     }
   }
 
-  return { events, summary, loading, exporting, error, filters, period, lateFilterAvailable, load, resetFilters, setPeriod, personRoute, exportCsv, directionLabel, entityTypeLabel, formatEventTime, ownerName, resultLabel, resultTone }
+  return { events, meta, summary, loading, exporting, error, filters, period, lateFilterAvailable, totalEvents, shownEvents, truncated, load, resetFilters, setPeriod, personRoute, exportCsv, directionLabel, entityTypeLabel, formatEventTime, ownerName, resultLabel, resultTone }
 })
