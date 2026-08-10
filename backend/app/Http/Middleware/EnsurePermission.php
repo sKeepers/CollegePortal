@@ -9,6 +9,37 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsurePermission
 {
+    /**
+     * Legacy-права-«зонтики». Каждое покрывает целую группу маршрутов и
+     * подставляется кандидатом наравне с конкретным правом из таблицы,
+     * поэтому роль может проходить куда угодно внутри группы, не имея на это
+     * ни одного конкретного права.
+     *
+     * `ARCH-001` про то, чтобы их убрать. Убирать вслепую нельзя: сначала надо
+     * знать, кто на них держится — это считает `permissions:inventory`.
+     *
+     * @var list<string>
+     */
+    public const LEGACY_UMBRELLAS = [
+        'manage_users',
+        'manage_dictionaries',
+        'manage_schedule',
+        'manage_journal',
+        'view_reports',
+    ];
+
+    /**
+     * Права, любое из которых открывает запрос. Открыто для проверки и учёта:
+     * инвентаризация обязана считать доступ ровно так же, как его считает сам
+     * middleware, иначе она мерит не то.
+     *
+     * @return list<string>
+     */
+    public function candidates(Request $request, string $permission): array
+    {
+        return $this->resolvePermissions($request, $permission);
+    }
+
     public function handle(Request $request, Closure $next, string $permission): Response
     {
         $permissions = $this->resolvePermissions($request, $permission);
