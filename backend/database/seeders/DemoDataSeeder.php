@@ -41,6 +41,19 @@ class DemoDataSeeder extends Seeder
 
     private DemoNameFactory $names;
 
+    /**
+     * Порядковый номер демонстрационного человека по идентификатору строки.
+     * Поведение — успеваемость, привычка приходить вовремя, провальная
+     * дисциплина — выводится из него, а не из идентификатора: см. пояснение
+     * у `studentProfile`.
+     *
+     * @var array<int, int>
+     */
+    private array $studentOrdinals = [];
+
+    /** @var array<int, int> */
+    private array $teacherOrdinals = [];
+
     public function run(): void
     {
         $this->names = new DemoNameFactory();
@@ -229,6 +242,7 @@ class DemoDataSeeder extends Seeder
             );
 
             $this->seedEmployeeForTeacher($person, $index, $departmentName, $positionName, $hr);
+            $this->teacherOrdinals[$teacher->id] = $index;
 
             return $teacher;
         })->values();
@@ -281,7 +295,7 @@ class DemoDataSeeder extends Seeder
                 )
                 : null;
 
-            return Student::updateOrCreate(
+            $student = Student::updateOrCreate(
                 ['email' => $email],
                 [
                     'person_id' => $person->id,
@@ -299,6 +313,10 @@ class DemoDataSeeder extends Seeder
                     'funding_form' => $index % 5 === 0 ? 'Договор' : 'Бюджет',
                 ]
             );
+
+            $this->studentOrdinals[$student->id] = $index;
+
+            return $student;
         })->values();
     }
 
@@ -390,7 +408,8 @@ class DemoDataSeeder extends Seeder
                 $profile = $this->studentProfile($student->id);
                 // Провальная дисциплина своя у каждого пятого: ровный студент,
                 // просевший на одном предмете, — обычная картина ведомости.
-                $struggles = $student->id % 5 === 0 && $lesson->subject_id % 4 === $student->id % 4;
+                $ordinal = $this->ordinal($this->studentOrdinals, $student->id);
+                $struggles = $ordinal % 5 === 0 && $lesson->subject_id % 4 === $ordinal % 4;
                 $status = $this->attendanceStatus($struggles ? 'weak' : $profile);
 
                 $attendanceRows[] = [
@@ -430,13 +449,21 @@ class DemoDataSeeder extends Seeder
     }
 
     /**
-     * Уровень студента устойчив между запусками: он выводится из его же
-     * идентификатора, а не бросается заново. Иначе отличник при следующем
+     * Уровень студента устойчив между запусками: он выводится из порядкового
+     * номера в наборе, а не бросается заново. Иначе отличник при следующем
      * наполнении стенда становится отстающим, и сравнить два прогона нельзя.
+     *
+     * Порядковый номер, а не идентификатор строки: идентификатор — это не
+     * свойство человека, а место в очереди на вставку, и зависит он от того,
+     * что лежало в базе раньше. В прогоне тестов последовательности не
+     * откатываются вместе с транзакцией, демо-набор получал идентификаторы
+     * с произвольного места, и состав отличников и отстающих менялся от
+     * прогона к прогону. Отсюда и брались случайные падения проверки на
+     * опоздавших: в одном окне идентификаторов их шесть, в другом ноль.
      */
     private function studentProfile(int $studentId): string
     {
-        $bucket = ($studentId * 7919) % 100;
+        $bucket = ($this->ordinal($this->studentOrdinals, $studentId) * 7919) % 100;
 
         return match (true) {
             $bucket < 12 => 'excellent',
@@ -453,13 +480,24 @@ class DemoDataSeeder extends Seeder
      */
     private function teacherProfile(int $teacherId): string
     {
-        $bucket = ($teacherId * 6421) % 100;
+        $bucket = ($this->ordinal($this->teacherOrdinals, $teacherId) * 6421) % 100;
 
         return match (true) {
             $bucket < 70 => 'excellent',
             $bucket < 92 => 'good',
             default => 'weak',
         };
+    }
+
+    /**
+     * Порядковый номер строки в наборе. Своего номера нет только у записей,
+     * заведённых не этим набором, — для них остаётся идентификатор.
+     *
+     * @param array<int, int> $map
+     */
+    private function ordinal(array $map, int $id): int
+    {
+        return $map[$id] ?? $id;
     }
 
     private function attendanceStatus(string $profile): string
@@ -527,6 +565,9 @@ class DemoDataSeeder extends Seeder
             ->where(fn ($query) => $query
                 ->where(fn ($q) => $q->where('entity_type', DigitalIdentity::ENTITY_STUDENT)->whereIn('entity_id', $students->pluck('id')))
                 ->orWhere(fn ($q) => $q->where('entity_type', DigitalIdentity::ENTITY_TEACHER)->whereIn('entity_id', $teachers->pluck('id'))))
+            // Порядок задан явно: без него набор случайных значений раскладывался
+            // бы по людям так, как база решит вернуть строки.
+            ->orderBy('id')
             ->get(['id', 'entity_type', 'entity_id']);
 
         if ($identities->isEmpty()) {

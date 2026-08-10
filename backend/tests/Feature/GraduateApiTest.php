@@ -123,6 +123,60 @@ class GraduateApiTest extends TestCase
         $this->assertDatabaseHas('diplomas', ['registration_number' => '28-002']);
     }
 
+    /**
+     * Приложение к диплому переживает круг «выгрузил — дополнил — загрузил».
+     *
+     * Выгрузка отдавала три его колонки — серию, номер и статус, — а загрузка
+     * их не читала: файл возвращался без приложения, и сообщения об этом не
+     * было. Владелец использует выгрузку как заготовку, и такая потеря
+     * обнаружилась бы уже в данных.
+     */
+    public function test_diploma_supplement_survives_the_csv_round_trip(): void
+    {
+        [$student, $group, $program, $specialty] = $this->baseEntities();
+        $graduate = Graduate::create(['student_id' => $student->id, 'group_id' => $group->id, 'education_program_id' => $program->id, 'specialty_id' => $specialty->id, 'graduation_year' => 2027, 'qualification' => 'Артист', 'status' => 'ready']);
+        $diploma = $graduate->diploma()->create(['series' => 'СК', 'number' => '000001', 'registration_number' => '27-001', 'status' => 'issued']);
+        $diploma->supplement()->create(['series' => 'ПР', 'number' => '000777', 'status' => 'issued']);
+
+        $export = $this->get('/api/graduates/export');
+        $export->assertOk();
+        $csv = $export->streamedContent();
+
+        // Приложение стирается целиком: потеря станет видна, а не спрячется за
+        // уже существующей записью.
+        $diploma->supplement()->delete();
+
+        $response = $this->post('/api/graduates/import', [
+            'file' => UploadedFile::fake()->createWithContent('graduates.csv', $csv),
+        ]);
+
+        $response->assertOk()->assertJsonPath('data.errors', [])->assertJsonPath('data.supplementsSaved', 1);
+        $this->assertDatabaseHas('diploma_supplements', [
+            'diploma_id' => $diploma->id,
+            'series' => 'ПР',
+            'number' => '000777',
+            'status' => 'issued',
+        ]);
+    }
+
+    /** Приложение без диплома — понятная ошибка строки, а не молчаливая потеря. */
+    public function test_supplement_without_diploma_is_a_line_error(): void
+    {
+        [$student, $group, $program, $specialty] = $this->baseEntities();
+
+        $csv = implode("\n", [
+            'student_id;graduation_year;supplement_series;supplement_number',
+            "{$student->id};2027;ПР;000777",
+        ]);
+
+        $response = $this->post('/api/graduates/import', [
+            'file' => UploadedFile::fake()->createWithContent('graduates.csv', $csv),
+        ]);
+
+        $response->assertOk()->assertJsonPath('data.errors.0.line', 2);
+        $this->assertDatabaseCount('diploma_supplements', 0);
+    }
+
     private function baseEntities(): array
     {
         $specialty = Specialty::create(['code' => '53.02.03', 'name' => 'Инструментальное исполнительство', 'education_level' => 'СПО', 'qualification' => 'Артист, преподаватель']);

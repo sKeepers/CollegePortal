@@ -8,10 +8,12 @@ use App\Support\Csv\CsvExport;
 use App\Services\Import\AdmissionImportHandler;
 use App\Services\Import\ClassroomImportHandler;
 use App\Services\Import\CurriculumImportHandler;
+use App\Services\Import\EducationProgramImportHandler;
 use App\Services\Import\EmployeeImportHandler;
 use App\Services\Import\GroupImportHandler;
 use App\Services\Import\ImportHandlerInterface;
 use App\Services\Import\ScheduleImportHandler;
+use App\Services\Import\SpecialtyImportHandler;
 use App\Services\Import\StudentImportHandler;
 use App\Services\Import\SubjectImportHandler;
 use App\Services\Import\TeacherImportHandler;
@@ -52,6 +54,8 @@ class UniversalImportService
             new GroupImportHandler(),
             new TeacherImportHandler($accounts, $people, $snils),
             new SubjectImportHandler($autoCodeService),
+            new SpecialtyImportHandler(),
+            new EducationProgramImportHandler(),
             new ClassroomImportHandler(),
             new AdmissionImportHandler(),
             new CurriculumImportHandler($autoCodeService),

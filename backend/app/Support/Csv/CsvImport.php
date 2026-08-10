@@ -23,9 +23,13 @@ use Generator;
  * ValueError, то есть одна лишняя точка с запятой в конце строки роняла импорт
  * пятисотой ошибкой вместо внятного сообщения.
  *
- * Импорты справочников (*CsvService) сюда пока не переведены: они BOM снимают
- * сами и работают верно. Их место — в UniversalImportService, это отдельная
- * задача.
+ * Импорты справочников (*CsvService) переводятся сюда по мере работы над ними.
+ * Их собственное снятие BOM верно только пока первый заголовок — одно слово:
+ * маркер стоит перед открывающей кавычкой, поэтому заголовок с пробелом
+ * («Код специальности») fgetcsv не считает закавыченным и отдаёт вместе с
+ * кавычками, а такой заголовок не совпадает ни с одним псевдонимом и первая
+ * колонка молча теряется. Здесь BOM снимается с потока до разбора, и вопрос
+ * снят. Переведены: дисциплины, специальности, образовательные программы.
  */
 final class CsvImport
 {
@@ -67,12 +71,38 @@ final class CsvImport
                 }
 
                 $row = array_slice(array_pad($row, $width, ''), 0, $width);
+                $values = array_map(static fn ($value) => trim((string) $value), $row);
 
-                yield $line => array_combine($headers, array_map(
-                    static fn ($value) => trim((string) $value),
-                    $row,
-                ));
+                // Строка из одних разделителей данных не несёт: без этого пустая
+                // строка в конце файла превращалась в ошибку «не заполнено поле».
+                if (array_filter($values, static fn (string $value): bool => $value !== '') === []) {
+                    continue;
+                }
+
+                yield $line => array_combine($headers, $values);
             }
+        } finally {
+            fclose($handle);
+        }
+    }
+
+    /**
+     * Есть ли в файле хотя бы строка заголовков. Импорты справочников отвечают
+     * на пустой файл понятным сообщением, а не нулём обработанных строк.
+     */
+    public static function hasHeader(string $path): bool
+    {
+        $handle = fopen($path, 'r');
+
+        if ($handle === false) {
+            return false;
+        }
+
+        try {
+            self::skipByteOrderMark($handle);
+            $headers = fgetcsv($handle, 0, self::detectDelimiter($path));
+
+            return is_array($headers) && $headers !== [null] && array_filter($headers, static fn ($value): bool => trim((string) $value) !== '') !== [];
         } finally {
             fclose($handle);
         }

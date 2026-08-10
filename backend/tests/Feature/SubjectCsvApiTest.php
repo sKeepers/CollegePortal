@@ -41,7 +41,11 @@ class SubjectCsvApiTest extends TestCase
 
         $content = $response->streamedContent();
 
-        $this->assertStringContainsString('name', $content);
+        // Выгрузка идёт колонками шаблона импорта, а не машинными именами полей:
+        // файл отдают как заготовку, и он обязан приниматься там, откуда его
+        // взяли. Проверка обратной загрузки — в SubjectExportRoundTripTest.
+        $this->assertStringContainsString('Дисциплина', $content);
+        $this->assertStringContainsString('Преподаватели', $content);
         $this->assertStringContainsString('Сольфеджио', $content);
         $this->assertStringContainsString('Смирнова Елена Викторовна', $content);
     }

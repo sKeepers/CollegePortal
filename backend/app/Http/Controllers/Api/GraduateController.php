@@ -154,7 +154,7 @@ class GraduateController extends Controller
     public function import(Request $request): JsonResponse
     {
         $request->validate(['file' => ['required', 'file', 'mimes:csv,txt', 'max:5120']]);
-        $created = 0; $updated = 0; $diplomasSaved = 0; $errors = [];
+        $created = 0; $updated = 0; $diplomasSaved = 0; $supplementsSaved = 0; $errors = [];
 
         foreach (CsvImport::rows($request->file('file')->getRealPath()) as $line => $data) {
             $validator = Validator::make($data, [
@@ -169,12 +169,13 @@ class GraduateController extends Controller
                 'graduation_year' => ['required', 'integer', 'min:2000', 'max:2100'],
                 'status' => ['nullable', 'in:draft,ready,issued,archived'],
                 'diploma_status' => ['nullable', 'in:draft,ready,issued,revoked'],
+                'supplement_status' => ['nullable', 'in:draft,ready,issued,revoked'],
                 'issue_date' => ['nullable', 'date'],
             ]);
             if ($validator->fails()) { $errors[] = ['line' => $line, 'errors' => $validator->errors()->all()]; continue; }
 
             try {
-                DB::transaction(function () use ($data, &$created, &$updated, &$diplomasSaved): void {
+                DB::transaction(function () use ($data, &$created, &$updated, &$diplomasSaved, &$supplementsSaved): void {
                     $studentId = $this->resolveStudentId($data);
                     if (!$studentId) { throw new \RuntimeException('Студент не найден.'); }
                     $student = Student::with('group.educationProgram.specialty')->findOrFail($studentId);
@@ -192,8 +193,10 @@ class GraduateController extends Controller
                     if ($graduate) { $graduate->update($payload); $updated++; }
                     else { $graduate = Graduate::create($payload); $created++; }
 
+                    $diploma = $graduate->diploma;
+
                     if (!empty($data['diploma_series']) || !empty($data['diploma_number']) || !empty($data['registration_number'])) {
-                        $graduate->diploma()->updateOrCreate(['graduate_id' => $graduate->id], [
+                        $diploma = $graduate->diploma()->updateOrCreate(['graduate_id' => $graduate->id], [
                             'series' => $data['diploma_series'] ?? null,
                             'number' => $data['diploma_number'] ?? null,
                             'registration_number' => $data['registration_number'] ?? null,
@@ -204,13 +207,29 @@ class GraduateController extends Controller
                         ]);
                         $diplomasSaved++;
                     }
+
+                    // Приложение к диплому. Выгрузка отдавала три его колонки, а
+                    // загрузка их не читала: файл, отданный как заготовка,
+                    // возвращался без приложения, и никто об этом не узнавал.
+                    if (!empty($data['supplement_series']) || !empty($data['supplement_number'])) {
+                        if (!$diploma) {
+                            throw new \RuntimeException('Приложение указано, а диплома нет: заполните серию, номер или регистрационный номер диплома.');
+                        }
+
+                        $diploma->supplement()->updateOrCreate(['diploma_id' => $diploma->id], [
+                            'series' => $data['supplement_series'] ?? null,
+                            'number' => $data['supplement_number'] ?? null,
+                            'status' => ($data['supplement_status'] ?? '') ?: 'draft',
+                        ]);
+                        $supplementsSaved++;
+                    }
                 });
             } catch (\Throwable $exception) {
                 $errors[] = ['line' => $line, 'errors' => [$exception->getMessage()]];
             }
         }
 
-        return response()->json(['data' => compact('created', 'updated', 'diplomasSaved', 'errors')]);
+        return response()->json(['data' => compact('created', 'updated', 'diplomasSaved', 'supplementsSaved', 'errors')]);
     }
 
     private function normalizeGraduateData(array $data): array

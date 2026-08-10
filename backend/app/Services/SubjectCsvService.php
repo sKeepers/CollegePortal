@@ -4,16 +4,18 @@ namespace App\Services;
 
 use App\Models\Subject;
 use App\Models\Teacher;
+use App\Services\Import\SubjectImportHandler;
 use App\Support\Csv\CsvExport;
+use App\Support\Csv\CsvImport;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use RuntimeException;
-use SplFileObject;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SubjectCsvService
 {
+    /** Колонки, которые принимает собственный CSV-импорт дисциплин. */
     private const HEADERS = [
         'id',
         'name',
@@ -24,21 +26,47 @@ class SubjectCsvService
         'teachers',
     ];
 
+    /**
+     * Заголовки шаблона импорта в технические имена этого сервиса — то же
+     * решение, что и у преподавателей: файл отдают как заготовку, и он обязан
+     * приниматься там, откуда его взяли. Прежние машинные заголовки продолжают
+     * работать, файлы по старому образцу никуда не делись.
+     */
+    private const LABEL_TO_COLUMN = [
+        'дисциплина' => 'name',
+        'название' => 'name',
+        'код' => 'code',
+        'отделение' => 'department',
+        'кафедра' => 'department',
+        'описание' => 'description',
+        'преподаватели' => 'teachers',
+        'преподаватель' => 'teachers',
+    ];
+
+    /**
+     * Выгрузка идёт колонками шаблона импорта, а не машинными именами полей.
+     *
+     * Идентификатор из выгрузки убран намеренно: это не данные, а порядок
+     * выдачи строк, и дисциплина находится по коду — он же ключ импорта.
+     * Преподаватели выгружаются одной колонкой с ФИО: список идентификаторов
+     * владелец в Excel не отредактирует.
+     */
     public function export(): StreamedResponse
     {
-        return CsvExport::download('subjects.csv', self::HEADERS, function (callable $row): void {
+        $handler = app(SubjectImportHandler::class);
+
+        return CsvExport::download('subjects.csv', $handler->templateHeaders(), function (callable $row): void {
             Subject::query()
                 ->with('teachers')
                 ->orderBy('name')
                 ->chunk(200, function ($subjects) use ($row): void {
                     foreach ($subjects as $subject) {
+                        // Порядок обязан совпадать с templateHeaders() обработчика импорта.
                         $row([
-                            $subject->id,
                             $subject->name,
                             $subject->code,
                             $subject->department,
                             $subject->description,
-                            $subject->teachers->pluck('id')->join(','),
                             $subject->teachers->map(fn (Teacher $teacher) => $this->teacherName($teacher))->join(' | '),
                         ]);
                     }
@@ -48,29 +76,16 @@ class SubjectCsvService
 
     public function import(UploadedFile $file): array
     {
-        $csv = new SplFileObject($file->getRealPath());
-        $csv->setFlags(SplFileObject::READ_CSV | SplFileObject::SKIP_EMPTY);
-        $csv->setCsvControl($this->detectDelimiter($file));
+        if (! CsvImport::hasHeader($file->getRealPath())) {
+            throw new RuntimeException('CSV-файл пустой.');
+        }
 
-        $headers = null;
         $created = 0;
         $updated = 0;
         $errors = [];
 
-        foreach ($csv as $index => $row) {
-            if ($row === [null] || $row === false) {
-                continue;
-            }
-
-            $row = array_map(fn ($value) => trim((string) $value), $row);
-
-            if ($headers === null) {
-                $headers = $this->normalizeHeaders($row);
-                continue;
-            }
-
-            $line = $index + 1;
-            $payload = $this->normalizePayload($this->mapRow($headers, $row));
+        foreach (CsvImport::rows($file->getRealPath()) as $line => $row) {
+            $payload = $this->normalizePayload($this->canonicalize($row));
             $subject = $this->findSubject($payload);
             $validator = Validator::make($payload, $this->rules($subject), $this->messages());
 
@@ -82,9 +97,21 @@ class SubjectCsvService
                 continue;
             }
 
+            $resolved = app(SubjectImportHandler::class)->teachersFromColumn($payload['teachers'] ?? null);
+
+            if ($resolved['unresolved'] !== []) {
+                $errors[] = [
+                    'line' => $line,
+                    'messages' => array_map(
+                        static fn (string $name): string => "Преподаватель не найден однозначно: {$name}. Уточните ФИО полностью или укажите идентификатор.",
+                        $resolved['unresolved']
+                    ),
+                ];
+                continue;
+            }
+
             $validated = $validator->validated();
-            $teacherIds = $validated['teacher_ids'] ?? [];
-            unset($validated['id'], $validated['teacher_ids'], $validated['teachers']);
+            unset($validated['id'], $validated['teachers']);
 
             if ($subject) {
                 $subject->update($validated);
@@ -94,11 +121,12 @@ class SubjectCsvService
                 $created++;
             }
 
-            $subject->teachers()->sync($teacherIds);
-        }
-
-        if ($headers === null) {
-            throw new RuntimeException('CSV-файл пустой.');
+            // Колонки преподавателей в файле не было — связь не трогаем.
+            // Раньше её отсутствие молча отвязывало всех: файл без этой колонки
+            // стирал привязку по всему реестру, и ничто об этом не сообщало.
+            if (($payload['teachers'] ?? null) !== null) {
+                $subject->teachers()->sync($resolved['ids']);
+            }
         }
 
         return [
@@ -108,58 +136,58 @@ class SubjectCsvService
         ];
     }
 
-    private function detectDelimiter(UploadedFile $file): string
-    {
-        $sample = file_get_contents($file->getRealPath(), false, null, 0, 4096) ?: '';
-
-        return substr_count($sample, ';') >= substr_count($sample, ',') ? ';' : ',';
-    }
-
-    private function normalizeHeaders(array $headers): array
-    {
-        return array_map(function (string $header): string {
-            return trim($header, "\xEF\xBB\xBF \t\n\r\0\x0B");
-        }, $headers);
-    }
-
-    private function mapRow(array $headers, array $row): array
+    /** @param array<string, string> $row */
+    private function canonicalize(array $row): array
     {
         $payload = [];
 
-        foreach ($headers as $index => $header) {
-            if ($header !== '') {
-                $payload[$header] = $row[$index] ?? null;
+        foreach ($row as $header => $value) {
+            if (trim($header) !== '') {
+                $payload[$this->canonicalColumn($header)] = $value;
             }
         }
 
         return $payload;
     }
 
+    /** Русская подпись шаблона или машинное имя — оба приводятся к одному ключу. */
+    private function canonicalColumn(string $header): string
+    {
+        return self::LABEL_TO_COLUMN[mb_strtolower(trim($header))] ?? $header;
+    }
+
     private function normalizePayload(array $payload): array
     {
         $payload = array_intersect_key($payload, array_flip(self::HEADERS));
+        // Считать преподавателей нужно до превращения пустых значений в null:
+        // дальше «колонка есть, ячейка пуста» уже неотличимо от «колонки нет»,
+        // а это разные вещи — очистить связь и не трогать её.
+        $teachers = $this->teachersColumn($payload);
         $payload = array_map(fn ($value) => $value === '' ? null : $value, $payload);
-        $payload['teacher_ids'] = $this->normalizeTeacherIds($payload);
+        unset($payload['teacher_ids']);
+        $payload['teachers'] = $teachers;
 
         return $payload;
     }
 
-    private function normalizeTeacherIds(array $payload): array
+    /**
+     * Преподаватели приходят либо колонкой «Преподаватели» с ФИО, либо прежней
+     * `teacher_ids` с идентификаторами. Обе сводятся к одной строке, разбирает
+     * её обработчик универсального импорта.
+     */
+    private function teachersColumn(array $payload): ?string
     {
-        $ids = collect(explode(',', (string) ($payload['teacher_ids'] ?? '')))
-            ->map(fn (string $id) => trim($id))
-            ->filter()
-            ->map(fn (string $id) => is_numeric($id) ? (int) $id : $id)
-            ->values();
+        $ids = trim((string) ($payload['teacher_ids'] ?? ''));
 
-        if ($ids->isNotEmpty()) {
-            return $ids->all();
+        if ($ids !== '') {
+            return $ids;
         }
 
-        return collect(preg_split('/\s*\|\s*/u', (string) ($payload['teachers'] ?? ''), -1, PREG_SPLIT_NO_EMPTY))
-            ->map(fn (string $name) => $this->findTeacherByName(trim($name))?->id ?? '__missing__')
-            ->values()
-            ->all();
+        if (array_key_exists('teachers', $payload)) {
+            return trim((string) $payload['teachers']);
+        }
+
+        return array_key_exists('teacher_ids', $payload) ? '' : null;
     }
 
     private function findSubject(array $payload): ?Subject
@@ -187,8 +215,8 @@ class SubjectCsvService
             'code' => ['nullable', 'string', 'max:100', Rule::unique('subjects', 'code')->ignore($subject)],
             'department' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'teacher_ids' => ['array'],
-            'teacher_ids.*' => ['integer', 'exists:teachers,id'],
+            // Преподаватели проверяются не здесь: имя разбирается обработчиком
+            // импорта, и «не нашёлся» с «нашлось несколько» — разные сообщения.
             'teachers' => ['nullable', 'string'],
         ];
     }
@@ -199,16 +227,7 @@ class SubjectCsvService
             'id.exists' => 'Дисциплина с указанным id не найдена.',
             'name.required' => 'Не указано название дисциплины.',
             'code.unique' => 'Дисциплина с таким кодом уже существует.',
-            'teacher_ids.*.integer' => 'Преподаватель не найден.',
-            'teacher_ids.*.exists' => 'Преподаватель не найден.',
         ];
-    }
-
-    private function findTeacherByName(string $name): ?Teacher
-    {
-        return Teacher::query()
-            ->get()
-            ->first(fn (Teacher $teacher) => $this->teacherName($teacher) === $name);
     }
 
     private function teacherName(Teacher $teacher): string

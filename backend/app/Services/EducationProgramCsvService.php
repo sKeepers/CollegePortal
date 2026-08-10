@@ -4,16 +4,18 @@ namespace App\Services;
 
 use App\Models\EducationProgram;
 use App\Models\Specialty;
+use App\Services\Import\EducationProgramImportHandler;
 use App\Support\Csv\CsvExport;
+use App\Support\Csv\CsvImport;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use RuntimeException;
-use SplFileObject;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EducationProgramCsvService
 {
+    /** Колонки, которые принимает собственный CSV-импорт программ. */
     private const HEADERS = [
         'id',
         'specialty_id',
@@ -26,24 +28,51 @@ class EducationProgramCsvService
         'description',
     ];
 
+    /**
+     * Заголовки шаблона импорта в технические имена этого сервиса. Прежние
+     * машинные заголовки продолжают работать: файлы по старому образцу
+     * никуда не делись.
+     */
+    private const LABEL_TO_COLUMN = [
+        'код специальности' => 'specialty_code',
+        'специальность' => 'specialty_code',
+        'программа' => 'name',
+        'образовательная программа' => 'name',
+        'название' => 'name',
+        'год начала' => 'year_start',
+        'год набора' => 'year_start',
+        'форма обучения' => 'study_form',
+        'срок обучения' => 'study_years',
+        'активна' => 'is_active',
+        'активен' => 'is_active',
+        'описание' => 'description',
+    ];
+
+    /**
+     * Выгрузка идёт колонками шаблона импорта. Специальность выгружается
+     * кодом: идентификатор строки владелец в Excel не наберёт, а код есть в
+     * документах. Признак «Активна» выгружается словом, а не единицей и нулём —
+     * его же понимает обратная загрузка.
+     */
     public function export(): StreamedResponse
     {
-        return CsvExport::download('education-programs.csv', self::HEADERS, function (callable $row): void {
+        $handler = app(EducationProgramImportHandler::class);
+
+        return CsvExport::download('education-programs.csv', $handler->templateHeaders(), function (callable $row): void {
             EducationProgram::query()
                 ->with('specialty')
                 ->orderByDesc('year_start')
                 ->orderBy('name')
                 ->chunk(200, function ($programs) use ($row): void {
                     foreach ($programs as $program) {
+                        // Порядок обязан совпадать с templateHeaders() обработчика импорта.
                         $row([
-                            $program->id,
-                            $program->specialty_id,
                             $program->specialty?->code,
                             $program->name,
                             $program->year_start,
                             $program->study_form,
                             $program->study_years,
-                            $program->is_active ? '1' : '0',
+                            $program->is_active ? 'да' : 'нет',
                             $program->description,
                         ]);
                     }
@@ -53,29 +82,16 @@ class EducationProgramCsvService
 
     public function import(UploadedFile $file): array
     {
-        $csv = new SplFileObject($file->getRealPath());
-        $csv->setFlags(SplFileObject::READ_CSV | SplFileObject::SKIP_EMPTY);
-        $csv->setCsvControl($this->detectDelimiter($file));
+        if (! CsvImport::hasHeader($file->getRealPath())) {
+            throw new RuntimeException('CSV-файл пустой.');
+        }
 
-        $headers = null;
         $created = 0;
         $updated = 0;
         $errors = [];
 
-        foreach ($csv as $index => $row) {
-            if ($row === [null] || $row === false) {
-                continue;
-            }
-
-            $row = array_map(fn ($value) => trim((string) $value), $row);
-
-            if ($headers === null) {
-                $headers = $this->normalizeHeaders($row);
-                continue;
-            }
-
-            $line = $index + 1;
-            $payload = $this->normalizePayload($this->mapRow($headers, $row));
+        foreach (CsvImport::rows($file->getRealPath()) as $line => $row) {
+            $payload = $this->normalizePayload($this->canonicalize($row));
             $program = $this->findProgram($payload);
             $validator = Validator::make($payload, $this->rules($program, $payload), $this->messages());
 
@@ -99,10 +115,6 @@ class EducationProgramCsvService
             }
         }
 
-        if ($headers === null) {
-            throw new RuntimeException('CSV-файл пустой.');
-        }
-
         return [
             'created' => $created,
             'updated' => $updated,
@@ -110,29 +122,24 @@ class EducationProgramCsvService
         ];
     }
 
-    private function detectDelimiter(UploadedFile $file): string
-    {
-        $sample = file_get_contents($file->getRealPath(), false, null, 0, 4096) ?: '';
-
-        return substr_count($sample, ';') >= substr_count($sample, ',') ? ';' : ',';
-    }
-
-    private function normalizeHeaders(array $headers): array
-    {
-        return array_map(fn (string $header) => trim($header, "\xEF\xBB\xBF \t\n\r\0\x0B"), $headers);
-    }
-
-    private function mapRow(array $headers, array $row): array
+    /** @param array<string, string> $row */
+    private function canonicalize(array $row): array
     {
         $payload = [];
 
-        foreach ($headers as $index => $header) {
-            if ($header !== '') {
-                $payload[$header] = $row[$index] ?? null;
+        foreach ($row as $header => $value) {
+            if (trim($header) !== '') {
+                $payload[$this->canonicalColumn($header)] = $value;
             }
         }
 
         return $payload;
+    }
+
+    /** Русская подпись шаблона или машинное имя — оба приводятся к одному ключу. */
+    private function canonicalColumn(string $header): string
+    {
+        return self::LABEL_TO_COLUMN[mb_strtolower(trim($header))] ?? $header;
     }
 
     private function normalizePayload(array $payload): array

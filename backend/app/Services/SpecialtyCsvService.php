@@ -3,16 +3,18 @@
 namespace App\Services;
 
 use App\Models\Specialty;
+use App\Services\Import\SpecialtyImportHandler;
 use App\Support\Csv\CsvExport;
+use App\Support\Csv\CsvImport;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use RuntimeException;
-use SplFileObject;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SpecialtyCsvService
 {
+    /** Колонки, которые принимает собственный CSV-импорт специальностей. */
     private const HEADERS = [
         'id',
         'code',
@@ -23,15 +25,40 @@ class SpecialtyCsvService
         'description',
     ];
 
+    /**
+     * Заголовки шаблона импорта в технические имена этого сервиса. Прежние
+     * машинные заголовки продолжают работать: файлы по старому образцу
+     * никуда не делись.
+     */
+    private const LABEL_TO_COLUMN = [
+        'код' => 'code',
+        'код специальности' => 'code',
+        'название' => 'name',
+        'специальность' => 'name',
+        'уровень образования' => 'education_level',
+        'уровень' => 'education_level',
+        'квалификация' => 'qualification',
+        'нормативный срок' => 'normative_study_years',
+        'срок обучения' => 'normative_study_years',
+        'описание' => 'description',
+    ];
+
+    /**
+     * Выгрузка идёт колонками шаблона импорта, а не машинными именами полей.
+     * Идентификатор убран: специальность находится по коду — он же ключ
+     * импорта, — а порядковый номер строки владельцу в Excel не нужен.
+     */
     public function export(): StreamedResponse
     {
-        return CsvExport::download('specialties.csv', self::HEADERS, function (callable $row): void {
+        $handler = app(SpecialtyImportHandler::class);
+
+        return CsvExport::download('specialties.csv', $handler->templateHeaders(), function (callable $row): void {
             Specialty::query()
                 ->orderBy('code')
                 ->chunk(200, function ($specialties) use ($row): void {
                     foreach ($specialties as $specialty) {
+                        // Порядок обязан совпадать с templateHeaders() обработчика импорта.
                         $row([
-                            $specialty->id,
                             $specialty->code,
                             $specialty->name,
                             $specialty->education_level,
@@ -46,29 +73,16 @@ class SpecialtyCsvService
 
     public function import(UploadedFile $file): array
     {
-        $csv = new SplFileObject($file->getRealPath());
-        $csv->setFlags(SplFileObject::READ_CSV | SplFileObject::SKIP_EMPTY);
-        $csv->setCsvControl($this->detectDelimiter($file));
+        if (! CsvImport::hasHeader($file->getRealPath())) {
+            throw new RuntimeException('CSV-файл пустой.');
+        }
 
-        $headers = null;
         $created = 0;
         $updated = 0;
         $errors = [];
 
-        foreach ($csv as $index => $row) {
-            if ($row === [null] || $row === false) {
-                continue;
-            }
-
-            $row = array_map(fn ($value) => trim((string) $value), $row);
-
-            if ($headers === null) {
-                $headers = $this->normalizeHeaders($row);
-                continue;
-            }
-
-            $line = $index + 1;
-            $payload = $this->normalizePayload($this->mapRow($headers, $row));
+        foreach (CsvImport::rows($file->getRealPath()) as $line => $row) {
+            $payload = $this->normalizePayload($this->canonicalize($row));
             $specialty = $this->findSpecialty($payload);
             $validator = Validator::make($payload, $this->rules($specialty), $this->messages());
 
@@ -92,10 +106,6 @@ class SpecialtyCsvService
             }
         }
 
-        if ($headers === null) {
-            throw new RuntimeException('CSV-файл пустой.');
-        }
-
         return [
             'created' => $created,
             'updated' => $updated,
@@ -103,29 +113,24 @@ class SpecialtyCsvService
         ];
     }
 
-    private function detectDelimiter(UploadedFile $file): string
-    {
-        $sample = file_get_contents($file->getRealPath(), false, null, 0, 4096) ?: '';
-
-        return substr_count($sample, ';') >= substr_count($sample, ',') ? ';' : ',';
-    }
-
-    private function normalizeHeaders(array $headers): array
-    {
-        return array_map(fn (string $header) => trim($header, "\xEF\xBB\xBF \t\n\r\0\x0B"), $headers);
-    }
-
-    private function mapRow(array $headers, array $row): array
+    /** @param array<string, string> $row */
+    private function canonicalize(array $row): array
     {
         $payload = [];
 
-        foreach ($headers as $index => $header) {
-            if ($header !== '') {
-                $payload[$header] = $row[$index] ?? null;
+        foreach ($row as $header => $value) {
+            if (trim($header) !== '') {
+                $payload[$this->canonicalColumn($header)] = $value;
             }
         }
 
         return $payload;
+    }
+
+    /** Русская подпись шаблона или машинное имя — оба приводятся к одному ключу. */
+    private function canonicalColumn(string $header): string
+    {
+        return self::LABEL_TO_COLUMN[mb_strtolower(trim($header))] ?? $header;
     }
 
     private function normalizePayload(array $payload): array
