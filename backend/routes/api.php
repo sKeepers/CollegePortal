@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\AccountController;
+use App\Http\Controllers\Api\AccountIdentityController;
+use App\Http\Controllers\Api\AdminUserIdentityController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AccessGateController;
 use App\Http\Controllers\Api\AccessPointController;
@@ -83,6 +85,9 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     Route::get('account', [AccountController::class, 'show']);
     Route::patch('account/contacts', [AccountController::class, 'updateContacts']);
     Route::post('account/password', [AccountController::class, 'changePassword']);
+    Route::get('account/identities', [AccountIdentityController::class, 'index']);
+    Route::post('account/identities', [AccountIdentityController::class, 'store']);
+    Route::delete('account/identities/{identity}', [AccountIdentityController::class, 'destroy']);
     Route::get('mobile/student', [MobileStudentController::class, 'show']);
     Route::get('dashboard/layouts', [DashboardLayoutController::class, 'index']);
     Route::post('dashboard/layouts', [DashboardLayoutController::class, 'store']);
@@ -335,6 +340,10 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         Route::get('admin/users/roles', [AdminUserController::class, 'roles']);
         Route::get('admin/users/people', [AdminUserController::class, 'people']);
         Route::post('admin/users/{user}/roles', [AdminUserController::class, 'assignRoles']);
+        // Внутри группы `manage_users` намеренно: отдельного права не заводится,
+        // чтобы не трогать таблицу прав, которую сейчас переписывает ARCH-001.
+        Route::get('admin/users/{user}/identities', [AdminUserIdentityController::class, 'index']);
+        Route::delete('admin/users/{user}/identities/{identity}', [AdminUserIdentityController::class, 'destroy']);
         Route::post('admin/users/{user}/block', [AdminUserController::class, 'block']);
         Route::post('admin/users/{user}/unblock', [AdminUserController::class, 'unblock']);
         Route::apiResource('admin/users', AdminUserController::class);

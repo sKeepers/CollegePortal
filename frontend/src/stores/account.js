@@ -4,6 +4,8 @@ import { api } from '../services/api'
 
 export const useAccountStore = defineStore('account', () => {
   const account = ref(null)
+  const identities = ref([])
+  const availableProviders = ref([])
   const loading = ref(false)
   const saving = ref(false)
   const error = ref('')
@@ -38,6 +40,28 @@ export const useAccountStore = defineStore('account', () => {
     }
   }
 
+  // Способы входа: Telegram, MAX и что появится дальше. Пустой `available` означает,
+  // что привязывать пока нечего — слой готов, провайдеров ещё нет.
+  async function loadIdentities() {
+    const payload = await api.list('account/identities')
+    identities.value = payload?.data || []
+    availableProviders.value = payload?.available || []
+  }
+
+  async function unlinkIdentity(id, currentPassword) {
+    saving.value = true
+    error.value = ''
+    try {
+      await api.delete('account/identities', `${id}`, { current_password: currentPassword })
+      await loadIdentities()
+    } catch (err) {
+      error.value = err.message || 'Не удалось отвязать способ входа'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
   async function changePassword(payload) {
     saving.value = true
     error.value = ''
@@ -51,5 +75,8 @@ export const useAccountStore = defineStore('account', () => {
     }
   }
 
-  return { account, loading, saving, error, load, saveContacts, changePassword }
+  return {
+    account, identities, availableProviders, loading, saving, error,
+    load, saveContacts, changePassword, loadIdentities, unlinkIdentity,
+  }
 })

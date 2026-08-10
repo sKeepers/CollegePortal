@@ -238,9 +238,12 @@ export const api = {
     })
   },
 
-  async delete(resource, id) {
+  // Тело у DELETE необязательное, но иногда нужно: отвязка способа входа требует
+  // подтверждения текущим паролем, а класть пароль в адрес нельзя — он попадёт в логи.
+  async delete(resource, id, data = null) {
     return request(`/${resource}/${id}`, {
       method: 'DELETE',
+      ...(data ? { body: JSON.stringify(data) } : {}),
     })
   },
 

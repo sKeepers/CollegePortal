@@ -9,6 +9,7 @@ use App\Observers\StudentObserver;
 use App\Observers\TeacherObserver;
 use App\Observers\UserObserver;
 use App\Support\Auth\ApiTokenResolver;
+use App\Support\Auth\Providers\ExternalIdentityProviders;
 use App\Support\LoginIdentifier;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -25,6 +26,11 @@ class AppServiceProvider extends ServiceProvider
     {
         // Один резолвер на запрос: его спрашивают и ограничитель частоты, и `api.token`.
         $this->app->scoped(ApiTokenResolver::class);
+
+        // Список внешних способов входа. Пуст, пока не сделаны AUTH-003 и AUTH-004:
+        // слой готов, провайдеров ещё нет. Добавлять их сюда, а не заводить рядом
+        // вторую схему хранения — ради этого слой и делался первым.
+        $this->app->singleton(ExternalIdentityProviders::class, fn (): ExternalIdentityProviders => new ExternalIdentityProviders([]));
     }
 
     /**

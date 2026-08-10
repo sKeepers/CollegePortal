@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
-import { KeyRound, Mail, Phone, UserRound } from '@lucide/vue'
+import { KeyRound, LogIn, Mail, Phone, UserRound } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppCard from '../../components/ui/AppCard.vue'
@@ -27,7 +27,25 @@ watch(account, (value) => {
   contacts.phone = value?.phone || ''
 }, { immediate: true })
 
-onMounted(() => store.load())
+onMounted(async () => {
+  await store.load()
+  await store.loadIdentities()
+})
+
+// Отвязка требует текущего пароля: перехваченной сессии мало, чтобы снять чужой
+// способ входа. Тем же паролем подтверждается и привязка.
+function askUnlink(identity) {
+  $q.dialog({
+    title: 'Отвязать способ входа?',
+    message: `${identity.provider_name} перестанет открывать вход в портал. Подтвердите текущим паролем.`,
+    prompt: { model: '', type: 'password', label: 'Текущий пароль' },
+    cancel: true,
+    persistent: true,
+  }).onOk(async (currentPassword) => {
+    await store.unlinkIdentity(identity.id, currentPassword)
+    $q.notify({ type: 'positive', message: 'Способ входа отвязан' })
+  })
+}
 
 async function saveContacts() {
   // Пустое поле здесь значит «очистить»: человек видит, что стирает.
@@ -86,6 +104,27 @@ function formatDateTime(value) {
             <q-btn color="primary" no-caps :loading="store.saving" @click="saveContacts">Сохранить контакты</q-btn>
           </div>
         </template>
+      </AppCard>
+
+      <AppCard>
+        <template #header><div class="account-card-title"><LogIn :size="18" /> Способы входа</div></template>
+        <q-list v-if="store.identities.length" dense separator>
+          <q-item v-for="identity in store.identities" :key="identity.id">
+            <q-item-section>
+              <q-item-label>{{ identity.provider_name }}</q-item-label>
+              <q-item-label caption>{{ identity.display_name || 'аккаунт привязан' }}</q-item-label>
+            </q-item-section>
+            <q-item-section side>
+              <q-btn flat dense no-caps color="negative" :disable="store.saving" @click="askUnlink(identity)">Отвязать</q-btn>
+            </q-item-section>
+          </q-item>
+        </q-list>
+        <p v-else class="account-note">
+          Кроме пароля, других способов входа пока нет.
+          <template v-if="!store.availableProviders.length">
+            Вход через Telegram появится отдельной задачей — тогда его можно будет привязать здесь.
+          </template>
+        </p>
       </AppCard>
 
       <AppCard>
