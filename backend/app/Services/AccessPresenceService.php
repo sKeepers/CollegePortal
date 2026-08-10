@@ -5,6 +5,9 @@ namespace App\Services;
 use App\Models\AccessEvent;
 use App\Models\Building;
 use App\Models\Employee;
+use App\Models\Student;
+use App\Models\Teacher;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -102,13 +105,56 @@ class AccessPresenceService
     }
 
     /**
+     * Карточки людей одним запросом на тип вместо запроса на человека.
+     *
+     * `AccessEvent::owner` — не связь, а аксессор: он ходит в базу при каждом
+     * обращении, и eager loading к нему неприменим. На поимённом списке это
+     * давало запрос на каждого человека. Замер на стенде 10.08.2026: 598 человек
+     * в здании — 1129 запросов и 684 мс, ровно 1.89 запроса на человека. После
+     * этой правки число запросов перестаёт зависеть от числа людей.
+     *
+     * @param Collection<int, AccessEvent> $events
+     * @return array<string, Model> ключ вида «student-17»
+     */
+    private function resolveOwners(Collection $events): array
+    {
+        $idsByType = $events
+            ->groupBy('entity_type')
+            ->map(fn (Collection $group): array => $group->pluck('entity_id')->filter()->unique()->values()->all());
+
+        $sources = [
+            'student' => fn (array $ids) => Student::query()->with('group')->whereIn('id', $ids)->get(),
+            'teacher' => fn (array $ids) => Teacher::query()->whereIn('id', $ids)->get(),
+            'employee' => fn (array $ids) => Employee::query()->with(['person', 'primaryDepartment'])->whereIn('id', $ids)->get(),
+        ];
+
+        $owners = [];
+
+        foreach ($sources as $type => $load) {
+            $ids = $idsByType->get($type, []);
+
+            if ($ids === []) {
+                continue;
+            }
+
+            foreach ($load($ids) as $model) {
+                $owners[$type.'-'.$model->getKey()] = $model;
+            }
+        }
+
+        return $owners;
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
     private function people(Collection $events): array
     {
+        $owners = $this->resolveOwners($events);
+
         return $events
-            ->map(function (AccessEvent $event): array {
-                $owner = $event->owner;
+            ->map(function (AccessEvent $event) use ($owners): array {
+                $owner = $owners[$event->entity_type.'-'.$event->entity_id] ?? null;
                 $person = $owner instanceof Employee ? $owner->person : $owner;
                 $name = trim(implode(' ', array_filter([
                     $person?->last_name,

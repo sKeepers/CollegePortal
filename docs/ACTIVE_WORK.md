@@ -18,8 +18,8 @@
 
 | Задача | Файлы, которые трогает | Состояние |
 | --- | --- | --- |
-| Аудит, находка 13 — список эвакуации делает запрос к базе на каждого человека. Сначала замерить | `AccessPresenceService`, замер на стенде | **в работе** |
-| Аудит, находка 9 — импортированное расписание не идёт в покрытие часов; тем же заходом экспорт расписания | `ScheduleImportHandler`, `ScheduleEngineService`, экспорт расписания | следующая |
+| Аудит, находка 9 — импортированное расписание не идёт в покрытие часов; тем же заходом экспорт расписания | `ScheduleImportHandler`, `ScheduleEngineService`, экспорт расписания | **следующая** |
+| Аудит, находка 13 — список эвакуации делал запрос на каждого человека | `AccessPresenceService`, `AccessMusterQueryCountTest` | сделано, замерено: 598 человек — было 1129 запросов и 684 мс, стало 5 и 109 мс |
 | Аудит, находка 7 — раздел «Отчеты» это заглушка, готовые отчёты недостижимы | `pages/reports/ReportsPage.vue`, `stores/reports.js`, кнопки в журнале и кадровом календаре | сделано |
 | Аудит, находка 5 — обрезка отчёта проходной 1000 событиями | `AccessReportService` (новый), `AccessReportController`, `AccessReportVolumeTest`, `stores/accessReports.js`, `pages/access/AccessReportsPage.vue` | сделано, влито `27c45e246` |
 | `DEMO-001` — правдоподобный демонстрационный набор | `backend/database/seeders/DemoDataSeeder.php`, `backend/database/seeders/Support/DemoNameFactory.php` | сделано, влито `0f1294465` |
