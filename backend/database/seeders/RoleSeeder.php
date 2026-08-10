@@ -265,6 +265,11 @@ class RoleSeeder extends Seeder
             'frdo.view', 'frdo.export', 'fis.view', 'fis.export',
             'attendance.reports',
             'gate.scan', 'gate.reports', 'gate.points.manage', 'digitalpasses.manage',
+            // Загрузка данных — обычная работа этой роли: студенты, расписание,
+            // шаблоны. Владелец подтвердил 10.08.2026. Осторожно: тем же правом
+            // открывается очистка рабочих данных стенда — развести их отдельная
+            // задача.
+            'import.manage',
         ];
     }
 

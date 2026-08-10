@@ -72,6 +72,8 @@ class TeacherApiTest extends TestCase
         $this->deleteJson("/api/teachers/{$teacher->id}")
             ->assertNoContent();
 
-        $this->assertDatabaseMissing('teachers', ['id' => $teacher->id]);
+        // Удаление не окончательное: карточка уходит в корзину.
+        $this->assertNull(Teacher::query()->find($teacher->id));
+        $this->assertNotNull(Teacher::withTrashed()->find($teacher->id));
     }
 }

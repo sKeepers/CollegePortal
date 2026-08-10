@@ -7,9 +7,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Teacher extends Model
 {
+    // Удаление карточки не окончательное: она уходит в корзину.
+    use SoftDeletes;
+
     protected $fillable = [
         'person_id',
         'user_id',

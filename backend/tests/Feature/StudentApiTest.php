@@ -170,7 +170,10 @@ class StudentApiTest extends TestCase
         $this->deleteJson("/api/students/{$student->id}")
             ->assertNoContent();
 
-        $this->assertDatabaseMissing('students', ['id' => $student->id]);
+        // Удаление не окончательное: карточка уходит в корзину, откуда её
+        // возвращает или вычищает администратор.
+        $this->assertNull(Student::query()->find($student->id));
+        $this->assertNotNull(Student::withTrashed()->find($student->id));
     }
 
     private function createGroup(string $name): Group

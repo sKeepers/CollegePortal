@@ -5,9 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Student extends Model
 {
+    // Удаление карточки не окончательное: она уходит в корзину, откуда её
+    // возвращает или вычищает администратор.
+    use SoftDeletes;
+
     protected $fillable = [
         'person_id',
         'user_id',

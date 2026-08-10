@@ -6,9 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Employee extends Model
 {
+    // Удаление карточки не окончательное: она уходит в корзину.
+    use SoftDeletes;
+
     public const UNAVAILABLE_STATUSES = ['vacation', 'sick_leave', 'maternity_leave', 'business_trip', 'suspended', 'dismissed'];
     public const WORK_SCHEDULE_CODES = ['weekday_0900_1800', 'weekday_0900_1700', 'shift_2_2_0800_2000', 'flexible'];
 

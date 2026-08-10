@@ -33,6 +33,7 @@ use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AttendanceAnalysisController;
 use App\Http\Controllers\Api\ClassroomController;
 use App\Http\Controllers\Api\CurriculumController;
+use App\Http\Controllers\Api\DeletionRequestController;
 use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\DigitalIdentityController;
 use App\Http\Controllers\Api\DemoDataController;
@@ -296,6 +297,25 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
 
     Route::post('admin/users/reset-password', [AdminUserController::class, 'resetPassword'])
         ->middleware('permission:users.manage');
+
+    // Удаление в два шага. Пометить карточку может тот, кто её ведёт;
+    // решает и чистит корзину только администратор.
+    Route::post('deletion-requests', [DeletionRequestController::class, 'store'])
+        ->middleware('permission:trash.request');
+    Route::get('deletion-requests/pending', [DeletionRequestController::class, 'pending'])
+        ->middleware('permission:trash.manage');
+    Route::get('deletion-requests', [DeletionRequestController::class, 'index'])
+        ->middleware('permission:trash.manage');
+    Route::post('deletion-requests/{deletionRequest}/approve', [DeletionRequestController::class, 'approve'])
+        ->middleware('permission:trash.manage');
+    Route::post('deletion-requests/{deletionRequest}/reject', [DeletionRequestController::class, 'reject'])
+        ->middleware('permission:trash.manage');
+    Route::get('trash', [DeletionRequestController::class, 'trash'])
+        ->middleware('permission:trash.manage');
+    Route::post('trash/{type}/{id}/restore', [DeletionRequestController::class, 'restore'])
+        ->middleware('permission:trash.manage');
+    Route::delete('trash/{type}/{id}', [DeletionRequestController::class, 'purge'])
+        ->middleware('permission:trash.manage');
 
     Route::middleware('permission:manage_users')->group(function (): void {
         Route::get('admin/audit', [AuditLogController::class, 'index']);
