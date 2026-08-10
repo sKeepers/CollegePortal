@@ -39,6 +39,7 @@ study.records@local
 admission@local
 hr@local
 teacher@local
+curator@local
 student@local
 security@local
 '
@@ -78,6 +79,8 @@ SECTIONS='
 Отчёты проходной|gate.reports|access/reports/summary,access/reports/events
 Корпуса и точки|gate.reports|access/buildings,access/points
 Цифровые пропуска|digitalpasses.manage,view_own_data|digital-identities
+Мобильный кабинет студента|mobile.student.view|mobile/student
+Мобильный кабинет преподавателя|mobile.teacher.view|mobile/teacher
 Импорт данных|import.manage|admin/import/config,admin/import/history
 Управление данными|demo_data.manage|admin/demo-data
 Пользователи|users.manage|admin/users,admin/users/roles

@@ -40,6 +40,10 @@ class PortalUserSeeder extends Seeder
             ['name' => 'Приемная комиссия', 'username' => 'admission', 'role' => 'admission'],
             ['name' => 'Отдел кадров', 'username' => 'hr', 'role' => 'hr'],
             ['name' => 'Преподаватель', 'username' => 'teacher', 'role' => 'teacher'],
+            // Куратор появился в наборе 11.08.2026: роль существовала и держала
+            // права мобильных кабинетов, а учётной записи под неё не было, и
+            // обход прав `check-role-access.sh` эту роль просто не проверял.
+            ['name' => 'Куратор', 'username' => 'curator', 'role' => 'curator'],
             ['name' => 'Студент', 'username' => 'student', 'role' => 'student'],
             ['name' => 'Сотрудник проходной', 'username' => 'security', 'role' => 'security'],
         ];
