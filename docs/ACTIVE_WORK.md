@@ -21,6 +21,18 @@
 
 **Занято другим чатом**, судя по веткам и worktree на DEV: `feature/fis-dictionary-intake`, `feature/fis-gia-records`, `feature/access-buildings-muster`, `feature/person-documents-completeness`. Задачи ФИС ГИА ведутся отдельно и этим чатом не трогаются.
 
+**Чат «ФИС ГИА и приёмная комиссия» (занято с 09.08.2026):** ветка `fix/student-filters-and-status`.
+
+| Задача | Файлы, которые трогает | Состояние |
+| --- | --- | --- |
+| `BUG-010` — пустой список статусов в фильтрах «Студенты» | `EnsurePermission::DOMAIN_RULES`, `RoleSeeder`, миграция `2026_08_10_000001_add_reference_view_permission`, `stores/referenceOptions.js`, `pages/students/StudentFilters.vue` | **в работе** |
+| `GUI-018` — фильтры «Курс» и «Специальность» | `StudentController::index`, `GroupController::index`, `stores/students.js`, `pages/students/*` | **в работе**, одной правкой с `BUG-010` |
+| ФИС: конкурсы (`CompetitiveGroupUID`) из `InstitutionExport` | `app/Services/FisIntegration/Xml/*` | следующая |
+
+**Осторожно, общие файлы.** `BUG-010` вводит право `reference.view`: правится `RoleSeeder` (базовое право всем ролям), `EnsurePermission::DOMAIN_RULES` (чтение справочников отделено от правки) и добавляется миграция — сидер на обновлении установленного стенда не запускается. Если ваш чат трогает эти же файлы, напишите здесь.
+
+Уже сделано и влито этим чатом, повторно не трогать: сборка XML по официальной XSD ФИС 4.9 (`resources/fis/gia-priem/4.9/`, `FisXsdSchema`, `PackageDataComposer`), загрузка справочников ФИС (`FisDictionaryIntakeService`, раздел на экране ФИС).
+
 **Договорённости на время параллельной работы:**
 
 - ствол публикует тот, кто первым закончил задачу; перед вливанием обязательно `git fetch` и проверка, что `develop` не уехал;
