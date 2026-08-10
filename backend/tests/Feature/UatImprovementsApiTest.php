@@ -195,4 +195,20 @@ class UatImprovementsApiTest extends TestCase
             ->assertForbidden()
             ->assertJsonPath('message', 'Очистка демо-данных запрещена в production.');
     }
+
+    /**
+     * Заливка демо-данных в production запрещена так же, как очистка. Защиту
+     * поставили на `clear` и `reset`, а `create` пропустили — и он наполняет
+     * базу шестьюстами демонстрационными студентами в живом контуре.
+     */
+    public function test_demo_data_create_is_forbidden_in_production(): void
+    {
+        $this->app->detectEnvironment(fn () => 'production');
+
+        $this->postJson('/api/admin/demo-data/create')
+            ->assertForbidden()
+            ->assertJsonPath('message', 'Создание демо-данных запрещено в production.');
+
+        $this->assertDatabaseMissing('students', ['email' => 'student@local']);
+    }
 }

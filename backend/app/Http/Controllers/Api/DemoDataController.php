@@ -36,8 +36,19 @@ class DemoDataController extends Controller
         return ['data' => $this->summary()];
     }
 
+    /**
+     * Очистка и сброс демо-данных в production запрещены, а заливка — нет:
+     * защитили две ручки из трёх. При этом `create` наполняет базу шестьюстами
+     * демонстрационными студентами, преподавателями и событиями проходной, и
+     * на боевом контуре это хуже очистки — данные не исчезают, а появляются
+     * вперемешку с настоящими, и отличить их потом можно только по домену
+     * почты. Ошибка в правах не должна открывать такую заливку: это второй
+     * рубеж, и стоит он одну строку.
+     */
     public function create(): JsonResponse
     {
+        abort_if(app()->environment('production'), Response::HTTP_FORBIDDEN, 'Создание демо-данных запрещено в production.');
+
         Artisan::call('db:seed', [
             '--class' => DemoDataSeeder::class,
             '--force' => true,
