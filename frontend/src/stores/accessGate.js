@@ -19,6 +19,28 @@ export function entityTypeLabel(type) {
 export function directionLabel(direction) { return direction === 'out' ? 'Выход' : 'Вход' }
 export function resultLabel(result) { return result === 'allowed' ? 'Разрешено' : 'Отказано' }
 export function resultTone(result) { return result === 'allowed' ? 'success' : 'danger' }
+
+/**
+ * Крупная строка, которую читает оператор проходной.
+ *
+ * Раньше здесь стояло «Проход зарегистрирован» — фраза про то, что запись
+ * сохранилась. Человеку у турникета нужно другое: зашёл посетитель или вышел.
+ * Направление сервер уже вычислил и вернул в ответе, оставалось его показать.
+ *
+ * У отказа направления нет: пропуск не сработал, и говорить про вход или
+ * выход было бы неправдой.
+ */
+export function outcomeHeadline(event) {
+  if (!event) return ''
+  return event.result === 'allowed' ? directionLabel(event.direction) : resultLabel(event.result)
+}
+
+/** Пояснение под крупной строкой: у отказа — причина, у прохода — что пропуск действителен. */
+export function outcomeDetail(event) {
+  if (!event) return ''
+  if (event.result !== 'allowed') return event.reason || 'Причина отказа не указана.'
+  return event.reason || 'Пропуск действителен.'
+}
 export function formatEventTime(value) {
   if (!value) return '—'
   const date = new Date(value)

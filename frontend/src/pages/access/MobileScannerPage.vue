@@ -1,13 +1,13 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import jsQR from 'jsqr'
-import { Camera, CheckCircle2, FlipHorizontal, Flashlight, Keyboard, Play, ScanLine, XCircle } from '@lucide/vue'
+import { Camera, FlipHorizontal, Flashlight, Keyboard, LogIn, LogOut, ScanLine, XCircle } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppCard from '../../components/ui/AppCard.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
-import { directionLabel, entityTypeLabel, formatEventTime, normalizeQrToken, ownerName, resultLabel, resultTone, useAccessGateStore } from '../../stores/accessGate'
+import { directionLabel, entityTypeLabel, formatEventTime, normalizeQrToken, outcomeDetail, outcomeHeadline, ownerName, resultLabel, resultTone, useAccessGateStore } from '../../stores/accessGate'
 
 const store = useAccessGateStore()
 const videoRef = ref(null)
@@ -22,16 +22,22 @@ const paused = ref(false)
 const torchEnabled = ref(false)
 const torchSupported = ref(false)
 const manualToken = ref('')
-const lastScannedValue = ref('')
-const lastScanAt = ref(0)
-const scanCooldownMs = 2200
+const lastSentPayload = ref('')
+const repeatHint = ref('')
 const scanIntervalMs = 350
+/**
+ * Пауза после отправленного скана — чтобы оператор успел прочитать результат.
+ * Дубли она не сторожит: их отсекает проверка по самому коду, см. handleScan.
+ */
+const resumeDelayMs = 1000
 const detector = createBarcodeDetector()
 let scanTimer = null
+let resumeTimer = null
 let audioContext = null
 
 const resultClass = computed(() => store.lastEvent?.result === 'allowed' ? 'mobile-scanner-result--allowed' : 'mobile-scanner-result--denied')
-const resultIcon = computed(() => store.lastEvent?.result === 'allowed' ? CheckCircle2 : XCircle)
+const directionIcon = computed(() => store.lastEvent?.direction === 'out' ? LogOut : LogIn)
+const resultIcon = computed(() => store.lastEvent?.result === 'allowed' ? directionIcon.value : XCircle)
 const scannerEngine = computed(() => detector ? 'BarcodeDetector' : 'jsQR fallback')
 const canTorch = computed(() => torchSupported.value && stream.value)
 const isSecureContext = computed(() => Boolean(globalThis?.isSecureContext))
@@ -115,7 +121,10 @@ async function startCamera(deviceId = selectedDeviceId.value) {
 
 function stopCamera() {
   if (scanTimer) window.clearTimeout(scanTimer)
+  if (resumeTimer) window.clearTimeout(resumeTimer)
   scanTimer = null
+  resumeTimer = null
+  paused.value = false
   scanning.value = false
   torchEnabled.value = false
   stream.value?.getTracks().forEach((track) => track.stop())
@@ -166,13 +175,27 @@ async function scanLoop() {
   }
 }
 
+/**
+ * Сканирование идёт непрерывно: после прохода не нужно ничего нажимать.
+ *
+ * Один и тот же код второй раз на сервер не уходит, и окно тут не по времени,
+ * а по значению. Пропуск динамический и одноразовый: `CP2:<срок>:<подпись>`
+ * живёт тридцать секунд, а сервер помечает предъявленный код использованным и
+ * на повтор отвечает «QR-код уже использован». Телефон в кадре камера читает
+ * несколько раз подряд, и по временному окну — как было до этого — повторы
+ * после его истечения превратились бы в череду отказов в журнале и красный
+ * экран у оператора сразу после успешного прохода. Код на телефоне обновляется
+ * сам, и следующий скан того же человека приходит уже с новой подписью.
+ */
 async function handleScan(value) {
   const normalized = normalizeQrToken(value)
-  const now = Date.now()
   if (!normalized) return
-  if (normalized === lastScannedValue.value && now - lastScanAt.value < scanCooldownMs) return
-  lastScannedValue.value = normalized
-  lastScanAt.value = now
+  if (normalized === lastSentPayload.value) {
+    repeatHint.value = 'Этот код уже отсканирован. Попросите обновить QR на телефоне.'
+    return
+  }
+  repeatHint.value = ''
+  lastSentPayload.value = normalized
   paused.value = true
   try {
     const event = await store.scan(normalized, { access_point: 'Мобильный сканер', device_name: 'Mobile Camera Scanner' })
@@ -182,18 +205,25 @@ async function handleScan(value) {
   } catch {
     vibrateDenied()
     beep(false)
+  } finally {
+    scheduleResume()
   }
+}
+
+function scheduleResume() {
+  if (resumeTimer) window.clearTimeout(resumeTimer)
+  resumeTimer = window.setTimeout(() => {
+    resumeTimer = null
+    // Снимаем паузу всегда, а цикл продолжаем только при работающей камере:
+    // ручной ввод работает и без неё, и оставить экран в паузе навсегда нельзя.
+    paused.value = false
+    if (scanning.value) scanLoop()
+  }, resumeDelayMs)
 }
 
 async function submitManual() {
   await handleScan(manualToken.value)
   manualToken.value = ''
-}
-
-function scanAgain() {
-  paused.value = false
-  store.warning = ''
-  scanLoop()
 }
 
 onMounted(async () => {
@@ -213,7 +243,7 @@ onBeforeUnmount(stopCamera)
     <PageHeader title="Мобильный сканер" subtitle="Сканирование QR-пропусков камерой телефона. Камера работает локально в браузере." />
 
     <AppErrorBanner :message="cameraError || store.error" />
-    <q-banner v-if="store.warning" rounded class="access-gate-warning">{{ store.warning }}</q-banner>
+    <q-banner v-if="store.warning || repeatHint" rounded class="access-gate-warning">{{ store.warning || repeatHint }}</q-banner>
 
     <div class="mobile-scanner-layout">
       <section class="mobile-scanner-camera-card">
@@ -232,7 +262,7 @@ onBeforeUnmount(stopCamera)
         <div class="mobile-scanner-meta">
           <AppStatusBadge :label="scannerEngine" tone="info" />
           <AppStatusBadge :label="isSecureContext ? 'Secure context' : 'Нужен HTTPS'" :tone="isSecureContext ? 'success' : 'warning'" />
-          <AppStatusBadge :label="paused ? 'Пауза после скана' : 'Готов к сканированию'" :tone="paused ? 'warning' : 'success'" />
+          <AppStatusBadge :label="paused ? 'Пауза после прохода' : 'Сканирование идёт'" :tone="paused ? 'warning' : 'success'" />
         </div>
       </section>
 
@@ -240,7 +270,7 @@ onBeforeUnmount(stopCamera)
         <template v-if="store.lastEvent">
           <div class="mobile-scanner-result__status">
             <component :is="resultIcon" :size="54" />
-            <div><strong>{{ resultLabel(store.lastEvent.result) }}</strong><span>{{ store.lastEvent.reason || 'Проход зарегистрирован.' }}</span></div>
+            <div><strong>{{ outcomeHeadline(store.lastEvent) }}</strong><span>{{ outcomeDetail(store.lastEvent) }}</span></div>
           </div>
           <h2>{{ ownerName(store.lastEvent) }}</h2>
           <p>{{ entityTypeLabel(store.lastEvent.entity_type) }}</p>
@@ -252,7 +282,6 @@ onBeforeUnmount(stopCamera)
             <div><dt>Время</dt><dd>{{ formatEventTime(store.lastEvent.event_time) }}</dd></div>
             <div><dt>Причина отказа</dt><dd>{{ store.lastEvent.reason || '—' }}</dd></div>
           </dl>
-          <q-btn color="primary" no-caps @click="scanAgain"><Play :size="17" class="q-mr-xs" /> Сканировать снова</q-btn>
         </template>
         <div v-else class="mobile-scanner-result__empty"><ScanLine :size="48" /><strong>Ожидание QR</strong><span>После распознавания здесь появится результат прохода.</span></div>
       </AppCard>

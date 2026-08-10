@@ -65,6 +65,39 @@ class AccessGateApiTest extends TestCase
         $this->assertSame(2, AccessEvent::count());
     }
 
+    /**
+     * Отказ не переставляет направление.
+     *
+     * Камера на проходной читает телефон в кадре несколько раз подряд, а
+     * динамический QR одноразовый: второй скан того же кода даёт отказ
+     * «QR-код уже использован». Пока отказы участвовали в чередовании, вошедший
+     * человек при следующем настоящем проходе снова «входил», хотя выходил, —
+     * и это видел не только журнал, но и экран «Кто сейчас в здании».
+     */
+    public function test_denied_scan_does_not_flip_the_direction(): void
+    {
+        $identity = $this->createStudentIdentity();
+        $qr = app(\App\Services\QrSvgService::class);
+        $payload = $qr->dynamicPayload($identity)['payload'];
+
+        $this->postJson('/api/access/scan', ['token' => $payload])
+            ->assertOk()
+            ->assertJsonPath('data.result', AccessEvent::RESULT_ALLOWED)
+            ->assertJsonPath('data.direction', AccessEvent::DIRECTION_IN);
+
+        // Тот же код камера прочитала повторно: проход не состоялся.
+        $this->postJson('/api/access/scan', ['token' => $payload])
+            ->assertOk()
+            ->assertJsonPath('data.result', AccessEvent::RESULT_DENIED);
+
+        $this->travel(31)->seconds();
+
+        $this->postJson('/api/access/scan', ['token' => $qr->dynamicPayload($identity)['payload']])
+            ->assertOk()
+            ->assertJsonPath('data.result', AccessEvent::RESULT_ALLOWED)
+            ->assertJsonPath('data.direction', AccessEvent::DIRECTION_OUT);
+    }
+
     public function test_scan_revoked_qr_creates_denied_event(): void
     {
         $identity = $this->createTeacherIdentity([

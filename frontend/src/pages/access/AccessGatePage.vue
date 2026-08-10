@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, onMounted, ref } from 'vue'
-import { CheckCircle2, LogIn, LogOut, RefreshCw, ScanLine, UserRound, XCircle } from '@lucide/vue'
+import { LogIn, LogOut, RefreshCw, ScanLine, UserRound, XCircle } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -8,7 +8,7 @@ import AppCard from '../../components/ui/AppCard.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
-import { directionLabel, entityTypeLabel, formatEventTime, normalizeQrToken, ownerName, resultLabel, resultTone, useAccessGateStore } from '../../stores/accessGate'
+import { directionLabel, entityTypeLabel, formatEventTime, normalizeQrToken, outcomeDetail, outcomeHeadline, ownerName, resultLabel, resultTone, useAccessGateStore } from '../../stores/accessGate'
 
 const store = useAccessGateStore()
 const scanInputRef = ref(null)
@@ -21,8 +21,10 @@ const keyTimings = ref([])
 const lastKeyAt = ref(null)
 const diagnostic = ref({ raw: '', normalized: '', length: 0, first: '—', last: '—', hasCr: false, hasLf: false, hasTab: false, hadEnter: false, intervals: [] })
 const statusPanelClass = computed(() => store.lastEvent?.result === 'allowed' ? 'access-gate-result--allowed' : 'access-gate-result--denied')
-const resultIcon = computed(() => store.lastEvent?.result === 'allowed' ? CheckCircle2 : XCircle)
 const directionIcon = computed(() => store.lastEvent?.direction === 'out' ? LogOut : LogIn)
+// У разрешённого прохода на видном месте стрелка направления, а не галочка:
+// оператор читает «зашёл» или «вышел», а не «событие сохранилось».
+const resultIcon = computed(() => store.lastEvent?.result === 'allowed' ? directionIcon.value : XCircle)
 
 async function focusScanner() {
   await nextTick()
@@ -150,8 +152,8 @@ onMounted(async () => {
             <div class="access-gate-result__status">
               <component :is="resultIcon" :size="54" />
               <div>
-                <strong>{{ resultLabel(store.lastEvent.result) }}</strong>
-                <span>{{ store.lastEvent.reason || 'Проход зарегистрирован.' }}</span>
+                <strong>{{ outcomeHeadline(store.lastEvent) }}</strong>
+                <span>{{ outcomeDetail(store.lastEvent) }}</span>
               </div>
             </div>
             <div class="access-gate-person">

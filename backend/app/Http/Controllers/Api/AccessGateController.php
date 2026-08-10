@@ -88,11 +88,26 @@ class AccessGateController extends Controller
             ->first();
     }
 
+    /**
+     * Направление чередуется по состоявшимся проходам, а не по всем событиям.
+     *
+     * Отказ — это не проход: человек остался по ту же сторону двери. Пока
+     * отказы попадали в расчёт, каждый лишний скан переставлял направление, и
+     * следующий настоящий проход записывался наоборот. Ловится это легко:
+     * динамический QR одноразовый, камера читает телефон в кадре несколько раз
+     * подряд, второй скан даёт «QR-код уже использован» — и вошедший человек
+     * при следующем проходе снова «входит», хотя выходит.
+     *
+     * Присутствие в здании (`AccessPresenceService`) уже считается только по
+     * разрешённым событиям, так что теперь обе стороны смотрят на одно и то же.
+     */
     private function nextDirection(DigitalIdentity $identity): string
     {
         $lastEvent = AccessEvent::query()
             ->where('digital_identity_id', $identity->id)
+            ->where('result', AccessEvent::RESULT_ALLOWED)
             ->orderByDesc('event_time')
+            ->orderByDesc('id')
             ->first();
 
         return $lastEvent?->direction === AccessEvent::DIRECTION_IN
