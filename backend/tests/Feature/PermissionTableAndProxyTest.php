@@ -46,7 +46,6 @@ class PermissionTableAndProxyTest extends TestCase
         'api/account/password',
         'api/account/identities',
         'api/account/identities/{identity}',
-        'api/mobile/student',
         'api/dashboard/layouts',
         'api/dashboard/layouts/reset',
         'api/dashboard/layouts/{dashboardLayout}',

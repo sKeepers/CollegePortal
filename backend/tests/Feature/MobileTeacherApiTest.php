@@ -130,7 +130,7 @@ class MobileTeacherApiTest extends TestCase
 
     public function test_signed_lesson_hides_marking_instead_of_offering_a_failing_button(): void
     {
-        $fixture = $this->fixture(['journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.sign']);
+        $fixture = $this->fixture(['mobile.teacher.view', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.sign']);
 
         $lessonId = $this->withApiAuth($fixture['user'])
             ->postJson("/api/journal/from-legacy-schedule/{$fixture['morning']->id}/open")
@@ -150,7 +150,9 @@ class MobileTeacherApiTest extends TestCase
 
     public function test_teacher_without_journal_permissions_gets_no_actions(): void
     {
-        $fixture = $this->fixture(['schedule.view']);
+        // `mobile.teacher.view` открывает сам раздел, права журнала — действия
+        // в нём. Здесь проверяется именно второе: раздел открыт, кнопок нет.
+        $fixture = $this->fixture(['mobile.teacher.view', 'schedule.view']);
 
         $this->withApiAuth($fixture['user'])
             ->getJson('/api/mobile/teacher')
@@ -164,7 +166,13 @@ class MobileTeacherApiTest extends TestCase
     public function test_user_without_teacher_card_gets_empty_cabinet_not_forbidden(): void
     {
         $this->fixture();
-        $stranger = $this->createApiUser(roleCode: 'employee');
+        // Право на раздел есть, карточки преподавателя нет. Правило проекта:
+        // такой человек получает пустой кабинет, а не 403. У роли без права
+        // раздела 403 как раз уместен — это другой случай.
+        $stranger = User::factory()->create([
+            'is_active' => true,
+            'role_id' => $this->roleWithPermissions('employee', ['mobile.teacher.view'])->id,
+        ]);
 
         $this->withApiAuth($stranger)
             ->getJson('/api/mobile/teacher')
@@ -217,7 +225,7 @@ class MobileTeacherApiTest extends TestCase
      * @param  list<string>  $permissions
      * @return array<string, mixed>
      */
-    private function fixture(array $permissions = ['journal.view', 'journal.edit', 'journal.attendance', 'journal.grades']): array
+    private function fixture(array $permissions = ['mobile.teacher.view', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades']): array
     {
         $group = Group::create(['name' => 'ИСП-101', 'specialty' => 'Инструментальное исполнительство', 'course' => 1, 'year_start' => 2026]);
         $solfeggio = Subject::create(['name' => 'Сольфеджио']);

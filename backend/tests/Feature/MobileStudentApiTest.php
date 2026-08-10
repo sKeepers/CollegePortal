@@ -7,6 +7,7 @@ use App\Models\Classroom;
 use App\Models\DigitalIdentity;
 use App\Models\Grade;
 use App\Models\Group;
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\ScheduleLesson;
 use App\Models\Student;
@@ -25,6 +26,13 @@ class MobileStudentApiTest extends TestCase
     public function test_it_returns_mobile_student_cabinet_data(): void
     {
         $role = Role::create(['code' => 'student', 'name' => 'Студент']);
+        // Кабинет закрыт правом `mobile.student.view` с `ARCH-001`, шага 3.
+        // Раньше маршрут лежал в общей авторизованной группе, и право
+        // спрашивал только маршрутизатор фронтенда.
+        $role->permissions()->sync([Permission::query()->firstOrCreate(
+            ['code' => 'mobile.student.view'],
+            ['name' => 'Мобильный кабинет студента', 'module' => 'Mobile', 'system' => true, 'active' => true],
+        )->id]);
         $user = User::factory()->create(['role_id' => $role->id, 'password' => Hash::make('password')]);
         $group = Group::create(['name' => 'ИСП-101', 'specialty' => 'Инструментальное исполнительство', 'course' => 1, 'year_start' => 2026]);
         $student = Student::create(['user_id' => $user->id, 'group_id' => $group->id, 'last_name' => 'Иванов', 'first_name' => 'Дмитрий', 'status' => 'active']);

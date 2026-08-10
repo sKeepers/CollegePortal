@@ -89,12 +89,16 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     Route::get('account/identities', [AccountIdentityController::class, 'index']);
     Route::post('account/identities', [AccountIdentityController::class, 'store']);
     Route::delete('account/identities/{identity}', [AccountIdentityController::class, 'destroy']);
-    Route::get('mobile/student', [MobileStudentController::class, 'show']);
-    // Кабинет отдаёт только данные вошедшего: преподаватель находится по
-    // `teachers.user_id`, чужой день не открывается подстановкой параметра.
-    // Право `mobile.teacher.view` будет объявлено здесь после ARCH-001 — оно
-    // решает видимость раздела, а не то, чьи данные видно.
-    Route::get('mobile/teacher', [MobileTeacherController::class, 'show']);
+    // Мобильные кабинеты. Право решает видимость раздела, а не то, чьи данные
+    // видно: кабинет отдаёт только данные вошедшего — преподаватель находится
+    // по `teachers.user_id`, и чужой день не открывается подстановкой
+    // параметра. У студенческого кабинета серверной проверки не было вовсе:
+    // право `mobile.student.view` существовало, но спрашивал его только
+    // маршрутизатор фронтенда.
+    Route::get('mobile/student', [MobileStudentController::class, 'show'])
+        ->middleware('permission:mobile.student.view');
+    Route::get('mobile/teacher', [MobileTeacherController::class, 'show'])
+        ->middleware('permission:mobile.teacher.view');
     Route::get('dashboard/layouts', [DashboardLayoutController::class, 'index']);
     Route::post('dashboard/layouts', [DashboardLayoutController::class, 'store']);
     Route::post('dashboard/layouts/reset', [DashboardLayoutController::class, 'reset']);

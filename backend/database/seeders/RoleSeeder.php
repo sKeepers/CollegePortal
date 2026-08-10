@@ -50,7 +50,7 @@ class RoleSeeder extends Seeder
         $this->syncPermissions('employee', $this->ids(['dashboard.view', 'view_own_data']));
         $this->syncPermissions('security', $this->ids($this->securityPermissions()));
         $this->syncPermissions('hr', $this->ids($this->hrPermissions()));
-        $this->syncPermissions('curator', $this->ids(array_values(array_unique(array_merge($this->teacherPermissions(), ['students.view', 'groups.view', 'attendance.reports'])))));
+        $this->syncPermissions('curator', $this->ids(array_values(array_unique(array_merge($this->teacherPermissions(), ['students.view', 'groups.view', 'attendance.reports', 'mobile.curator.view'])))));
     }
 
     private function permissions(): array
@@ -219,6 +219,12 @@ class RoleSeeder extends Seeder
             ['module' => 'System', 'code' => 'ui.foundation.view', 'name' => 'UI Foundation: просмотр', 'description' => 'Просмотр витрины UI-компонентов.'],
             ['module' => 'Mobile', 'code' => 'mobile.student.view', 'name' => 'Мобильный кабинет студента', 'description' => 'Доступ к мобильному кабинету студента.'],
             ['module' => 'Mobile', 'code' => 'mobile.student.pass', 'name' => 'Мобильный QR студента', 'description' => 'Просмотр мобильного QR-пропуска.'],
+            // Заявка чата «Мобильные кабинеты» от 10.08.2026. Право решает
+            // видимость раздела; чьи данные видно, решает сам эндпоинт — по
+            // `teachers.user_id` и `groups.curator_id`.
+            ['module' => 'Mobile', 'code' => 'mobile.teacher.view', 'name' => 'Мобильный кабинет преподавателя', 'description' => 'Доступ к мобильному кабинету преподавателя.'],
+            ['module' => 'Mobile', 'code' => 'mobile.curator.view', 'name' => 'Мобильный кабинет куратора', 'description' => 'Доступ к мобильному кабинету куратора группы.'],
+            ['module' => 'Mobile', 'code' => 'mobile.admin.view', 'name' => 'Мобильный кабинет администратора', 'description' => 'Доступ к мобильному кабинету администратора.'],
             // `view_own_data` — настоящее право, а не зонтик: им открыты свой
             // цифровой пропуск и своя нагрузка. Остаётся.
             //
@@ -356,7 +362,7 @@ class RoleSeeder extends Seeder
 
     private function teacherPermissions(): array
     {
-        return ['dashboard.view', 'hr.calendar.view', 'schedule.view', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.export', 'attendance.view', 'exams.view', 'view_own_data'];
+        return ['dashboard.view', 'hr.calendar.view', 'schedule.view', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.export', 'attendance.view', 'exams.view', 'view_own_data', 'mobile.teacher.view'];
     }
 
     private function studentPermissions(): array
