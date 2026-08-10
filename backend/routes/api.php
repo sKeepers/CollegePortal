@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\AdmissionBulkController;
 use App\Http\Controllers\Api\BuildingController;
 use App\Http\Controllers\Api\GroupController;
 use App\Http\Controllers\Api\HrCalendarController;
+use App\Http\Controllers\Api\MobileAdminController;
 use App\Http\Controllers\Api\MobileCuratorController;
 use App\Http\Controllers\Api\MobileStudentController;
 use App\Http\Controllers\Api\MobileTeacherController;
@@ -109,6 +110,11 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         Route::get('mobile/curator/groups/{group}/attendance', [MobileCuratorController::class, 'attendance']);
         Route::get('mobile/curator/groups/{group}/access', [MobileCuratorController::class, 'access']);
     });
+    // Счётчики кабинета администратора. Сами входящие собираются из тех же
+    // маршрутов, что и «колокольчик» на десктопе, и каждый из них проверяет
+    // своё право сам.
+    Route::get('mobile/admin', [MobileAdminController::class, 'show'])
+        ->middleware('permission:mobile.admin.view');
     Route::get('dashboard/layouts', [DashboardLayoutController::class, 'index']);
     Route::post('dashboard/layouts', [DashboardLayoutController::class, 'store']);
     Route::post('dashboard/layouts/reset', [DashboardLayoutController::class, 'reset']);

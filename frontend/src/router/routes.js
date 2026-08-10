@@ -4,6 +4,7 @@ import PublicLayout from '../layouts/PublicLayout.vue'
 import MobileStudentLayout from '../layouts/MobileStudentLayout.vue'
 import MobileTeacherLayout from '../layouts/MobileTeacherLayout.vue'
 import MobileCuratorLayout from '../layouts/MobileCuratorLayout.vue'
+import MobileAdminLayout from '../layouts/MobileAdminLayout.vue'
 const LoginPage = () => import('../pages/auth/LoginPage.vue')
 const DashboardPage = () => import('../pages/dashboard/DashboardPage.vue')
 const MyAccountPage = () => import('../pages/account/MyAccountPage.vue')
@@ -57,6 +58,7 @@ const MobileTeacherPassPage = () => import('../pages/mobile/teacher/MobileTeache
 const MobileTeacherLessonPage = () => import('../pages/mobile/teacher/MobileTeacherLessonPage.vue')
 const MobileCuratorHomePage = () => import('../pages/mobile/curator/MobileCuratorHomePage.vue')
 const MobileCuratorGroupPage = () => import('../pages/mobile/curator/MobileCuratorGroupPage.vue')
+const MobileAdminHomePage = () => import('../pages/mobile/admin/MobileAdminHomePage.vue')
 const StudentCabinetPage = () => import('../pages/student/StudentCabinetPage.vue')
 
 export const routes = [
@@ -108,12 +110,9 @@ export const routes = [
   },
 
   {
-    // Право `mobile.teacher.view` встанет сюда после ARCH-001: пока его нет в
-    // каталоге, объявление отправило бы преподавателя на «нет прав». До тех пор
-    // раздел ограничен ролью, а чьи данные видно — решает сервер.
     path: '/m/teacher',
     component: MobileTeacherLayout,
-    meta: { roles: ['teacher', 'curator', 'admin'] },
+    meta: { permission: 'mobile.teacher.view' },
     children: [
       {
         path: '',
@@ -152,6 +151,20 @@ export const routes = [
         name: 'mobile-curator-group',
         component: MobileCuratorGroupPage,
         meta: { title: 'Моя группа' },
+      },
+    ],
+  },
+
+  {
+    path: '/m/admin',
+    component: MobileAdminLayout,
+    meta: { permission: 'mobile.admin.view' },
+    children: [
+      {
+        path: '',
+        name: 'mobile-admin-home',
+        component: MobileAdminHomePage,
+        meta: { title: 'Кабинет администратора' },
       },
     ],
   },

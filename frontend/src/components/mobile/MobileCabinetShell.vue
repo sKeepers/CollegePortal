@@ -47,6 +47,11 @@ async function navigate(item) {
 
     <q-page-container>
       <router-view />
+      <!-- Выход из кабинета в обычный портал. Без него телефон — тупик: с
+           рабочего стола сюда переводит маршрутизатор, а обратно ссылки нет. -->
+      <div class="mobile-cabinet-full-version">
+        <RouterLink to="/dashboard?full=1">Полная версия портала</RouterLink>
+      </div>
     </q-page-container>
 
     <q-footer v-if="navItems.length" class="mobile-cabinet-bottom-nav">

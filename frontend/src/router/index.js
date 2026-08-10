@@ -44,6 +44,11 @@ router.beforeEach(async (to) => {
     return { path: '/m/student', hash: '#schedule' }
   }
 
+  // `?full=1` — просьба человека открыть обычный портал на телефоне. Ссылка
+  // «Полная версия» есть в каждом мобильном кабинете, и без этой проверки она
+  // возвращала бы туда, откуда нажата.
+  const wantsFullVersion = to.query.full !== undefined
+
   // Преподаватель и куратор на телефоне попадают в свой кабинет, а не в
   // рабочий стол и не в журнал с таблицами: отметка посещаемости делается стоя
   // в аудитории, одной рукой. На большом экране обе страницы остаются прежними.
@@ -51,12 +56,19 @@ router.beforeEach(async (to) => {
   // У куратора кабинета два, и рабочий стол ведёт в тот, что про группу:
   // журнал занятия он откроет из кабинета преподавателя, а вот «кто сегодня не
   // пришёл» смотрят с телефона именно про группу.
-  if (layoutService.isMobile.value && auth.hasRole('curator') && to.path === '/dashboard') {
+  if (layoutService.isMobile.value && !wantsFullVersion && auth.hasRole('curator') && to.path === '/dashboard') {
     return { path: '/m/curator' }
   }
 
-  if (layoutService.isMobile.value && auth.hasRole(['teacher', 'curator']) && ['/dashboard', '/journal'].includes(to.path)) {
+  if (layoutService.isMobile.value && !wantsFullVersion && auth.hasRole(['teacher', 'curator']) && ['/dashboard', '/journal'].includes(to.path)) {
     return { path: '/m/teacher' }
+  }
+
+  // Администратор с телефона чаще всего заходит не «поработать», а посмотреть
+  // сводку и решить по заявке. Сканер проходной остаётся отдельным переходом
+  // ниже — он про другой сценарий и другую роль.
+  if (layoutService.isMobile.value && !wantsFullVersion && auth.hasRole('admin') && to.path === '/dashboard') {
+    return { path: '/m/admin' }
   }
 
   if (layoutService.isMobile.value && auth.hasRole(['admin', 'security']) && to.path === '/access/gate') {

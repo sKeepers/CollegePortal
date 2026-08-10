@@ -7697,3 +7697,61 @@ body {
   font-size: 12px;
   font-weight: 700;
 }
+
+/* Кабинет администратора: заявка, по которой решение принимается тут же. */
+
+.mobile-cabinet-request {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 12px;
+  border: 1px solid #fed7aa;
+  border-radius: 14px;
+  background: #fffbeb;
+}
+
+.mobile-cabinet-request strong {
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.mobile-cabinet-request span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.mobile-cabinet-request em {
+  color: #92400e;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+/* Две кнопки решения делят ширину поровну и не уезжают: подтверждение и отказ
+   на телефоне должны попадаться пальцем одинаково уверенно. */
+.mobile-cabinet-decision {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mobile-cabinet-decision .q-btn {
+  min-height: 44px;
+}
+
+.mobile-cabinet-full-version {
+  width: min(100%, 430px);
+  margin: 0 auto;
+  padding: 0 12px calc(120px + env(safe-area-inset-bottom));
+  text-align: center;
+}
+
+.mobile-cabinet-full-version a {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
