@@ -46,7 +46,9 @@ security@local
 # раздел|право показа раздела|endpoints через запятую
 #
 # Право взято из пункта меню в AppLayout.vue, endpoints — из запросов, которые
-# страница делает при открытии.
+# страница делает при открытии. Несколько прав через запятую значат ИЛИ — ровно
+# как в объявлении у маршрута: свой пропуск и свою нагрузку человек видит по
+# `view_own_data`, не имея права на чужие.
 SECTIONS='
 Люди|people.view|people
 Студенты|students.view|students,students/export
@@ -55,7 +57,8 @@ SECTIONS='
 Журнал|journal.view|journal/lessons
 Посещаемость|attendance.reports|attendance/teachers/today,attendance/students/today,dashboard/analytics/executive
 Учебные планы|curricula.view|curricula,curricula/export
-Нагрузка|teachingload.view|teaching-loads,teaching-loads/export
+Нагрузка|teachingload.view|teaching-loads/export
+Своя нагрузка|teachingload.view,view_own_data|teaching-loads
 Экзамены и ГИА|exams.view|exams,exams/export
 Выпускники|graduation.view|graduates,graduates/export
 ФРДО|frdo.view|frdo-packages
@@ -70,12 +73,11 @@ SECTIONS='
 Заявления|admissions.view|applicant-applications,applicant-applications/export,admissions/stats
 Сотрудники|hr.employees.view|employees,departments,positions
 Кадровый календарь|hr.calendar.view|hr/calendar
-Подразделения|hr.departments.manage|departments
-Должности|hr.positions.manage|positions
+Подразделения и должности|hr.employees.view|departments,positions
 Кто в здании|gate.reports|access/muster
 Отчёты проходной|gate.reports|access/reports/summary,access/reports/events
 Корпуса и точки|gate.reports|access/buildings,access/points
-Цифровые пропуска|digitalpasses.manage|digital-identities
+Цифровые пропуска|digitalpasses.manage,view_own_data|digital-identities
 Импорт данных|import.manage|admin/import/config,admin/import/history
 Управление данными|demo_data.manage|admin/demo-data
 Пользователи|users.manage|admin/users,admin/users/roles
@@ -108,10 +110,18 @@ for login in $ACCOUNTS; do
     while IFS='|' read -r section gate endpoints; do
         [[ -z "$section" ]] && continue
 
-        if [[ "$is_admin" != "0" ]] || printf '%s\n' "$held" | grep -qx "$gate"; then
+        expected=deny
+
+        if [[ "$is_admin" != "0" ]]; then
             expected=allow
         else
-            expected=deny
+            IFS=',' read -ra gates <<< "$gate"
+            for one in "${gates[@]}"; do
+                if printf '%s\n' "$held" | grep -qx "$one"; then
+                    expected=allow
+                    break
+                fi
+            done
         fi
 
         IFS=',' read -ra paths <<< "$endpoints"
