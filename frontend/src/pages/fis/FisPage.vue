@@ -271,8 +271,18 @@ const intakeSubtitle = computed(() => {
   if (!value) return "—";
   if (value.kind === "dictionary_list")
     return `${value.dictionaries?.length ?? 0} шт.`;
+  if (value.kind === "institution_export")
+    return `конкурсов в файле: ${value.competitive_groups ?? 0}`;
   return value.dictionary?.name || value.dictionary?.code || "—";
 });
+const intakeKindLabel = computed(
+  () =>
+    ({
+      directions: "Направления подготовки",
+      dictionary_list: "Список справочников",
+      institution_export: "Сведения об организации",
+    })[intake.value?.kind] || "Записи справочника",
+);
 async function previewDictionary() {
   if (!dictionaryFile.value) return;
   await store.previewDictionary(dictionaryFile.value, dictionaryCatalog.value);
@@ -432,12 +442,14 @@ onMounted(async () => {
     <section class="fis-gateway-panel">
       <div class="fis-gateway-panel__header">
         <div>
-          <h2>Справочники ФИС</h2>
+          <h2>Данные из ФИС</h2>
           <p>
-            Ответ метода получения элементов справочника. Справочник направлений
-            подготовки становится специальностями портала, остальные —
-            сопоставлениями с идентификаторами ФИС. Разбор ничего не пишет:
-            запись происходит только по кнопке «Применить».
+            Ответ ФИС: справочник, состав справочника или сведения об
+            организации. Что загрузили — портал определяет сам. Справочник
+            направлений подготовки становится специальностями, остальные —
+            сопоставлениями с идентификаторами ФИС, а конкурсы из сведений об
+            организации связываются с образовательными программами. Разбор
+            ничего не пишет: запись происходит только по кнопке «Применить».
           </p>
         </div>
         <div class="fis-gateway-panel__actions">
@@ -478,17 +490,45 @@ onMounted(async () => {
       </div>
       <div v-if="intake" class="fis-gateway-grid">
         <article class="fis-gateway-card">
-          <span>Справочник</span
+          <span>Загружено</span
+          ><AppStatusBadge :label="intakeKindLabel" tone="info" /><small>{{
+            intakeSubtitle
+          }}</small>
+        </article>
+        <article
+          v-if="intake.kind === 'institution_export'"
+          class="fis-gateway-card"
+        >
+          <span>Конкурсы</span
           ><AppStatusBadge
             :label="
-              intake.kind === 'directions'
-                ? 'Направления подготовки'
-                : intake.kind === 'dictionary_list'
-                  ? 'Список справочников'
-                  : 'Записи справочника'
+              intakeApplied
+                ? `связано ${intake.mapped}`
+                : `свяжется ${intake.will_map?.length ?? 0}`
             "
-            tone="info"
-          /><small>{{ intakeSubtitle }}</small>
+            :tone="intakeApplied ? 'success' : 'warning'"
+          /><small
+            >не связано {{ intake.unlinked?.length ?? 0 }}, требуют выбора
+            {{ intake.ambiguous?.length ?? 0 }}</small
+          >
+        </article>
+        <article
+          v-if="intake.ambiguous?.length"
+          class="fis-gateway-card"
+        >
+          <span>Несколько конкурсов на программу</span
+          ><AppStatusBadge
+            :label="String(intake.ambiguous.length)"
+            tone="warning"
+          /><small
+            >{{
+              intake.ambiguous
+                .slice(0, 3)
+                .map((item) => item.education_program)
+                .join(", ")
+            }}
+            — выберите конкурс вручную</small
+          >
         </article>
         <article v-if="intake.kind === 'directions'" class="fis-gateway-card">
           <span>Специальности</span

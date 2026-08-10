@@ -54,8 +54,15 @@ class InstitutionProgramsWriter
         return ['institution_programs' => $programs->count()];
     }
 
+    /**
+     * Приставка вынесена в константу: по этому же идентификатору сведения об
+     * организации возвращают конкурс обратно, и обе стороны обязаны читать
+     * его одинаково.
+     */
+    public const UID_PREFIX = 'education-program-';
+
     public function uid(EducationProgram $program): string
     {
-        return 'education-program-'.$program->getKey();
+        return self::UID_PREFIX.$program->getKey();
     }
 }

@@ -141,9 +141,26 @@ DictionaryItem → DirectionID, Name, NewCode, QualificationCode?, UGSCode?, UGS
 
 Коды причин: `field_missing`, `field_too_short`, `field_too_long`, `reference_missing`, `no_source_data`, `admission_year_missing`, `person_missing`, `choices_missing`, `competitive_group_missing`, `identity_document_missing`, `education_document_type_unmapped`.
 
+## Загрузка конкурсов из сведений об организации
+
+Конкурсы приходят методами 2.7 и 2.13 — сведения об образовательной организации. Раздел `AdmissionInfo/CompetitiveGroups` в них устроен так же, как в XSD метода импорта:
+
+```
+CompetitiveGroup → UID, CampaignUID, Name, EducationLevelID, EducationSourceID,
+                   EducationFormID, DirectionID?, EduPrograms → EduProgram → UID
+```
+
+**Связь с программой портала читается напрямую, без догадок:** в `EduProgram/UID` стоит тот самый идентификатор, который портал выдаёт в разделе `InstitutionPrograms` — `education-program-{id}`. Приставка вынесена в константу `InstitutionProgramsWriter::UID_PREFIX`, чтобы обе стороны читали её одинаково.
+
+Файл загружается тем же входом, что и справочники (`POST api/fis/dictionaries/preview` и `/apply`): вид документа определяется по содержимому, оператору не нужно помнить, какой метод ответил. Маршрут исторически называется `dictionaries` — переименовывать его дороже, чем оставить.
+
+**Одна программа — один конкурс.** Сопоставление хранит один `CompetitiveGroupUID` на программу. Если в файле у программы несколько конкурсов — бюджет и платное, очное и заочное, — не связывается **ни один**: они возвращаются списком `ambiguous` с названиями, формой обучения и источником финансирования, и выбор делает человек. Угадать здесь — значит подать заявление в чужой конкурс. Разводить конкурсы правильно надо по форме и источнику, которые есть в `ProgramChoice`; для этого конкурсы придётся вести в портале как сущность, и это отдельное решение.
+
+Конкурсы, чьи программы в портале не нашлись, возвращаются списком `unlinked` с причиной.
+
 ## Конкурсные группы
 
-Конкурсы (`CompetitiveGroups`) создаются в самой ФИС. Портал их не ведёт, поэтому связь «образовательная программа → конкурс» хранится в `fis_external_mappings`:
+Связь «образовательная программа → конкурс» хранится в `fis_external_mappings`:
 
 ```
 entity_type    = App\Models\EducationProgram

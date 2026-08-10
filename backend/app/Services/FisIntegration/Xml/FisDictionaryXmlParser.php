@@ -111,8 +111,20 @@ class FisDictionaryXmlParser
         return match ($root) {
             'Dictionaries' => 'dictionary_list',
             'DictionaryData' => 'dictionary_data',
-            default => throw new FisIntegrationException('Не понимаю этот ответ ФИС: корневой элемент «'.$root.'». Ожидались «Dictionaries» или «DictionaryData».'),
+            // Сведения об организации приходят и корнем `InstitutionExport`,
+            // и пакетом `PackageData` — метод получения части сведений по ОО
+            // отдаёт то же наполнение. Опознаём по конкурсам внутри, а не по
+            // имени корня: оператору незачем разбираться, какой метод ответил.
+            'InstitutionExport', 'PackageData', 'Root' => $this->hasCompetitiveGroups($xml)
+                ? 'institution_export'
+                : throw new FisIntegrationException('В сведениях об организации нет раздела «CompetitiveGroups»: конкурсов в файле не оказалось.'),
+            default => throw new FisIntegrationException('Не понимаю этот ответ ФИС: корневой элемент «'.$root.'». Ожидались «Dictionaries», «DictionaryData» или «InstitutionExport».'),
         };
+    }
+
+    private function hasCompetitiveGroups(string $xml): bool
+    {
+        return (new DOMXPath($this->document($xml)))->query('//CompetitiveGroup')->length > 0;
     }
 
     private function rootName(string $xml): string
