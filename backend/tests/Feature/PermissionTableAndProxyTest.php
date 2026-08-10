@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsurePermission;
 use App\Models\EducationProgram;
 use App\Models\Graduate;
 use App\Models\Group;
+use App\Models\Permission;
 use App\Models\Person;
 use App\Models\Role;
 use App\Models\Specialty;
@@ -15,6 +16,7 @@ use App\Services\Import\EmployeeImportHandler;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -26,6 +28,31 @@ use Tests\TestCase;
 class PermissionTableAndProxyTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * Маршруты закрытой части, которым право не нужно.
+     *
+     * Своей учётной записью, своим рабочим столом и своим кабинетом
+     * распоряжается любой вошедший, независимо от роли. Список закрытый: всё
+     * остальное обязано объявить право, иначе тест ниже уронит сборку.
+     *
+     * @var list<string>
+     */
+    private const OPEN_TO_ANY_AUTHENTICATED = [
+        'api/auth/me',
+        'api/auth/logout',
+        'api/account',
+        'api/account/contacts',
+        'api/account/password',
+        'api/account/identities',
+        'api/account/identities/{identity}',
+        'api/mobile/student',
+        'api/dashboard/layouts',
+        'api/dashboard/layouts/reset',
+        'api/dashboard/layouts/{dashboardLayout}',
+        'api/dashboard/layouts/{dashboardLayout}/activate',
+        'api/uat/feedback',
+    ];
 
     private function tokenForRole(string $roleCode): string
     {
@@ -44,62 +71,110 @@ class PermissionTableAndProxyTest extends TestCase
     }
 
     /**
-     * Находка 8, ARCH-001. Право маршрута выводится из префикса URL, и при
-     * промахе молча возвращается reference.manage: законный пользователь
-     * получает необъяснимый отказ, а посторонний с reference.manage проходит.
-     * Так и вышло с фото выпускника — в таблице стоял alumni, а контроллер
-     * принимает graduates.
+     * Находка 8, `ARCH-001`. Право маршрута выводилось из префикса URL, и при
+     * промахе молча возвращалось `reference.manage`: законный пользователь
+     * получал необъяснимый отказ, а посторонний с `reference.manage` проходил.
+     * Так и вышло с фото выпускника — в таблице стояло `alumni`, а контроллер
+     * принимает `graduates`.
      *
-     * Тест держит таблицу полной: новый маршрут в группе manage_dictionaries,
-     * префикс которого сюда не внесли, роняет сборку здесь, а не у пользователя.
+     * Таблицы больше нет, и промахнуться теперь можно только одним способом —
+     * не объявив право вовсе. Тест ловит это здесь, а не у пользователя.
      */
-    public function test_every_dictionary_route_has_a_prefix_in_the_permission_table(): void
+    public function test_every_route_behind_the_token_declares_a_permission(): void
     {
         $missing = [];
 
         foreach (Route::getRoutes() as $route) {
-            if (! in_array('permission:manage_dictionaries', $route->gatherMiddleware(), true)) {
+            if (! in_array('api.token', $route->gatherMiddleware(), true)) {
                 continue;
             }
 
-            foreach ($this->concretePaths($route->uri()) as $path) {
-                $matched = false;
+            if (in_array($route->uri(), self::OPEN_TO_ANY_AUTHENTICATED, true)) {
+                continue;
+            }
 
-                foreach (array_keys(EnsurePermission::DOMAIN_RULES) as $prefix) {
-                    if (str_starts_with($path, $prefix)) {
-                        $matched = true;
-                        break;
-                    }
-                }
-
-                if (! $matched) {
-                    $missing[] = $path;
-                }
+            if ($this->declaredPermissions($route) === []) {
+                $missing[] = $route->methods()[0].' '.$route->uri();
             }
         }
 
         $this->assertSame([], array_values(array_unique($missing)), implode("\n", array_merge(
-            ['Маршруты вне таблицы EnsurePermission::DOMAIN_RULES — они молча получат reference.manage:'],
+            [
+                'Маршруты закрытой части без объявленного права. Либо допишите',
+                '->middleware(\'permission:...\'), либо внесите маршрут в',
+                'OPEN_TO_ANY_AUTHENTICATED, если он и правда открыт каждому вошедшему:',
+            ],
             array_unique($missing),
         )));
     }
 
     /**
-     * Параметры подставляем единицей, а тип фотографии разворачиваем во все три
-     * реальных значения: именно на нём таблица и разъехалась с контроллером.
+     * `ARCH-001`, шаг 3. Право-зонтик открывал роли целую группу маршрутов, не
+     * требуя ни одного конкретного права. Ни один маршрут больше его не
+     * объявляет, и вернуться он не должен: доступ, выданный зонтиком, не виден
+     * ни в матрице разрешений, ни в обходе ролей.
+     */
+    public function test_no_route_declares_a_legacy_umbrella(): void
+    {
+        $offenders = [];
+
+        foreach (Route::getRoutes() as $route) {
+            foreach ($this->declaredPermissions($route) as $permission) {
+                if (in_array($permission, EnsurePermission::LEGACY_UMBRELLAS, true)) {
+                    $offenders[] = $route->methods()[0].' '.$route->uri().' → '.$permission;
+                }
+            }
+        }
+
+        $this->assertSame([], array_values(array_unique($offenders)), implode("\n", array_merge(
+            ['Маршруты объявляют legacy-право-«зонтик» — назовите конкретное право:'],
+            array_unique($offenders),
+        )));
+    }
+
+    /**
+     * Каждое право, названное у маршрута, обязано существовать в каталоге.
+     * Опечатка в `permission:studnets.view` иначе просто закрывает маршрут
+     * всем, кроме администратора, и выглядит как «у роли нет прав».
+     */
+    public function test_every_declared_permission_exists_in_the_catalogue(): void
+    {
+        $this->seed(RoleSeeder::class);
+
+        $known = Permission::query()->pluck('code')->all();
+        $unknown = [];
+
+        foreach (Route::getRoutes() as $route) {
+            foreach ($this->declaredPermissions($route) as $permission) {
+                if (! in_array($permission, $known, true)) {
+                    $unknown[] = $route->methods()[0].' '.$route->uri().' → '.$permission;
+                }
+            }
+        }
+
+        $this->assertSame([], array_values(array_unique($unknown)), implode("\n", array_merge(
+            ['Маршруты требуют прав, которых нет в каталоге `RoleSeeder::permissions()`:'],
+            array_unique($unknown),
+        )));
+    }
+
+    /**
+     * Права, объявленные у маршрута. Проверок может быть несколько, и внутри
+     * каждой альтернативы перечислены через запятую.
      *
      * @return list<string>
      */
-    private function concretePaths(string $uri): array
+    private function declaredPermissions(RoutingRoute $route): array
     {
-        if (str_contains($uri, '{type}')) {
-            return array_map(
-                fn (string $type): string => (string) preg_replace('/\{[^}]+\}/', '1', str_replace('{type}', $type, $uri)),
-                ['students', 'teachers', 'graduates'],
-            );
+        $declared = [];
+
+        foreach ($route->gatherMiddleware() as $middleware) {
+            if (is_string($middleware) && str_starts_with($middleware, 'permission:')) {
+                $declared = [...$declared, ...explode(',', substr($middleware, strlen('permission:')))];
+            }
         }
 
-        return [(string) preg_replace('/\{[^}]+\}/', '1', $uri)];
+        return array_values(array_unique($declared));
     }
 
     /** Находка 8 на живом маршруте: фото выпускника правит тот, у кого graduation.edit. */

@@ -2,63 +2,72 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\EnsurePermission;
+use App\Models\Permission;
 use App\Support\Permissions\PermissionInventory;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * `ARCH-001`, шаг первый: сколько доступа держится на праве-зонтике.
+ * `ARCH-001`: сколько доступа держится на праве-зонтике.
  *
- * Право-зонтик — `manage_dictionaries` и подобные — открывает роли целую
- * группу маршрутов, не требуя ни одного конкретного права. Снять его вслепую
- * нельзя: уточнение таблицы однажды уже сломало массовый экспорт у директора.
- * Поэтому сначала измеряем, а тест сторожит измерение.
+ * Право-зонтик — `manage_dictionaries` и подобные — открывало роли целую группу
+ * маршрутов, не требуя ни одного конкретного права. Шаг 1 это измерил, шаг 2
+ * назвал недостающие права своими именами, шаг 3 объявил право у маршрута и
+ * снял зонтики.
  *
- * **Потолки только опускаются.** Каждый маршрут, получивший своё право,
- * уменьшает число; выросло — значит в группу добавили маршрут, не дав роли
- * конкретного права, и мы снова копим долг вместо того, чтобы его отдавать.
+ * **Потолок опущен до нуля и обратно не поднимается.** Ненулевой замер значит,
+ * что зонтик вернулся: на маршрут, в сидер или в матрицу разрешений.
  */
 class PermissionUmbrellaDependencyTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * Замер от 10.08.2026, после того как роли получили свои права.
-     *
-     * Осталось только то, что владелец решил забрать: у «Учебной части» это
-     * правка справочников (18 маршрутов), раздел администрирования (17) и три
-     * удаления. Когда зонтик снимут, этот доступ и должен пропасть.
-     *
-     * @var array<string, int>
-     */
-    private const CEILING = ['study' => 38];
-
-    public function test_no_role_leans_on_an_umbrella_more_than_it_did(): void
+    public function test_no_role_reaches_anything_through_an_umbrella(): void
     {
         $this->seed(RoleSeeder::class);
 
         $inventory = app(PermissionInventory::class);
-        $counts = [];
-
-        foreach ($inventory->dependentOnUmbrella() as $row) {
-            $counts[$row['role']] = ($counts[$row['role']] ?? 0) + 1;
-        }
 
         // Пустой замер прошёл бы любую проверку ниже, поэтому сначала
         // убеждаемся, что мерить вообще было что.
         $this->assertNotEmpty($inventory->reachable(), 'Замер пуст: роли без прав или маршруты не загрузились.');
 
-        foreach ($counts as $role => $count) {
-            $ceiling = self::CEILING[$role] ?? 0;
+        $leaning = $inventory->dependentOnUmbrella();
 
-            $this->assertLessThanOrEqual(
-                $ceiling,
-                $count,
-                "Роль {$role} опирается на право-зонтик в {$count} местах вместо {$ceiling}: ".
-                'маршрут добавили в группу, не дав роли конкретного права. Посмотрите `php artisan permissions:inventory --umbrella-only`.',
-            );
-        }
+        $this->assertSame([], $leaning, implode("\n", array_merge(
+            ['Роли снова дотягиваются до маршрутов через право-зонтик:'],
+            array_map(
+                fn (array $row): string => $row['role'].' → '.$row['method'].' '.$row['uri'].' ('.implode(', ', $row['umbrella']).')',
+                $leaning,
+            ),
+        )));
+    }
+
+    /**
+     * Зонтик, оставшийся выданным роли, не виден нигде: ни в обходе, ни в
+     * матрице разрешений — маршрутов, которые он открывает, больше нет. Но
+     * стоит вернуть его на маршрут, и доступ откроется молча. Поэтому у ролей
+     * его быть не должно вовсе.
+     */
+    public function test_no_role_holds_a_legacy_umbrella(): void
+    {
+        $this->seed(RoleSeeder::class);
+
+        $held = Permission::query()
+            ->whereIn('code', EnsurePermission::LEGACY_UMBRELLAS)
+            ->with('roles')
+            ->get()
+            ->flatMap(fn (Permission $permission): array => $permission->roles
+                ->map(fn ($role): string => $role->code.' → '.$permission->code)
+                ->all())
+            ->all();
+
+        $this->assertSame([], $held, implode("\n", array_merge(
+            ['Роли держат legacy-право-«зонтик» — выдайте конкретные права вместо него:'],
+            $held,
+        )));
     }
 
     public function test_the_inventory_counts_access_the_same_way_the_middleware_does(): void

@@ -137,7 +137,7 @@ const navGroups = [
       { label: 'Настройки колледжа', to: '/admin/settings', icon: Settings, permission: 'settings.manage' },
       { label: 'Справочники', to: '/admin/reference', icon: Tags, permission: 'reference.manage' },
       { label: 'Импорт данных', to: '/admin/import', icon: FileSpreadsheet, permission: 'import.manage' },
-      { label: 'Управление данными', to: '/admin/data-management', icon: Database, permission: 'import.manage' },
+      { label: 'Управление данными', to: '/admin/data-management', icon: Database, permission: 'demo_data.manage' },
       { label: 'UAT', to: '/admin/uat', icon: MessageSquareWarning, permission: 'uat.manage' },
       { label: 'Библиотека интерфейса', to: '/system/ui-foundation', icon: Settings, adminOnly: true },
     ],

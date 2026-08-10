@@ -7,16 +7,40 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Проверка права, объявленного у маршрута.
+ *
+ * До `ARCH-001`, шага 3, право здесь **выводилось**: из префикса URL и метода
+ * по таблице `DOMAIN_RULES`, а при промахе молча возвращалось
+ * `reference.manage`. Законный пользователь получал необъяснимое «нет прав», а
+ * посторонний с правом на справочники проходил куда угодно. Рядом стояли пять
+ * legacy-прав-«зонтиков», открывавших роли целую группу маршрутов без единого
+ * конкретного права.
+ *
+ * Теперь право написано у маршрута, и здесь не осталось ни таблицы, ни разбора
+ * пути, ни зависимости от метода:
+ *
+ * ```php
+ * Route::get('students', ...)->middleware('permission:students.view');
+ * ```
+ *
+ * Несколько проверок на одном маршруте складываются через **И** — каждая
+ * добавляет требование. Альтернативы внутри одной проверки перечисляются через
+ * запятую и складываются через **ИЛИ**:
+ *
+ * ```php
+ * ->middleware('permission:digitalpasses.manage,view_own_data')
+ * ```
+ */
 class EnsurePermission
 {
     /**
-     * Legacy-права-«зонтики». Каждое покрывает целую группу маршрутов и
-     * подставляется кандидатом наравне с конкретным правом из таблицы,
-     * поэтому роль может проходить куда угодно внутри группы, не имея на это
-     * ни одного конкретного права.
+     * Legacy-права-«зонтики». Ни один маршрут их больше не объявляет, ни одна
+     * роль их больше не держит.
      *
-     * `ARCH-001` про то, чтобы их убрать. Убирать вслепую нельзя: сначала надо
-     * знать, кто на них держится — это считает `permissions:inventory`.
+     * Список оставлен сторожем: `PermissionTableAndProxyTest` роняет сборку,
+     * если зонтик вернётся на маршрут. Без него ошибку заметил бы только
+     * пользователь, у которого внезапно открылось лишнее.
      *
      * @var list<string>
      */
@@ -29,22 +53,20 @@ class EnsurePermission
     ];
 
     /**
-     * Права, любое из которых открывает запрос. Открыто для проверки и учёта:
-     * инвентаризация обязана считать доступ ровно так же, как его считает сам
-     * middleware, иначе она мерит не то.
+     * Право на чтение перекрывается правом на правку: кто может изменить
+     * справочник, тот тем более может его прочитать.
      *
-     * @return list<string>
+     * Без этого перевод чтения на `reference.view` отнял бы чтение у роли,
+     * которой выдали правку, но не выдали просмотр, — например у заведённой
+     * вручную уже после миграции, раздавшей `reference.view`.
+     *
+     * @var array<string, string>
      */
-    public function candidates(Request $request, string $permission): array
-    {
-        return $this->resolvePermissions($request, $permission);
-    }
+    private const COVERED_BY = ['reference.view' => 'reference.manage'];
 
-    public function handle(Request $request, Closure $next, string $permission): Response
+    public function handle(Request $request, Closure $next, string ...$permissions): Response
     {
-        $permissions = $this->resolvePermissions($request, $permission);
-
-        foreach ($permissions as $candidate) {
+        foreach ($this->candidates($permissions) as $candidate) {
             if (Gate::allows('permission', $candidate)) {
                 return $next($request);
             }
@@ -54,197 +76,25 @@ class EnsurePermission
     }
 
     /**
-     * Право на чтение перекрывается правом на правку: кто может изменить
-     * справочник, тот тем более может его прочитать.
+     * Права, любое из которых проходит проверку. Открыто для учёта:
+     * инвентаризация обязана считать доступ ровно так же, как его считает сам
+     * middleware, иначе она мерит не то.
      *
-     * Без этого таблица работала бы в одну сторону. Она только сужает доступ,
-     * и перевод чтения с `reference.manage` на `reference.view` отнял бы
-     * чтение у роли, которой выдали правку, но не выдали просмотр, — например
-     * у заведённой вручную уже после миграции, раздавшей `reference.view`.
-     *
-     * @var array<string, string>
+     * @param  list<string>  $permissions
+     * @return list<string>
      */
-    private const COVERED_BY = ['reference.view' => 'reference.manage'];
-
-    /** @return list<string> */
-    private function resolvePermissions(Request $request, string $permission): array
+    public function candidates(array $permissions): array
     {
-        $path = trim($request->path(), '/');
-        $method = $request->method();
-        $mapped = match ($permission) {
-            'manage_users' => $this->systemPermission($path, $method),
-            'manage_dictionaries' => $this->domainPermission($path, $method),
-            'manage_schedule' => $this->schedulePermission($method),
-            'manage_journal' => $this->journalPermission($path, $method),
-            'view_reports' => $this->reportPermission($path),
-            default => $permission,
-        };
+        $candidates = [];
 
-        if (str_starts_with($path, 'api/digital-identities') && in_array($method, ['GET', 'HEAD'], true)) {
-            return array_values(array_unique(array_filter(['digitalpasses.manage', 'view_own_data', $permission])));
-        }
+        foreach ($permissions as $permission) {
+            $candidates[] = $permission;
 
-        if ($path === 'api/teaching-loads' && in_array($method, ['GET', 'HEAD'], true)) {
-            return array_values(array_unique(array_filter(['teachingload.view', 'view_own_data', $permission])));
-        }
-
-        return array_values(array_unique(array_filter([$mapped, self::COVERED_BY[$mapped] ?? null, $permission])));
-    }
-
-    private function systemPermission(string $path, string $method): string
-    {
-        if (str_starts_with($path, 'api/admin/audit')) {
-            return 'audit.view';
-        }
-        if (str_starts_with($path, 'api/admin/settings')) {
-            return $method === 'GET' ? 'settings.manage' : 'settings.manage';
-        }
-        if (str_starts_with($path, 'api/admin/permissions')) {
-            return 'permissions.manage';
-        }
-        if (str_starts_with($path, 'api/admin/roles')) {
-            return 'roles.manage';
-        }
-        if (str_starts_with($path, 'api/admin/users/roles') || str_starts_with($path, 'api/admin/users/people') || str_starts_with($path, 'api/admin/users')) {
-            return 'users.manage';
-        }
-
-        return 'users.manage';
-    }
-
-    private function reportPermission(string $path): string
-    {
-        if (str_starts_with($path, 'api/attendance')) {
-            return 'attendance.reports';
-        }
-        if (str_starts_with($path, 'api/dashboard/analytics')) {
-            return 'dashboard.view';
-        }
-
-        return 'attendance.reports';
-    }
-
-    private function schedulePermission(string $method): string
-    {
-        return in_array($method, ['GET', 'HEAD'], true) ? 'schedule.view' : 'schedule.update';
-    }
-
-    private function journalPermission(string $path, string $method): string
-    {
-        if (str_contains($path, '/export')) {
-            return 'journal.export';
-        }
-        if (str_starts_with($path, 'api/reports/')) {
-            return in_array($method, ['GET', 'HEAD'], true) ? 'journal.view' : 'journal.export';
-        }
-
-        return in_array($method, ['GET', 'HEAD'], true) ? 'journal.view' : 'journal.edit';
-    }
-
-    /**
-     * Префикс URL — требуемое право по методу: [чтение, создание, изменение, удаление].
-     *
-     * Таблица вынесена в константу, чтобы её полноту можно было проверить тестом:
-     * маршрут, префикс которого сюда не попал, молча получает reference.manage
-     * (см. domainPermission ниже) — законный пользователь получает необъяснимое
-     * «нет прав», а посторонний с reference.manage проходит. Это задача ARCH-001.
-     */
-    public const DOMAIN_RULES = [
-        // Чтение справочников отделено от правки. Справочник — это подписи к
-        // значениям: статусы студентов, формы обучения, типы документов. Роль,
-        // которая видит статус в списке, обязана видеть его и в фильтре, иначе
-        // выпадающий список молча пуст. Правка по-прежнему только у владельца
-        // справочников.
-        'api/admin/reference' => ['reference.view', 'reference.manage', 'reference.manage', 'reference.manage'],
-        'api/admin/import' => ['import.manage', 'import.manage', 'import.manage', 'import.manage'],
-        'api/admin/demo-data' => ['import.manage', 'import.manage', 'import.manage', 'import.manage'],
-        'api/people' => ['people.view', 'people.create', 'people.update', 'people.merge'],
-        'api/person-photos/student' => ['students.view', 'students.update', 'students.update', 'students.update'],
-        'api/person-photos/teacher' => ['teachers.view', 'teachers.update', 'teachers.update', 'teachers.update'],
-        // Контроллер принимает тип graduates, а здесь до 09.08.2026 стояло alumni:
-        // совпадения не было, и фото выпускника требовало reference.manage вместо
-        // graduation.edit. Роль «Учебная часть 2» получала отказ на своей же карточке.
-        'api/person-photos/graduates' => ['graduation.view', 'graduation.edit', 'graduation.edit', 'graduation.edit'],
-        'api/access/scan' => ['gate.scan', 'gate.scan', 'gate.scan', 'gate.scan'],
-        'api/access/events' => ['gate.reports', 'gate.reports', 'gate.reports', 'gate.reports'],
-        'api/access/reports' => ['gate.reports', 'gate.reports', 'gate.reports', 'gate.reports'],
-        // Список эвакуации читают все, кто и так видит отчеты проходной;
-        // справочник корпусов и точек правит только тот, кто им владеет.
-        'api/access/muster' => ['gate.reports', 'gate.reports', 'gate.reports', 'gate.reports'],
-        'api/access/buildings' => ['gate.reports', 'gate.points.manage', 'gate.points.manage', 'gate.points.manage'],
-        'api/access/points' => ['gate.reports', 'gate.points.manage', 'gate.points.manage', 'gate.points.manage'],
-        'api/digital-identities' => ['digitalpasses.manage', 'digitalpasses.manage', 'digitalpasses.manage', 'digitalpasses.manage'],
-        // Массовые операции проверяют право на каждое действие сами
-        // (AdmissionBulkController::authorizeAction, StudentBulkController тоже),
-        // поэтому на входе достаточно права просмотра: иначе директор с
-        // admissions.bulk_export не смог бы выгрузить выборку, которую видит.
-        'api/admissions/bulk' => ['admissions.view', 'admissions.view', 'admissions.view', 'admissions.view'],
-        'api/applicant-applications/bulk' => ['admissions.view', 'admissions.view', 'admissions.view', 'admissions.view'],
-        'api/applicant-applications' => ['admissions.view', 'admissions.edit', 'admissions.edit', 'admissions.edit'],
-        'api/admissions' => ['admissions.view', 'admissions.edit', 'admissions.edit', 'admissions.edit'],
-        'api/curriculum-items' => ['curricula.view', 'curricula.edit', 'curricula.edit', 'curricula.edit'],
-        'api/curriculum-subjects' => ['curricula.subjects.view', 'curricula.subjects.create', 'curricula.subjects.update', 'curricula.subjects.delete'],
-        'api/curricula' => ['curricula.view', 'curricula.edit', 'curricula.edit', 'curricula.edit'],
-        // Программы и специальности читают все, кто ведёт группы и выпуск:
-        // без них не собрать ни группу, ни пакет ФРДО. Правит их по-прежнему
-        // владелец справочников.
-        'api/education-programs' => ['reference.view', 'reference.manage', 'reference.manage', 'reference.manage'],
-        'api/exam-results' => ['exams.view', 'exams.edit', 'exams.edit', 'exams.edit'],
-        'api/exams' => ['exams.view', 'exams.edit', 'exams.edit', 'exams.edit'],
-        'api/frdo-packages' => ['frdo.view', 'frdo.export', 'frdo.export', 'frdo.export'],
-        'api/fis/outbound' => ['fis.outbound.view', 'fis.outbound.create', 'fis.outbound.generate', 'fis.outbound.generate'],
-        // Приём справочников ФИС: без своей строки префикс молча получил бы
-        // reference.manage.
-        'api/fis/dictionaries' => ['fis.outbound.view', 'fis.outbound.view', 'fis.settings.manage', 'fis.settings.manage'],
-        'api/fis-packages' => ['fis.view', 'fis.export', 'fis.export', 'fis.export'],
-        'api/groups' => ['groups.view', 'groups.create', 'groups.update', 'groups.delete'],
-        'api/graduates' => ['graduation.view', 'graduation.edit', 'graduation.edit', 'graduation.edit'],
-        'api/specialties' => ['reference.view', 'reference.manage', 'reference.manage', 'reference.manage'],
-        'api/students' => ['students.view', 'students.create', 'students.update', 'students.delete'],
-        'api/subjects' => ['subjects.view', 'subjects.create', 'subjects.update', 'subjects.delete'],
-        'api/teaching-load-items' => ['teachingload.view', 'teachingload.edit', 'teachingload.edit', 'teachingload.edit'],
-        'api/teaching-loads' => ['teachingload.view', 'teachingload.edit', 'teachingload.edit', 'teachingload.edit'],
-        'api/teaching-load' => ['teachingload.view', 'teaching_load.generate', 'teaching_load.assign', 'teaching_load.assign'],
-        'api/teachers' => ['teachers.view', 'teachers.create', 'teachers.update', 'teachers.delete'],
-        'api/classrooms' => ['classrooms.view', 'classrooms.create', 'classrooms.update', 'classrooms.delete'],
-    ];
-
-    private function domainPermission(string $path, string $method): string
-    {
-        foreach (self::DOMAIN_RULES as $prefix => $permissions) {
-            if (str_starts_with($path, $prefix)) {
-                return $this->methodPermission($method, $path, $permissions);
+            if (isset(self::COVERED_BY[$permission])) {
+                $candidates[] = self::COVERED_BY[$permission];
             }
         }
 
-        return 'reference.manage';
-    }
-
-    /** @param array{0:string,1:string,2:string,3:string} $permissions */
-    private function methodPermission(string $method, string $path, array $permissions): string
-    {
-        if ($method === 'GET' || $method === 'HEAD') {
-            if (str_contains($path, '/export') || str_contains($path, 'export.')) {
-                return $permissions[2];
-            }
-            return $permissions[0];
-        }
-
-        if ($method === 'POST') {
-            if (str_contains($path, '/import') || str_contains($path, '/validate') || str_contains($path, '/mark-exported') || str_contains($path, '/archive') || str_contains($path, '/enroll') || str_contains($path, '/items') || str_contains($path, '/results') || str_contains($path, '/diploma') || str_contains($path, '/supplement')) {
-                return $permissions[2];
-            }
-            return $permissions[1];
-        }
-
-        if (in_array($method, ['PUT', 'PATCH'], true)) {
-            return $permissions[2];
-        }
-
-        if ($method === 'DELETE') {
-            return $permissions[3];
-        }
-
-        return $permissions[0];
+        return array_values(array_unique(array_filter($candidates)));
     }
 }

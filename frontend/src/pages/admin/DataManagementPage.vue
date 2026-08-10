@@ -17,7 +17,7 @@ import { usePermissions } from '../../composables/usePermissions'
 const store = useDemoDataStore()
 const backups = useDatabaseBackupsStore()
 const permissions = usePermissions()
-const canManage = computed(() => permissions.hasPermission('import.manage'))
+const canManage = computed(() => permissions.hasPermission('demo_data.manage'))
 const canManageBackups = computed(() => permissions.hasPermission('settings.manage'))
 const $q = useQuasar()
 const importFile = ref(null)

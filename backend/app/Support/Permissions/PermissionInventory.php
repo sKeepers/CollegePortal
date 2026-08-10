@@ -4,7 +4,6 @@ namespace App\Support\Permissions;
 
 use App\Http\Middleware\EnsurePermission;
 use App\Models\Role;
-use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
 
@@ -112,16 +111,16 @@ class PermissionInventory
 
     /**
      * Для каждой проверки права на маршруте — список прав, любое из которых
-     * её проходит. Проверок может быть несколько, и они складываются через И.
+     * её проходит. Проверок может быть несколько, и они складываются через И;
+     * альтернативы внутри одной перечислены через запятую и складываются
+     * через ИЛИ.
      *
      * @return list<list<string>>
      */
     private function checksFor(RoutingRoute $route): array
     {
-        $request = Request::create('/'.$this->concreteUri($route), $route->methods()[0]);
-
         return array_map(
-            fn (string $permission): array => $this->middleware->candidates($request, $permission),
+            fn (string $spec): array => $this->middleware->candidates(explode(',', $spec)),
             $this->permissionMiddleware($route),
         );
     }
@@ -138,12 +137,6 @@ class PermissionInventory
         }
 
         return $found;
-    }
-
-    /** Параметры пути подменяются единицей: таблица смотрит на префикс, не на значение. */
-    private function concreteUri(RoutingRoute $route): string
-    {
-        return (string) preg_replace('/\{[^}]+\}/', '1', $route->uri());
     }
 
     /** @return array<string, list<string>> */

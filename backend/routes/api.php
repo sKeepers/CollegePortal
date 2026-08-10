@@ -181,7 +181,14 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     Route::post('people', [PersonController::class, 'store'])->middleware('permission:people.create');
     Route::patch('people/{person}', [PersonController::class, 'update'])->middleware('permission:people.update');
 
-    Route::middleware('permission:view_reports')->group(function (): void {
+    // Управленческая сводка и отчёты посещаемости.
+    //
+    // До 10.08.2026 группа стояла под правом-зонтиком `view_reports`, а
+    // требуемое право выводилось из префикса: для сводки получалось
+    // `dashboard.view` — то самое, что есть у каждого вошедшего. Проверено на
+    // стенде: студент и преподаватель открывали управленческую сводку. Владелец
+    // решил закрыть её тем же правом, что и соседние отчёты.
+    Route::middleware('permission:attendance.reports')->group(function (): void {
         Route::get('dashboard/analytics/executive', [DashboardAnalyticsController::class, 'executive']);
         Route::get('attendance/teachers/today', [AttendanceAnalysisController::class, 'teachersToday']);
         Route::get('attendance/students/today', [AttendanceAnalysisController::class, 'studentsToday']);
@@ -334,20 +341,28 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     Route::delete('trash/{type}/{id}', [DeletionRequestController::class, 'purge'])
         ->middleware('permission:trash.manage');
 
-    Route::middleware('permission:manage_users')->group(function (): void {
+    Route::middleware('permission:audit.view')->group(function (): void {
         Route::get('admin/audit', [AuditLogController::class, 'index']);
-        Route::get('admin/settings', [AdminSettingController::class, 'index']);
-        Route::put('admin/settings', [AdminSettingController::class, 'update']);
         Route::get('admin/audit/{auditLog}', [AuditLogController::class, 'show']);
+    });
+
+    Route::middleware('permission:permissions.manage')->group(function (): void {
         Route::apiResource('admin/permissions', AdminPermissionController::class)->except(['show']);
         Route::post('admin/permissions/{permission}/roles', [AdminPermissionController::class, 'assignRoles']);
         Route::get('admin/permissions/roles/list', [AdminPermissionController::class, 'roles']);
+    });
+
+    Route::middleware('permission:roles.manage')->group(function (): void {
         Route::apiResource('admin/roles', AdminRoleController::class)->except(['show']);
+    });
+
+    Route::middleware('permission:users.manage')->group(function (): void {
+        // Строго до apiResource: иначе {user} перехватит слова roles и people.
         Route::get('admin/users/roles', [AdminUserController::class, 'roles']);
         Route::get('admin/users/people', [AdminUserController::class, 'people']);
         Route::post('admin/users/{user}/roles', [AdminUserController::class, 'assignRoles']);
-        // Внутри группы `manage_users` намеренно: отдельного права не заводится,
-        // чтобы не трогать таблицу прав, которую сейчас переписывает ARCH-001.
+        // Отвязка чужого способа входа — работа с учётной записью, поэтому
+        // право то же. Своего права `AUTH-005` намеренно не заводила.
         Route::get('admin/users/{user}/identities', [AdminUserIdentityController::class, 'index']);
         Route::delete('admin/users/{user}/identities/{identity}', [AdminUserIdentityController::class, 'destroy']);
         Route::post('admin/users/{user}/block', [AdminUserController::class, 'block']);
@@ -356,14 +371,36 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     });
 
     Route::middleware('permission:settings.manage')->group(function (): void {
+        Route::get('admin/settings', [AdminSettingController::class, 'index']);
+        Route::put('admin/settings', [AdminSettingController::class, 'update']);
         Route::get('admin/database-backups', [DatabaseBackupController::class, 'index']);
         Route::post('admin/database-backups', [DatabaseBackupController::class, 'store']);
         Route::post('admin/database-backups/{snapshot}/restore', [DatabaseBackupController::class, 'restore']);
     });
 
-    Route::middleware('permission:manage_dictionaries')->group(function (): void {
-        Route::apiResource('admin/reference/catalogs', ReferenceCatalogController::class)->parameters(['catalogs' => 'catalog'])->except(['show']);
-        Route::apiResource('admin/reference/items', ReferenceItemController::class)->parameters(['items' => 'item'])->except(['show']);
+    // Ниже — то, что до 10.08.2026 лежало под правом-зонтиком
+    // `manage_dictionaries`, а требуемое право выводилось из префикса URL и
+    // метода по таблице `EnsurePermission::DOMAIN_RULES`. Таблицы больше нет:
+    // право написано у маршрута.
+    //
+    // Правило переноса было одно — дословность: право взято у того же кода,
+    // который вычислял его раньше. Где на маршруте уже стояло собственное
+    // право, выведенное сохранено рядом: две проверки складываются через И, и
+    // отбросить внешнюю значило бы расширить доступ.
+
+    // Справочники: перечни подписей. Читает тот, кто видит их в фильтрах,
+    // правит владелец справочников.
+    Route::apiResource('admin/reference/catalogs', ReferenceCatalogController::class)
+        ->parameters(['catalogs' => 'catalog'])->except(['show'])
+        ->middlewareFor('index', 'permission:reference.view')
+        ->middlewareFor(['store', 'update', 'destroy'], 'permission:reference.manage');
+    Route::apiResource('admin/reference/items', ReferenceItemController::class)
+        ->parameters(['items' => 'item'])->except(['show'])
+        ->middlewareFor('index', 'permission:reference.view')
+        ->middlewareFor(['store', 'update', 'destroy'], 'permission:reference.manage');
+
+    // Загрузка данных из файлов.
+    Route::middleware('permission:import.manage')->group(function (): void {
         Route::get('admin/import/config', [UniversalImportController::class, 'config']);
         Route::get('admin/import/history', [UniversalImportController::class, 'history']);
         Route::get('admin/import/templates/{dataType}.csv', [UniversalImportController::class, 'template']);
@@ -375,139 +412,259 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         Route::post('admin/import/preview', [UniversalImportController::class, 'preview']);
         Route::post('admin/import/{importJob}/validate', [UniversalImportController::class, 'validateJob']);
         Route::post('admin/import/{importJob}/confirm', [UniversalImportController::class, 'confirm']);
+    });
+
+    // Разведено с импортом 10.08.2026. `import.manage` открывало и загрузку
+    // файлов, и очистку рабочих данных стенда — «загрузить студентов» и
+    // «стереть базу» под одним ключом. Теперь очистка отдельно и только у
+    // администратора.
+    Route::middleware('permission:demo_data.manage')->group(function (): void {
         Route::get('admin/demo-data', [DemoDataController::class, 'status']);
         Route::post('admin/demo-data/create', [DemoDataController::class, 'create']);
         Route::post('admin/demo-data/clear', [DemoDataController::class, 'clear']);
         Route::post('admin/demo-data/reset', [DemoDataController::class, 'reset']);
         Route::post('admin/demo-data/import', [DemoDataController::class, 'import']);
         Route::get('admin/demo-data/export', [DemoDataController::class, 'export']);
-        Route::post('person-photos/{type}/{id}', [PersonPhotoController::class, 'store']);
-        Route::delete('person-photos/{type}/{id}', [PersonPhotoController::class, 'destroy']);
-        Route::get('classrooms/export', [ClassroomController::class, 'export']);
-        Route::post('classrooms/import', [ClassroomController::class, 'import']);
-        Route::apiResource('classrooms', ClassroomController::class);
+    });
+
+    // Фото человека правит тот, кто ведёт его карточку, поэтому право зависит
+    // от типа. Раньше тип был параметром, право выводилось из префикса URL, и
+    // промах по одному типу отнимал у роли её собственную карточку: в таблице
+    // стояло `alumni`, а контроллер принимает `graduates`.
+    //
+    // Тип вынесен в путь, а не оставлен параметром с ограничением: маршруты с
+    // одинаковым URI перекрывают друг друга в коллекции, и выжил бы только
+    // последний из трёх. В контроллер тип приходит через `defaults`.
+    foreach (['students' => 'students.update', 'teachers' => 'teachers.update', 'graduates' => 'graduation.edit'] as $photoType => $photoPermission) {
+        Route::post('person-photos/'.$photoType.'/{id}', [PersonPhotoController::class, 'store'])
+            ->defaults('type', $photoType)->middleware('permission:'.$photoPermission);
+        Route::delete('person-photos/'.$photoType.'/{id}', [PersonPhotoController::class, 'destroy'])
+            ->defaults('type', $photoType)->middleware('permission:'.$photoPermission);
+    }
+
+    // Аудитории. Выгрузка отдана праву на просмотр — решение владельца
+    // 10.08.2026: кто видит список на экране, тот может сохранить его в файл.
+    Route::get('classrooms/export', [ClassroomController::class, 'export'])->middleware('permission:classrooms.view');
+    Route::post('classrooms/import', [ClassroomController::class, 'import'])->middleware('permission:classrooms.update');
+    Route::apiResource('classrooms', ClassroomController::class)
+        ->middlewareFor(['index', 'show'], 'permission:classrooms.view')
+        ->middlewareFor('store', 'permission:classrooms.create')
+        ->middlewareFor('update', 'permission:classrooms.update')
+        ->middlewareFor('destroy', 'permission:classrooms.delete');
+
+    // Проходная. Отчёты читает тот, кто и так их видит; справочник корпусов и
+    // точек правит только его владелец.
+    Route::post('access/scan', [AccessGateController::class, 'scan'])->middleware('permission:gate.scan');
+    Route::middleware('permission:gate.reports')->group(function (): void {
         Route::get('access/events', [AccessGateController::class, 'events']);
-        Route::post('access/scan', [AccessGateController::class, 'scan']);
         Route::get('access/reports/summary', [AccessReportController::class, 'summary']);
         Route::get('access/reports/events', [AccessReportController::class, 'events']);
         Route::get('access/muster', [AccessReportController::class, 'muster']);
         Route::get('access/buildings', [BuildingController::class, 'index']);
+        Route::get('access/points', [AccessPointController::class, 'index']);
+    });
+    Route::middleware('permission:gate.points.manage')->group(function (): void {
         Route::post('access/buildings', [BuildingController::class, 'store']);
         Route::put('access/buildings/{building}', [BuildingController::class, 'update']);
         Route::delete('access/buildings/{building}', [BuildingController::class, 'destroy']);
-        Route::get('access/points', [AccessPointController::class, 'index']);
         Route::post('access/points', [AccessPointController::class, 'store']);
         Route::put('access/points/{access_point}', [AccessPointController::class, 'update']);
         Route::delete('access/points/{access_point}', [AccessPointController::class, 'destroy']);
-        Route::get('digital-identities', [DigitalIdentityController::class, 'index']);
-        Route::post('digital-identities/issue', [DigitalIdentityController::class, 'issue']);
-        Route::post('digital-identities/{digitalIdentity}/revoke', [DigitalIdentityController::class, 'revoke']);
-        Route::get('digital-identities/{digitalIdentity}/qr', [DigitalIdentityController::class, 'qr']);
-        Route::get('admissions/{applicantApplication}/documents', [ApplicantDocumentController::class, 'index'])->middleware('permission:admissions.documents.view');
-        Route::post('admissions/{applicantApplication}/documents/{type}/receive', [ApplicantDocumentController::class, 'receive'])->middleware('permission:admissions.documents.receive');
-        Route::post('admissions/{applicantApplication}/documents/{type}/upload', [ApplicantDocumentController::class, 'upload'])->middleware('permission:admissions.documents.upload');
-        Route::post('admissions/{applicantApplication}/documents/{document}/verify', [ApplicantDocumentController::class, 'verify'])->middleware('permission:admissions.documents.verify');
-        Route::post('admissions/{applicantApplication}/documents/{document}/reject', [ApplicantDocumentController::class, 'reject'])->middleware('permission:admissions.documents.reject');
-        Route::put('admissions/{applicantApplication}/documents/{document}', [ApplicantDocumentController::class, 'update'])->middleware('permission:admissions.documents.receive');
-        Route::delete('admissions/{applicantApplication}/documents/{document}', [ApplicantDocumentController::class, 'destroy'])->middleware('permission:admissions.documents.delete');
-        Route::get('admissions/{applicantApplication}/documents/{document}/files/{file}/download', [ApplicantDocumentController::class, 'download'])->middleware('permission:admissions.documents.download');
-        Route::delete('admissions/{applicantApplication}/documents/{document}/files/{file}', [ApplicantDocumentController::class, 'destroyFile'])->middleware('permission:admissions.documents.delete');
-        Route::get('admissions/stats', [ApplicantApplicationController::class, 'stats']);
-        Route::get('applicant-applications/stats', [ApplicantApplicationController::class, 'stats']);
-        Route::post('admissions/bulk/preview', [AdmissionBulkController::class, 'preview']);
-        Route::post('admissions/bulk/apply', [AdmissionBulkController::class, 'apply']);
-        Route::post('applicant-applications/bulk/preview', [AdmissionBulkController::class, 'preview']);
-        Route::post('applicant-applications/bulk/apply', [AdmissionBulkController::class, 'apply']);
-        Route::get('applicant-applications/export', [ApplicantApplicationController::class, 'export']);
-        Route::post('applicant-applications/import', [ApplicantApplicationController::class, 'import']);
-        Route::post('applicant-applications/{applicantApplication}/enroll', [ApplicantApplicationController::class, 'enroll']);
-        Route::patch('applicant-applications/{applicantApplication}/documents/{type}', [ApplicantApplicationController::class, 'updateDocument']);
-        Route::apiResource('applicant-applications', ApplicantApplicationController::class);
-        Route::get('curricula/export', [CurriculumController::class, 'export']);
-        Route::post('curricula/import', [CurriculumController::class, 'import']);
-        Route::get('curricula/{curriculum}/subjects', [CurriculumController::class, 'subjects'])->middleware('permission:curricula.subjects.view');
-        Route::get('curricula/{curriculum}/semesters', [CurriculumController::class, 'semesters'])->middleware('permission:curricula.subjects.view');
-        Route::get('curricula/{curriculum}/summary', [CurriculumController::class, 'summary'])->middleware('permission:curricula.subjects.view');
-        Route::post('curricula/{curriculum}/subjects', [CurriculumController::class, 'storeSubject'])->middleware('permission:curricula.subjects.create');
-        Route::put('curriculum-subjects/{curriculumSubject}', [CurriculumController::class, 'updateSubject'])->middleware('permission:curricula.subjects.update');
-        Route::delete('curriculum-subjects/{curriculumSubject}', [CurriculumController::class, 'destroySubject'])->middleware('permission:curricula.subjects.delete');
-        Route::post('curricula/{curriculum}/items', [CurriculumController::class, 'storeItem']);
-        Route::delete('curriculum-items/{curriculumItem}', [CurriculumController::class, 'destroyItem']);
-        Route::apiResource('curricula', CurriculumController::class);
-        Route::get('education-programs/export', [EducationProgramController::class, 'export']);
-        Route::post('education-programs/import', [EducationProgramController::class, 'import']);
-        Route::apiResource('education-programs', EducationProgramController::class);
-        Route::get('exams/export', [ExamController::class, 'export']);
-        Route::post('exams/import', [ExamController::class, 'import']);
-        Route::post('exams/{exam}/results', [ExamController::class, 'storeResult']);
-        Route::delete('exam-results/{examResult}', [ExamController::class, 'destroyResult']);
-        Route::apiResource('exams', ExamController::class);
-        Route::get('groups/export', [GroupController::class, 'export']);
-        Route::post('groups/import', [GroupController::class, 'import']);
-        Route::apiResource('groups', GroupController::class);
-        Route::get('graduates/export', [GraduateController::class, 'export']);
-        Route::post('graduates/import', [GraduateController::class, 'import']);
-        Route::post('graduates/{graduate}/diploma', [GraduateController::class, 'storeDiploma']);
-        Route::post('graduates/{graduate}/supplement', [GraduateController::class, 'storeSupplement']);
-        Route::apiResource('graduates', GraduateController::class);
-        Route::post('frdo-packages/{frdoPackage}/validate', [FrdoPackageController::class, 'validatePackage']);
-        Route::post('frdo-packages/{frdoPackage}/mark-exported', [FrdoPackageController::class, 'markExported']);
-        Route::post('frdo-packages/{frdoPackage}/archive', [FrdoPackageController::class, 'archive']);
-        Route::get('frdo-packages/{frdoPackage}/export.csv', [FrdoPackageController::class, 'exportCsv']);
-        Route::get('frdo-packages/{frdoPackage}/export.json', [FrdoPackageController::class, 'exportJson']);
-        Route::apiResource('frdo-packages', FrdoPackageController::class)->only(['index', 'store', 'show']);
-        Route::post('fis/dictionaries/preview', [FisDictionaryIntakeController::class, 'preview'])->middleware('permission:fis.outbound.view');
-        Route::post('fis/dictionaries/apply', [FisDictionaryIntakeController::class, 'apply'])->middleware('permission:fis.settings.manage');
-        Route::get('fis/outbound/spec-info', [FisOutboundPackageController::class, 'specInfo'])->middleware('permission:fis.outbound.view');
-        Route::get('fis/outbound/gateway/health', [FisOutboundPackageController::class, 'gatewayHealth'])->middleware('permission:fis.outbound.view');
-        Route::get('fis/outbound/gateway/version', [FisOutboundPackageController::class, 'gatewayVersion'])->middleware('permission:fis.outbound.view');
-        Route::post('fis/outbound/gateway/zkspd-check', [FisOutboundPackageController::class, 'gatewayZkspdCheck'])->middleware('permission:fis.outbound.view');
-        Route::post('fis/outbound/gateway/dictionaries/list', [FisOutboundPackageController::class, 'gatewayDictionariesList'])->middleware('permission:fis.outbound.view');
-        Route::post('fis/outbound/gateway/dictionaries/details', [FisOutboundPackageController::class, 'gatewayDictionaryDetails'])->middleware('permission:fis.outbound.view');
-        Route::post('fis/outbound/gateway/institution/info', [FisOutboundPackageController::class, 'gatewayInstitutionInfo'])->middleware('permission:fis.outbound.view');
-        Route::post('fis/outbound/gateway/check-application', [FisOutboundPackageController::class, 'gatewayTestCheckApplication'])->middleware('permission:fis.outbound.view');
-        Route::get('fis/outbound/packages', [FisOutboundPackageController::class, 'index'])->middleware('permission:fis.outbound.view');
-        Route::post('fis/outbound/packages', [FisOutboundPackageController::class, 'store'])->middleware('permission:fis.outbound.create');
-        Route::get('fis/outbound/packages/{package}', [FisOutboundPackageController::class, 'show'])->middleware('permission:fis.outbound.view');
-        Route::post('fis/outbound/packages/{package}/generate', [FisOutboundPackageController::class, 'generate'])->middleware('permission:fis.outbound.generate');
-        Route::post('fis/outbound/packages/{package}/validate', [FisOutboundPackageController::class, 'validatePackage'])->middleware('permission:fis.outbound.validate');
-        Route::post('fis/outbound/packages/{package}/send-preview', [FisOutboundPackageController::class, 'sendPreview'])->middleware('permission:fis.outbound.send_test');
-        Route::post('fis/outbound/packages/{package}/send', [FisOutboundPackageController::class, 'send'])->middleware('permission:fis.outbound.send_test');
-        Route::post('fis/outbound/packages/{package}/refresh-status', [FisOutboundPackageController::class, 'refreshStatus'])->middleware('permission:fis.outbound.status');
-        Route::post('fis/outbound/packages/{package}/cancel', [FisOutboundPackageController::class, 'cancel'])->middleware('permission:fis.outbound.generate');
-        Route::get('fis/outbound/packages/{package}/events', [FisOutboundPackageController::class, 'events'])->middleware('permission:fis.outbound.view');
-        Route::get('fis/outbound/packages/{package}/download', [FisOutboundPackageController::class, 'download'])->middleware('permission:fis.outbound.download');
-        Route::post('fis-packages/{fisPackage}/validate', [FisPackageController::class, 'validatePackage']);
-        Route::post('fis-packages/{fisPackage}/mark-exported', [FisPackageController::class, 'markExported']);
-        Route::post('fis-packages/{fisPackage}/archive', [FisPackageController::class, 'archive']);
-        Route::get('fis-packages/{fisPackage}/export.csv', [FisPackageController::class, 'exportCsv']);
-        Route::get('fis-packages/{fisPackage}/export.json', [FisPackageController::class, 'exportJson']);
-        Route::apiResource('fis-packages', FisPackageController::class)->only(['index', 'store', 'show']);
-        Route::get('specialties/export', [SpecialtyController::class, 'export']);
-        Route::post('specialties/import', [SpecialtyController::class, 'import']);
-        Route::apiResource('specialties', SpecialtyController::class);
-        Route::post('students/bulk/preview', [StudentBulkController::class, 'preview']);
-        Route::post('students/bulk/apply', [StudentBulkController::class, 'apply']);
-        Route::get('students/export', [StudentController::class, 'export']);
-        Route::post('students/import', [StudentController::class, 'import']);
-        Route::apiResource('students', StudentController::class);
-        Route::get('subjects/export', [SubjectController::class, 'export']);
-        Route::post('subjects/import', [SubjectController::class, 'import']);
-        Route::apiResource('subjects', SubjectController::class);
-        Route::post('teaching-load/generate/preview', [TeachingLoadController::class, 'generatePreview'])->middleware('permission:teaching_load.generate');
-        Route::post('teaching-load/generate/apply', [TeachingLoadController::class, 'generateApply'])->middleware('permission:teaching_load.generate');
-        Route::get('teaching-load/{teachingLoad}/coverage', [TeachingLoadController::class, 'coverage'])->middleware('permission:teaching_load.view_coverage');
-        Route::post('teaching-load/items/{teachingLoadItem}/assign-teacher', [TeachingLoadController::class, 'assignTeacher'])->middleware('permission:teaching_load.assign');
-        Route::post('teaching-load/items/bulk-assign-teacher', [TeachingLoadController::class, 'bulkAssignTeacher'])->middleware('permission:teaching_load.bulk_assign');
-        Route::get('teaching-loads/export', [TeachingLoadController::class, 'export']);
-        Route::post('teaching-loads/import', [TeachingLoadController::class, 'import']);
-        Route::post('teaching-loads/{teachingLoad}/items', [TeachingLoadController::class, 'storeItem']);
-        Route::delete('teaching-load-items/{teachingLoadItem}', [TeachingLoadController::class, 'destroyItem']);
-        Route::apiResource('teaching-loads', TeachingLoadController::class);
-        Route::get('teachers/export', [TeacherController::class, 'export']);
-        Route::post('teachers/import', [TeacherController::class, 'import']);
-        Route::apiResource('teachers', TeacherController::class);
     });
+
+    // Цифровые пропуска. Список и свой QR открыты ещё и по `view_own_data`:
+    // человек видит собственный пропуск, не имея права на чужие. Пустой профиль
+    // даёт пустой список, а не отказ, — это забота `DigitalIdentityController`.
+    Route::get('digital-identities', [DigitalIdentityController::class, 'index'])
+        ->middleware('permission:digitalpasses.manage,view_own_data');
+    Route::get('digital-identities/{digitalIdentity}/qr', [DigitalIdentityController::class, 'qr'])
+        ->middleware('permission:digitalpasses.manage,view_own_data');
+    Route::post('digital-identities/issue', [DigitalIdentityController::class, 'issue'])
+        ->middleware('permission:digitalpasses.manage');
+    Route::post('digital-identities/{digitalIdentity}/revoke', [DigitalIdentityController::class, 'revoke'])
+        ->middleware('permission:digitalpasses.manage');
+
+    // Документы заявления. Второе право сохранено намеренно: работать с
+    // документами может тот, кто видит и ведёт сами заявления.
+    Route::get('admissions/{applicantApplication}/documents', [ApplicantDocumentController::class, 'index'])->middleware(['permission:admissions.view', 'permission:admissions.documents.view']);
+    Route::post('admissions/{applicantApplication}/documents/{type}/receive', [ApplicantDocumentController::class, 'receive'])->middleware(['permission:admissions.edit', 'permission:admissions.documents.receive']);
+    Route::post('admissions/{applicantApplication}/documents/{type}/upload', [ApplicantDocumentController::class, 'upload'])->middleware(['permission:admissions.edit', 'permission:admissions.documents.upload']);
+    Route::post('admissions/{applicantApplication}/documents/{document}/verify', [ApplicantDocumentController::class, 'verify'])->middleware(['permission:admissions.edit', 'permission:admissions.documents.verify']);
+    Route::post('admissions/{applicantApplication}/documents/{document}/reject', [ApplicantDocumentController::class, 'reject'])->middleware(['permission:admissions.edit', 'permission:admissions.documents.reject']);
+    Route::put('admissions/{applicantApplication}/documents/{document}', [ApplicantDocumentController::class, 'update'])->middleware(['permission:admissions.edit', 'permission:admissions.documents.receive']);
+    Route::delete('admissions/{applicantApplication}/documents/{document}', [ApplicantDocumentController::class, 'destroy'])->middleware(['permission:admissions.edit', 'permission:admissions.documents.delete']);
+    Route::get('admissions/{applicantApplication}/documents/{document}/files/{file}/download', [ApplicantDocumentController::class, 'download'])->middleware(['permission:admissions.view', 'permission:admissions.documents.download']);
+    Route::delete('admissions/{applicantApplication}/documents/{document}/files/{file}', [ApplicantDocumentController::class, 'destroyFile'])->middleware(['permission:admissions.edit', 'permission:admissions.documents.delete']);
+
+    // Приёмная комиссия. Массовые операции проверяют право на каждое действие
+    // внутри `AdmissionBulkController::authorizeAction`, поэтому на входе стоит
+    // право просмотра: иначе директор с `admissions.bulk_export` не смог бы
+    // выгрузить выборку, которую видит. Уточнение таблицы однажды это уже
+    // ломало.
+    Route::get('admissions/stats', [ApplicantApplicationController::class, 'stats'])->middleware('permission:admissions.view');
+    Route::get('applicant-applications/stats', [ApplicantApplicationController::class, 'stats'])->middleware('permission:admissions.view');
+    Route::post('admissions/bulk/preview', [AdmissionBulkController::class, 'preview'])->middleware('permission:admissions.view');
+    Route::post('admissions/bulk/apply', [AdmissionBulkController::class, 'apply'])->middleware('permission:admissions.view');
+    Route::post('applicant-applications/bulk/preview', [AdmissionBulkController::class, 'preview'])->middleware('permission:admissions.view');
+    Route::post('applicant-applications/bulk/apply', [AdmissionBulkController::class, 'apply'])->middleware('permission:admissions.view');
+    Route::get('applicant-applications/export', [ApplicantApplicationController::class, 'export'])->middleware('permission:admissions.view');
+    Route::post('applicant-applications/import', [ApplicantApplicationController::class, 'import'])->middleware('permission:admissions.edit');
+    Route::post('applicant-applications/{applicantApplication}/enroll', [ApplicantApplicationController::class, 'enroll'])->middleware('permission:admissions.edit');
+    Route::patch('applicant-applications/{applicantApplication}/documents/{type}', [ApplicantApplicationController::class, 'updateDocument'])->middleware('permission:admissions.edit');
+    Route::apiResource('applicant-applications', ApplicantApplicationController::class)
+        ->middlewareFor(['index', 'show'], 'permission:admissions.view')
+        ->middlewareFor(['store', 'update', 'destroy'], 'permission:admissions.edit');
+
+    // Учебные планы. У дисциплин плана своё право, и право на сам план
+    // сохранено рядом: дисциплины плана видит тот, кто видит план.
+    Route::get('curricula/export', [CurriculumController::class, 'export'])->middleware('permission:curricula.view');
+    Route::post('curricula/import', [CurriculumController::class, 'import'])->middleware('permission:curricula.edit');
+    Route::get('curricula/{curriculum}/subjects', [CurriculumController::class, 'subjects'])->middleware(['permission:curricula.view', 'permission:curricula.subjects.view']);
+    Route::get('curricula/{curriculum}/semesters', [CurriculumController::class, 'semesters'])->middleware(['permission:curricula.view', 'permission:curricula.subjects.view']);
+    Route::get('curricula/{curriculum}/summary', [CurriculumController::class, 'summary'])->middleware(['permission:curricula.view', 'permission:curricula.subjects.view']);
+    Route::post('curricula/{curriculum}/subjects', [CurriculumController::class, 'storeSubject'])->middleware(['permission:curricula.edit', 'permission:curricula.subjects.create']);
+    Route::put('curriculum-subjects/{curriculumSubject}', [CurriculumController::class, 'updateSubject'])->middleware('permission:curricula.subjects.update');
+    Route::delete('curriculum-subjects/{curriculumSubject}', [CurriculumController::class, 'destroySubject'])->middleware('permission:curricula.subjects.delete');
+    Route::post('curricula/{curriculum}/items', [CurriculumController::class, 'storeItem'])->middleware('permission:curricula.edit');
+    Route::delete('curriculum-items/{curriculumItem}', [CurriculumController::class, 'destroyItem'])->middleware('permission:curricula.edit');
+    Route::apiResource('curricula', CurriculumController::class)
+        ->middlewareFor(['index', 'show'], 'permission:curricula.view')
+        ->middlewareFor(['store', 'update', 'destroy'], 'permission:curricula.edit');
+
+    // Образовательные программы и специальности — справочная часть: читают все,
+    // кто ведёт группы и выпуск, правит владелец справочников.
+    Route::get('education-programs/export', [EducationProgramController::class, 'export'])->middleware('permission:reference.view');
+    Route::post('education-programs/import', [EducationProgramController::class, 'import'])->middleware('permission:reference.manage');
+    Route::apiResource('education-programs', EducationProgramController::class)
+        ->middlewareFor(['index', 'show'], 'permission:reference.view')
+        ->middlewareFor(['store', 'update', 'destroy'], 'permission:reference.manage');
+
+    // Экзамены и ГИА.
+    Route::get('exams/export', [ExamController::class, 'export'])->middleware('permission:exams.view');
+    Route::post('exams/import', [ExamController::class, 'import'])->middleware('permission:exams.edit');
+    Route::post('exams/{exam}/results', [ExamController::class, 'storeResult'])->middleware('permission:exams.edit');
+    Route::delete('exam-results/{examResult}', [ExamController::class, 'destroyResult'])->middleware('permission:exams.edit');
+    Route::apiResource('exams', ExamController::class)
+        ->middlewareFor(['index', 'show'], 'permission:exams.view')
+        ->middlewareFor(['store', 'update', 'destroy'], 'permission:exams.edit');
+
+    // Группы.
+    Route::get('groups/export', [GroupController::class, 'export'])->middleware('permission:groups.view');
+    Route::post('groups/import', [GroupController::class, 'import'])->middleware('permission:groups.update');
+    Route::apiResource('groups', GroupController::class)
+        ->middlewareFor(['index', 'show'], 'permission:groups.view')
+        ->middlewareFor('store', 'permission:groups.create')
+        ->middlewareFor('update', 'permission:groups.update')
+        ->middlewareFor('destroy', 'permission:groups.delete');
+
+    // Выпуск и дипломы.
+    Route::get('graduates/export', [GraduateController::class, 'export'])->middleware('permission:graduation.view');
+    Route::post('graduates/import', [GraduateController::class, 'import'])->middleware('permission:graduation.edit');
+    Route::post('graduates/{graduate}/diploma', [GraduateController::class, 'storeDiploma'])->middleware('permission:graduation.edit');
+    Route::post('graduates/{graduate}/supplement', [GraduateController::class, 'storeSupplement'])->middleware('permission:graduation.edit');
+    Route::apiResource('graduates', GraduateController::class)
+        ->middlewareFor(['index', 'show'], 'permission:graduation.view')
+        ->middlewareFor(['store', 'update', 'destroy'], 'permission:graduation.edit');
+
+    // ФРДО и ФИС: у выгрузки здесь своё право, и оно так и задумано —
+    // `frdo.export` и `fis.export` открывают подготовку, проверку и выгрузку.
+    Route::post('frdo-packages/{frdoPackage}/validate', [FrdoPackageController::class, 'validatePackage'])->middleware('permission:frdo.export');
+    Route::post('frdo-packages/{frdoPackage}/mark-exported', [FrdoPackageController::class, 'markExported'])->middleware('permission:frdo.export');
+    Route::post('frdo-packages/{frdoPackage}/archive', [FrdoPackageController::class, 'archive'])->middleware('permission:frdo.export');
+    Route::get('frdo-packages/{frdoPackage}/export.csv', [FrdoPackageController::class, 'exportCsv'])->middleware('permission:frdo.export');
+    Route::get('frdo-packages/{frdoPackage}/export.json', [FrdoPackageController::class, 'exportJson'])->middleware('permission:frdo.export');
+    Route::apiResource('frdo-packages', FrdoPackageController::class)->only(['index', 'store', 'show'])
+        ->middlewareFor(['index', 'show'], 'permission:frdo.view')
+        ->middlewareFor('store', 'permission:frdo.export');
+
+    // Официальный обмен с ФИС ГИА и Приёма.
+    //
+    // Второе право у шлюзовых вызовов — не замысел, а наследство таблицы: POST
+    // выводился в `fis.outbound.create`, и проверка связи требовала права на
+    // создание пакета. Сохранено дословно, чтобы перенос ничего не расширил;
+    // отдельной строкой вынесено в отчёт как то, что стоит пересмотреть.
+    Route::post('fis/dictionaries/preview', [FisDictionaryIntakeController::class, 'preview'])->middleware('permission:fis.outbound.view');
+    Route::post('fis/dictionaries/apply', [FisDictionaryIntakeController::class, 'apply'])->middleware(['permission:fis.outbound.view', 'permission:fis.settings.manage']);
+    Route::get('fis/outbound/spec-info', [FisOutboundPackageController::class, 'specInfo'])->middleware('permission:fis.outbound.view');
+    Route::get('fis/outbound/gateway/health', [FisOutboundPackageController::class, 'gatewayHealth'])->middleware('permission:fis.outbound.view');
+    Route::get('fis/outbound/gateway/version', [FisOutboundPackageController::class, 'gatewayVersion'])->middleware('permission:fis.outbound.view');
+    Route::post('fis/outbound/gateway/zkspd-check', [FisOutboundPackageController::class, 'gatewayZkspdCheck'])->middleware(['permission:fis.outbound.create', 'permission:fis.outbound.view']);
+    Route::post('fis/outbound/gateway/dictionaries/list', [FisOutboundPackageController::class, 'gatewayDictionariesList'])->middleware(['permission:fis.outbound.create', 'permission:fis.outbound.view']);
+    Route::post('fis/outbound/gateway/dictionaries/details', [FisOutboundPackageController::class, 'gatewayDictionaryDetails'])->middleware(['permission:fis.outbound.create', 'permission:fis.outbound.view']);
+    Route::post('fis/outbound/gateway/institution/info', [FisOutboundPackageController::class, 'gatewayInstitutionInfo'])->middleware(['permission:fis.outbound.create', 'permission:fis.outbound.view']);
+    Route::post('fis/outbound/gateway/check-application', [FisOutboundPackageController::class, 'gatewayTestCheckApplication'])->middleware(['permission:fis.outbound.create', 'permission:fis.outbound.view']);
+    Route::get('fis/outbound/packages', [FisOutboundPackageController::class, 'index'])->middleware('permission:fis.outbound.view');
+    Route::post('fis/outbound/packages', [FisOutboundPackageController::class, 'store'])->middleware('permission:fis.outbound.create');
+    Route::get('fis/outbound/packages/{package}', [FisOutboundPackageController::class, 'show'])->middleware('permission:fis.outbound.view');
+    Route::post('fis/outbound/packages/{package}/generate', [FisOutboundPackageController::class, 'generate'])->middleware(['permission:fis.outbound.create', 'permission:fis.outbound.generate']);
+    Route::post('fis/outbound/packages/{package}/validate', [FisOutboundPackageController::class, 'validatePackage'])->middleware(['permission:fis.outbound.generate', 'permission:fis.outbound.validate']);
+    Route::post('fis/outbound/packages/{package}/send-preview', [FisOutboundPackageController::class, 'sendPreview'])->middleware(['permission:fis.outbound.create', 'permission:fis.outbound.send_test']);
+    Route::post('fis/outbound/packages/{package}/send', [FisOutboundPackageController::class, 'send'])->middleware(['permission:fis.outbound.create', 'permission:fis.outbound.send_test']);
+    Route::post('fis/outbound/packages/{package}/refresh-status', [FisOutboundPackageController::class, 'refreshStatus'])->middleware(['permission:fis.outbound.create', 'permission:fis.outbound.status']);
+    Route::post('fis/outbound/packages/{package}/cancel', [FisOutboundPackageController::class, 'cancel'])->middleware(['permission:fis.outbound.create', 'permission:fis.outbound.generate']);
+    Route::get('fis/outbound/packages/{package}/events', [FisOutboundPackageController::class, 'events'])->middleware('permission:fis.outbound.view');
+    Route::get('fis/outbound/packages/{package}/download', [FisOutboundPackageController::class, 'download'])->middleware(['permission:fis.outbound.view', 'permission:fis.outbound.download']);
+
+    Route::post('fis-packages/{fisPackage}/validate', [FisPackageController::class, 'validatePackage'])->middleware('permission:fis.export');
+    Route::post('fis-packages/{fisPackage}/mark-exported', [FisPackageController::class, 'markExported'])->middleware('permission:fis.export');
+    Route::post('fis-packages/{fisPackage}/archive', [FisPackageController::class, 'archive'])->middleware('permission:fis.export');
+    Route::get('fis-packages/{fisPackage}/export.csv', [FisPackageController::class, 'exportCsv'])->middleware('permission:fis.export');
+    Route::get('fis-packages/{fisPackage}/export.json', [FisPackageController::class, 'exportJson'])->middleware('permission:fis.export');
+    Route::apiResource('fis-packages', FisPackageController::class)->only(['index', 'store', 'show'])
+        ->middlewareFor(['index', 'show'], 'permission:fis.view')
+        ->middlewareFor('store', 'permission:fis.export');
+
+    Route::get('specialties/export', [SpecialtyController::class, 'export'])->middleware('permission:reference.view');
+    Route::post('specialties/import', [SpecialtyController::class, 'import'])->middleware('permission:reference.manage');
+    Route::apiResource('specialties', SpecialtyController::class)
+        ->middlewareFor(['index', 'show'], 'permission:reference.view')
+        ->middlewareFor(['store', 'update', 'destroy'], 'permission:reference.manage');
+
+    // Студенты. Массовые операции — как у приёмной комиссии: право на просмотр
+    // на входе, каждое действие проверяет `StudentBulkController` сам. Решение
+    // владельца 10.08.2026; до него на входе стояло право на создание.
+    Route::post('students/bulk/preview', [StudentBulkController::class, 'preview'])->middleware('permission:students.view');
+    Route::post('students/bulk/apply', [StudentBulkController::class, 'apply'])->middleware('permission:students.view');
+    Route::get('students/export', [StudentController::class, 'export'])->middleware('permission:students.view');
+    Route::post('students/import', [StudentController::class, 'import'])->middleware('permission:students.update');
+    Route::apiResource('students', StudentController::class)
+        ->middlewareFor(['index', 'show'], 'permission:students.view')
+        ->middlewareFor('store', 'permission:students.create')
+        ->middlewareFor('update', 'permission:students.update')
+        ->middlewareFor('destroy', 'permission:students.delete');
+
+    Route::get('subjects/export', [SubjectController::class, 'export'])->middleware('permission:subjects.view');
+    Route::post('subjects/import', [SubjectController::class, 'import'])->middleware('permission:subjects.update');
+    Route::apiResource('subjects', SubjectController::class)
+        ->middlewareFor(['index', 'show'], 'permission:subjects.view')
+        ->middlewareFor('store', 'permission:subjects.create')
+        ->middlewareFor('update', 'permission:subjects.update')
+        ->middlewareFor('destroy', 'permission:subjects.delete');
+
+    // Нагрузка.
+    Route::post('teaching-load/generate/preview', [TeachingLoadController::class, 'generatePreview'])->middleware('permission:teaching_load.generate');
+    Route::post('teaching-load/generate/apply', [TeachingLoadController::class, 'generateApply'])->middleware('permission:teaching_load.generate');
+    Route::get('teaching-load/{teachingLoad}/coverage', [TeachingLoadController::class, 'coverage'])->middleware(['permission:teachingload.view', 'permission:teaching_load.view_coverage']);
+    Route::post('teaching-load/items/{teachingLoadItem}/assign-teacher', [TeachingLoadController::class, 'assignTeacher'])->middleware('permission:teaching_load.assign');
+    Route::post('teaching-load/items/bulk-assign-teacher', [TeachingLoadController::class, 'bulkAssignTeacher'])->middleware(['permission:teaching_load.assign', 'permission:teaching_load.bulk_assign']);
+    Route::get('teaching-loads/export', [TeachingLoadController::class, 'export'])->middleware('permission:teachingload.view');
+    Route::post('teaching-loads/import', [TeachingLoadController::class, 'import'])->middleware('permission:teachingload.edit');
+    Route::post('teaching-loads/{teachingLoad}/items', [TeachingLoadController::class, 'storeItem'])->middleware('permission:teachingload.edit');
+    Route::delete('teaching-load-items/{teachingLoadItem}', [TeachingLoadController::class, 'destroyItem'])->middleware('permission:teachingload.edit');
+    // Список нагрузки открыт ещё и по `view_own_data`: преподаватель видит свою.
+    // Пустой профиль даёт пустой список, а не отказ, — это `TeachingLoadController`.
+    Route::apiResource('teaching-loads', TeachingLoadController::class)
+        ->middlewareFor('index', 'permission:teachingload.view,view_own_data')
+        ->middlewareFor('show', 'permission:teachingload.view')
+        ->middlewareFor(['store', 'update', 'destroy'], 'permission:teachingload.edit');
+
+    Route::get('teachers/export', [TeacherController::class, 'export'])->middleware('permission:teachers.view');
+    Route::post('teachers/import', [TeacherController::class, 'import'])->middleware('permission:teachers.update');
+    Route::apiResource('teachers', TeacherController::class)
+        ->middlewareFor(['index', 'show'], 'permission:teachers.view')
+        ->middlewareFor('store', 'permission:teachers.create')
+        ->middlewareFor('update', 'permission:teachers.update')
+        ->middlewareFor('destroy', 'permission:teachers.delete');
 
     Route::middleware('permission:schedule.view')->group(function (): void {
         Route::get('schedule/entries', [ScheduleEngineController::class, 'index']);
@@ -532,10 +689,11 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
 
     // Строго до apiResource: иначе параметр {schedule_lesson} перехватит слово export.
     Route::get('schedule-lessons/export', [ScheduleLessonController::class, 'export'])
-        ->middleware('permission:manage_schedule');
+        ->middleware('permission:schedule.view');
 
     Route::apiResource('schedule-lessons', ScheduleLessonController::class)
-        ->middleware('permission:manage_schedule');
+        ->middlewareFor(['index', 'show'], 'permission:schedule.view')
+        ->middlewareFor(['store', 'update', 'destroy'], 'permission:schedule.update');
 
     Route::middleware('permission:journal.view')->group(function (): void {
         Route::get('journal/lessons', [JournalLessonController::class, 'index']);
@@ -562,12 +720,21 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         Route::get('journal/lessons/{lesson}/export.csv', [JournalLessonController::class, 'exportLesson'])->middleware('permission:journal.export');
     });
 
-    Route::middleware('permission:manage_journal')->group(function (): void {
-        Route::apiResource('attendance', AttendanceController::class);
-        Route::apiResource('grades', GradeController::class);
-        Route::get('reports/attendance-by-group', [ReportController::class, 'attendanceByGroup']);
-        Route::get('reports/attendance-by-group/export', [ReportController::class, 'exportAttendanceByGroup']);
-        Route::get('reports/grades-by-group', [ReportController::class, 'gradesByGroup']);
-        Route::get('reports/grades-by-group/export', [ReportController::class, 'exportGradesByGroup']);
-    });
+    // Старые точки посещаемости и оценок и сводные отчёты журнала.
+    Route::apiResource('attendance', AttendanceController::class)
+        ->middlewareFor(['index', 'show'], 'permission:journal.view')
+        ->middlewareFor(['store', 'update', 'destroy'], 'permission:journal.edit');
+
+    Route::apiResource('grades', GradeController::class)
+        ->middlewareFor(['index', 'show'], 'permission:journal.view')
+        ->middlewareFor(['store', 'update', 'destroy'], 'permission:journal.edit');
+
+    Route::get('reports/attendance-by-group', [ReportController::class, 'attendanceByGroup'])
+        ->middleware('permission:journal.view');
+    Route::get('reports/attendance-by-group/export', [ReportController::class, 'exportAttendanceByGroup'])
+        ->middleware('permission:journal.export');
+    Route::get('reports/grades-by-group', [ReportController::class, 'gradesByGroup'])
+        ->middleware('permission:journal.view');
+    Route::get('reports/grades-by-group/export', [ReportController::class, 'exportGradesByGroup'])
+        ->middleware('permission:journal.export');
 });

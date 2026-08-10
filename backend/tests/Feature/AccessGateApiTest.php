@@ -203,7 +203,7 @@ class AccessGateApiTest extends TestCase
     public function test_access_scan_permissions_allow_security_and_block_teacher_student(): void
     {
         $identity = $this->createStudentIdentity();
-        $permission = Permission::query()->firstOrCreate(['code' => 'manage_dictionaries'], ['name' => 'Управление справочниками']);
+        $permission = Permission::query()->firstOrCreate(['code' => 'gate.scan'], ['name' => 'Проходная: сканирование']);
         Role::query()->firstOrCreate(['code' => 'security'], ['name' => 'Сотрудник проходной'])->permissions()->sync([$permission->id]);
         $security = $this->createApiUser(roleCode: 'security');
         $teacher = $this->createApiUser(roleCode: 'teacher');

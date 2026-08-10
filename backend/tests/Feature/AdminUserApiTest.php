@@ -175,7 +175,7 @@ class AdminUserApiTest extends TestCase
     public function test_non_user_manager_cannot_open_users_api(): void
     {
         $role = Role::create(['name' => 'Учебная часть', 'code' => 'academic_office']);
-        $permission = Permission::create(['name' => 'Управление справочниками', 'code' => 'manage_dictionaries']);
+        $permission = Permission::create(['name' => 'Справочники: управление', 'code' => 'reference.manage']);
         $role->permissions()->sync([$permission->id]);
         $user = $this->createApiUser(roleCode: 'academic_office');
         $user->forceFill(['role_id' => $role->id])->save();

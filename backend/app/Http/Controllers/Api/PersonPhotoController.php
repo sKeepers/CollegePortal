@@ -21,8 +21,15 @@ class PersonPhotoController extends Controller
         'graduates' => Graduate::class,
     ];
 
-    public function store(Request $request, string $type, int $id): JsonResponse
+    /**
+     * Тип берётся у маршрута, а не из позиционного параметра: с `ARCH-001`,
+     * шага 3, каждый тип — свой маршрут со своим правом, и тип приходит
+     * значением по умолчанию, а не сегментом пути.
+     */
+    public function store(Request $request, int $id): JsonResponse
     {
+        $type = (string) $request->route('type');
+
         $request->validate([
             'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'type' => ['nullable', Rule::in(array_keys(self::TYPES))],
@@ -43,9 +50,9 @@ class PersonPhotoController extends Controller
         ]);
     }
 
-    public function destroy(string $type, int $id): Response
+    public function destroy(Request $request, int $id): Response
     {
-        $person = $this->resolvePerson($type, $id);
+        $person = $this->resolvePerson((string) $request->route('type'), $id);
         $this->deleteExistingPhoto($person);
         $person->forceFill(['photo_path' => null])->save();
 

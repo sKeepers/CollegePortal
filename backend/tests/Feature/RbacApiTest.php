@@ -12,7 +12,7 @@ class RbacApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_student_cannot_manage_dictionaries(): void
+    public function test_student_cannot_open_the_registries(): void
     {
         $studentRole = $this->createRoleWithPermissions('student', ['view_own_data']);
         $user = $this->createApiUser(roleCode: $studentRole->code);
@@ -22,9 +22,9 @@ class RbacApiTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_teacher_can_manage_journal_but_not_dictionaries(): void
+    public function test_teacher_can_open_the_journal_but_not_the_registries(): void
     {
-        $teacherRole = $this->createRoleWithPermissions('teacher', ['manage_journal', 'view_own_data']);
+        $teacherRole = $this->createRoleWithPermissions('teacher', ['journal.view', 'view_own_data']);
         $user = $this->createApiUser(roleCode: $teacherRole->code);
 
         $this->withApiAuth($user)
@@ -36,9 +36,9 @@ class RbacApiTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_academic_office_can_manage_dictionaries_and_schedule(): void
+    public function test_academic_office_reaches_groups_and_schedule_by_its_own_permissions(): void
     {
-        $role = $this->createRoleWithPermissions('academic_office', ['manage_dictionaries', 'manage_schedule']);
+        $role = $this->createRoleWithPermissions('academic_office', ['groups.view', 'schedule.view']);
         $user = $this->createApiUser(roleCode: $role->code);
 
         $this->withApiAuth($user)

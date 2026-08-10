@@ -207,16 +207,29 @@ class RoleSeeder extends Seeder
             ['module' => 'UAT', 'code' => 'uat.manage', 'name' => 'UAT: управление', 'description' => 'Управление закрытым пользовательским тестированием и реестром замечаний.'],
             ['module' => 'System', 'code' => 'reference.view', 'name' => 'Справочники: просмотр', 'description' => 'Чтение нормативно-справочной информации для подписей и фильтров.'],
             ['module' => 'System', 'code' => 'reference.manage', 'name' => 'Справочники: управление', 'description' => 'Управление нормативно-справочной информацией.'],
-            ['module' => 'System', 'code' => 'import.manage', 'name' => 'Импорт: управление', 'description' => 'Универсальный импорт и демо-данные.'],
+            ['module' => 'System', 'code' => 'import.manage', 'name' => 'Импорт: управление', 'description' => 'Универсальный импорт данных из файлов.'],
+            // Разведено с `import.manage` 10.08.2026 по решению владельца: одно
+            // право открывало и «загрузить студентов», и «стереть рабочие данные
+            // стенда». Никому, кроме администратора, не выдаётся.
+            ['module' => 'System', 'code' => 'demo_data.manage', 'name' => 'Демонстрационные данные и очистка стенда', 'description' => 'Создание, очистка и выгрузка демонстрационного набора, очистка рабочих данных стенда.'],
+            // Заведены миграцией корзины, в каталоге сидера их не хватало:
+            // на установке с нуля список прав обязан совпадать с базой.
+            ['module' => 'System', 'code' => 'trash.request', 'name' => 'Удаление: пометить карточку', 'description' => 'Пометить ошибочно заведённую карточку на удаление с указанием причины.'],
+            ['module' => 'System', 'code' => 'trash.manage', 'name' => 'Удаление: решение и корзина', 'description' => 'Одобрение и отклонение заявок, восстановление и окончательная очистка корзины.'],
             ['module' => 'System', 'code' => 'ui.foundation.view', 'name' => 'UI Foundation: просмотр', 'description' => 'Просмотр витрины UI-компонентов.'],
             ['module' => 'Mobile', 'code' => 'mobile.student.view', 'name' => 'Мобильный кабинет студента', 'description' => 'Доступ к мобильному кабинету студента.'],
             ['module' => 'Mobile', 'code' => 'mobile.student.pass', 'name' => 'Мобильный QR студента', 'description' => 'Просмотр мобильного QR-пропуска.'],
+            // `view_own_data` — настоящее право, а не зонтик: им открыты свой
+            // цифровой пропуск и своя нагрузка. Остаётся.
+            //
+            // Пять legacy-прав-«зонтиков» — `manage_users`,
+            // `manage_dictionaries`, `manage_schedule`, `manage_journal`,
+            // `view_reports` — убраны отсюда `ARCH-001`, шагом 3. Каждое
+            // открывало роли целую группу маршрутов, не требуя ни одного
+            // конкретного права. На установленных системах их отвязывает и
+            // гасит миграция `2026_08_10_141000`; здесь они просто больше не
+            // заводятся.
             ['module' => 'Legacy', 'code' => 'view_own_data', 'name' => 'Просмотр личных данных', 'description' => 'Legacy permission для совместимости.'],
-            ['module' => 'Legacy', 'code' => 'view_reports', 'name' => 'Просмотр отчетов', 'description' => 'Legacy permission для совместимости.'],
-            ['module' => 'Legacy', 'code' => 'manage_users', 'name' => 'Управление пользователями', 'description' => 'Legacy permission для совместимости.'],
-            ['module' => 'Legacy', 'code' => 'manage_dictionaries', 'name' => 'Управление справочниками', 'description' => 'Legacy permission для совместимости.'],
-            ['module' => 'Legacy', 'code' => 'manage_schedule', 'name' => 'Управление расписанием', 'description' => 'Legacy permission для совместимости.'],
-            ['module' => 'Legacy', 'code' => 'manage_journal', 'name' => 'Ведение журнала', 'description' => 'Legacy permission для совместимости.'],
         ];
     }
 
@@ -226,7 +239,7 @@ class RoleSeeder extends Seeder
             'dashboard.view', 'people.view', 'students.view', 'groups.view', 'teachers.view', 'subjects.view', 'classrooms.view',
             'schedule.view', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.view_all', 'journal.export', 'attendance.view', 'attendance.reports',
             'admissions.view', 'admissions.applicant.view', 'admissions.application.view', 'admissions.choice.view', 'admissions.document.view', 'admissions.document.download_sensitive', 'admissions.documents.view', 'admissions.documents.download', 'admissions.bulk_export', 'admissions.reference.view', 'curricula.view', 'curricula.subjects.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'graduation.view',
-            'frdo.view', 'fis.view', 'fis.outbound.view', 'fis.outbound.status', 'gate.reports', 'audit.view', 'reference.manage', 'uat.manage', 'hr.employees.view', 'hr.calendar.view', 'hr.replacements.view', 'hr.reports.view', 'view_reports',
+            'frdo.view', 'fis.view', 'fis.outbound.view', 'fis.outbound.status', 'gate.reports', 'audit.view', 'reference.manage', 'uat.manage', 'hr.employees.view', 'hr.calendar.view', 'hr.replacements.view', 'hr.reports.view',
         ];
     }
 
@@ -238,13 +251,13 @@ class RoleSeeder extends Seeder
     private function studySchedulePermissions(): array
     {
         return [
-            'dashboard.view', 'view_own_data', 'view_reports',
+            'dashboard.view', 'view_own_data',
             'schedule.view', 'schedule.create', 'schedule.update', 'schedule.delete', 'schedule.validate',
-            'schedule.manage_templates', 'schedule.manage_replacements', 'schedule.view_conflicts', 'schedule.view_coverage', 'manage_schedule',
+            'schedule.manage_templates', 'schedule.manage_replacements', 'schedule.view_conflicts', 'schedule.view_coverage',
             'teachingload.view', 'teachingload.edit', 'teaching_load.generate', 'teaching_load.assign', 'teaching_load.bulk_assign', 'teaching_load.view_coverage',
             'curricula.view', 'curricula.edit', 'curricula.subjects.view', 'curricula.subjects.create', 'curricula.subjects.update', 'curricula.subjects.delete',
             'subjects.view', 'subjects.create', 'subjects.update', 'subjects.delete',
-            'classrooms.view', 'classrooms.create', 'classrooms.update', 'classrooms.delete', 'manage_dictionaries',
+            'classrooms.view', 'classrooms.create', 'classrooms.update', 'classrooms.delete',
             'exams.view', 'exams.edit',
             'groups.view', 'teachers.view', 'students.view', 'people.view',
             'attendance.view',
@@ -269,7 +282,11 @@ class RoleSeeder extends Seeder
             // шаблоны. Владелец подтвердил 10.08.2026. Осторожно: тем же правом
             // открывается очистка рабочих данных стенда — развести их отдельная
             // задача.
+            //
+            // Разведено 10.08.2026: очистка стенда и демонстрационный набор
+            // ушли под `demo_data.manage`, которого у роли нет.
             'import.manage',
+            'trash.request',
         ];
     }
 
@@ -280,17 +297,18 @@ class RoleSeeder extends Seeder
     private function studyRecordsPermissions(): array
     {
         return [
-            'dashboard.view', 'view_own_data', 'view_reports',
+            'dashboard.view', 'view_own_data',
             'people.view', 'people.update', 'people.link',
             'students.view', 'students.create', 'students.update', 'students.delete',
             'students.bulk_group', 'students.bulk_status', 'students.bulk_course', 'students.bulk_education', 'students.bulk_passes', 'students.bulk_accounts', 'students.bulk_archive', 'students.bulk_export',
             'groups.view', 'groups.create', 'groups.update', 'groups.delete',
             'journal.view', 'journal.view_all', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files',
-            'journal.complete', 'journal.sign', 'journal.reopen', 'journal.export', 'manage_journal',
+            'journal.complete', 'journal.sign', 'journal.reopen', 'journal.export',
             'attendance.view', 'attendance.reports',
             'graduation.view', 'graduation.edit', 'frdo.view',
             'exams.view', 'curricula.view', 'schedule.view', 'teachingload.view',
             'teachers.view', 'subjects.view', 'classrooms.view',
+            'trash.request',
         ];
     }
 
@@ -306,13 +324,14 @@ class RoleSeeder extends Seeder
             'attendance.view', 'attendance.reports', 'admissions.applicant.view', 'admissions.application.view', 'admissions.choice.view', 'admissions.document.view', 'admissions.documents.view', 'admissions.reference.view', 'curricula.view', 'curricula.edit', 'curricula.subjects.view', 'curricula.subjects.create', 'curricula.subjects.update', 'curricula.subjects.delete',
             'teachingload.view', 'teachingload.edit', 'teaching_load.generate', 'teaching_load.assign', 'teaching_load.bulk_assign', 'teaching_load.view_coverage', 'exams.view', 'exams.edit',
             'graduation.view', 'graduation.edit', 'people.update', 'people.link', 'frdo.view', 'fis.view', 'fis.outbound.view', 'fis.outbound.create', 'fis.outbound.generate', 'fis.outbound.validate', 'fis.outbound.send_test', 'fis.outbound.status', 'reference.manage', 'import.manage',
-            'manage_dictionaries', 'manage_schedule', 'manage_journal', 'uat.manage', 'hr.employees.view', 'hr.calendar.view', 'hr.statuses.manage', 'hr.replacements.view', 'hr.replacements.manage', 'hr.reports.view', 'view_reports',
+            'uat.manage', 'hr.employees.view', 'hr.calendar.view', 'hr.statuses.manage', 'hr.replacements.view', 'hr.replacements.manage', 'hr.reports.view',
             // `ARCH-001`, шаг 2: названо своими правами то, до чего заместитель
             // и учебная часть дотягивались только через право-зонтик.
             // Владелец подтвердил состав 10.08.2026. Прав на удаление среди них
             // не было и не появилось.
             'admissions.view', 'admissions.edit', 'frdo.export', 'fis.export',
             'gate.scan', 'gate.reports', 'gate.points.manage', 'digitalpasses.manage', 'view_own_data',
+            'trash.request',
         ];
     }
 
@@ -324,20 +343,20 @@ class RoleSeeder extends Seeder
      */
     private function hrPermissions(): array
     {
-        return ['dashboard.view', 'hr.employees.view', 'hr.employees.create', 'hr.employees.update', 'hr.employees.dismiss', 'hr.employees.digital_pass.issue', 'hr.assignments.manage', 'hr.statuses.manage', 'hr.departments.manage', 'hr.positions.manage', 'hr.documents.view', 'hr.calendar.view', 'hr.calendar.manage', 'hr.absences.manage', 'hr.dismissals.manage', 'hr.replacements.view', 'hr.replacements.manage', 'hr.reports.view', 'teachers.view', 'gate.reports', 'view_own_data'];
+        return ['dashboard.view', 'hr.employees.view', 'hr.employees.create', 'hr.employees.update', 'hr.employees.dismiss', 'hr.employees.digital_pass.issue', 'hr.assignments.manage', 'hr.statuses.manage', 'hr.departments.manage', 'hr.positions.manage', 'hr.documents.view', 'hr.calendar.view', 'hr.calendar.manage', 'hr.absences.manage', 'hr.dismissals.manage', 'hr.replacements.view', 'hr.replacements.manage', 'hr.reports.view', 'teachers.view', 'gate.reports', 'view_own_data', 'trash.request'];
     }
 
     private function admissionPermissions(): array
     {
-        return ['dashboard.view', 'people.view', 'people.create', 'people.update', 'admissions.view', 'admissions.edit', 'admissions.applicant.view', 'admissions.applicant.manage', 'admissions.applicant.create', 'admissions.applicant.update', 'admissions.applicant.archive', 'admissions.application.view', 'admissions.application.create', 'admissions.application.update', 'admissions.application.register', 'admissions.application.manage', 'admissions.choice.view', 'admissions.choice.create', 'admissions.choice.update', 'admissions.choice.delete', 'admissions.document.view', 'admissions.document.create', 'admissions.document.update', 'admissions.document.delete', 'admissions.document.verify', 'admissions.document.download_sensitive', 'admissions.documents.view', 'admissions.documents.receive', 'admissions.documents.upload', 'admissions.documents.verify', 'admissions.documents.reject', 'admissions.documents.download', 'admissions.bulk_status', 'admissions.bulk_documents', 'admissions.bulk_recommend', 'admissions.bulk_assign', 'admissions.bulk_export', 'admissions.bulk_enroll', 'admissions.reference.view', 'students.view', 'groups.view', 'fis.outbound.view', 'fis.outbound.create', 'fis.outbound.generate', 'fis.outbound.validate', 'fis.outbound.send_test', 'fis.outbound.status', 'reference.manage', 'import.manage', 'view_reports',
+        return ['dashboard.view', 'people.view', 'people.create', 'people.update', 'admissions.view', 'admissions.edit', 'admissions.applicant.view', 'admissions.applicant.manage', 'admissions.applicant.create', 'admissions.applicant.update', 'admissions.applicant.archive', 'admissions.application.view', 'admissions.application.create', 'admissions.application.update', 'admissions.application.register', 'admissions.application.manage', 'admissions.choice.view', 'admissions.choice.create', 'admissions.choice.update', 'admissions.choice.delete', 'admissions.document.view', 'admissions.document.create', 'admissions.document.update', 'admissions.document.delete', 'admissions.document.verify', 'admissions.document.download_sensitive', 'admissions.documents.view', 'admissions.documents.receive', 'admissions.documents.upload', 'admissions.documents.verify', 'admissions.documents.reject', 'admissions.documents.download', 'admissions.bulk_status', 'admissions.bulk_documents', 'admissions.bulk_recommend', 'admissions.bulk_assign', 'admissions.bulk_export', 'admissions.bulk_enroll', 'admissions.reference.view', 'students.view', 'groups.view', 'fis.outbound.view', 'fis.outbound.create', 'fis.outbound.generate', 'fis.outbound.validate', 'fis.outbound.send_test', 'fis.outbound.status', 'reference.manage', 'import.manage',
             // `ARCH-001`, шаг 2: отчёт посещаемости приёмная комиссия открывала
             // только через право-зонтик `view_reports`.
-            'attendance.reports'];
+            'attendance.reports', 'trash.request'];
     }
 
     private function teacherPermissions(): array
     {
-        return ['dashboard.view', 'hr.calendar.view', 'schedule.view', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.export', 'attendance.view', 'exams.view', 'view_own_data', 'manage_journal'];
+        return ['dashboard.view', 'hr.calendar.view', 'schedule.view', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.export', 'attendance.view', 'exams.view', 'view_own_data'];
     }
 
     private function studentPermissions(): array
@@ -347,7 +366,7 @@ class RoleSeeder extends Seeder
 
     private function securityPermissions(): array
     {
-        return ['dashboard.view', 'gate.scan', 'gate.reports', 'gate.points.manage', 'digitalpasses.manage', 'attendance.view', 'attendance.reports', 'view_reports'];
+        return ['dashboard.view', 'gate.scan', 'gate.reports', 'gate.points.manage', 'digitalpasses.manage', 'attendance.view', 'attendance.reports'];
     }
 
     /**

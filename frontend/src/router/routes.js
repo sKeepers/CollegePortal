@@ -404,7 +404,7 @@ export const routes = [
         path: 'admin/data-management',
         name: 'admin-data-management',
         component: DataManagementPage,
-        meta: { title: 'Управление данными', permissionsAny: ['import.manage', 'settings.manage'] },
+        meta: { title: 'Управление данными', permissionsAny: ['demo_data.manage', 'settings.manage'] },
       },
       {
         path: 'admin/uat',

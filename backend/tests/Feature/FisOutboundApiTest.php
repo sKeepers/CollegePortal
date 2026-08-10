@@ -118,7 +118,10 @@ class FisOutboundApiTest extends TestCase
 
     public function test_gateway_diagnostics_are_signed_and_disabled_when_feature_flag_is_off(): void
     {
-        $user = $this->userWith(['fis.outbound.view','manage_dictionaries']);
+        // Шлюзовые проверки требуют ещё и `fis.outbound.create`: право досталось
+        // им от таблицы префиксов, где POST выводился в «создание». Перенос
+        // сохранил это дословно, см. ARCH_001_STEP3_PLAN.md.
+        $user = $this->userWith(['fis.outbound.view', 'fis.outbound.create']);
         $this->withApiAuth($user);
 
         config(['fis_api.gateway_enabled' => false, 'fis_api.gateway_url' => 'http://fis-agent.test', 'fis_api.gateway_shared_secret' => 'test-secret']);
