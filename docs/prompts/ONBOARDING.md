@@ -96,7 +96,7 @@ cp_session. Схема базы не менялась. Выкатка на PROD 
 2. docs/ACTIVE_WORK.md — состояние; раздел «Кто чем занят прямо сейчас»
    найди по названию своей области.
 3. docs/prompts/ASSIGNMENTS.md — раздел твоей области.
-4. docs/prompts/5_ARCH_001_PERMISSIONS.md — задание по ARCH-001,
+4. docs/prompts/2_ARCH_001_PERMISSIONS.md — задание по ARCH-001,
    которое ты сейчас ведёшь.
 
 Твоя область: routes/api.php, EnsurePermission, RoleSeeder, права ролей,
