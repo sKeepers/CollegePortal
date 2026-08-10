@@ -71,7 +71,9 @@ Route::get('settings/public', [AdminSettingController::class, 'publicSettings'])
 Route::get('public/specialties', [SpecialtyController::class, 'index']);
 Route::get('public/education-programs', [EducationProgramController::class, 'index']);
 
-Route::middleware(['api.token', 'throttle:api.authenticated'])->group(function (): void {
+// `api.csrf` стоит после `api.token` намеренно: проверять происхождение имеет смысл
+// только для запроса, который уже опознан, и только когда токен пришёл из cookie.
+Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->group(function (): void {
     Route::get('auth/me', [AuthController::class, 'me']);
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('mobile/student', [MobileStudentController::class, 'show']);

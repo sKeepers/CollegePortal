@@ -871,7 +871,7 @@ async function resetScheduleFilters() {
 }
 
 async function bootstrapAuth() {
-  if (!api.token()) {
+  if (!api.hasSession()) {
     return
   }
 
@@ -883,7 +883,7 @@ async function bootstrapAuth() {
     authUser.value = payload.data
     await loadAll()
   } catch {
-    api.clearToken()
+    api.clearSession()
     authUser.value = null
   } finally {
     loading.value = false
@@ -896,7 +896,6 @@ async function login() {
 
   try {
     const payload = await api.login(loginForm)
-    api.setToken(payload.token)
     authUser.value = payload.user
     await loadAll()
   } catch (caught) {
@@ -915,7 +914,7 @@ async function logout() {
   } catch {
     // Local logout should still clear the stale token.
   } finally {
-    api.clearToken()
+    api.clearSession()
     authUser.value = null
     activeSection.value = 'dashboard'
     loading.value = false

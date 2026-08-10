@@ -111,9 +111,8 @@ export const useDigitalPassesStore = defineStore('digitalPasses', () => {
     qrSvg.value = ''
     qrExpiresAt.value = null
     if (!identity?.id) return ''
-    const token = api.token()
-    const response = await fetch(`${api.baseUrl}/digital-identities/${identity.id}/qr?format=svg`, {
-      headers: { Accept: 'image/svg+xml', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    const response = await api.authFetch(`${api.baseUrl}/digital-identities/${identity.id}/qr?format=svg`, {
+      headers: { Accept: 'image/svg+xml' },
     })
     if (!response.ok) throw new Error('Не удалось загрузить QR-код')
     qrSvg.value = await response.text()
@@ -123,9 +122,8 @@ export const useDigitalPassesStore = defineStore('digitalPasses', () => {
 
   async function downloadQrPng(identity = selectedIdentity.value) {
     if (!identity?.id) return null
-    const token = api.token()
-    const response = await fetch(`${api.baseUrl}/digital-identities/${identity.id}/qr?format=png`, {
-      headers: { Accept: 'image/png', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    const response = await api.authFetch(`${api.baseUrl}/digital-identities/${identity.id}/qr?format=png`, {
+      headers: { Accept: 'image/png' },
     })
     if (!response.ok) throw new Error('Не удалось скачать PNG QR-код')
     return await response.blob()

@@ -8,7 +8,7 @@ export const useAuthStore = defineStore('auth', () => {
   const initialized = ref(false)
   const error = ref('')
 
-  const isAuthenticated = computed(() => Boolean(user.value && api.token()))
+  const isAuthenticated = computed(() => Boolean(user.value && api.hasSession()))
   const isAdmin = computed(() => user.value?.role?.code === 'admin')
   const permissions = computed(() => user.value?.permissions || user.value?.role?.permissions || [])
   const roleCodes = computed(() => {
@@ -32,8 +32,9 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = ''
 
     try {
+      // Токен в ответе больше не приходит: сервер поставил его в httpOnly cookie,
+      // которую браузер подставит сам. Хранить здесь нечего.
       const payload = await api.login(credentials)
-      api.setToken(payload.token, { persistent: credentials.staySignedIn !== false })
       user.value = payload.user
       initialized.value = true
     } catch (caught) {
@@ -45,7 +46,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function restore() {
-    if (!api.token()) {
+    if (!api.hasSession()) {
       initialized.value = true
       user.value = null
       return
@@ -58,7 +59,7 @@ export const useAuthStore = defineStore('auth', () => {
       const payload = await api.me()
       user.value = payload.data
     } catch {
-      api.clearToken()
+      api.clearSession()
       user.value = null
     } finally {
       initialized.value = true
@@ -75,7 +76,7 @@ export const useAuthStore = defineStore('auth', () => {
     } catch {
       // Even if the token is stale, local logout must complete.
     } finally {
-      api.clearToken()
+      api.clearSession()
       user.value = null
       initialized.value = true
       loading.value = false

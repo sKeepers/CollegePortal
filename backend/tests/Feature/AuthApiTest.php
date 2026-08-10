@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Role;
 use App\Models\User;
+use App\Support\Auth\SessionCookie;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -22,15 +23,18 @@ class AuthApiTest extends TestCase
             'is_active' => true,
         ]);
 
+        // Договор изменился по `SEC-002`: токен уходит в httpOnly cookie и в теле
+        // ответа его больше нет. Подробности перехода — в `CookieSessionTest`.
         $this->postJson('/api/auth/login', [
             'login' => 'admin@example.test',
             'password' => 'password',
         ])
             ->assertOk()
-            ->assertJsonPath('token_type', 'Bearer')
+            ->assertJsonPath('token_type', 'Cookie')
             ->assertJsonPath('user.email', 'admin@example.test')
             ->assertJsonPath('user.role.code', 'admin')
-            ->assertJsonStructure(['token'])
+            ->assertJsonMissingPath('token')
+            ->assertCookie(SessionCookie::SESSION)
             ->assertJsonMissingPath('user.api_token_hash')
             ->assertJsonMissingPath('user.api_token_lookup_hash');
 

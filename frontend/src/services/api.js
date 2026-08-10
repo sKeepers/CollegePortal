@@ -1,8 +1,35 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
-const TOKEN_KEY = 'college_portal_token'
 
-function storedToken() {
-  return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY)
+// Токен сессии лежит в httpOnly cookie и отсюда не виден — в этом и смысл SEC-002.
+// Виден только признак CSRF: его ставит сервер рядом с сессией, а мы перекладываем
+// его в заголовок изменяющих запросов, доказывая, что запрос сделал сам портал.
+const CSRF_COOKIE = 'cp_csrf'
+const CSRF_HEADER = 'X-CSRF-Token'
+const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS']
+
+function csrfToken() {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${CSRF_COOKIE}=([^;]*)`))
+  return match ? decodeURIComponent(match[1]) : ''
+}
+
+function authHeaders(method = 'GET') {
+  const csrf = csrfToken()
+  return SAFE_METHODS.includes(String(method).toUpperCase()) || !csrf ? {} : { [CSRF_HEADER]: csrf }
+}
+
+/**
+ * Единственный способ обратиться к API с учётными данными. Cookie отправляет браузер,
+ * поэтому заголовка с токеном больше нет; наша забота — признак CSRF.
+ */
+function authFetch(url, options = {}) {
+  return fetch(url, {
+    credentials: 'include',
+    ...options,
+    headers: {
+      ...authHeaders(options.method),
+      ...options.headers,
+    },
+  })
 }
 
 const VALIDATION_RULE_MESSAGES = {
@@ -89,17 +116,15 @@ function validationMessages(errors) {
 }
 
 async function request(path, options = {}) {
-  const token = storedToken()
   const isFormData = options.body instanceof FormData
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await authFetch(`${API_BASE_URL}${path}`, {
+    ...options,
     headers: {
       Accept: 'application/json',
       ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
-    ...options,
   })
 
   if (response.status === 204) {
@@ -124,20 +149,24 @@ async function request(path, options = {}) {
 export const api = {
   baseUrl: API_BASE_URL,
 
-  setToken(token, { persistent = true } = {}) {
-    const storage = persistent ? localStorage : sessionStorage
-    const otherStorage = persistent ? sessionStorage : localStorage
-    storage.setItem(TOKEN_KEY, token)
-    otherStorage.removeItem(TOKEN_KEY)
+  authFetch,
+
+  /**
+   * Есть ли сессия — судим по читаемому признаку CSRF: сам токен из JavaScript
+   * не виден. Это не проверка прав, а признак «стоит ли пробовать»: окончательный
+   * ответ всё равно даёт сервер.
+   */
+  hasSession() {
+    return Boolean(csrfToken())
   },
 
-  clearToken() {
-    localStorage.removeItem(TOKEN_KEY)
-    sessionStorage.removeItem(TOKEN_KEY)
-  },
-
-  token() {
-    return storedToken()
+  /**
+   * Забыть сессию на стороне браузера, не дожидаясь сервера. Нужно на 401: httpOnly
+   * cookie отсюда не стереть, но признак убрать можно, и интерфейс сразу перестанет
+   * считать человека вошедшим. Настоящее снятие делает выход на сервере.
+   */
+  clearSession() {
+    document.cookie = `${CSRF_COOKIE}=; Path=/; Max-Age=0; SameSite=Strict`
   },
 
   async login(credentials) {
@@ -223,13 +252,11 @@ export const api = {
   },
 
   async postDownload(path, data) {
-    const token = storedToken()
-    const response = await fetch(`${API_BASE_URL}${path}`, {
+    const response = await authFetch(`${API_BASE_URL}${path}`, {
       method: 'POST',
       headers: {
         Accept: 'text/csv',
         'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         'X-Idempotency-Key': crypto.randomUUID?.() || String(Date.now()),
       },
       body: JSON.stringify(data),
@@ -244,11 +271,9 @@ export const api = {
   },
 
   async download(path) {
-    const token = storedToken()
-    const response = await fetch(`${API_BASE_URL}${path}`, {
+    const response = await authFetch(`${API_BASE_URL}${path}`, {
       headers: {
         Accept: 'text/csv',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
     })
 
