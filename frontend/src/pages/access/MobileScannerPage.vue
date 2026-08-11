@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import jsQR from 'jsqr'
-import { Camera, FlipHorizontal, Flashlight, Keyboard, LogIn, LogOut, ScanLine, XCircle } from '@lucide/vue'
+import { Camera, FlipHorizontal, Flashlight, Keyboard, LogIn, LogOut, Maximize2, Minimize2, RotateCw, ScanLine, XCircle } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppCard from '../../components/ui/AppCard.vue'
@@ -19,22 +19,46 @@ const cameraStatus = ref('Камера не запущена')
 const cameraError = ref('')
 const scanning = ref(false)
 const paused = ref(false)
+const backgrounded = ref(false)
+const cameraLost = ref(false)
 const torchEnabled = ref(false)
 const torchSupported = ref(false)
 const manualToken = ref('')
+const manualOpen = ref(false)
 const lastSentPayload = ref('')
 const repeatHint = ref('')
+const flash = ref('')
 const scanIntervalMs = 350
 /**
  * Пауза после отправленного скана — чтобы оператор успел прочитать результат.
  * Дубли она не сторожит: их отсекает проверка по самому коду, см. handleScan.
  */
 const resumeDelayMs = 1000
+const COMPACT_KEY = 'collegePortal.scanner.compact'
+/**
+ * Длинная сторона рабочего кадра для jsQR. Кадр камеры приходит 640×480 и
+ * больше, а распознаванию столько не нужно: в память копируется каждый пиксель,
+ * и на телефоне это главный расход батареи в непрерывном режиме.
+ */
+const WORK_SIZE = 384
+/** Доля кадра под рамкой прицела. Разбирается ровно то, что видно в рамке. */
+const ROI_RATIO = 0.72
+/**
+ * Раз в столько пустых кадров смотрим кадр целиком. Рамка помогает целиться, но
+ * если оператор держит телефон боком, код окажется вне её — и без этой
+ * подстраховки сканер молчал бы, а причина была бы не видна.
+ */
+const WIDE_SWEEP_EVERY = 8
+
 const detector = createBarcodeDetector()
 let scanTimer = null
 let resumeTimer = null
+let flashTimer = null
 let audioContext = null
+let wakeLock = null
+let emptyFrames = 0
 
+const compact = ref(loadCompact())
 const resultClass = computed(() => store.lastEvent?.result === 'allowed' ? 'mobile-scanner-result--allowed' : 'mobile-scanner-result--denied')
 const directionIcon = computed(() => store.lastEvent?.direction === 'out' ? LogOut : LogIn)
 const resultIcon = computed(() => store.lastEvent?.result === 'allowed' ? directionIcon.value : XCircle)
@@ -42,6 +66,13 @@ const scannerEngine = computed(() => detector ? 'BarcodeDetector' : 'jsQR fallba
 const canTorch = computed(() => torchSupported.value && stream.value)
 const isSecureContext = computed(() => Boolean(globalThis?.isSecureContext))
 const hasCameraApi = computed(() => Boolean(navigator.mediaDevices?.getUserMedia))
+const liveStatus = computed(() => {
+  if (cameraLost.value) return 'Камера остановлена'
+  if (backgrounded.value) return 'Свёрнуто, съёмка на паузе'
+  if (paused.value) return 'Пауза после прохода'
+  if (scanning.value) return 'Сканирование идёт'
+  return cameraStatus.value
+})
 
 function createBarcodeDetector() {
   try {
@@ -52,11 +83,31 @@ function createBarcodeDetector() {
   }
 }
 
+function loadCompact() {
+  try {
+    return window.localStorage.getItem(COMPACT_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function toggleCompact() {
+  compact.value = !compact.value
+  try {
+    window.localStorage.setItem(COMPACT_KEY, compact.value ? '1' : '0')
+  } catch {
+    // Приватный режим браузера — выбор просто не переживёт перезагрузку.
+  }
+}
+
 function vibrateAllowed() { navigator.vibrate?.(90) }
 function vibrateDenied() { navigator.vibrate?.([80, 70, 80]) }
 function beep(allowed = true) {
   try {
     audioContext ||= new AudioContext()
+    // После возврата из фона контекст приходит приостановленным, и звук
+    // молча пропадает — как раз в том сценарии, ради которого он и нужен.
+    if (audioContext.state === 'suspended') audioContext.resume().catch(() => {})
     const oscillator = audioContext.createOscillator()
     const gain = audioContext.createGain()
     oscillator.frequency.value = allowed ? 880 : 220
@@ -69,6 +120,30 @@ function beep(allowed = true) {
   } catch {
     // Звук может быть заблокирован браузером до пользовательского действия.
   }
+}
+
+/**
+ * Экран не должен гаснуть, пока идёт съёмка: у турникета телефон лежит без
+ * прикосновений, а блокировка обрывает поток камеры. Поддержки может не быть —
+ * тогда просто работаем как раньше.
+ */
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return
+  try {
+    wakeLock = await navigator.wakeLock.request('screen')
+    wakeLock.addEventListener?.('release', () => { wakeLock = null })
+  } catch {
+    wakeLock = null
+  }
+}
+
+async function releaseWakeLock() {
+  try {
+    await wakeLock?.release()
+  } catch {
+    // Уже отпущен системой.
+  }
+  wakeLock = null
 }
 
 async function loadCameras() {
@@ -108,9 +183,14 @@ async function startCamera(deviceId = selectedDeviceId.value) {
     const track = stream.value.getVideoTracks()[0]
     selectedDeviceId.value = track.getSettings().deviceId || deviceId || ''
     torchSupported.value = Boolean(track.getCapabilities?.().torch)
+    // Систему тоже надо слушать: другое приложение или спящий режим забирают
+    // камеру молча, и без этого экран остаётся «сканирующим» навсегда.
+    track.addEventListener('ended', handleTrackEnded)
     cameraStatus.value = 'Камера подключена'
+    cameraLost.value = false
     scanning.value = true
     paused.value = false
+    await requestWakeLock()
     await loadCameras()
     scanLoop()
   } catch (error) {
@@ -127,8 +207,17 @@ function stopCamera() {
   paused.value = false
   scanning.value = false
   torchEnabled.value = false
+  stream.value?.getVideoTracks().forEach((track) => track.removeEventListener('ended', handleTrackEnded))
   stream.value?.getTracks().forEach((track) => track.stop())
   stream.value = null
+  releaseWakeLock()
+}
+
+function handleTrackEnded() {
+  cameraLost.value = true
+  scanning.value = false
+  cameraStatus.value = 'Камера остановлена системой'
+  cameraError.value = 'Камера была занята другим приложением или отключена системой. Нажмите «Продолжить съёмку».'
 }
 
 async function switchCamera() {
@@ -147,8 +236,34 @@ async function toggleTorch() {
   await track.applyConstraints({ advanced: [{ torch: torchEnabled.value }] })
 }
 
+/**
+ * Кадр для распознавания: центральный квадрат под рамкой прицела, уменьшенный
+ * до рабочего размера. Раньше в память копировался кадр целиком и в полном
+ * разрешении — на телефоне это заметно и по нагреву, и по батарее.
+ */
+function readFromCanvas(video) {
+  const canvas = canvasRef.value
+  const wide = emptyFrames > 0 && emptyFrames % WIDE_SWEEP_EVERY === 0
+  const shortSide = Math.min(video.videoWidth, video.videoHeight)
+  const srcSide = wide ? shortSide : Math.round(shortSide * ROI_RATIO)
+  const sx = Math.round((video.videoWidth - srcSide) / 2)
+  const sy = Math.round((video.videoHeight - srcSide) / 2)
+  const side = Math.min(WORK_SIZE, srcSide)
+
+  if (canvas.width !== side || canvas.height !== side) {
+    canvas.width = side
+    canvas.height = side
+  }
+
+  const context = canvas.getContext('2d', { willReadFrequently: true })
+  context.drawImage(video, sx, sy, srcSide, srcSide, 0, 0, side, side)
+  const image = context.getImageData(0, 0, side, side)
+
+  return jsQR(image.data, image.width, image.height)?.data || ''
+}
+
 async function scanLoop() {
-  if (!scanning.value || paused.value || !videoRef.value || !canvasRef.value) return
+  if (!scanning.value || paused.value || backgrounded.value || !videoRef.value || !canvasRef.value) return
 
   const startedAt = Date.now()
   const video = videoRef.value
@@ -158,19 +273,15 @@ async function scanLoop() {
       const codes = await detector.detect(video).catch(() => [])
       value = codes[0]?.rawValue || ''
     } else {
-      const canvas = canvasRef.value
-      const context = canvas.getContext('2d', { willReadFrequently: true })
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
-      context.drawImage(video, 0, 0, canvas.width, canvas.height)
-      const image = context.getImageData(0, 0, canvas.width, canvas.height)
-      value = jsQR(image.data, image.width, image.height)?.data || ''
+      value = readFromCanvas(video)
     }
+
+    emptyFrames = value ? 0 : emptyFrames + 1
 
     if (value) await handleScan(value)
   }
 
-  if (scanning.value && !paused.value) {
+  if (scanning.value && !paused.value && !backgrounded.value) {
     scanTimer = window.setTimeout(scanLoop, Math.max(0, scanIntervalMs - (Date.now() - startedAt)))
   }
 }
@@ -200,14 +311,27 @@ async function handleScan(value) {
   try {
     const event = await store.scan(normalized, { access_point: 'Мобильный сканер', device_name: 'Mobile Camera Scanner' })
     const allowed = event?.result === 'allowed'
+    showFlash(allowed ? 'allowed' : 'denied')
     allowed ? vibrateAllowed() : vibrateDenied()
     beep(allowed)
   } catch {
+    showFlash('denied')
     vibrateDenied()
     beep(false)
   } finally {
     scheduleResume()
   }
+}
+
+/**
+ * Цветная вспышка во весь кадр. Оператор держит телефон на вытянутой руке и
+ * читать карточку под камерой ему некогда: решение должно быть видно боковым
+ * зрением, а подробности — уже потом.
+ */
+function showFlash(kind) {
+  flash.value = kind
+  if (flashTimer) window.clearTimeout(flashTimer)
+  flashTimer = window.setTimeout(() => { flash.value = '' }, resumeDelayMs)
 }
 
 function scheduleResume() {
@@ -224,9 +348,40 @@ function scheduleResume() {
 async function submitManual() {
   await handleScan(manualToken.value)
   manualToken.value = ''
+  manualOpen.value = false
+}
+
+/**
+ * Возврат из фона. Сюда приходят три разных случая: экран заблокировали,
+ * приложение свернули, вкладку переключили. Во всех трёх браузер ставит видео
+ * на паузу, а таймер продолжает тикать вхолостую по замершему кадру.
+ */
+async function handleVisibility() {
+  if (document.hidden) {
+    backgrounded.value = true
+    if (scanTimer) window.clearTimeout(scanTimer)
+    scanTimer = null
+    return
+  }
+
+  backgrounded.value = false
+
+  if (!stream.value) return
+
+  const track = stream.value.getVideoTracks()[0]
+  if (!track || track.readyState === 'ended') {
+    // Систему уже не переубедить: поток закрыт, нужен новый.
+    await startCamera(selectedDeviceId.value)
+    return
+  }
+
+  await videoRef.value?.play().catch(() => {})
+  await requestWakeLock()
+  if (scanning.value && !paused.value) scanLoop()
 }
 
 onMounted(async () => {
+  document.addEventListener('visibilitychange', handleVisibility)
   await loadCameras().catch(() => {})
   if (isSecureContext.value && hasCameraApi.value) {
     await startCamera()
@@ -235,38 +390,60 @@ onMounted(async () => {
   }
 })
 
-onBeforeUnmount(stopCamera)
+onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', handleVisibility)
+  if (flashTimer) window.clearTimeout(flashTimer)
+  stopCamera()
+})
 </script>
 
 <template>
-  <AppPage class="mobile-scanner-page">
-    <PageHeader title="Мобильный сканер" subtitle="Сканирование QR-пропусков камерой телефона. Камера работает локально в браузере." />
+  <AppPage :class="['mobile-scanner-page', { 'mobile-scanner-page--compact': compact }]">
+    <PageHeader v-if="!compact" title="Мобильный сканер" subtitle="Сканирование QR-пропусков камерой телефона. Камера работает локально в браузере." />
 
-    <AppErrorBanner :message="cameraError || store.error" />
-    <q-banner v-if="store.warning || repeatHint" rounded class="access-gate-warning">{{ store.warning || repeatHint }}</q-banner>
+    <AppErrorBanner v-if="!compact" :message="cameraError || store.error" />
+    <q-banner v-if="!compact && (store.warning || repeatHint)" rounded class="access-gate-warning">{{ store.warning || repeatHint }}</q-banner>
 
     <div class="mobile-scanner-layout">
       <section class="mobile-scanner-camera-card">
-        <div class="mobile-scanner-camera">
+        <div :class="['mobile-scanner-camera', flash ? `mobile-scanner-camera--${flash}` : '']">
           <video ref="videoRef" playsinline muted />
-          <div class="mobile-scanner-frame"><ScanLine :size="34" /><span>{{ cameraStatus }}</span></div>
+          <div class="mobile-scanner-frame" :style="{ '--cp-roi': ROI_RATIO }"><ScanLine :size="34" /><span>{{ liveStatus }}</span></div>
           <canvas ref="canvasRef" hidden />
+
+          <!-- Итог поверх кадра: крупно, цветом, без прокрутки. -->
+          <div v-if="store.lastEvent" :class="['mobile-scanner-overlay', store.lastEvent.result === 'allowed' ? 'mobile-scanner-overlay--allowed' : 'mobile-scanner-overlay--denied']">
+            <component :is="resultIcon" :size="34" />
+            <div>
+              <strong>{{ outcomeHeadline(store.lastEvent) }}</strong>
+              <span>{{ ownerName(store.lastEvent) }}</span>
+            </div>
+          </div>
+
+          <button type="button" class="mobile-scanner-compact-toggle" :aria-label="compact ? 'Обычный режим' : 'Компактный режим'" @click="toggleCompact">
+            <component :is="compact ? Minimize2 : Maximize2" :size="18" />
+          </button>
         </div>
 
         <div class="mobile-scanner-controls">
-          <q-btn v-if="!stream" color="primary" no-caps @click="startCamera()"><Camera :size="17" class="q-mr-xs" /> Запустить камеру</q-btn>
+          <q-btn v-if="!stream || cameraLost" color="primary" no-caps @click="startCamera()"><Camera :size="17" class="q-mr-xs" /> {{ cameraLost ? 'Продолжить съёмку' : 'Запустить камеру' }}</q-btn>
           <q-btn outline no-caps :disable="!stream" @click="switchCamera"><FlipHorizontal :size="17" class="q-mr-xs" /> Сменить</q-btn>
           <q-btn outline no-caps :disable="!canTorch" @click="toggleTorch"><Flashlight :size="17" class="q-mr-xs" /> {{ torchEnabled ? 'Выключить' : 'Фонарик' }}</q-btn>
+          <q-btn v-if="compact" outline no-caps @click="manualOpen = true"><Keyboard :size="17" class="q-mr-xs" /> Ввести код</q-btn>
         </div>
 
-        <div class="mobile-scanner-meta">
+        <p v-if="compact && (cameraError || store.error || store.warning || repeatHint)" class="mobile-scanner-compact-note">
+          {{ cameraError || store.error || store.warning || repeatHint }}
+        </p>
+
+        <div v-if="!compact" class="mobile-scanner-meta">
           <AppStatusBadge :label="scannerEngine" tone="info" />
           <AppStatusBadge :label="isSecureContext ? 'Secure context' : 'Нужен HTTPS'" :tone="isSecureContext ? 'success' : 'warning'" />
-          <AppStatusBadge :label="paused ? 'Пауза после прохода' : 'Сканирование идёт'" :tone="paused ? 'warning' : 'success'" />
+          <AppStatusBadge :label="liveStatus" :tone="paused || backgrounded || cameraLost ? 'warning' : 'success'" />
         </div>
       </section>
 
-      <AppCard :class="['mobile-scanner-result', store.lastEvent ? resultClass : 'mobile-scanner-result--idle']">
+      <AppCard v-if="!compact" :class="['mobile-scanner-result', store.lastEvent ? resultClass : 'mobile-scanner-result--idle']">
         <template v-if="store.lastEvent">
           <div class="mobile-scanner-result__status">
             <component :is="resultIcon" :size="54" />
@@ -286,12 +463,41 @@ onBeforeUnmount(stopCamera)
         <div v-else class="mobile-scanner-result__empty"><ScanLine :size="48" /><strong>Ожидание QR</strong><span>После распознавания здесь появится результат прохода.</span></div>
       </AppCard>
 
-      <AppCard title="Ручной ввод" subtitle="Fallback, если камера недоступна или QR поврежден">
+      <AppCard v-if="!compact" title="Ручной ввод" subtitle="Fallback, если камера недоступна или QR поврежден">
         <q-form class="mobile-scanner-manual" @submit.prevent="submitManual">
-          <q-input v-model="manualToken" outlined label="Актуальный QR-код CP2" autocomplete="off"><template #prepend><Keyboard :size="20" /></template></q-input>
+          <q-input
+            v-model="manualToken"
+            outlined
+            label="Актуальный QR-код CP2"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+          ><template #prepend><Keyboard :size="20" /></template></q-input>
           <q-btn color="primary" type="submit" :loading="store.scanning" :disable="!manualToken.trim()">Проверить</q-btn>
         </q-form>
       </AppCard>
     </div>
+
+    <!-- В компактном режиме ручной ввод не исчезает, а прячется в диалог:
+         запасной путь обязан оставаться под рукой, когда камера подвела. -->
+    <q-dialog v-model="manualOpen">
+      <q-card class="mobile-scanner-manual-dialog">
+        <q-card-section><div class="text-h6">Ручной ввод</div></q-card-section>
+        <q-card-section>
+          <q-form class="mobile-scanner-manual" @submit.prevent="submitManual">
+            <q-input
+              v-model="manualToken"
+              outlined
+              autofocus
+              label="Актуальный QR-код CP2"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+            ><template #prepend><Keyboard :size="20" /></template></q-input>
+            <q-btn color="primary" type="submit" :loading="store.scanning" :disable="!manualToken.trim()"><RotateCw :size="16" class="q-mr-xs" /> Проверить</q-btn>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </AppPage>
 </template>

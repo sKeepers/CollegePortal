@@ -6855,6 +6855,128 @@ body {
   }
 }
 
+/* MOB-003: компактный режим, вспышка результата поверх кадра и рамка прицела,
+   совпадающая с областью, которую сканер действительно разбирает. */
+
+.mobile-scanner-camera {
+  transition: box-shadow 140ms ease;
+}
+
+.mobile-scanner-camera--allowed {
+  box-shadow: inset 0 0 0 6px #16a34a;
+}
+
+.mobile-scanner-camera--denied {
+  box-shadow: inset 0 0 0 6px #dc2626;
+}
+
+/* Рамка держится квадратной и центрируется по кадру: сканер разбирает
+   вписанный в неё квадрат, а не весь кадр, и прицел должен об этом говорить.
+   Раньше рамка растягивалась во всю ширину и обещала больше, чем читалось. */
+.mobile-scanner-frame {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  height: calc(100% * var(--cp-roi, 0.72));
+  width: auto;
+  max-width: calc(100% * var(--cp-roi, 0.72));
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+}
+
+/* Подпись состояния — над рамкой: снизу лежит полоса результата, и они
+   перекрывали бы друг друга ровно в тот момент, когда обе нужны. */
+.mobile-scanner-frame span {
+  bottom: auto;
+  top: -34px;
+  white-space: nowrap;
+}
+
+.mobile-scanner-overlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+  color: #ffffff;
+}
+
+.mobile-scanner-overlay--allowed {
+  background: rgba(22, 163, 74, 0.94);
+}
+
+.mobile-scanner-overlay--denied {
+  background: rgba(220, 38, 38, 0.94);
+}
+
+.mobile-scanner-overlay strong {
+  display: block;
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.mobile-scanner-overlay span {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.mobile-scanner-compact-toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.mobile-scanner-compact-note {
+  margin: 8px 0 0;
+  color: #b45309;
+  font-size: 13px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+/* Компактный режим: в кадре только камера, итог и кнопки. Всё, что можно
+   прочитать потом, с экрана убрано — оператор стоит у двери, а не за столом. */
+.mobile-scanner-page--compact .mobile-scanner-layout {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.mobile-scanner-page--compact .mobile-scanner-camera,
+.mobile-scanner-page--compact .mobile-scanner-camera video {
+  height: min(68vh, 620px);
+  max-height: none;
+  min-height: 0;
+}
+
+.mobile-scanner-page--compact .mobile-scanner-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.mobile-scanner-page--compact .mobile-scanner-controls .q-btn {
+  width: 100%;
+  min-height: 44px;
+}
+
+.mobile-scanner-manual-dialog {
+  width: min(92vw, 420px);
+}
+
 .attendance-analysis-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
