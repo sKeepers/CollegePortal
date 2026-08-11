@@ -27,6 +27,7 @@ use App\Models\Specialty;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Teacher;
+use App\Models\TeachingLoad;
 use App\Models\TeachingLoadItem;
 use App\Models\User;
 use App\Services\SettingService;
@@ -639,6 +640,16 @@ class DemoDataSeeder extends Seeder
     {
         $academicYear = (string) (SettingService::value('academic', 'current_academic_year', '') ?: '2026/2027');
         $generator = app(TeachingLoadGenerationService::class);
+
+        // Нагрузка прошлого наполнения снимается целиком, а не обновляется.
+        // Дисциплины плана при каждом запуске раскладываются заново и получают
+        // новые идентификаторы, поэтому генератор старых строк не узнаёт и
+        // пытается создать вторые такие же — на стенде это падало нарушением
+        // уникальности. В тестах база каждый раз пустая, и увидеть это можно
+        // было только на втором запуске набора подряд.
+        $staleLoadIds = TeachingLoad::query()->whereIn('group_id', $groups->pluck('id'))->pluck('id');
+        TeachingLoadItem::query()->whereIn('teaching_load_id', $staleLoadIds)->delete();
+        TeachingLoad::query()->whereIn('id', $staleLoadIds)->delete();
 
         foreach ($groups as $groupIndex => $group) {
             $generator->apply($group->id, $academicYear);

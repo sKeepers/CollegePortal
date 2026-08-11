@@ -42,6 +42,34 @@ class DemoDataSeederTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * Набор обязан переживать повторный запуск.
+     *
+     * Стенд наполняют не один раз, и второй запуск падал нарушением
+     * уникальности: дисциплины плана раскладываются заново и получают новые
+     * идентификаторы, а генератор нагрузки старых строк не узнавал и пытался
+     * создать вторые такие же. В тестах база каждый раз пустая, поэтому увидеть
+     * это можно было только здесь — на втором запуске подряд.
+     */
+    public function test_demo_data_seeder_survives_a_second_run(): void
+    {
+        Carbon::setTestNow('2026-07-27 12:00:00');
+
+        foreach (['admin', 'teacher', 'student'] as $code) {
+            Role::query()->firstOrCreate(['code' => $code], ['name' => $code]);
+        }
+
+        $this->seed(DemoDataSeeder::class);
+        $this->seed(DemoDataSeeder::class);
+
+        $this->assertSame(600, Student::query()->count(), 'Второй запуск не должен удваивать людей');
+        $this->assertSame(70, Teacher::query()->count());
+        $this->assertSame(12, Curriculum::query()->count());
+        $this->assertGreaterThan(0, TeachingLoadItem::query()->count());
+
+        Carbon::setTestNow();
+    }
+
     public function test_demo_data_links_people_employees_and_realistic_attendance(): void
     {
         Carbon::setTestNow('2026-07-27 12:00:00');
