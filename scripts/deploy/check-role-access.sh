@@ -81,6 +81,8 @@ SECTIONS='
 Цифровые пропуска|digitalpasses.manage,view_own_data|digital-identities
 Мобильный кабинет студента|mobile.student.view|mobile/student
 Мобильный кабинет преподавателя|mobile.teacher.view|mobile/teacher
+Мобильный кабинет куратора|mobile.curator.view|mobile/curator
+Мобильный кабинет администратора|mobile.admin.view|mobile/admin
 Импорт данных|import.manage|admin/import/config,admin/import/history
 Управление данными|demo_data.manage|admin/demo-data
 Пользователи|users.manage|admin/users,admin/users/roles
