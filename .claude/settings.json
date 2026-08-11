@@ -61,10 +61,10 @@
       "Bash(git check-ignore *)",
 
       "PowerShell(ssh -o BatchMode=yes andale@192.168.34.114 *)",
-      "PowerShell(ssh -o BatchMode=yes andale@192.168.34.17 *)",
+      "PowerShell(ssh -o BatchMode=yes andale@192.168.34.99 *)",
       "PowerShell(ssh -o BatchMode=yes ai_read@192.168.34.1 *)",
       "PowerShell(ssh andale@192.168.34.114 *)",
-      "PowerShell(ssh andale@192.168.34.17 *)",
+      "PowerShell(ssh andale@192.168.34.99 *)",
       "PowerShell(ssh ai_read@192.168.34.1 *)",
 
       "PowerShell(scp -o BatchMode=yes *)",

@@ -188,8 +188,8 @@
 **Порядок выкатки, когда владелец назовёт час:**
 
 ```
-scp releases/college-portal-0.8.0-rc8.tar.gz cp-agent@192.168.34.17:/home/cp-agent/
-ssh -i .local/ssh/cp-agent cp-agent@192.168.34.17 \
+scp releases/college-portal-0.8.0-rc8.tar.gz cp-agent@192.168.34.99:/home/cp-agent/
+ssh -i .local/ssh/cp-agent cp-agent@192.168.34.99 \
   "sudo -n /opt/college-portal/installer/update.sh /home/cp-agent/college-portal-0.8.0-rc8.tar.gz"
 ```
 

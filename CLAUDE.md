@@ -20,7 +20,7 @@
 | --- | --- | --- |
 | `C:\!Projects\CollegePortal` | рабочая копия, только редактирование | — |
 | `192.168.34.114` | DEV: сборка, тесты, проверка | `ssh andale@192.168.34.114`, checkout в `/home/andale/CollegePortal` |
-| `192.168.34.17` | PROD | `ssh andale@192.168.34.17`, установка в `/opt/college-portal` |
+| `192.168.34.99` | PROD | `ssh andale@192.168.34.99`, установка в `/opt/college-portal` |
 | `192.168.34.1` | Mikrotik, учётная запись только на чтение | `ssh ai_read@192.168.34.1` |
 | `192.168.34.223` | ViPNet-ПК Windows 7, шлюз ФИС ГИА | SSH |
 
@@ -106,8 +106,8 @@ bash scripts/release/build-release.sh
 
 ```bash
 # с рабочей станции, через служебную учётную запись
-scp releases/college-portal-<версия>.tar.gz cp-agent@192.168.34.17:/home/cp-agent/
-ssh -i .local/ssh/cp-agent cp-agent@192.168.34.17 \
+scp releases/college-portal-<версия>.tar.gz cp-agent@192.168.34.99:/home/cp-agent/
+ssh -i .local/ssh/cp-agent cp-agent@192.168.34.99 \
   "sudo -n /opt/college-portal/installer/update.sh /home/cp-agent/college-portal-<версия>.tar.gz"
 ```
 

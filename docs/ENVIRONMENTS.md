@@ -151,7 +151,7 @@ Linux DEV:
 
 UAT:
 
-- host/IP: `192.168.34.17`;
+- host/IP: `192.168.34.99` (до 11.08.2026 — `192.168.34.17`);
 - path: `/opt/college-portal`;
 - обновляется только через installer/update script и release archive;
 - `git pull` на UAT в рамках repository sync не выполняется.
