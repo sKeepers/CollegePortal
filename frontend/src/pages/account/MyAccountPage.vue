@@ -18,9 +18,23 @@ const password = reactive({ current_password: '', password: '', password_confirm
 const showPassword = ref(false)
 
 const account = computed(() => store.account)
+
+// Требования владельца от 11.08.2026. Проверка здесь — подсказка, а не защита:
+// решает всё равно сервер, `App\Rules\SelfChosenPassword`.
+const PASSWORD_MIN = 6
+const passwordProblem = computed(() => {
+  if (!password.password) return ''
+  if (password.password.length < PASSWORD_MIN) return `Не короче ${PASSWORD_MIN} символов`
+  if (!/^[\x21-\x7E]+$/.test(password.password)) return 'Только латиница, без пробелов'
+  if (!/[A-Z]/.test(password.password)) return 'Нужна хотя бы одна заглавная латинская буква'
+  return ''
+})
 const passwordValid = computed(() =>
-  Boolean(password.current_password && password.password.length >= 8 && password.password === password.password_confirmation),
+  Boolean(password.current_password && password.password && !passwordProblem.value && password.password === password.password_confirmation),
 )
+
+// Пароль выдан порталом: предложение видно, пока человек не заведёт свой.
+const issuedPassword = computed(() => Boolean(account.value?.must_change_password))
 
 watch(account, (value) => {
   contacts.email = value?.email || ''
@@ -74,6 +88,13 @@ function formatDateTime(value) {
     <AppLoading v-if="store.loading" label="Загрузка учётной записи..." />
 
     <div v-else-if="account" class="account-grid">
+      <q-banner v-if="issuedPassword" rounded class="bg-orange-1 text-orange-10 account-issued-banner">
+        <template #avatar><KeyRound :size="20" /></template>
+        Вы входите с паролем, который выдал портал: его знаете не только вы — он был напечатан на карточке
+        или передан вам администратором. Заведите свой в блоке «Пароль» ниже. Прямо сейчас это не обязательно,
+        но пока вы этого не сделали, напоминание будет появляться при каждом входе.
+      </q-banner>
+
       <AppCard>
         <template #header><div class="account-card-title"><UserRound :size="18" /> Кто вы в портале</div></template>
         <dl class="account-details">
@@ -131,12 +152,23 @@ function formatDateTime(value) {
         <template #header><div class="account-card-title"><KeyRound :size="18" /> Пароль</div></template>
         <template v-if="!showPassword">
           <p class="account-note">Пароль меняется только вами и только с подтверждением текущего.</p>
-          <div class="account-actions"><q-btn outline no-caps @click="showPassword = true">Изменить пароль</q-btn></div>
+          <div class="account-actions">
+            <q-btn :outline="!issuedPassword" :color="issuedPassword ? 'primary' : undefined" no-caps @click="showPassword = true">
+              {{ issuedPassword ? 'Создать свой пароль' : 'Изменить пароль' }}
+            </q-btn>
+          </div>
         </template>
         <template v-else>
           <div class="account-form">
-            <q-input v-model="password.current_password" outlined dense type="password" label="Текущий пароль" autocomplete="current-password" />
-            <q-input v-model="password.password" outlined dense type="password" label="Новый пароль" autocomplete="new-password" hint="Не короче восьми символов" />
+            <q-input v-model="password.current_password" outlined dense type="password" label="Текущий пароль" autocomplete="current-password"
+              :hint="issuedPassword ? 'Тот, что выдал портал' : ''" />
+            <q-input
+              v-model="password.password"
+              outlined dense type="password" label="Новый пароль" autocomplete="new-password"
+              :error="Boolean(passwordProblem)"
+              :error-message="passwordProblem"
+              hint="Не короче 6 символов, латиница, есть заглавная буква"
+            />
             <q-input v-model="password.password_confirmation" outlined dense type="password" label="Новый пароль ещё раз" autocomplete="new-password" />
           </div>
           <div class="account-actions">

@@ -65,6 +65,9 @@ class AccountProvisioningService
                 'username' => $username,
                 'password' => $password,
                 'is_active' => true,
+                // Пароль выдан порталом и напечатан на карточке. После первого входа
+                // человеку будет предложено завести свой — решение владельца 11.08.2026.
+                'must_change_password' => true,
                 'person_type' => 'person',
                 'person_id' => $person->id,
             ]);

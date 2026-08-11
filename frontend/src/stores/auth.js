@@ -9,6 +9,9 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref('')
 
   const isAuthenticated = computed(() => Boolean(user.value && api.hasSession()))
+  // Портал выдал пароль, своего человек ещё не заводил. Признак приходит и при входе,
+  // и при восстановлении сессии, поэтому предложение переживает обновление страницы.
+  const mustChangePassword = computed(() => Boolean(user.value?.must_change_password))
   const isAdmin = computed(() => user.value?.role?.code === 'admin')
   const permissions = computed(() => user.value?.permissions || user.value?.role?.permissions || [])
   const roleCodes = computed(() => {
@@ -67,6 +70,14 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * Человек завёл свой пароль. Отметку снял сервер, но перечитывать ради этого всю
+   * учётную запись незачем — предложение должно исчезнуть сразу.
+   */
+  function passwordChanged() {
+    if (user.value) user.value = { ...user.value, must_change_password: false }
+  }
+
   async function logout() {
     loading.value = true
     error.value = ''
@@ -89,6 +100,8 @@ export const useAuthStore = defineStore('auth', () => {
     initialized,
     error,
     isAuthenticated,
+    mustChangePassword,
+    passwordChanged,
     permissions,
     roleCodes,
     isAdmin,

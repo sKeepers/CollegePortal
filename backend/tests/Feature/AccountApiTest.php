@@ -64,21 +64,23 @@ class AccountApiTest extends TestCase
         [$user] = $this->userWithPerson('старый-пароль-1');
         $this->withApiAuth($user);
 
+        // Новый пароль здесь и ниже — латиницей с заглавной: с 11.08.2026 этого требует
+        // политика, и кириллический пароль отклонялся бы раньше проверки текущего.
         $this->postJson('/api/account/password', [
             'current_password' => 'не-тот-пароль',
-            'password' => 'новый-пароль-2',
-            'password_confirmation' => 'новый-пароль-2',
+            'password' => 'Novyi-Parol2',
+            'password_confirmation' => 'Novyi-Parol2',
         ])->assertStatus(422)->assertJsonPath('errors.current_password.0', 'Текущий пароль указан неверно.');
 
         $this->assertTrue(Hash::check('старый-пароль-1', $user->fresh()->password));
 
         $this->postJson('/api/account/password', [
             'current_password' => 'старый-пароль-1',
-            'password' => 'новый-пароль-2',
-            'password_confirmation' => 'новый-пароль-2',
+            'password' => 'Novyi-Parol2',
+            'password_confirmation' => 'Novyi-Parol2',
         ])->assertOk();
 
-        $this->assertTrue(Hash::check('новый-пароль-2', $user->fresh()->password));
+        $this->assertTrue(Hash::check('Novyi-Parol2', $user->fresh()->password));
     }
 
     public function test_a_short_or_unconfirmed_password_is_refused(): void
@@ -88,14 +90,14 @@ class AccountApiTest extends TestCase
 
         $this->postJson('/api/account/password', [
             'current_password' => 'старый-пароль-1',
-            'password' => 'корот1',
-            'password_confirmation' => 'корот1',
+            'password' => 'Korot',
+            'password_confirmation' => 'Korot',
         ])->assertStatus(422);
 
         $this->postJson('/api/account/password', [
             'current_password' => 'старый-пароль-1',
-            'password' => 'достаточно-длинный',
-            'password_confirmation' => 'другое-подтверждение',
+            'password' => 'Dostatochno-Dlinnyi',
+            'password_confirmation' => 'Drugoe-Podtverzhdenie',
         ])->assertStatus(422);
 
         $this->assertTrue(Hash::check('старый-пароль-1', $user->fresh()->password));

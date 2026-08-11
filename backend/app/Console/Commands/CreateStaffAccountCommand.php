@@ -223,6 +223,10 @@ class CreateStaffAccountCommand extends Command
 
         if ($password !== '') {
             $user->password = Hash::make($password);
+            // Пароль знает не только владелец учётной записи — он показан в выводе
+            // команды. Значит, после входа портал предложит завести свой. Повторный
+            // вызов без `--password` пароль не трогает и отметку тоже.
+            $user->must_change_password = true;
         }
 
         $user->save();

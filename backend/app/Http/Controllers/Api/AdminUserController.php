@@ -9,6 +9,7 @@ use App\Models\Employee;
 use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Rules\SelfChosenPassword;
 use App\Services\AuditLogService;
 use App\Services\AccountProvisioningService;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -55,6 +56,9 @@ class AdminUserController extends Controller
             ...$data,
             'password' => Hash::make($data['password']),
             'is_active' => $data['is_active'] ?? true,
+            // Пароль задал не сам человек, а администратор — значит, после входа
+            // портал предложит завести свой.
+            'must_change_password' => true,
         ]);
         $this->syncPrimaryRole($user);
         AuditLogService::log('users', 'create', $user, null, $user->fresh()->toArray(), $request);
@@ -122,7 +126,11 @@ class AdminUserController extends Controller
         }
 
         $password = (string) random_int(10000, 99999);
-        $user->forceFill(['password' => Hash::make($password)])->save();
+        // Выданный пароль временный: после входа портал предложит завести свой.
+        $user->forceFill([
+            'password' => Hash::make($password),
+            'must_change_password' => true,
+        ])->save();
 
         AuditLogService::log('users', 'reset_password', $user, null, [
             'profile_type' => $data['profile_type'],
@@ -159,6 +167,10 @@ class AdminUserController extends Controller
 
         if (! empty($data['password'])) {
             $data['password'] = Hash::make($data['password']);
+            // Пароль задан со стороны, а не самим человеком. Правка карточки без
+            // пароля отметку не трогает — иначе она возвращалась бы тому, кто свой
+            // пароль давно завёл, при любом изменении роли или почты.
+            $data['must_change_password'] = true;
         } else {
             unset($data['password']);
         }
@@ -291,7 +303,9 @@ class AdminUserController extends Controller
             'role_id' => ['required', 'integer', 'exists:roles,id'],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user?->id)],
-            'password' => [$user ? 'nullable' : 'required', 'string', 'min:8', 'max:255'],
+            // Тот же набор требований, что и в «Моей учётной записи»: пароль, который
+            // задаёт человек, не должен зависеть от того, кто именно его набирает.
+            'password' => [$user ? 'nullable' : 'required', 'string', 'max:255', new SelfChosenPassword],
             'is_active' => ['sometimes', 'boolean'],
             'person_type' => ['nullable', Rule::in(['student', 'teacher', 'employee', 'applicant', 'guest', 'alumni'])],
             'person_id' => ['nullable', 'integer', 'min:1', 'exists:people,id'],
@@ -301,7 +315,6 @@ class AdminUserController extends Controller
             'email.email' => 'Введите корректный email.',
             'email.unique' => 'Пользователь с таким email уже существует.',
             'password.required' => 'Введите пароль.',
-            'password.min' => 'Пароль должен содержать не менее :min символов.',
             'role_id.required' => 'Выберите роль.',
             'role_id.exists' => 'Выбранная роль не найдена.',
             'person_id.exists' => 'Выбранная личная карточка не найдена.',

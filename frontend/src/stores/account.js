@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
+import { useAuthStore } from './auth'
 
 export const useAccountStore = defineStore('account', () => {
   const account = ref(null)
@@ -66,7 +67,12 @@ export const useAccountStore = defineStore('account', () => {
     saving.value = true
     error.value = ''
     try {
-      return await api.post('account/password', payload)
+      const result = await api.post('account/password', payload)
+      // Свой пароль заведён — предложение убираем сразу, и здесь, и в меню входа.
+      // Сервер отметку уже снял, перечитывать ради этого учётную запись незачем.
+      if (account.value) account.value = { ...account.value, must_change_password: false }
+      useAuthStore().passwordChanged()
+      return result
     } catch (err) {
       error.value = err.message || 'Не удалось изменить пароль'
       throw err

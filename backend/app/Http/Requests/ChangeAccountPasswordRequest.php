@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\SelfChosenPassword;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\Password;
 
 class ChangeAccountPasswordRequest extends FormRequest
 {
@@ -16,10 +16,10 @@ class ChangeAccountPasswordRequest extends FormRequest
     {
         return [
             'current_password' => ['required', 'string'],
-            // Восемь символов — требование только к тому, что человек задаёт сам.
-            // Выдаваемые порталом пароли короче, и это отдельный вопрос политики,
-            // который решает владелец; здесь мы просто не плодим новых коротких.
-            'password' => ['required', 'string', 'confirmed', Password::min(8)],
+            // Требования вынесены в правило: тот же набор проверяет пароль, который
+            // администратор задаёт в карточке пользователя. Выдаваемые порталом пароли
+            // под него не подпадают намеренно — решение владельца от 11.08.2026.
+            'password' => ['required', 'string', 'confirmed', 'max:255', new SelfChosenPassword],
         ];
     }
 

@@ -101,7 +101,7 @@ class AuditLogApiTest extends TestCase
         $this->postJson('/api/admin/users', [
             'name' => 'Аудит Пользователь',
             'email' => 'audit.user@example.test',
-            'password' => 'demo12345',
+            'password' => 'Demo12345',
             'role_id' => $role->id,
             'is_active' => true,
         ])->assertCreated();

@@ -83,6 +83,9 @@ class UserResource extends JsonResource
             'username' => $this->username,
             'is_active' => $this->is_active,
             'status' => $this->is_active ? 'active' : 'blocked',
+            // Признак «ходит с выданным паролем». Фронтенд по нему предлагает завести
+            // свой сразу после входа; секрета в самом признаке нет.
+            'must_change_password' => (bool) $this->must_change_password,
             'role' => new RoleResource($this->whenLoaded('role')),
             'roles' => RoleResource::collection($this->whenLoaded('roles')),
             'permissions' => method_exists($this->resource, 'permissionCodes') ? $this->permissionCodes() : [],

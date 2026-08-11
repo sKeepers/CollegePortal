@@ -27,7 +27,7 @@ class AdminUserApiTest extends TestCase
             ->postJson('/api/admin/users', [
                 'name' => 'Тестовый пользователь',
                 'email' => 'test.user@example.test',
-                'password' => 'demo12345',
+                'password' => 'Demo12345',
                 'role_id' => $role->id,
                 'is_active' => true,
                 'person_type' => 'teacher',
@@ -78,7 +78,7 @@ class AdminUserApiTest extends TestCase
         $this->withApiAuth()
             ->postJson('/api/admin/users', [
                 'email' => 'valid@example.test',
-                'password' => 'demo12345',
+                'password' => 'Demo12345',
                 'role_id' => $role->id,
             ])
             ->assertUnprocessable()
@@ -88,7 +88,7 @@ class AdminUserApiTest extends TestCase
         $this->withApiAuth()
             ->postJson('/api/admin/users', [
                 'name' => 'Нет email',
-                'password' => 'demo12345',
+                'password' => 'Demo12345',
                 'role_id' => $role->id,
             ])
             ->assertUnprocessable()
@@ -98,7 +98,7 @@ class AdminUserApiTest extends TestCase
             ->postJson('/api/admin/users', [
                 'name' => 'Плохой email',
                 'email' => 'not-email',
-                'password' => 'demo12345',
+                'password' => 'Demo12345',
                 'role_id' => $role->id,
             ])
             ->assertUnprocessable()
@@ -108,7 +108,7 @@ class AdminUserApiTest extends TestCase
             ->postJson('/api/admin/users', [
                 'name' => 'Дубликат',
                 'email' => 'duplicate@example.test',
-                'password' => 'demo12345',
+                'password' => 'Demo12345',
                 'role_id' => $role->id,
             ])
             ->assertUnprocessable()
@@ -118,17 +118,17 @@ class AdminUserApiTest extends TestCase
             ->postJson('/api/admin/users', [
                 'name' => 'Короткий пароль',
                 'email' => 'short@example.test',
-                'password' => 'short',
+                'password' => 'Short',
                 'role_id' => $role->id,
             ])
             ->assertUnprocessable()
-            ->assertJsonPath('errors.password.0', 'Пароль должен содержать не менее 8 символов.');
+            ->assertJsonPath('errors.password.0', 'Пароль должен быть не короче 6 символов.');
 
         $this->withApiAuth()
             ->postJson('/api/admin/users', [
                 'name' => 'Без роли',
                 'email' => 'norole@example.test',
-                'password' => 'demo12345',
+                'password' => 'Demo12345',
             ])
             ->assertUnprocessable()
             ->assertJsonPath('errors.role_id.0', 'Выберите роль.');
@@ -137,7 +137,7 @@ class AdminUserApiTest extends TestCase
             ->postJson('/api/admin/users', [
                 'name' => 'Без Person',
                 'email' => 'missing-person@example.test',
-                'password' => 'demo12345',
+                'password' => 'Demo12345',
                 'role_id' => $role->id,
                 'person_id' => 999999,
             ])

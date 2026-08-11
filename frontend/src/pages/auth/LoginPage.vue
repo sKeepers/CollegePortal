@@ -16,7 +16,9 @@ const form = reactive({
 
 async function submit() {
   await auth.login({ login: form.login, password: form.password, staySignedIn: form.staySignedIn })
-  router.push('/dashboard')
+  // Пароль выдан порталом и напечатан на карточке — ведём человека туда, где он
+  // заводит свой. Это предложение, а не запрет: со страницы можно уйти в любой раздел.
+  router.push(auth.mustChangePassword ? '/account' : '/dashboard')
 }
 </script>
 

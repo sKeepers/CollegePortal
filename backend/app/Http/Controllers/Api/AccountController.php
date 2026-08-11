@@ -37,6 +37,9 @@ class AccountController extends Controller
             'login' => $user->email ?: $user->username,
             'role' => $user->role?->name,
             'last_login_at' => $user->last_login_at?->toISOString(),
+            // Пароль выдан порталом, своего человек ещё не заводил: раздел показывает
+            // предложение сменить его, а не молча ждёт, что человек догадается сам.
+            'must_change_password' => (bool) $user->must_change_password,
             // Контакты берутся у человека, а не у учётной записи: это общие данные,
             // и они же показываются в карточках студента, преподавателя и сотрудника.
             'has_person' => $person !== null,
@@ -79,10 +82,19 @@ class AccountController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $user->forceFill(['password' => $request->validated()['password']])->save();
+        // Отметка снимается здесь и только здесь: человек завёл свой пароль, и
+        // предлагать ему это при каждом входе больше не нужно.
+        $wasIssued = (bool) $user->must_change_password;
+        $user->forceFill([
+            'password' => $request->validated()['password'],
+            'must_change_password' => false,
+        ])->save();
 
         // В журнал не попадает ни старый пароль, ни новый — только сам факт смены.
-        AuditLogService::log('auth', 'account_password_changed', $user, null, ['self_service' => true], $request, $user);
+        AuditLogService::log('auth', 'account_password_changed', $user, null, [
+            'self_service' => true,
+            'replaced_issued_password' => $wasIssued,
+        ], $request, $user);
 
         return response()->json(['message' => 'Пароль изменён.']);
     }

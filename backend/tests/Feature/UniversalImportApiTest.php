@@ -141,7 +141,9 @@ class UniversalImportApiTest extends TestCase
         $user = User::where('person_id', $employee->person_id)->firstOrFail();
         $this->assertSame('+70000000002', $user->username);
         $this->assertTrue($user->is_active);
-        $this->assertStringNotContainsString('password', json_encode($response->json(), JSON_THROW_ON_ERROR));
+        // Ищем ключ, а не подстроку: с 11.08.2026 в ответе есть `must_change_password`,
+        // и проверка на подстроку срабатывала на нём, хотя самого пароля в ответе нет.
+        $this->assertStringNotContainsString('"password"', json_encode($response->json(), JSON_THROW_ON_ERROR));
     }
 
     public function test_it_rejects_unknown_employee_work_schedule(): void
@@ -279,7 +281,9 @@ class UniversalImportApiTest extends TestCase
         $this->assertSame($user->id, $student->user_id);
         $this->assertNotNull($user->person_id);
         $this->assertNotNull($user->password);
-        $this->assertStringNotContainsString('password', json_encode($response->json(), JSON_THROW_ON_ERROR));
+        // Ищем ключ, а не подстроку: с 11.08.2026 в ответе есть `must_change_password`,
+        // и проверка на подстроку срабатывала на нём, хотя самого пароля в ответе нет.
+        $this->assertStringNotContainsString('"password"', json_encode($response->json(), JSON_THROW_ON_ERROR));
     }
 
     public function test_student_import_skips_duplicate_without_snils_and_preserves_study_data(): void
