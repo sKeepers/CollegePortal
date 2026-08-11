@@ -5,8 +5,10 @@
 // а не в три копии разметки.
 import { nextTick } from 'vue'
 import { useRouter } from 'vue-router'
+import { LogOut } from '@lucide/vue'
 import EnvironmentBadge from '../system/EnvironmentBadge.vue'
 import { getCurrentEnvironment } from '../../services/environmentService'
+import { useAuthStore } from '../../stores/auth'
 
 defineProps({
   title: { type: String, required: true },
@@ -14,7 +16,18 @@ defineProps({
 })
 
 const router = useRouter()
+const auth = useAuthStore()
 const environment = getCurrentEnvironment()
+
+// Выхода в мобильном кабинете не было ни в одной из четырёх оболочек: телефон
+// оставался залогиненным навсегда, а «Полная версия портала» ведёт в тот же
+// сеанс. Для общего телефона на проходной или у куратора это и есть дыра.
+// Поведение то же, что на десктопе: сеанс закрывается на сервере, cookie
+// снимается, человек уходит на форму входа.
+async function logout() {
+  await auth.logout()
+  router.push('/login')
+}
 
 async function navigate(item) {
   await router.push(item.to)
@@ -42,6 +55,10 @@ async function navigate(item) {
         </div>
         <q-space />
         <EnvironmentBadge />
+        <q-btn flat dense round aria-label="Выйти" @click="logout">
+          <LogOut :size="20" />
+          <q-tooltip>Выйти</q-tooltip>
+        </q-btn>
       </q-toolbar>
     </q-header>
 
