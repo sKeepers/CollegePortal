@@ -101,7 +101,9 @@
 
 ### Чат 3 — «Единая карточка человека» (занято с 09.08.2026, заход продолжен 10.08.2026)
 
-**Очередь из [ASSIGNMENTS.md](prompts/ASSIGNMENTS.md) пройдена целиком.** Firefox — `df9563c`, проверка ИНН и СНИЛС — `040feba`, политика паролей — [PASSWORD_POLICY_DECISION.md](PASSWORD_POLICY_DECISION.md), кода в ней нет по условию задания. Веток и worktree не осталось.
+**Взято сейчас:** ответ владельца по политике паролей от 11.08.2026 — выдача остаётся пятизначной, после входа портал **предлагает** создать свой пароль, требования к нему: не короче 6 символов, латиница, есть заглавная. Ветка `feature/password-change-prompt`.
+
+Очередь из [ASSIGNMENTS.md](prompts/ASSIGNMENTS.md) до этого пройдена целиком: Firefox — `df9563c`, проверка ИНН и СНИЛС — `040feba`, разбор политики паролей — `5886d6e`.
 
 **Ждёт владельца три вещи:** два шага в Firefox, три вопроса по политике паролей и прежние решения по `/legacy`, Telegram и MAX. Пока ответов нет, следующая работа области — `AUTH-003`, а её начинать нельзя без бота.
 
@@ -112,7 +114,8 @@
 | Доказать, что `SEC-002` работает | `scripts/deploy/check-auth-cookie.sh`, `docs/SEC_002_BROWSER_CHECK.md` | **проверено владельцем 10.08.2026, блокер релиза снят**; три замечания розданы по областям |
 | Замечание: Firefox не разлогинивает при снятой галочке | `CookieSessionTest`, `SEC_002_BROWSER_CHECK.md`, `check-auth-cookie.sh` | разобрано и закреплено тестами, **дефекта у нас нет**; два шага в Firefox — за владельцем |
 | Замечание: карточка приняла неверные ИНН и СНИЛС | `app/Rules`, `Store/UpdatePersonRequest`, `Store/UpdateStudentRequest`, `PeoplePage.vue` | сделано, влито |
-| Политика выдаваемых паролей | `docs/PASSWORD_POLICY_DECISION.md`, кода нет | разобрано, **ждёт решения владельца** — три вопроса в конце документа |
+| Политика выдаваемых паролей | `docs/PASSWORD_POLICY_DECISION.md` | разобрано, **владелец ответил 11.08.2026** |
+| Предложение сменить выданный пароль после входа | `App\Rules\SelfChosenPassword`, миграция `must_change_password`, `AccountController`, `AdminUserController`, `AccountProvisioningService`, `LoginPage.vue`, `MyAccountPage.vue` | **в работе**, ветка `feature/password-change-prompt` |
 | Маршрут `/legacy` и остаток находки 12 | разбор, ничего не удалено | разобрано, **ждёт решения владельца** — [LEGACY_INTERFACE_REVIEW.md](LEGACY_INTERFACE_REVIEW.md) |
 | Раздел «Моя учётная запись» и `AUTH-001` | `AccountController`, `/account`, меню пользователя | сделано, влито |
 | `AUTH-005` — общий слой внешних провайдеров | `user_identities`, `ExternalIdentityProvider`, `ExternalIdentityService`, блок «Способы входа», отвязка администратором | сделано, влито |
