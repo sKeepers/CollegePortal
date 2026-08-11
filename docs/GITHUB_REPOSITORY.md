@@ -43,7 +43,7 @@ Result: no leaks found by gitleaks. The only tracked XLSX files are official ext
 
 ## Release
 
-The current release tag is `v0.8.0-rc7`. Release notes live in `CHANGELOG.md`; the release archive is built on DEV by `scripts/release/build-release.sh` and must be reviewed before being attached as a release asset.
+The current release tag is `v0.8.0-rc8`. Release notes live in `CHANGELOG.md`; the release archive is built on DEV by `scripts/release/build-release.sh` and must be reviewed before being attached as a release asset.
 
 The Publication Result block below is a snapshot of the first publication (`v0.8.0-rc2`) and is kept as history, not as current state.
 
