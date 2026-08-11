@@ -17,12 +17,17 @@ function cleanEmployee(payload) {
     last_name: payload.last_name?.trim() || undefined,
     first_name: payload.first_name?.trim() || undefined,
     middle_name: payload.middle_name?.trim() || null,
+    // Дата рождения — то, чем портал узнаёт человека по ФИО, а не только по
+    // контактам. Рабочий график до 11.08.2026 сюда не попадал вовсе: поле в
+    // форме было, до сервера не доходило и молча не сохранялось.
+    birth_date: payload.birth_date || null,
     email: payload.email?.trim() || null,
     phone: payload.phone?.trim() || null,
     snils: payload.snils?.trim() || null,
     employee_number: payload.employee_number?.trim() || '',
     status: payload.status || 'active',
     employment_type: payload.employment_type || 'full_time',
+    work_schedule_code: payload.work_schedule_code || null,
     hired_at: payload.hired_at || null,
     dismissed_at: payload.dismissed_at || null,
     primary_department_id: payload.primary_department_id || null,

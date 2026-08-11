@@ -17,7 +17,13 @@ use Illuminate\Support\Str;
 class PersonService
 {
     /** Общие поля, которые профильная карточка вправе записать в Person. */
-    private const PROFILE_EDITABLE_FIELDS = ['last_name', 'first_name', 'middle_name', 'phone', 'email', 'snils'];
+    /**
+     * `birth_date` добавлена 11.08.2026 вместе с полем в карточке сотрудника
+     * (`HR-002`). Без неё поле показывалось бы и молча не сохранялось — ровно та
+     * беда, которую уже чинили для ФИО. Копий в профилях у даты нет, поэтому в
+     * `PROFILE_MIRRORS` ей делать нечего.
+     */
+    private const PROFILE_EDITABLE_FIELDS = ['last_name', 'first_name', 'middle_name', 'birth_date', 'phone', 'email', 'snils'];
 
     /**
      * Профили, держащие собственную копию общих данных, и поля этой копии.

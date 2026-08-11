@@ -34,6 +34,7 @@ const employeeForm = reactive({
   last_name: '',
   first_name: '',
   middle_name: '',
+  birth_date: '',
   email: '',
   phone: '',
   snils: '',
@@ -169,6 +170,10 @@ function onDeletionRequested() {
 const canIssueDigitalPass = computed(() => auth.can('hr.employees.digital_pass.issue'))
 const canManageAssignments = computed(() => auth.can('hr.assignments.manage'))
 const canManageStatuses = computed(() => auth.can('hr.statuses.manage'))
+// `HR-002`: узкий взгляд в реестр — только найденные совпадения, только на выбор.
+const canMatchPeople = computed(() => auth.can('hr.people.match') || auth.can('people.view'))
+const personMatches = ref([])
+const personMatchDialog = ref(false)
 const canManageDepartments = computed(() => auth.can('hr.departments.manage'))
 const canManagePositions = computed(() => auth.can('hr.positions.manage'))
 
@@ -216,6 +221,7 @@ function resetEmployeeForm(employee = null) {
     last_name: employee?.person?.last_name || '',
     first_name: employee?.person?.first_name || '',
     middle_name: employee?.person?.middle_name || '',
+    birth_date: employee?.person?.birth_date || '',
     email: employee?.person?.email || '',
     phone: employee?.person?.phone || '',
     snils: employee?.person?.snils || '',
@@ -239,10 +245,81 @@ function openEmployeeDialog(employee = null) {
   employeeDialog.value = true
 }
 
+/**
+ * `HR-002`. Сервер отказывает, когда по введённым данным нашлось несколько
+ * человек: привязать карточку не к тому — хуже, чем переспросить. Раньше на
+ * этом всё и заканчивалось — «выберите вручную», а выбирать было не из чего.
+ *
+ * Теперь отказ превращается в вопрос: спрашиваем у сервера, кого именно он
+ * нашёл, и показываем их. Реестр людей при этом остаётся закрыт — приходят
+ * только те, на кого вышел собственный ввод кадровика.
+ */
 async function saveEmployee() {
-  await store.saveEmployee(employeeForm, editingEmployeeId.value)
+  try {
+    await store.saveEmployee(employeeForm, editingEmployeeId.value)
+  } catch (err) {
+    if (await offerPersonMatches()) return
+    throw err
+  }
+
   employeeDialog.value = false
   $q.notify({ type: 'positive', message: 'Карточка сотрудника сохранена' })
+}
+
+async function offerPersonMatches() {
+  if (!canMatchPeople.value || employeeForm.person_id) return false
+
+  try {
+    const payload = await api.create('hr/person-matches', {
+      last_name: employeeForm.last_name || null,
+      first_name: employeeForm.first_name || null,
+      middle_name: employeeForm.middle_name || null,
+      birth_date: employeeForm.birth_date || null,
+      snils: employeeForm.snils || null,
+      email: employeeForm.email || null,
+      phone: employeeForm.phone || null,
+    })
+    const matches = payload?.data?.matches || []
+    if (matches.length < 2) return false
+
+    personMatches.value = matches
+    personMatchDialog.value = true
+    return true
+  } catch {
+    // Не удалось спросить — пусть человек видит исходный отказ сервера.
+    return false
+  }
+}
+
+/** Подписи тому, чем совпало: «телефон» и «СНИЛС» весят по-разному. */
+const MATCH_LABELS = {
+  snils: 'СНИЛС',
+  phone: 'телефон',
+  email: 'почта',
+  full_name_birth_date: 'ФИО и дата рождения',
+  identity_document: 'документ',
+}
+
+function matchedByLabel(matchedBy) {
+  return (matchedBy || []).map((item) => MATCH_LABELS[item] || item).join(', ')
+}
+
+async function choosePerson(match) {
+  employeeForm.person_id = match.id
+  personMatchDialog.value = false
+  await saveEmployee()
+}
+
+/** Ни один из найденных не подходит — значит человек новый. */
+async function createNewPerson() {
+  employeeForm.person_id = null
+  personMatchDialog.value = false
+  $q.notify({
+    type: 'info',
+    message: 'Уточните СНИЛС или дату рождения: без них портал не отличит нового человека от найденных.',
+    position: 'top-right',
+    timeout: 4000,
+  })
 }
 
 function confirmDismiss(employee) {
@@ -524,6 +601,10 @@ watch(() => route.path, (path) => {
           <q-input v-model="employeeForm.last_name" outlined dense label="Фамилия" />
           <q-input v-model="employeeForm.first_name" outlined dense label="Имя" />
           <q-input v-model="employeeForm.middle_name" outlined dense label="Отчество" />
+          <!-- Дата рождения — не украшение карточки: по ней портал узнаёт человека
+               по ФИО, а не только по СНИЛС, телефону и почте. Без неё двое
+               однофамильцев с общим рабочим телефоном неразличимы. -->
+          <q-input v-model="employeeForm.birth_date" outlined dense type="date" label="Дата рождения" />
           <q-input v-model="employeeForm.email" outlined dense label="Email" />
           <q-input v-model="employeeForm.phone" outlined dense label="Телефон" />
           <q-select v-model="employeeForm.primary_department_id" outlined dense label="Подразделение" :options="store.departmentOptions" emit-value map-options clearable />
@@ -583,6 +664,36 @@ watch(() => route.path, (path) => {
       </q-card>
     </q-dialog>
 
+    <!-- `HR-002`: вместо «выберите вручную» — те, кого портал действительно нашёл. -->
+    <q-dialog v-model="personMatchDialog">
+      <q-card class="hr-dialog hr-dialog--small">
+        <q-card-section>
+          <div class="text-h6">Такой человек уже есть в портале</div>
+          <p class="hr-match__hint">
+            По введённым данным нашлось несколько человек. Выберите того, чью карточку заводите, —
+            иначе в базе появится второй он же.
+          </p>
+        </q-card-section>
+        <q-list separator bordered class="rounded-borders q-mx-md">
+          <q-item v-for="match in personMatches" :key="match.id" clickable @click="choosePerson(match)">
+            <q-item-section>
+              <q-item-label>{{ match.full_name }}</q-item-label>
+              <q-item-label caption>
+                <template v-if="match.birth_date">{{ formatDate(match.birth_date) }}</template>
+                <template v-if="match.roles.length"> · {{ match.roles.join(', ') }}</template>
+              </q-item-label>
+              <q-item-label caption class="hr-match__matched">Совпало: {{ matchedByLabel(match.matched_by) }}</q-item-label>
+            </q-item-section>
+            <q-item-section side><q-btn flat dense no-caps color="primary" label="Это он" /></q-item-section>
+          </q-item>
+        </q-list>
+        <q-card-actions align="right">
+          <q-btn flat no-caps label="Никто из них" @click="createNewPerson" />
+          <q-btn flat no-caps label="Отмена" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <DeletionRequestDialog
       v-model="deletionRequestVisible"
       subject-type="employee"
@@ -619,6 +730,8 @@ watch(() => route.path, (path) => {
 .hr-info-grid strong { color: #0f172a; font-weight: 600; }
 .hr-dialog { width: min(860px, calc(100vw - 32px)); }
 .hr-dialog--small { width: min(520px, calc(100vw - 32px)); }
+.hr-match__hint { margin: 8px 0 0; color: #64748b; font-size: 13px; }
+.hr-match__matched { color: #0f172a; }
 .hr-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .hr-form-wide { grid-column: 1 / -1; }
 @media (max-width: 1360px) { .hr-filters { grid-template-columns: repeat(2, minmax(180px, 1fr)); } }

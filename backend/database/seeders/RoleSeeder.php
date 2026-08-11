@@ -194,6 +194,12 @@ class RoleSeeder extends Seeder
             ['module' => 'HR', 'code' => 'hr.positions.manage', 'name' => 'Кадры: должности', 'description' => 'Управление должностями.'],
             ['module' => 'HR', 'code' => 'hr.documents.view', 'name' => 'Кадры: документы просмотр', 'description' => 'Просмотр кадровых документов.'],
             ['module' => 'HR', 'code' => 'hr.reports.view', 'name' => 'Кадры: отчеты', 'description' => 'Просмотр кадровых отчетов.'],
+            // `HR-002`. Узкий взгляд в общий реестр: кадровик видит только тех,
+            // на кого вышел его собственный ввод, и только ФИО, дату рождения,
+            // кем человек уже является и чем совпало. Право отдельное, чтобы эта
+            // уступка была видна в матрице разрешений, а не пряталась внутри
+            // права на заведение сотрудника.
+            ['module' => 'HR', 'code' => 'hr.people.match', 'name' => 'Кадры: поиск человека по совпадениям', 'description' => 'Показ найденных совпадений при заведении сотрудника, без доступа к реестру людей.'],
             ['module' => 'HR', 'code' => 'hr.calendar.view', 'name' => 'Кадры: календарь просмотр', 'description' => 'Просмотр календаря отсутствий.'],
             ['module' => 'HR', 'code' => 'hr.calendar.manage', 'name' => 'Кадры: календарь управление', 'description' => 'Управление кадровым календарем.'],
             ['module' => 'HR', 'code' => 'hr.absences.manage', 'name' => 'Кадры: отсутствия', 'description' => 'Preview/apply отпусков, больничных, командировок и отстранений.'],
@@ -350,7 +356,7 @@ class RoleSeeder extends Seeder
      */
     private function hrPermissions(): array
     {
-        return ['dashboard.view', 'hr.employees.view', 'hr.employees.create', 'hr.employees.update', 'hr.employees.dismiss', 'hr.employees.digital_pass.issue', 'hr.assignments.manage', 'hr.statuses.manage', 'hr.departments.manage', 'hr.positions.manage', 'hr.documents.view', 'hr.calendar.view', 'hr.calendar.manage', 'hr.absences.manage', 'hr.dismissals.manage', 'hr.replacements.view', 'hr.replacements.manage', 'hr.reports.view', 'teachers.view', 'gate.reports', 'view_own_data', 'trash.request'];
+        return ['dashboard.view', 'hr.employees.view', 'hr.employees.create', 'hr.employees.update', 'hr.employees.dismiss', 'hr.employees.digital_pass.issue', 'hr.assignments.manage', 'hr.statuses.manage', 'hr.departments.manage', 'hr.positions.manage', 'hr.documents.view', 'hr.calendar.view', 'hr.calendar.manage', 'hr.absences.manage', 'hr.dismissals.manage', 'hr.replacements.view', 'hr.replacements.manage', 'hr.reports.view', 'hr.people.match', 'teachers.view', 'gate.reports', 'view_own_data', 'trash.request'];
     }
 
     private function admissionPermissions(): array

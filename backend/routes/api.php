@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\ApplicantDocumentController;
 use App\Http\Controllers\Api\AdmissionBulkController;
 use App\Http\Controllers\Api\BuildingController;
 use App\Http\Controllers\Api\GroupController;
+use App\Http\Controllers\Api\Hr\PersonMatchController;
 use App\Http\Controllers\Api\HrCalendarController;
 use App\Http\Controllers\Api\MobileAdminController;
 use App\Http\Controllers\Api\MobileCuratorController;
@@ -158,6 +159,16 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         Route::patch('employee-status-periods/{period}', [EmployeeController::class, 'updateStatusPeriod'])->middleware('permission:hr.statuses.manage');
         Route::delete('employee-status-periods/{period}', [EmployeeController::class, 'destroyStatusPeriod'])->middleware('permission:hr.statuses.manage');
     });
+    // `HR-002`: кадровик спрашивает, кого портал нашёл по его же вводу. Не реестр
+    // людей, а результат поиска, и полей ровно на выбор между двумя. Право своё,
+    // чтобы этот узкий взгляд в общий реестр был виден в матрице разрешений, а не
+    // прятался внутри права на заведение сотрудника.
+    // `people.view` перечислено через ИЛИ не для кадров, а для тех, у кого реестр
+    // и так открыт: узкий срез им тем более разрешён, и вопрос «который из этих
+    // двух» получает правильный ответ у всех ролей, а не только у кадровой.
+    Route::post('hr/person-matches', PersonMatchController::class)
+        ->middleware('permission:hr.people.match,people.view');
+
     Route::middleware('permission:hr.calendar.view')->group(function (): void {
         Route::get('hr/calendar', [HrCalendarController::class, 'calendar']);
         Route::get('hr/reports/absences', [HrCalendarController::class, 'report'])->middleware('permission:hr.reports.view');
