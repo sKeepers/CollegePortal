@@ -1,5 +1,10 @@
 @echo off
+chcp 65001 >nul
 setlocal
-set ROOT=C:\CollegePortalGateway
-if not exist "%ROOT%\config\gateway.private.config" copy "%~dp0..\..\config.example" "%ROOT%\config\gateway.private.config"
-echo Review %ROOT%\config\gateway.private.config manually. Secrets are never printed by this script.
+set "CONFIG=C:\CollegePortalGateway\config\gateway.private.config"
+if not exist "%CONFIG%" (
+  echo [ОШИБКА] Private config не найден. Сначала выполните install-all.cmd.
+  exit /b 1
+)
+echo Открывается private config. Не копируйте secret в Issues, Git или логи.
+notepad.exe "%CONFIG%"

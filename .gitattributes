@@ -2,3 +2,9 @@
 # после выгрузки на сервер падает на первой же строке с `$'\r': command not
 # found`. На это уже наступили, перенося скрипт обхода ролей с рабочей станции.
 *.sh text eol=lf
+
+# Обратный случай: сценарии шлюза выполняются на Windows 7 ViPNet-ПК, куда их
+# кладут распакованным пакетом. Пакетный файл с одними LF там ведёт себя
+# непредсказуемо на метках и `goto`, поэтому перевод строк закрепляем явно.
+integrations/collegeportal-gateway/packaging/windows/*.cmd text eol=crlf
+integrations/collegeportal-gateway/packaging/windows/*.ps1 text eol=crlf
