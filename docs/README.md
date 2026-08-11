@@ -130,6 +130,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [FIS_OPERATIONS_GUIDE.md](FIS_OPERATIONS_GUIDE.md)
 - [FIS_OUTBOUND_PACKAGES.md](FIS_OUTBOUND_PACKAGES.md)
 - [FIS_SECURITY.md](FIS_SECURITY.md)
+- [FIS_TEST_ACCEPTANCE.md](FIS_TEST_ACCEPTANCE.md)
 - [FIS_TEST_ENVIRONMENT.md](FIS_TEST_ENVIRONMENT.md)
 - [FIS.md](FIS.md)
 - [FRDO.md](FRDO.md)
