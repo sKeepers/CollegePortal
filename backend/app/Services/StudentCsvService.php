@@ -10,6 +10,7 @@ use App\Services\Admissions\PersonDocumentService;
 use App\Services\Import\StudentImportHandler;
 use DateTimeImmutable;
 use App\Support\Csv\CsvExport;
+use App\Support\Phone;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
@@ -115,7 +116,7 @@ class StudentCsvService
                             $student->middle_name,
                             $student->group?->name,
                             $student->birth_date?->toDateString(),
-                            $student->phone,
+                            Phone::forExport($student->phone),
                             $student->email,
                             $student->snils,
                             $student->status,

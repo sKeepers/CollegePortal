@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Teacher;
 use App\Services\Import\TeacherImportHandler;
 use App\Support\Csv\CsvExport;
+use App\Support\Phone;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Validator;
 use RuntimeException;
@@ -79,7 +80,7 @@ class TeacherCsvService
                             $teacher->middle_name,
                             $teacher->person?->birth_date?->format('d.m.Y'),
                             $teacher->person?->snils,
-                            $teacher->phone,
+                            Phone::forExport($teacher->phone),
                             $teacher->email,
                             $teacher->person?->address,
                             $teacher->position,

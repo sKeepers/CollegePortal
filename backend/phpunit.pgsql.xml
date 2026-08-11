@@ -25,7 +25,8 @@
     </source>
     <php>
         <!-- Тот же лимит, что и в phpunit.xml: на PostgreSQL пик ещё выше. -->
-        <ini name="memory_limit" value="512M"/>
+        <!-- Тот же гигабайт, что и в phpunit.xml: пояснение там. -->
+        <ini name="memory_limit" value="1024M"/>
         <server name="APP_ENV" value="testing"/>
         <server name="APP_MAINTENANCE_DRIVER" value="file"/>
         <server name="BCRYPT_ROUNDS" value="4"/>

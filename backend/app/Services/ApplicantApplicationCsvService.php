@@ -6,6 +6,7 @@ use App\Models\ApplicantApplication;
 use App\Models\EducationProgram;
 use DateTimeImmutable;
 use App\Support\Csv\CsvExport;
+use App\Support\Phone;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Validator;
@@ -54,7 +55,7 @@ class ApplicantApplicationCsvService
                             $application->first_name,
                             $application->middle_name,
                             $application->birth_date?->toDateString(),
-                            $application->phone,
+                            Phone::forExport($application->phone),
                             $application->email,
                             $application->education_base,
                             $application->status,
