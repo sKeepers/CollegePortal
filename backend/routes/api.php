@@ -624,14 +624,21 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     // отдельной строкой вынесено в отчёт как то, что стоит пересмотреть.
     Route::post('fis/dictionaries/preview', [FisDictionaryIntakeController::class, 'preview'])->middleware('permission:fis.outbound.view');
     Route::post('fis/dictionaries/apply', [FisDictionaryIntakeController::class, 'apply'])->middleware(['permission:fis.outbound.view', 'permission:fis.settings.manage']);
+    // Диагностика шлюза и обновление статуса больше не требуют права создавать
+    // пакеты. `create` досталось им от таблицы префиксов, где POST означал
+    // «создание»; при переносе права к маршруту оно сохранялось дословно, чтобы
+    // ничего не расширить молча. Владелец снял его 11.08.2026: четыре вызова —
+    // чистое чтение из шлюза, пятый проверяет заявление в тестовом контуре, а
+    // обновление статуса называет право `fis.outbound.status`. Создание,
+    // формирование и отправка остались как были.
     Route::get('fis/outbound/spec-info', [FisOutboundPackageController::class, 'specInfo'])->middleware('permission:fis.outbound.view');
     Route::get('fis/outbound/gateway/health', [FisOutboundPackageController::class, 'gatewayHealth'])->middleware('permission:fis.outbound.view');
     Route::get('fis/outbound/gateway/version', [FisOutboundPackageController::class, 'gatewayVersion'])->middleware('permission:fis.outbound.view');
-    Route::post('fis/outbound/gateway/zkspd-check', [FisOutboundPackageController::class, 'gatewayZkspdCheck'])->middleware(['permission:fis.outbound.create', 'permission:fis.outbound.view']);
-    Route::post('fis/outbound/gateway/dictionaries/list', [FisOutboundPackageController::class, 'gatewayDictionariesList'])->middleware(['permission:fis.outbound.create', 'permission:fis.outbound.view']);
-    Route::post('fis/outbound/gateway/dictionaries/details', [FisOutboundPackageController::class, 'gatewayDictionaryDetails'])->middleware(['permission:fis.outbound.create', 'permission:fis.outbound.view']);
-    Route::post('fis/outbound/gateway/institution/info', [FisOutboundPackageController::class, 'gatewayInstitutionInfo'])->middleware(['permission:fis.outbound.create', 'permission:fis.outbound.view']);
-    Route::post('fis/outbound/gateway/check-application', [FisOutboundPackageController::class, 'gatewayTestCheckApplication'])->middleware(['permission:fis.outbound.create', 'permission:fis.outbound.view']);
+    Route::post('fis/outbound/gateway/zkspd-check', [FisOutboundPackageController::class, 'gatewayZkspdCheck'])->middleware('permission:fis.outbound.view');
+    Route::post('fis/outbound/gateway/dictionaries/list', [FisOutboundPackageController::class, 'gatewayDictionariesList'])->middleware('permission:fis.outbound.view');
+    Route::post('fis/outbound/gateway/dictionaries/details', [FisOutboundPackageController::class, 'gatewayDictionaryDetails'])->middleware('permission:fis.outbound.view');
+    Route::post('fis/outbound/gateway/institution/info', [FisOutboundPackageController::class, 'gatewayInstitutionInfo'])->middleware('permission:fis.outbound.view');
+    Route::post('fis/outbound/gateway/check-application', [FisOutboundPackageController::class, 'gatewayTestCheckApplication'])->middleware('permission:fis.outbound.view');
     Route::get('fis/outbound/packages', [FisOutboundPackageController::class, 'index'])->middleware('permission:fis.outbound.view');
     Route::post('fis/outbound/packages', [FisOutboundPackageController::class, 'store'])->middleware('permission:fis.outbound.create');
     Route::get('fis/outbound/packages/{package}', [FisOutboundPackageController::class, 'show'])->middleware('permission:fis.outbound.view');
@@ -639,7 +646,7 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     Route::post('fis/outbound/packages/{package}/validate', [FisOutboundPackageController::class, 'validatePackage'])->middleware(['permission:fis.outbound.generate', 'permission:fis.outbound.validate']);
     Route::post('fis/outbound/packages/{package}/send-preview', [FisOutboundPackageController::class, 'sendPreview'])->middleware(['permission:fis.outbound.create', 'permission:fis.outbound.send_test']);
     Route::post('fis/outbound/packages/{package}/send', [FisOutboundPackageController::class, 'send'])->middleware(['permission:fis.outbound.create', 'permission:fis.outbound.send_test']);
-    Route::post('fis/outbound/packages/{package}/refresh-status', [FisOutboundPackageController::class, 'refreshStatus'])->middleware(['permission:fis.outbound.create', 'permission:fis.outbound.status']);
+    Route::post('fis/outbound/packages/{package}/refresh-status', [FisOutboundPackageController::class, 'refreshStatus'])->middleware('permission:fis.outbound.status');
     Route::post('fis/outbound/packages/{package}/cancel', [FisOutboundPackageController::class, 'cancel'])->middleware(['permission:fis.outbound.create', 'permission:fis.outbound.generate']);
     Route::get('fis/outbound/packages/{package}/events', [FisOutboundPackageController::class, 'events'])->middleware('permission:fis.outbound.view');
     Route::get('fis/outbound/packages/{package}/download', [FisOutboundPackageController::class, 'download'])->middleware(['permission:fis.outbound.view', 'permission:fis.outbound.download']);

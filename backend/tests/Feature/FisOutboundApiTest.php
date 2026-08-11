@@ -118,10 +118,9 @@ class FisOutboundApiTest extends TestCase
 
     public function test_gateway_diagnostics_are_signed_and_disabled_when_feature_flag_is_off(): void
     {
-        // Шлюзовые проверки требуют ещё и `fis.outbound.create`: право досталось
-        // им от таблицы префиксов, где POST выводился в «создание». Перенос
-        // сохранил это дословно, см. ARCH_001_STEP3_PLAN.md.
-        $user = $this->userWith(['fis.outbound.view', 'fis.outbound.create']);
+        // Диагностика шлюза требует только права смотреть обмен: `create` с неё
+        // снято 11.08.2026 по решению владельца, см. FIS_DECISIONS_2026-08-11.md.
+        $user = $this->userWith(['fis.outbound.view']);
         $this->withApiAuth($user);
 
         config(['fis_api.gateway_enabled' => false, 'fis_api.gateway_url' => 'http://fis-agent.test', 'fis_api.gateway_shared_secret' => 'test-secret']);
@@ -167,6 +166,35 @@ class FisOutboundApiTest extends TestCase
         $this->postJson('/api/fis/outbound/packages', ['package_type' => 'admission', 'environment' => 'test'])
             ->assertCreated()
             ->assertJsonPath('data.status', 'draft');
+    }
+
+    /**
+     * Директор смотрит обмен и знает статус пакета, но пакетов не создаёт.
+     * До 11.08.2026 диагностика шлюза и обновление статуса требовали ещё и
+     * `fis.outbound.create`, поэтому проверить связь он не мог: на одной панели
+     * две проверки проходили, а четыре отвечали 403.
+     */
+    public function test_the_director_can_check_the_gateway_without_being_able_to_create(): void
+    {
+        $this->withApiAuth($this->userWith(['fis.outbound.view', 'fis.outbound.status']));
+
+        config(['fis_api.gateway_enabled' => false, 'fis_api.gateway_url' => 'http://fis-agent.test', 'fis_api.gateway_shared_secret' => 'test-secret']);
+
+        // 409 — «шлюз выключен», то есть проверка прав пройдена. Именно это и
+        // проверяется: не отказ по правам.
+        foreach ([
+            'gateway/zkspd-check',
+            'gateway/dictionaries/list',
+            'gateway/dictionaries/details',
+            'gateway/institution/info',
+            'gateway/check-application',
+        ] as $path) {
+            $this->postJson("/api/fis/outbound/{$path}")->assertStatus(409);
+        }
+
+        // А создать пакет он по-прежнему не может.
+        $this->postJson('/api/fis/outbound/packages', ['package_type' => 'admission', 'environment' => 'test'])
+            ->assertForbidden();
     }
 
     private function userWith(array $permissions): User

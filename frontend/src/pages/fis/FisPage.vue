@@ -43,6 +43,12 @@ import {
 const store = useFisStore();
 const permissions = usePermissions();
 const canManage = computed(() => permissions.hasPermission("fis.export"));
+// Панели обмена с ФИС показывались всем, кто открыл раздел, и часть кнопок
+// отвечала отказом — экран выглядел сломанным. Право то же, что у самих
+// маршрутов обмена: раздел «ФИС» открывает и `study`, у которой его нет.
+const canSeeOutbound = computed(() =>
+  permissions.hasPermission("fis.outbound.view"),
+);
 const $q = useQuasar(),
   route = useRoute(),
   router = useRouter();
@@ -371,7 +377,7 @@ onMounted(async () => {
       </div>
     </q-banner>
 
-    <section class="fis-gateway-panel">
+    <section v-if="canSeeOutbound" class="fis-gateway-panel">
       <div class="fis-gateway-panel__header">
         <div>
           <h2>CollegePortal Gateway — адаптер ФИС</h2>
@@ -439,7 +445,7 @@ onMounted(async () => {
         </article>
       </div>
     </section>
-    <section class="fis-gateway-panel">
+    <section v-if="canSeeOutbound" class="fis-gateway-panel">
       <div class="fis-gateway-panel__header">
         <div>
           <h2>Данные из ФИС</h2>

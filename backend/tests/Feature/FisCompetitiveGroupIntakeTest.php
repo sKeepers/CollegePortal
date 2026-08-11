@@ -50,20 +50,47 @@ class FisCompetitiveGroupIntakeTest extends TestCase
         $this->assertSame('campaign-2026', $mapping->metadata['campaign_uid']);
     }
 
-    public function test_a_program_with_two_competitions_is_not_guessed(): void
+    /**
+     * Бюджет и платное — разные условия приёма, и конкурсы у них разные. До
+     * 11.08.2026 сопоставление хранило один UID на программу, поэтому такая
+     * программа не связывалась вовсе и заявления по ней не отправлялись совсем.
+     */
+    public function test_a_program_with_two_competitions_keeps_both_by_admission_terms(): void
     {
         $this->seed(RoleSeeder::class);
         $this->withApiAuth($this->userWith(['fis.outbound.view', 'fis.settings.manage']));
         $piano = $this->createProgram('Фортепиано', '53.02.03');
 
-        $response = $this->post('/api/fis/dictionaries/apply', ['file' => $this->file($this->twoCompetitionsXml($piano->id))])
+        $this->post('/api/fis/dictionaries/apply', ['file' => $this->file($this->twoCompetitionsXml($piano->id))])
+            ->assertOk()
+            ->assertJsonPath('data.mapped', 2)
+            ->assertJsonPath('data.ambiguous', []);
+
+        $mappings = FisExternalMapping::query()
+            ->where('external_type', FisCompetitiveGroupIntakeService::EXTERNAL_TYPE)
+            ->pluck('external_id', 'scope');
+
+        // Область — форма обучения и источник финансирования в значениях ФИС.
+        $this->assertSame('cg-2026-budget', $mappings['1|1']);
+        $this->assertSame('cg-2026-paid', $mappings['1|3']);
+    }
+
+    /** Неразличимое остаётся неразличимым: одна форма, один источник, два конкурса. */
+    public function test_two_competitions_on_the_same_terms_are_still_not_guessed(): void
+    {
+        $this->seed(RoleSeeder::class);
+        $this->withApiAuth($this->userWith(['fis.outbound.view', 'fis.settings.manage']));
+        $piano = $this->createProgram('Фортепиано', '53.02.03');
+
+        $xml = str_replace('<EducationSourceID>3</EducationSourceID>', '<EducationSourceID>1</EducationSourceID>', $this->twoCompetitionsXml($piano->id));
+
+        $response = $this->post('/api/fis/dictionaries/apply', ['file' => $this->file($xml)])
             ->assertOk()
             ->assertJsonPath('data.mapped', 0);
 
         $ambiguous = $response->json('data.ambiguous');
         $this->assertCount(1, $ambiguous);
         $this->assertCount(2, $ambiguous[0]['candidates']);
-        // Ни один из двух не выбран: заявление ушло бы в чужой конкурс.
         $this->assertSame(0, FisExternalMapping::query()->where('external_type', FisCompetitiveGroupIntakeService::EXTERNAL_TYPE)->count());
     }
 

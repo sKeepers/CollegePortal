@@ -197,13 +197,20 @@ class ApplicationsWriter
         $writer->startElement('FinSourceAndEduForms');
 
         foreach ($choices as $choice) {
-            $uid = $this->references->competitiveGroupUid($choice->education_program_id, $package->environment);
+            // Конкурс ищется по условию приёма: у программы их бывает несколько,
+            // и различаются они формой обучения и источником финансирования.
+            $uid = $this->references->competitiveGroupUid(
+                $choice->education_program_id,
+                $package->environment,
+                $choice->education_form_id,
+                $choice->funding_form_id,
+            );
 
             if ($uid === null) {
                 $blockers->add(
                     'competitive_group_missing',
                     'FinSourceEduForm.CompetitiveGroupUID',
-                    'Для образовательной программы «'.($choice->educationProgram?->name ?: '#'.$choice->education_program_id).'» не задан UID конкурсной группы ФИС. Конкурс создаётся в самой ФИС, а его UID заносится сопоставлением.',
+                    'Для образовательной программы «'.($choice->educationProgram?->name ?: '#'.$choice->education_program_id).'» не задан UID конкурсной группы ФИС на выбранных условиях приёма. Конкурс создаётся в самой ФИС, его UID заносится сопоставлением, а форма обучения и источник финансирования должны быть сопоставлены со справочниками ФИС — иначе портал не поймёт, какой из конкурсов программы нужен.',
                     'Заявление '.($application->application_number ?: '#'.$application->id),
                 );
 

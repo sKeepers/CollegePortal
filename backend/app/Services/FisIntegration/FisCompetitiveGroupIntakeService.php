@@ -17,12 +17,15 @@ use Illuminate\Support\Facades\DB;
  * ФИС, и портал их не ведёт — он лишь запоминает, какой конкурс отвечает какой
  * образовательной программе.
  *
- * **Ограничение, о котором надо знать.** У одной программы в ФИС может быть
- * несколько конкурсов сразу — бюджет и платное, очное и заочное. Сопоставление
- * хранит один UID на программу, поэтому неоднозначные случаи не связываются
- * вовсе: они возвращаются списком с названиями, формой обучения и источником
- * финансирования, чтобы решение принял человек. Угадать здесь — значит подать
- * заявление в чужой конкурс.
+ * **Конкурс — свойство условия приёма, а не программы.** У одной программы их
+ * бывает несколько сразу: бюджет и платное, очное и заочное. Ключ сопоставления
+ * поэтому включает форму обучения и источник финансирования — ровно так, как
+ * конкурс понимает сама ФИС в `FinSourceEduForm`.
+ *
+ * Неоднозначность осталась ровно там, где она настоящая: два конкурса на одну
+ * программу с одинаковой формой и одинаковым источником различить нечем. Такие
+ * возвращаются списком, чтобы решение принял человек. Угадать здесь — значит
+ * подать заявление в чужой конкурс.
  */
 class FisCompetitiveGroupIntakeService
 {
@@ -30,6 +33,19 @@ class FisCompetitiveGroupIntakeService
 
     public function __construct(private readonly FisCompetitiveGroupParser $parser)
     {
+    }
+
+    /**
+     * Условие приёма, под которым живёт конкурс: форма обучения и источник
+     * финансирования в идентификаторах ФИС. Оба могут отсутствовать — тогда
+     * конкурс один на программу, и область пустая, как у прежних записей.
+     */
+    public static function scope(?string $educationFormId, ?string $educationSourceId): string
+    {
+        $form = trim((string) $educationFormId);
+        $source = trim((string) $educationSourceId);
+
+        return $form === '' && $source === '' ? '' : $form.'|'.$source;
     }
 
     /** @return array<string, mixed> */
@@ -52,6 +68,7 @@ class FisCompetitiveGroupIntakeService
                         'entity_id' => $item['education_program_id'],
                         'external_type' => self::EXTERNAL_TYPE,
                         'environment' => $environment,
+                        'scope' => $item['scope'],
                     ],
                     [
                         'external_id' => $item['competitive_group_uid'],
@@ -121,32 +138,44 @@ class FisCompetitiveGroupIntakeService
         foreach ($byProgram as $programId => $candidates) {
             $program = EducationProgram::query()->find($programId);
 
-            if (count($candidates) > 1) {
-                $ambiguous[] = [
-                    'education_program_id' => $programId,
-                    'education_program' => $program?->name,
-                    'candidates' => array_map(fn (array $group): array => [
-                        'competitive_group_uid' => $group['uid'],
-                        'competitive_group_name' => $group['name'],
-                        'education_form_id' => $group['education_form_id'],
-                        'education_source_id' => $group['education_source_id'],
-                    ], $candidates),
-                    'reason' => 'У программы несколько конкурсов. Сопоставление хранит один — выберите нужный вручную.',
-                ];
+            // Конкурсы одной программы разводятся условием приёма. Остаётся
+            // неоднозначным только то, что и правда неразличимо: два конкурса с
+            // одинаковой формой обучения и одинаковым источником финансирования.
+            $byScope = [];
 
-                continue;
+            foreach ($candidates as $group) {
+                $byScope[self::scope($group['education_form_id'], $group['education_source_id'])][] = $group;
             }
 
-            $group = $candidates[0];
-            $willMap[] = [
-                'education_program_id' => $programId,
-                'education_program' => $program?->name,
-                'competitive_group_uid' => $group['uid'],
-                'competitive_group_name' => $group['name'],
-                'campaign_uid' => $group['campaign_uid'],
-                'education_form_id' => $group['education_form_id'],
-                'education_source_id' => $group['education_source_id'],
-            ];
+            foreach ($byScope as $scope => $scoped) {
+                if (count($scoped) > 1) {
+                    $ambiguous[] = [
+                        'education_program_id' => $programId,
+                        'education_program' => $program?->name,
+                        'candidates' => array_map(fn (array $group): array => [
+                            'competitive_group_uid' => $group['uid'],
+                            'competitive_group_name' => $group['name'],
+                            'education_form_id' => $group['education_form_id'],
+                            'education_source_id' => $group['education_source_id'],
+                        ], $scoped),
+                        'reason' => 'У программы несколько конкурсов с одинаковой формой обучения и одинаковым источником финансирования — различить их нечем, выберите нужный вручную.',
+                    ];
+
+                    continue;
+                }
+
+                $group = $scoped[0];
+                $willMap[] = [
+                    'education_program_id' => $programId,
+                    'education_program' => $program?->name,
+                    'competitive_group_uid' => $group['uid'],
+                    'competitive_group_name' => $group['name'],
+                    'campaign_uid' => $group['campaign_uid'],
+                    'education_form_id' => $group['education_form_id'],
+                    'education_source_id' => $group['education_source_id'],
+                    'scope' => $scope,
+                ];
+            }
         }
 
         return [

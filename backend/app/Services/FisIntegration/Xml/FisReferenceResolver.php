@@ -5,6 +5,7 @@ namespace App\Services\FisIntegration\Xml;
 use App\Models\EducationProgram;
 use App\Models\FisExternalMapping;
 use App\Services\Admissions\FisDictionaryMappingService;
+use App\Services\FisIntegration\FisCompetitiveGroupIntakeService;
 
 /**
  * Перевод внутренних значений портала в идентификаторы справочников ФИС.
@@ -44,18 +45,49 @@ class FisReferenceResolver
      * ведёт, поэтому связь «образовательная программа → конкурс» хранится
      * сопоставлением и заполняется оператором.
      */
-    public function competitiveGroupUid(?int $educationProgramId, string $environment): ?string
-    {
+    public function competitiveGroupUid(
+        ?int $educationProgramId,
+        string $environment,
+        ?int $educationFormItemId = null,
+        ?int $fundingFormItemId = null,
+    ): ?string {
         if ($educationProgramId === null) {
             return null;
         }
 
-        $value = FisExternalMapping::query()
+        $query = FisExternalMapping::query()
             ->where('entity_type', EducationProgram::class)
             ->where('entity_id', $educationProgramId)
             ->where('external_type', 'fis:CompetitiveGroupUID')
-            ->where('environment', $environment)
-            ->value('external_id');
+            ->where('environment', $environment);
+
+        // У программы конкурсов бывает несколько, и различаются они условием
+        // приёма. Форма и источник в заявлении — элементы справочников портала,
+        // а конкурс записан идентификаторами ФИС, поэтому сначала перевод.
+        $scope = FisCompetitiveGroupIntakeService::scope(
+            $this->referenceValue($educationFormItemId, 'EducationFormID', $environment),
+            $this->referenceValue($fundingFormItemId, 'EducationSourceID', $environment),
+        );
+
+        if ($scope !== '') {
+            $scoped = (clone $query)->where('scope', $scope)->value('external_id');
+
+            if (filled($scoped)) {
+                return (string) $scoped;
+            }
+        }
+
+        // Запасной ход — сопоставление без условия приёма. Так выглядят записи,
+        // сделанные до разведения конкурсов, и программы с единственным
+        // конкурсом, у которого форма и источник не указаны.
+        $value = (clone $query)->where('scope', '')->value('external_id');
+
+        return filled($value) ? (string) $value : null;
+    }
+
+    private function referenceValue(?int $referenceItemId, string $dictionary, string $environment): ?string
+    {
+        $value = $this->mappings->valueForReference($referenceItemId, $dictionary, $environment);
 
         return filled($value) ? (string) $value : null;
     }
