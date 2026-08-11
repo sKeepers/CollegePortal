@@ -891,7 +891,7 @@ class DemoDataSeeder extends Seeder
      */
     private function seedAccessEvents($students, $teachers, $lessons): void
     {
-        $firstLesson = $this->firstLessonStarts($lessons);
+        $window = $this->lessonWindows($lessons);
         $groupByStudent = $students->pluck('group_id', 'id');
         $now = now();
 
@@ -938,7 +938,7 @@ class DemoDataSeeder extends Seeder
                 $key = $teacher
                     ? 'teacher:'.$identity->entity_id
                     : 'group:'.($groupByStudent[$identity->entity_id] ?? 0);
-                $startsAt = $firstLesson[$day->toDateString().'|'.$key] ?? '08:30';
+                $startsAt = $window[$day->toDateString().'|'.$key] ?? '08:30';
                 $base = $day->copy()->setTimeFromTimeString($startsAt);
                 $shift = match ($profile) {
                     'excellent' => mt_rand(-40, -5),
@@ -976,9 +976,15 @@ class DemoDataSeeder extends Seeder
                 // Часть людей уходит, не отметившись: в отчёте они остаются
                 // «в здании», и это настоящая, а не выдуманная проблема проходной.
                 if (mt_rand(1, 100) <= 88) {
-                    $exit = $day->copy()->setTime($teacher ? 16 : 14, 20)->addMinutes(mt_rand(0, 150));
+                    $lastLesson = $window[$day->toDateString().'|'.$key.'|end'] ?? null;
+                    // Приходящий преподаватель уходит следом за своим занятием,
+                    // а не сидит до вечера. У остальных день кончается как
+                    // прежде: у преподавателя позже, у студента раньше.
+                    $exit = $this->isVisitingTeacher($teacher, $identity->entity_id) && $lastLesson !== null
+                        ? $day->copy()->setTimeFromTimeString($lastLesson)->addMinutes(mt_rand(2, 20))
+                        : $day->copy()->setTime($teacher ? 16 : 14, 20)->addMinutes(mt_rand(0, 150));
 
-                    if ($exit->lessThanOrEqualTo($now)) {
+                    if ($exit->greaterThan($entry) && $exit->lessThanOrEqualTo($now)) {
                         $rows[] = $this->accessRow($identity, $point, AccessEvent::DIRECTION_OUT, $exit, $now);
                     }
                 }
@@ -999,7 +1005,7 @@ class DemoDataSeeder extends Seeder
      * @param \Illuminate\Support\Collection<int, ScheduleLesson> $lessons
      * @return array<string, string>
      */
-    private function firstLessonStarts($lessons): array
+    private function lessonWindows($lessons): array
     {
         $starts = [];
 
@@ -1007,16 +1013,32 @@ class DemoDataSeeder extends Seeder
             $date = $lesson->lesson_date->toDateString();
             $time = $this->timeString($lesson->starts_at);
 
+            $ends = $this->timeString($lesson->ends_at);
+
             foreach (['teacher:'.$lesson->teacher_id, 'group:'.$lesson->group_id] as $key) {
                 $index = $date.'|'.$key;
 
                 if (! isset($starts[$index]) || $time < $starts[$index]) {
                     $starts[$index] = $time;
                 }
+
+                if (! isset($starts[$index.'|end']) || $ends > $starts[$index.'|end']) {
+                    $starts[$index.'|end'] = $ends;
+                }
             }
         }
 
         return $starts;
+    }
+
+    /**
+     * Приходящий преподаватель — тот же признак, что и в кадровой карточке:
+     * каждый четвёртый. Считается по порядковому номеру в наборе, а не по
+     * идентификатору строки.
+     */
+    private function isVisitingTeacher(bool $isTeacher, int $teacherId): bool
+    {
+        return $isTeacher && $this->ordinal($this->teacherOrdinals, $teacherId) % 4 === 0;
     }
 
     /** @return array<string, mixed> */
@@ -1061,17 +1083,24 @@ class DemoDataSeeder extends Seeder
         $department = $hr['departments'][$departmentName] ?? null;
         $position = $hr['positions'][$positionName] ?? null;
 
+        // Каждый четвёртый преподаватель — приходящий: пришёл к своему занятию
+        // и ушёл. В колледже искусств так работают концертмейстеры и мастера по
+        // инструменту, и отчёт обязан отличать их от тех, кто в колледже весь
+        // день, иначе нормальный уход после пары выглядит нарушением.
+        $visiting = $index % 4 === 0;
+
         $employee = Employee::updateOrCreate(
             ['employee_number' => sprintf('DEMO-T%03d', $index)],
             [
                 'person_id' => $person->id,
                 'status' => 'active',
-                'employment_type' => 'full_time',
+                'employment_type' => $visiting ? 'external_part_time' : 'full_time',
+                'work_schedule_code' => $visiting ? 'flexible' : 'weekday_0900_1800',
                 'hired_at' => Carbon::create(2024, 9, 1)->toDateString(),
                 'dismissed_at' => null,
                 'primary_department_id' => $department?->id,
                 'primary_position_id' => $position?->id,
-                'workload_rate' => 1,
+                'workload_rate' => $visiting ? 0.5 : 1,
                 'is_teacher' => true,
                 'comment' => 'Демонстрационная кадровая запись преподавателя.',
             ]

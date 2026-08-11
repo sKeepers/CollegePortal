@@ -61,6 +61,11 @@ const metrics = computed(() => {
       { label: 'Опоздали', value: store.summary.late, to: `/attendance?type=${store.mode}&mode=today&status=late` },
       { label: 'Не пришли', value: store.summary.absent, to: `/attendance?type=${store.mode}&mode=today&status=absent` },
       { label: 'Сейчас в здании', value: store.summary.inside_now },
+      // У студентов — расхождение журнала с проходной, у преподавателей —
+      // сколько из них приходящие: их день мерится не с девяти до шести.
+      ...(store.mode === 'students'
+        ? [{ label: 'Отмечены без входа', value: store.summary.marked_present_without_entry, to: `/attendance?type=students&mode=today&marked_without_entry=1` }]
+        : [{ label: 'Приходящие', value: store.summary.visiting }]),
     ]
   }
 
@@ -238,7 +243,14 @@ onMounted(async () => {
             </q-td>
           </template>
           <template #body-cell-status="props">
-            <q-td :props="props"><AppStatusBadge :label="props.row.status_label" :tone="props.row.status_tone" /><q-chip v-if="props.row.inside_now" dense color="green-1" text-color="positive" class="q-ml-xs">в здании</q-chip></q-td>
+            <q-td :props="props">
+              <AppStatusBadge :label="props.row.status_label" :tone="props.row.status_tone" />
+              <q-chip v-if="props.row.inside_now" dense color="green-1" text-color="positive" class="q-ml-xs">в здании</q-chip>
+              <!-- Преподаватель отметил на занятии, а входа нет: об этом куратор
+                   и директор должны узнать здесь, а не в конце семестра. -->
+              <q-chip v-if="props.row.marked_present_without_entry" dense color="orange-1" text-color="warning" class="q-ml-xs">отмечен без входа</q-chip>
+              <q-chip v-if="props.row.is_visiting" dense color="blue-1" text-color="info" class="q-ml-xs">приходящий</q-chip>
+            </q-td>
           </template>
           <template #body-cell-first_entry="props"><q-td :props="props">{{ store.formatAttendanceDateTime(props.row.first_entry) }}</q-td></template>
           <template #body-cell-last_exit="props"><q-td :props="props">{{ store.formatAttendanceDateTime(props.row.last_exit) }}</q-td></template>

@@ -62,6 +62,9 @@ class AttendanceAnalysisController extends Controller
     {
         return $request->validate([
             'status' => ['nullable', 'string', 'max:64'],
+            // Расхождение «отмечен на занятии, а входа нет» — отдельный признак,
+            // а не статус: он живёт рядом со статусом, а не вместо него.
+            'marked_without_entry' => ['nullable', 'boolean'],
             'group_id' => ['nullable', 'integer'],
             'teacher_id' => ['nullable', 'integer'],
             'date_from' => ['nullable', 'date'],

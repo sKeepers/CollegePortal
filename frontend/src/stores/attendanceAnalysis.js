@@ -88,7 +88,9 @@ export const useAttendanceAnalysisStore = defineStore('attendanceAnalysis', () =
   const loadingOptions = ref(false)
   const exporting = ref(false)
   const error = ref('')
-  const filters = reactive({ status: '', group_id: '', teacher_id: '', person_id: '', date_from: todayIsoDate(), date_to: todayIsoDate() })
+  // marked_without_entry — признак рядом со статусом, а не вместо него: студент
+  // может быть и «не вошёл», и отмеченным преподавателем на занятии.
+  const filters = reactive({ status: '', marked_without_entry: '', group_id: '', teacher_id: '', person_id: '', date_from: todayIsoDate(), date_to: todayIsoDate() })
 
   const todayRows = computed(() => (mode.value === 'teachers' ? teachers.value : students.value))
   const rows = computed(() => (reportMode.value === 'today' ? todayRows.value : historyRows.value))
@@ -199,6 +201,7 @@ export const useAttendanceAnalysisStore = defineStore('attendanceAnalysis', () =
 
   function resetFilters() {
     filters.status = ''
+    filters.marked_without_entry = ''
     filters.group_id = ''
     filters.teacher_id = ''
     filters.person_id = ''
@@ -214,6 +217,7 @@ export const useAttendanceAnalysisStore = defineStore('attendanceAnalysis', () =
       reportMode.value = query.mode
     }
     filters.status = typeof query.status === 'string' ? query.status : ''
+    filters.marked_without_entry = query.marked_without_entry ? 1 : ''
     filters.group_id = query.group ? Number(query.group) : (query.group_id ? Number(query.group_id) : '')
     filters.teacher_id = query.teacher ? Number(query.teacher) : (query.teacher_id ? Number(query.teacher_id) : '')
     filters.person_id = query.person_id ? Number(query.person_id) : ''

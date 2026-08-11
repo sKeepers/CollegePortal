@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\AccessEvent;
 use App\Models\DigitalIdentity;
+use App\Models\Employee;
+use App\Models\JournalAttendance;
 use App\Models\ScheduleLesson;
 use App\Models\Student;
 use App\Models\Teacher;
@@ -18,6 +20,9 @@ class AttendanceAnalysisService
 {
     public const TEACHER_ABSENT = 'not_arrived';
     public const STUDENT_ABSENT = 'not_entered';
+
+    /** Графики сотрудников на время одного отчёта: в истории они спрашиваются на каждого человека. */
+    private ?Collection $scheduleCache = null;
 
     /** @param array<string, mixed> $filters */
     public function teachersToday(?CarbonImmutable $date = null, array $filters = []): array
@@ -48,6 +53,7 @@ class AttendanceAnalysisService
         $lessons = $this->lessons($dateFrom, $dateTo, $filters);
         $lessonsByTeacher = $lessons->groupBy('teacher_id');
         $eventsByOwner = $this->allowedEvents($dateFrom, $dateTo, DigitalIdentity::ENTITY_TEACHER)->groupBy('entity_id');
+        $schedules = $this->workSchedules();
         $currentAcademicYear = (string) SettingService::value('academic', 'current_academic_year', '');
 
         $teachers = Teacher::query()
@@ -63,6 +69,7 @@ class AttendanceAnalysisService
             $lessonsByTeacher->get($teacher->id, collect()),
             $eventsByOwner->get($teacher->id, collect()),
             $dateFrom,
+            $schedules[$teacher->person_id] ?? null,
         ))->values();
 
         $rows = $this->filterRows($rows, $filters);
@@ -83,6 +90,7 @@ class AttendanceAnalysisService
         $lessons = $this->lessons($dateFrom, $dateTo, $filters);
         $lessonsByGroup = $lessons->groupBy('group_id');
         $eventsByOwner = $this->allowedEvents($dateFrom, $dateTo, DigitalIdentity::ENTITY_STUDENT)->groupBy('entity_id');
+        $markedPresent = $this->studentsMarkedPresent($dateFrom, $dateTo);
 
         $students = Student::query()
             ->with('group')
@@ -97,6 +105,7 @@ class AttendanceAnalysisService
             $lessonsByGroup->get($student->group_id, collect()),
             $eventsByOwner->get($student->id, collect()),
             $dateFrom,
+            $markedPresent->has($student->id),
         ))->values();
 
         $rows = $this->filterRows($rows, $filters);
@@ -125,11 +134,16 @@ class AttendanceAnalysisService
                 'teachers_late' => $this->attentionRows($teachers, ['late'], '/attendance?type=teachers&status=late'),
                 'students_late_over_threshold' => $this->attentionRows($students->filter(fn (array $row) => ($row['late_minutes'] ?? 0) > $studentThreshold), ['late'], '/attendance?type=students&status=late'),
                 'schedule_without_entry' => $this->attentionRows($students->merge($teachers), [self::TEACHER_ABSENT, self::STUDENT_ABSENT], '/attendance?status=absent'),
+                // Отмечен на занятии, а в здание не входил. Это не про
+                // дисциплину студента, а про достоверность журнала, поэтому
+                // блок отдельный и виден директору сразу.
+                'marked_present_without_entry' => $this->markedWithoutEntryRows($students),
             ],
         ];
     }
 
-    private function teacherRow(Teacher $teacher, Collection $lessons, Collection $events, CarbonImmutable $date): array
+    /** @param array{code: ?string, employment: ?string}|null $schedule */
+    private function teacherRow(Teacher $teacher, Collection $lessons, Collection $events, CarbonImmutable $date, ?array $schedule = null): array
     {
         $firstLesson = $lessons->sortBy(fn (ScheduleLesson $lesson) => $this->lessonStart($lesson, $date)?->timestamp ?? PHP_INT_MAX)->first();
         $firstLessonStart = $firstLesson ? $this->lessonStart($firstLesson, $date) : null;
@@ -157,11 +171,17 @@ class AttendanceAnalysisService
             'inside_now' => $insideNow,
             'minutes_inside' => $this->minutesInside($events),
             'teaching_load_hours' => $loadHours,
+            // График рабочего дня: приходящий преподаватель провёл занятие и
+            // ушёл — это норма, а не ранний уход, и отчёт обязан отличать его
+            // от того, кто должен быть в колледже весь день.
+            'work_schedule' => $schedule['code'] ?? null,
+            'work_schedule_label' => $this->workScheduleLabel($schedule),
+            'is_visiting' => $this->isVisiting($schedule),
             'comment' => $this->comment($status['code'], $firstLessonStart, $lateMinutes, $insideNow, $teacher->teachingLoads->isNotEmpty()),
         ];
     }
 
-    private function studentRow(Student $student, Collection $lessons, Collection $events, CarbonImmutable $date): array
+    private function studentRow(Student $student, Collection $lessons, Collection $events, CarbonImmutable $date, bool $markedPresent = false): array
     {
         $firstLesson = $lessons->sortBy(fn (ScheduleLesson $lesson) => $this->lessonStart($lesson, $date)?->timestamp ?? PHP_INT_MAX)->first();
         $firstLessonStart = $firstLesson ? $this->lessonStart($firstLesson, $date) : null;
@@ -188,6 +208,11 @@ class AttendanceAnalysisService
             'late_minutes' => $lateMinutes,
             'inside_now' => $insideNow,
             'minutes_inside' => $this->minutesInside($events),
+            // Преподаватель отметил студента на занятии, а в здание он не
+            // входил. Одно из двух неверно: либо человек прошёл мимо турникета,
+            // либо отметка поставлена не глядя. Куратор и директор должны это
+            // видеть, а не узнавать в конце семестра.
+            'marked_present_without_entry' => $markedPresent && $firstEntry === null,
             'comment' => $this->comment($status['code'], $firstLessonStart, $lateMinutes, $insideNow, false),
         ];
     }
@@ -389,6 +414,12 @@ class AttendanceAnalysisService
 
     private function filterRows(Collection $rows, array $filters): Collection
     {
+        // Отдельный фильтр, а не статус: расхождение живёт рядом со статусом, а
+        // не вместо него — студент может быть и «не вошёл», и отмеченным.
+        if (! empty($filters['marked_without_entry'])) {
+            $rows = $rows->filter(fn (array $row): bool => (bool) ($row['marked_present_without_entry'] ?? false));
+        }
+
         $status = (string) ($filters['status'] ?? '');
 
         if ($status === '') {
@@ -416,7 +447,90 @@ class AttendanceAnalysisService
             'late' => $rows->where('status', 'late')->count(),
             'absent' => $rows->where('status', $absentStatus)->count(),
             'on_time' => $rows->filter(fn (array $row) => in_array($row['status'], ['present', 'arrived', 'early', 'entered'], true))->count(),
+            'marked_present_without_entry' => $rows->where('marked_present_without_entry', true)->count(),
+            'visiting' => $rows->where('is_visiting', true)->count(),
         ];
+    }
+
+    /**
+     * График рабочего дня сотрудника по его человеку. Одним запросом на весь
+     * отчёт: спрашивать его на каждого преподавателя значило бы вернуть ту же
+     * беду, что уже ловили на списке эвакуации.
+     *
+     * @return \Illuminate\Support\Collection<int, array{code: ?string, employment: ?string}>
+     */
+    private function workSchedules(): Collection
+    {
+        if ($this->scheduleCache !== null) {
+            return $this->scheduleCache;
+        }
+
+        return $this->scheduleCache = Employee::query()
+            ->whereNotNull('person_id')
+            ->get(['person_id', 'work_schedule_code', 'employment_type'])
+            ->keyBy('person_id')
+            ->map(fn (Employee $employee): array => [
+                'code' => $employee->work_schedule_code,
+                'employment' => $employee->employment_type,
+            ]);
+    }
+
+    /**
+     * Приходящий преподаватель: свободный график или внешнее совместительство.
+     * Он появляется к своему занятию и уходит после него, и мерить его днём с
+     * девяти до шести неверно.
+     *
+     * @param array{code: ?string, employment: ?string}|null $schedule
+     */
+    private function isVisiting(?array $schedule): bool
+    {
+        if ($schedule === null) {
+            return false;
+        }
+
+        return ($schedule['code'] ?? null) === 'flexible'
+            || in_array($schedule['employment'] ?? null, ['external_part_time', 'contract'], true);
+    }
+
+    private function isVisitingPerson(string $type, Student|Teacher $person): bool
+    {
+        if ($type !== DigitalIdentity::ENTITY_TEACHER || ! $person->person_id) {
+            return false;
+        }
+
+        return $this->isVisiting($this->workSchedules()[$person->person_id] ?? null);
+    }
+
+    /** @param array{code: ?string, employment: ?string}|null $schedule */
+    private function workScheduleLabel(?array $schedule): ?string
+    {
+        return match ($schedule['code'] ?? null) {
+            'weekday_0900_1800' => 'Будни 9:00–18:00',
+            'weekday_0900_1700' => 'Будни 9:00–17:00',
+            'shift_2_2_0800_2000' => 'Сменный 2/2, 8:00–20:00',
+            'flexible' => 'Свободный график',
+            default => $this->isVisiting($schedule) ? 'Приходящий' : null,
+        };
+    }
+
+    /**
+     * Студенты, отмеченные преподавателем на занятии за период.
+     *
+     * Одним запросом на весь отчёт, а не по человеку. Прогулявший занятие сюда
+     * не попадает: отметка «отсутствовал» расхождением с проходной не является.
+     *
+     * @return \Illuminate\Support\Collection<int, int>
+     */
+    private function studentsMarkedPresent(CarbonImmutable $dateFrom, CarbonImmutable $dateTo): Collection
+    {
+        return JournalAttendance::query()
+            ->join('journal_lessons', 'journal_lessons.id', '=', 'journal_attendance.journal_lesson_id')
+            ->whereIn('journal_attendance.status', [JournalAttendance::STATUS_PRESENT, JournalAttendance::STATUS_LATE])
+            ->whereDate('journal_lessons.lesson_date', '>=', $dateFrom->toDateString())
+            ->whereDate('journal_lessons.lesson_date', '<=', $dateTo->toDateString())
+            ->distinct()
+            ->pluck('journal_attendance.student_id')
+            ->flip();
     }
 
 
@@ -572,7 +686,10 @@ class AttendanceAnalysisService
             'late_minutes' => $lateMinutes,
             'is_late' => $scheduled && $lateMinutes > 0,
             'early_leave_minutes' => $earlyLeaveMinutes,
-            'is_early_leave' => $scheduled && $earlyLeaveMinutes > 0,
+            // Приходящему преподавателю ранний уход не ставится: он и приходит
+            // ради своего занятия. Мерить его концом последней пары в колледже
+            // значило бы записывать в нарушители за то, ради чего его позвали.
+            'is_early_leave' => $scheduled && $earlyLeaveMinutes > 0 && ! $this->isVisitingPerson($type, $person),
             'has_open_session' => (bool) $sessionsPayload['has_open_session'],
             'sessions' => $sessionsPayload['sessions'],
             'lessons' => $lessons->map(fn (ScheduleLesson $lesson) => $this->lessonPayload($lesson, $date))->values()->all(),
@@ -834,6 +951,29 @@ class AttendanceAnalysisService
                 'absent' => $summary['absent'],
                 'inside_now' => $summary['inside_now'],
             ];
+    }
+
+    /** @param Collection<int, array<string, mixed>> $rows */
+    private function markedWithoutEntryRows(Collection $rows): array
+    {
+        $flagged = $rows->filter(fn (array $row): bool => (bool) ($row['marked_present_without_entry'] ?? false));
+        $to = '/attendance?type=students&marked_without_entry=1';
+
+        return [
+            'count' => $flagged->count(),
+            'items' => $flagged
+                ->take(5)
+                ->map(fn (array $row) => [
+                    'id' => $row['id'],
+                    'name' => $row['full_name'],
+                    'status' => 'Отмечен на занятии, входа нет',
+                    'group' => $row['group'] ?? null,
+                    'to' => $to,
+                ])
+                ->values()
+                ->all(),
+            'to' => $to,
+        ];
     }
 
     private function attentionRows(Collection $rows, array $statuses, string $to): array

@@ -5,7 +5,11 @@ namespace Tests\Feature;
 use App\Models\AccessEvent;
 use App\Models\Classroom;
 use App\Models\DigitalIdentity;
+use App\Models\Employee;
 use App\Models\Group;
+use App\Models\JournalAttendance;
+use App\Models\JournalLesson;
+use App\Models\Person;
 use App\Models\ScheduleLesson;
 use App\Models\Student;
 use App\Models\Subject;
@@ -226,6 +230,120 @@ class AttendanceAnalysisApiTest extends TestCase
         $csv = $response->streamedContent();
         $this->assertStringContainsString('ФИО', $csv);
         $this->assertStringContainsString('Иванов Дмитрий', $csv);
+    }
+
+    /**
+     * Преподаватель отметил студента на занятии, а в здание студент не входил.
+     *
+     * Одно из двух неверно: либо человек прошёл мимо турникета, либо отметка
+     * поставлена не глядя. Куратор и директор должны видеть это в отчёте, а не
+     * узнавать в конце семестра.
+     */
+    public function test_student_marked_present_without_entry_is_flagged(): void
+    {
+        $context = $this->createScheduleContext();
+        $lesson = $this->createLesson($context, '09:00', '10:30');
+        $absent = Student::create(['group_id' => $context['group']->id, 'last_name' => 'Сидоров', 'first_name' => 'Пётр', 'status' => 'active']);
+        $present = Student::create(['group_id' => $context['group']->id, 'last_name' => 'Иванова', 'first_name' => 'Мария', 'status' => 'active']);
+        $this->addAccessEvent('student', $present->id, '08:45');
+
+        $journalLesson = JournalLesson::create([
+            'legacy_schedule_lesson_id' => $lesson->id,
+            'group_id' => $context['group']->id,
+            'subject_id' => $context['subject']->id,
+            'teacher_id' => $context['teacher']->id,
+            'lesson_date' => '2026-09-10',
+            'starts_at' => '09:00',
+            'ends_at' => '10:30',
+            'status' => JournalLesson::STATUS_COMPLETED,
+        ]);
+
+        foreach ([$absent, $present] as $student) {
+            JournalAttendance::create([
+                'journal_lesson_id' => $journalLesson->id,
+                'student_id' => $student->id,
+                'status' => JournalAttendance::STATUS_PRESENT,
+                'source' => 'teacher',
+            ]);
+        }
+
+        $response = $this->getJson('/api/attendance/students/today?date_from=2026-09-10&date_to=2026-09-10')
+            ->assertOk()
+            ->assertJsonPath('summary.marked_present_without_entry', 1);
+
+        $rows = collect($response->json('data'))->keyBy('id');
+        $this->assertTrue($rows['student-'.$absent->id]['marked_present_without_entry'], 'Отмечен на занятии, а входа нет');
+        $this->assertFalse($rows['student-'.$present->id]['marked_present_without_entry'], 'Вошёл — расхождения нет');
+
+        // Тот же признак отдельным фильтром: по ссылке из панели директора
+        // должен открываться список ровно этих людей.
+        $this->getJson('/api/attendance/students/today?date_from=2026-09-10&date_to=2026-09-10&marked_without_entry=1')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.full_name', 'Сидоров Пётр');
+    }
+
+    /** Прогулявший занятие расхождением не считается: отметка совпала с проходной. */
+    public function test_student_marked_absent_is_not_a_discrepancy(): void
+    {
+        $context = $this->createScheduleContext();
+        $lesson = $this->createLesson($context, '09:00', '10:30');
+        $student = Student::create(['group_id' => $context['group']->id, 'last_name' => 'Сидоров', 'first_name' => 'Пётр', 'status' => 'active']);
+
+        $journalLesson = JournalLesson::create([
+            'legacy_schedule_lesson_id' => $lesson->id,
+            'group_id' => $context['group']->id,
+            'subject_id' => $context['subject']->id,
+            'teacher_id' => $context['teacher']->id,
+            'lesson_date' => '2026-09-10',
+            'starts_at' => '09:00',
+            'ends_at' => '10:30',
+            'status' => JournalLesson::STATUS_COMPLETED,
+        ]);
+        JournalAttendance::create([
+            'journal_lesson_id' => $journalLesson->id,
+            'student_id' => $student->id,
+            'status' => JournalAttendance::STATUS_ABSENT,
+            'source' => 'teacher',
+        ]);
+
+        $this->getJson('/api/attendance/students/today?date_from=2026-09-10&date_to=2026-09-10')
+            ->assertOk()
+            ->assertJsonPath('summary.marked_present_without_entry', 0);
+    }
+
+    /**
+     * Приходящему преподавателю ранний уход не ставится: он и приходит ради
+     * своего занятия, а мерить его концом дня в колледже неверно.
+     */
+    public function test_visiting_teacher_leaving_after_the_lesson_is_not_an_early_leave(): void
+    {
+        $context = $this->createScheduleContext();
+        $teacher = $context['teacher'];
+        $person = Person::create(['last_name' => 'Петров', 'first_name' => 'Алексей', 'status' => 'active']);
+        $teacher->forceFill(['person_id' => $person->id])->save();
+        Employee::create([
+            'person_id' => $person->id,
+            'employee_number' => 'VIS-001',
+            'status' => 'active',
+            'employment_type' => 'external_part_time',
+            'work_schedule_code' => 'flexible',
+            'is_teacher' => true,
+        ]);
+
+        $this->createLesson($context, '09:00', '10:30');
+        $this->addAccessEvent('teacher', $teacher->id, '08:50');
+        $this->addAccessEvent('teacher', $teacher->id, '10:40', AccessEvent::DIRECTION_OUT);
+
+        $this->getJson('/api/attendance/teachers/today?date_from=2026-09-10&date_to=2026-09-10')
+            ->assertOk()
+            ->assertJsonPath('data.0.is_visiting', true)
+            ->assertJsonPath('data.0.work_schedule_label', 'Свободный график')
+            ->assertJsonPath('summary.visiting', 1);
+
+        $this->getJson('/api/attendance/history?type=teacher&date_from=2026-09-10&date_to=2026-09-10')
+            ->assertOk()
+            ->assertJsonPath('data.0.early_leave_count', 0);
     }
 
     private function createScheduleContext(): array
