@@ -11,15 +11,19 @@ use App\Models\Curriculum;
 use App\Models\CurriculumItem;
 use App\Models\CurriculumSubject;
 use App\Models\DigitalIdentity;
+use App\Models\Diploma;
+use App\Models\DiplomaSupplement;
 use App\Models\Employee;
 use App\Models\EmployeeAssignment;
 use App\Models\EmployeeStatusPeriod;
 use App\Models\Grade;
+use App\Models\Graduate;
 use App\Models\Group;
 use App\Models\JournalAttendance;
 use App\Models\JournalGrade;
 use App\Models\JournalLesson;
 use App\Models\Person;
+use App\Models\ScheduleEntry;
 use App\Models\ScheduleLesson;
 use App\Models\Student;
 use App\Models\Subject;
@@ -132,9 +136,20 @@ class DemoDataController extends Controller
 
             Group::query()->whereIn('curriculum_id', $curriculumIds)->update(['curriculum_id' => null]);
 
+            // Движок расписания и выпускники появились в наборе 11.08.2026.
+            // Записи движка держат группу и преподавателя, диплом держит
+            // выпускника, а выпускник — студента: без этого удаление снова
+            // упёрлось бы во внешний ключ, как уже было с нагрузкой.
+            $graduateIds = Graduate::query()->whereIn('student_id', $studentIds)->pluck('id');
+            $diplomaIds = Diploma::query()->whereIn('graduate_id', $graduateIds)->pluck('id');
+
             $deleted = [
                 'access_events' => AccessEvent::query()->whereIn('digital_identity_id', $identityIds)->delete(),
                 'digital_identities' => DigitalIdentity::query()->whereIn('id', $identityIds)->delete(),
+                'diploma_supplements' => DiplomaSupplement::query()->whereIn('diploma_id', $diplomaIds)->delete(),
+                'diplomas' => Diploma::query()->whereIn('id', $diplomaIds)->delete(),
+                'graduates' => Graduate::query()->whereIn('id', $graduateIds)->delete(),
+                'schedule_entries' => ScheduleEntry::query()->whereIn('group_id', $groupIds)->orWhereIn('teacher_id', $teacherIds)->delete(),
                 'journal_grades' => JournalGrade::query()->whereIn('journal_lesson_id', $journalLessonIds)->delete(),
                 'journal_attendance' => JournalAttendance::query()->whereIn('journal_lesson_id', $journalLessonIds)->delete(),
                 'journal_lessons' => JournalLesson::query()->whereIn('id', $journalLessonIds)->delete(),

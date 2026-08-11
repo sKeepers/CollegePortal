@@ -5,13 +5,17 @@ namespace Tests\Feature;
 use App\Models\AccessEvent;
 use App\Models\Attendance;
 use App\Models\Curriculum;
+use App\Models\Diploma;
+use App\Models\DiplomaSupplement;
 use App\Models\Employee;
+use App\Models\Graduate;
 use App\Models\Group;
 use App\Models\JournalAttendance;
 use App\Models\JournalGrade;
 use App\Models\JournalLesson;
 use App\Models\Person;
 use App\Models\Role;
+use App\Models\ScheduleEntry;
 use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\TeachingLoad;
@@ -122,6 +126,17 @@ class DemoDataSeederTest extends TestCase
         $this->assertGreaterThan(0, TeachingLoad::query()->count());
         $this->assertGreaterThan(0, TeachingLoadItem::query()->whereNotNull('teacher_id')->count());
         $this->assertGreaterThan(0, TeachingLoadItem::query()->whereNull('teacher_id')->count(), 'Покрытие часов без нераспределённых строк ничего не показывает');
+
+        // Движок расписания и выпускники — последние два раздела, открывавшиеся
+        // пустыми. Покрытие часов считается по записям движка, привязанным к
+        // строкам нагрузки: без привязки оно показывало бы ноль поставленных
+        // часов у всех, то есть то же самое пустое место.
+        $this->assertGreaterThan(0, ScheduleEntry::query()->count(), 'Движок расписания обязан быть наполнен');
+        $this->assertGreaterThan(0, ScheduleEntry::query()->whereNotNull('teaching_load_item_id')->count(), 'Без связи с нагрузкой покрытие часов пустое');
+        $this->assertGreaterThan(0, Graduate::query()->count());
+        $this->assertGreaterThan(0, Diploma::query()->count());
+        $this->assertGreaterThan(0, DiplomaSupplement::query()->count(), 'Без приложений не видно, что обратная загрузка их не теряет');
+        $this->assertGreaterThan(0, Graduate::query()->where('status', 'ready')->count(), 'Реестр, где у всех всё выдано, не показывает работы');
 
         $summary = app(AttendanceAnalysisService::class)->teachersToday()['summary'];
         $this->assertGreaterThan(0, $summary['late']);

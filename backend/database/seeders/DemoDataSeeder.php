@@ -15,6 +15,7 @@ use App\Models\EducationProgram;
 use App\Models\Employee;
 use App\Models\EmployeeAssignment;
 use App\Models\Grade;
+use App\Models\Graduate;
 use App\Models\Group;
 use App\Models\JournalAttendance;
 use App\Models\JournalGrade;
@@ -22,6 +23,7 @@ use App\Models\JournalLesson;
 use App\Models\Person;
 use App\Models\Position;
 use App\Models\Role;
+use App\Models\ScheduleEntry;
 use App\Models\ScheduleLesson;
 use App\Models\Specialty;
 use App\Models\Student;
@@ -105,6 +107,8 @@ class DemoDataSeeder extends Seeder
             // нести двадцать пять тысяч строк через все оставшиеся шаги.
             unset($marks);
             $this->seedTeachingLoads($groups, $teachers);
+            $this->seedScheduleEntries($lessons);
+            $this->seedGraduates($groups, $students);
             $this->seedDigitalIdentities($students, $teachers);
             $this->seedAccessEvents($students, $teachers, $lessons);
             $this->seedApplicantApplications($programs);
@@ -620,6 +624,168 @@ class DemoDataSeeder extends Seeder
 
         if ($gradeRows !== []) {
             JournalGrade::query()->insert($gradeRows);
+        }
+    }
+
+    /**
+     * Движок расписания: занятия в его собственной таблице.
+     *
+     * Набор писал только в `schedule_lessons`, а покрытие часов и конфликты
+     * читают `schedule_entries` — экран расписания показывал пары, а блоки
+     * «Покрытие» и «Конфликты» рядом с ними оставались пустыми при полутора
+     * тысячах занятий.
+     *
+     * Каждая запись привязывается к строке нагрузки той же группы и той же
+     * дисциплины: именно по этой связи движок считает, сколько часов уже
+     * поставлено против запланированных. Без привязки покрытие показывало бы
+     * ноль поставленных часов у всех — то есть ровно то же самое пустое место.
+     *
+     * @param \Illuminate\Support\Collection<int, ScheduleLesson> $lessons
+     */
+    private function seedScheduleEntries($lessons): void
+    {
+        if ($lessons->isEmpty()) {
+            return;
+        }
+
+        $academicYear = (string) (SettingService::value('academic', 'current_academic_year', '') ?: '2026/2027');
+
+        ScheduleEntry::query()->whereIn('group_id', $lessons->pluck('group_id')->unique())->delete();
+
+        // Строка нагрузки на пару «группа + дисциплина». Их может быть
+        // несколько — дисциплина идёт в разных семестрах, — и берётся та, у
+        // которой есть преподаватель: покрытие без преподавателя ни о чём.
+        $items = TeachingLoadItem::query()
+            ->orderByRaw('teacher_id is null')
+            ->orderBy('id')
+            ->get(['id', 'group_id', 'subject_id', 'semester']);
+        $itemByPair = [];
+        foreach ($items as $item) {
+            $itemByPair[$item->group_id.':'.$item->subject_id] ??= $item;
+        }
+
+        $slots = ['08:30' => 1, '10:10' => 2, '12:10' => 3, '13:50' => 4];
+        $now = now();
+        $rows = [];
+
+        foreach ($lessons as $lesson) {
+            $startsAt = $this->timeString($lesson->starts_at);
+            $item = $itemByPair[$lesson->group_id.':'.$lesson->subject_id] ?? null;
+
+            if (count($rows) >= 1000) {
+                ScheduleEntry::query()->insert($rows);
+                $rows = [];
+            }
+
+            $rows[] = [
+                'academic_year' => $academicYear,
+                'semester' => $item?->semester ?? 1,
+                'date' => $lesson->lesson_date->toDateString(),
+                'day_of_week' => $lesson->lesson_date->dayOfWeekIso,
+                'lesson_number' => $slots[$startsAt] ?? 1,
+                'starts_at' => $startsAt,
+                'ends_at' => $this->timeString($lesson->ends_at),
+                'group_id' => $lesson->group_id,
+                'subject_id' => $lesson->subject_id,
+                'teacher_id' => $lesson->teacher_id,
+                'classroom_id' => $lesson->classroom_id,
+                'teaching_load_item_id' => $item?->id,
+                'status' => 'scheduled',
+                'source' => 'demo_data',
+                'is_replacement' => false,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        if ($rows !== []) {
+            ScheduleEntry::query()->insert($rows);
+        }
+    }
+
+    /**
+     * Выпускники прошлого года с дипломами.
+     *
+     * Раздел открывался пустым: выпускников набор не создавал вовсе, поэтому
+     * не на чем было увидеть ни реестр, ни выгрузку, ни приложение к диплому —
+     * то самое, которое обратная загрузка недавно научилась не терять.
+     *
+     * Выпускники берутся из групп четвёртого курса и выпускаются прошлым
+     * годом: человек, выпустившийся в этом году, ещё числился бы студентом, и
+     * реестр противоречил бы контингенту.
+     *
+     * @param \Illuminate\Support\Collection<int, Group> $groups
+     * @param \Illuminate\Support\Collection<int, Student> $students
+     */
+    private function seedGraduates($groups, $students): void
+    {
+        $finalCourse = $groups->where('course', 4);
+
+        if ($finalCourse->isEmpty()) {
+            return;
+        }
+
+        $graduationYear = (int) Carbon::today()->year - 1;
+        $byGroup = $students->groupBy('group_id');
+        $programs = Group::query()->whereIn('id', $finalCourse->pluck('id'))->with('educationProgram.specialty')->get()->keyBy('id');
+        $index = 0;
+
+        foreach ($finalCourse as $group) {
+            $program = $programs[$group->id]?->educationProgram ?? null;
+
+            // По десять человек с группы: реестр должен быть похож на выпуск, а
+            // не на весь контингент, и оставаться обозримым на экране.
+            foreach (($byGroup[$group->id] ?? collect())->take(10) as $student) {
+                $index++;
+                $graduate = Graduate::updateOrCreate(
+                    ['student_id' => $student->id],
+                    [
+                        'person_id' => $student->person_id,
+                        'group_id' => $group->id,
+                        'education_program_id' => $program?->id,
+                        'specialty_id' => $program?->specialty?->id,
+                        'graduation_year' => $graduationYear,
+                        'qualification' => $program?->specialty?->qualification,
+                        // Каждый десятый ещё без диплома: реестр, где у всех всё
+                        // выдано, не показывает работы, ради которой он и нужен.
+                        'status' => $index % 10 === 0 ? 'ready' : 'issued',
+                        'note' => 'Демонстрационная запись выпускника.',
+                    ]
+                );
+
+                if ($index % 10 === 0) {
+                    $graduate->diploma()->delete();
+
+                    continue;
+                }
+
+                $diploma = $graduate->diploma()->updateOrCreate(
+                    ['graduate_id' => $graduate->id],
+                    [
+                        'series' => 'СК',
+                        'number' => sprintf('%06d', 100000 + $index),
+                        'registration_number' => sprintf('%d-%03d', $graduationYear % 100, $index),
+                        'issue_date' => Carbon::create($graduationYear, 6, 30)->toDateString(),
+                        'qualification' => $graduate->qualification,
+                        'gia_decision' => sprintf('Протокол ГИА № %d от 25.06.%d', ($index % 7) + 1, $graduationYear),
+                        'status' => 'issued',
+                    ]
+                );
+
+                // Приложение не у всех: без этого не видно ни его выгрузки, ни
+                // того, что обратная загрузка его больше не теряет.
+                if ($index % 3 !== 0) {
+                    $diploma->supplement()->updateOrCreate(
+                        ['diploma_id' => $diploma->id],
+                        [
+                            'series' => 'ПР',
+                            'number' => sprintf('%06d', 500000 + $index),
+                            'issue_date' => Carbon::create($graduationYear, 6, 30)->toDateString(),
+                            'status' => 'issued',
+                        ]
+                    );
+                }
+            }
         }
     }
 
