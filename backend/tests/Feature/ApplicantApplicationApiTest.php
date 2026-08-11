@@ -6,9 +6,11 @@ use App\Models\ApplicantApplication;
 use App\Models\ApplicantApplicationDocument;
 use App\Models\EducationProgram;
 use App\Models\Group;
+use App\Models\Person;
 use App\Models\Specialty;
 use App\Models\Student;
 use App\Services\ApplicantApplicationDocumentService;
+use App\Services\PersonService;
 use Database\Seeders\ReferenceDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -311,6 +313,58 @@ class ApplicantApplicationApiTest extends TestCase
             'applicant_application_id' => $application->id,
             'type' => 'enrolled',
         ]);
+
+        // Человек заводится при зачислении: без него паспорт и документ об образовании
+        // прикрепить некуда, а правка ФИО в карточке человека до студента не дойдёт.
+        $person = Person::query()->sole();
+        $this->assertSame('Анохин', $person->last_name);
+        $this->assertSame('active', $person->status);
+        $this->assertSame($person->id, Student::query()->sole()->person_id);
+        $this->assertSame($person->id, $application->fresh()->person_id);
+    }
+
+    public function test_it_links_enrollment_to_an_existing_person(): void
+    {
+        $program = $this->createProgram();
+        $group = $this->createGroup($program);
+        $person = app(PersonService::class)->createPerson([
+            'last_name' => 'Анохин',
+            'first_name' => 'Дмитрий',
+            'middle_name' => 'Алексеевич',
+            'birth_date' => '2010-03-14',
+        ]);
+        $application = ApplicantApplication::create($this->payload($program, ['status' => 'accepted']));
+        $this->receiveAllDocuments($application);
+
+        $this->postJson("/api/applicant-applications/{$application->id}/enroll", [
+            'group_id' => $group->id,
+            'enrollment_date' => '2026-09-01',
+        ])->assertCreated();
+
+        $this->assertSame(1, Person::query()->count(), 'Второй карточки человека появиться не должно.');
+        $this->assertSame($person->id, Student::query()->sole()->person_id);
+        $this->assertSame($person->id, $application->fresh()->person_id);
+    }
+
+    public function test_it_refuses_enrollment_when_several_people_match(): void
+    {
+        $program = $this->createProgram();
+        $group = $this->createGroup($program);
+        $people = app(PersonService::class);
+        $people->createPerson(['last_name' => 'Анохин', 'first_name' => 'Дмитрий', 'email' => 'applicant@example.test']);
+        $people->createPerson(['last_name' => 'Анохина', 'first_name' => 'Дарья', 'phone' => '+79990000010']);
+        $application = ApplicantApplication::create($this->payload($program, ['status' => 'accepted']));
+        $this->receiveAllDocuments($application);
+
+        $this->postJson("/api/applicant-applications/{$application->id}/enroll", [
+            'group_id' => $group->id,
+            'enrollment_date' => '2026-09-01',
+        ])->assertStatus(422)->assertJsonValidationErrors('person');
+
+        // Отказ обязан быть целым: ни студента, ни третьего человека, ни смены статуса.
+        $this->assertSame(0, Student::query()->count());
+        $this->assertSame(2, Person::query()->count());
+        $this->assertSame('accepted', $application->fresh()->status);
     }
 
     public function test_it_rejects_enrollment_when_required_documents_are_missing(): void

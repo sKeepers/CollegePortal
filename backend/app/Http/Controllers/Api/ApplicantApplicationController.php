@@ -11,11 +11,13 @@ use App\Http\Resources\ApplicantApplicationResource;
 use App\Http\Resources\StudentResource;
 use App\Models\ApplicantApplication;
 use App\Models\ApplicantApplicationDocument;
+use App\Models\Person;
 use App\Models\Student;
 use App\Services\ApplicantApplicationCsvService;
 use App\Services\ApplicantApplicationDocumentService;
 use App\Services\ApplicantApplicationEventService;
 use App\Services\Bulk\BulkSelectionResolver;
+use App\Services\PersonService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -32,6 +34,7 @@ class ApplicantApplicationController extends Controller
         private readonly ApplicantApplicationEventService $eventService,
         private readonly ApplicantApplicationDocumentService $documentService,
         private readonly BulkSelectionResolver $selectionResolver,
+        private readonly PersonService $people,
     ) {
     }
 
@@ -210,7 +213,10 @@ class ApplicantApplicationController extends Controller
         }
 
         $student = DB::transaction(function () use ($request, $applicantApplication): Student {
+            $person = $this->resolvePerson($applicantApplication);
+
             $student = Student::create([
+                'person_id' => $person->id,
                 'group_id' => $request->integer('group_id'),
                 'last_name' => $applicantApplication->last_name,
                 'first_name' => $applicantApplication->first_name,
@@ -220,6 +226,8 @@ class ApplicantApplicationController extends Controller
                 'email' => $applicantApplication->email,
                 'status' => 'active',
                 'enrollment_date' => $request->date('enrollment_date')->toDateString(),
+                'education_form' => $applicantApplication->education_form,
+                'funding_form' => $applicantApplication->funding_form,
             ]);
 
             $applicantApplication->update(['status' => 'enrolled']);
@@ -271,6 +279,37 @@ class ApplicantApplicationController extends Controller
             'enrolled' => 'Зачислен',
             default => $status,
         };
+    }
+
+    /**
+     * Человек заводится при зачислении всегда — как в карточке студента и в массовом
+     * зачислении: паспорт и документ об образовании принадлежат ему, а не карточке
+     * студента, и без `Person` их некуда прикрепить. Заодно связывается заявление:
+     * до этого копия ФИО в нём была не копией, а единственным источником.
+     */
+    private function resolvePerson(ApplicantApplication $applicantApplication): Person
+    {
+        if ($applicantApplication->person) {
+            return $applicantApplication->person;
+        }
+
+        $data = $this->people->dataFromProfile($applicantApplication);
+        // Статус заявления — не статус человека: «accepted» и «recommended» в `people`
+        // не значат ничего, а `normalizePersonData` записал бы их как есть.
+        $data['status'] = 'active';
+
+        $duplicates = $this->people->findPossibleDuplicates($data);
+
+        if ($duplicates->count() > 1) {
+            throw ValidationException::withMessages([
+                'person' => ['Нашлось несколько подходящих карточек человека. Свяжите заявление с нужной вручную и повторите зачисление.'],
+            ]);
+        }
+
+        $person = $duplicates->first() ?: $this->people->createPerson($data);
+        $this->people->linkProfile($applicantApplication, $person);
+
+        return $person;
     }
 
     private function abortIfFoundationRecord(ApplicantApplication $applicantApplication): void

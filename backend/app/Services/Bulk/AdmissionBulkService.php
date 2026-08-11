@@ -243,11 +243,16 @@ class AdmissionBulkService
         if ($apply) {
             $personId = $application->person_id;
             if (! $personId) {
-                $duplicates = $this->personService->findPossibleDuplicates($this->personService->dataFromProfile($application));
+                $data = $this->personService->dataFromProfile($application);
+                // Статус заявления — не статус человека: «accepted» и «recommended»
+                // в `people` не значат ничего, а записались бы туда как есть.
+                $data['status'] = 'active';
+
+                $duplicates = $this->personService->findPossibleDuplicates($data);
                 if ($duplicates->count() > 1) {
                     return ['type' => 'error', 'reason' => 'Найдено несколько возможных Person-дублей, требуется ручная проверка.'];
                 }
-                $person = $duplicates->first() ?: $this->personService->createPerson($this->personService->dataFromProfile($application));
+                $person = $duplicates->first() ?: $this->personService->createPerson($data);
                 $this->personService->linkProfile($application, $person);
                 $personId = $person->id;
             }
