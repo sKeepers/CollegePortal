@@ -47,4 +47,13 @@ return [
         'bot_token' => env('TELEGRAM_LOGIN_BOT_TOKEN') ?: null,
     ],
 
+    /*
+     * Бот MAX — канал уведомлений (`NOTIFY-001`). Входа через MAX не существует, это
+     * только отправка. Токена нет — канал не подключается и галочек в кабинете нет.
+     */
+    'max' => [
+        'bot_username' => env('MAX_BOT_USERNAME') ?: null,
+        'bot_token' => env('MAX_BOT_TOKEN') ?: null,
+    ],
+
 ];

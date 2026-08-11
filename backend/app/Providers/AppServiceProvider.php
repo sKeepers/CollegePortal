@@ -11,6 +11,8 @@ use App\Observers\UserObserver;
 use App\Support\Auth\ApiTokenResolver;
 use App\Support\Auth\Providers\ExternalIdentityProviders;
 use App\Support\Auth\Providers\TelegramLoginProvider;
+use App\Support\Notifications\MaxNotificationChannel;
+use App\Support\Notifications\NotificationChannels;
 use App\Support\LoginIdentifier;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -32,6 +34,18 @@ class AppServiceProvider extends ServiceProvider
         // без имени бота и токена Telegram-вход не появляется ни в списке, ни кнопкой,
         // и портал работает ровно как до `AUTH-003`. MAX встанет сюда же, если владелец
         // выберет один из путей — «входа через MAX» для стороннего сайта не существует.
+        // Каналы доставки уведомлений. Без токена бота список пуст: галочки не
+        // показываются, отправлять некуда, портал работает как до `NOTIFY-001`.
+        // Telegram сюда не встал не по забывчивости — с боевого сервера его адреса
+        // отвечают через раз, замер в docs/NOTIFY_001_PLAN.md.
+        $this->app->singleton(NotificationChannels::class, function (): NotificationChannels {
+            $token = config('services.max.bot_token');
+
+            return new NotificationChannels(array_filter([
+                $token ? new MaxNotificationChannel($token) : null,
+            ]));
+        });
+
         $this->app->singleton(ExternalIdentityProviders::class, function (): ExternalIdentityProviders {
             $token = config('services.telegram.bot_token');
             $username = config('services.telegram.bot_username');

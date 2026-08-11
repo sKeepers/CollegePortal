@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\AccountIdentityController;
+use App\Http\Controllers\Api\AccountNotificationController;
 use App\Http\Controllers\Api\AdminUserIdentityController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AccessGateController;
@@ -96,6 +97,10 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     Route::get('account/identities', [AccountIdentityController::class, 'index']);
     Route::post('account/identities', [AccountIdentityController::class, 'store']);
     Route::delete('account/identities/{identity}', [AccountIdentityController::class, 'destroy']);
+    // Галочки уведомлений — без права, как и остальной раздел: своими уведомлениями
+    // человек распоряжается сам.
+    Route::get('account/notifications', [AccountNotificationController::class, 'index']);
+    Route::post('account/notifications', [AccountNotificationController::class, 'update']);
     // Мобильные кабинеты. Право решает видимость раздела, а не то, чьи данные
     // видно: кабинет отдаёт только данные вошедшего — преподаватель находится
     // по `teachers.user_id`, и чужой день не открывается подстановкой

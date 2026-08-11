@@ -35,6 +35,8 @@
         <!-- См. пояснение в phpunit.xml: набор не должен зависеть от настроек стенда. -->
         <server name="TELEGRAM_LOGIN_BOT_USERNAME" value=""/>
         <server name="TELEGRAM_LOGIN_BOT_TOKEN" value=""/>
+        <server name="MAX_BOT_USERNAME" value=""/>
+        <server name="MAX_BOT_TOKEN" value=""/>
         <server name="BROADCAST_CONNECTION" value="null"/>
         <server name="CACHE_STORE" value="array"/>
         <server name="DB_CONNECTION" value="pgsql"/>
