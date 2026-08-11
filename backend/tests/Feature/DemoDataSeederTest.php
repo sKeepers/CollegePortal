@@ -23,7 +23,9 @@ use App\Models\TeachingLoadItem;
 use App\Services\AttendanceAnalysisService;
 use Carbon\Carbon;
 use Database\Seeders\DemoDataSeeder;
+use Illuminate\Database\Events\TransactionBeginning;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 /**
@@ -82,6 +84,16 @@ class DemoDataSeederTest extends TestCase
             Role::query()->firstOrCreate(['code' => $code], ['name' => $code]);
         }
 
+        // Сколько транзакций набор открывает за прогон. Под `RefreshDatabase`
+        // внешняя транзакция есть всегда, поэтому каждая внутренняя — точка
+        // сохранения, и её блокировка живёт до конца теста. Считаем здесь, а не
+        // отдельным тестом: наполнение стоит полминуты, второй раз его гонять
+        // незачем.
+        $transactions = 0;
+        Event::listen(TransactionBeginning::class, function () use (&$transactions): void {
+            $transactions++;
+        });
+
         $this->seed(DemoDataSeeder::class);
 
         $this->assertSame(600, Student::query()->count());
@@ -137,6 +149,21 @@ class DemoDataSeederTest extends TestCase
         $this->assertGreaterThan(0, Diploma::query()->count());
         $this->assertGreaterThan(0, DiplomaSupplement::query()->count(), 'Без приложений не видно, что обратная загрузка их не теряет');
         $this->assertGreaterThan(0, Graduate::query()->where('status', 'ready')->count(), 'Реестр, где у всех всё выдано, не показывает работы');
+
+        // Порог, а не точное число: набор растёт, и подгонять цифру под каждую
+        // новую сущность бессмысленно. Важен порядок величины. До правки от
+        // 12.08.2026 здесь было 4970 — набор в одиночку занимал 78 % таблицы
+        // блокировок PostgreSQL (`max_locks_per_transaction` × `max_connections`
+        // записей на весь сервер), и второго прогона рядом сервер не выдерживал.
+        // Стало 60. Если счётчик снова уехал в тысячи — ищите `updateOrCreate`
+        // или `firstOrCreate` в наборе: они создают строку через `createOrFirst`,
+        // а тот внутри транзакции заворачивает вставку в `SAVEPOINT`. Писать
+        // строки набор обязан через `DemoDataSeeder::writeRow`.
+        $this->assertLessThan(
+            200,
+            $transactions,
+            "Набор открыл {$transactions} транзакций: столько точек сохранения исчерпывают таблицу блокировок PostgreSQL"
+        );
 
         $summary = app(AttendanceAnalysisService::class)->teachersToday()['summary'];
         $this->assertGreaterThan(0, $summary['late']);

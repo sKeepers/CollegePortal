@@ -35,6 +35,9 @@ use App\Models\User;
 use App\Services\SettingService;
 use App\Services\TeachingLoadGenerationService;
 use Database\Seeders\Support\DemoNameFactory;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -79,7 +82,8 @@ class DemoDataSeeder extends Seeder
             $studentRole = Role::where('code', 'student')->firstOrFail();
             $demoPassword = env('DEMO_USER_PASSWORD', 'test1234');
 
-            User::updateOrCreate(
+            $this->writeRow(
+                User::query(),
                 ['email' => 'admin@local'],
                 [
                     'role_id' => $adminRole->id,
@@ -138,7 +142,8 @@ class DemoDataSeeder extends Seeder
 
         return collect($programs)->map(function (array $item) use ($educationLevel): EducationProgram {
             [$code, $specialtyName, $qualification, $programName, $studyForm, $studyYears] = $item;
-            $specialty = Specialty::updateOrCreate(
+            $specialty = $this->writeRow(
+                Specialty::query(),
                 ['code' => $code],
                 [
                     'name' => $specialtyName,
@@ -149,7 +154,8 @@ class DemoDataSeeder extends Seeder
                 ]
             );
 
-            return EducationProgram::updateOrCreate(
+            return $this->writeRow(
+                EducationProgram::query(),
                 [
                     'specialty_id' => $specialty->id,
                     'name' => $programName,
@@ -179,7 +185,8 @@ class DemoDataSeeder extends Seeder
         ];
 
         return collect($items)->map(function (string $name, int $index): Subject {
-            $subject = Subject::updateOrCreate(
+            $subject = $this->writeRow(
+                Subject::query(),
                 ['code' => $index === 0 ? 'MUS-101' : sprintf('DEMO-SUB-%02d', $index + 1)],
                 [
                     'name' => $name,
@@ -199,7 +206,8 @@ class DemoDataSeeder extends Seeder
      */
     private function seedClassrooms()
     {
-        return collect(range(1, 25))->map(fn (int $index): Classroom => Classroom::updateOrCreate(
+        return collect(range(1, 25))->map(fn (int $index): Classroom => $this->writeRow(
+            Classroom::query(),
             ['number' => (string) (100 + $index), 'building' => 'Демо-корпус'],
             [
                 'floor' => (int) ceil($index / 8),
@@ -216,7 +224,8 @@ class DemoDataSeeder extends Seeder
             ['DEMO-MUSIC', 'Музыкальное отделение'],
             ['DEMO-GENERAL', 'Общеобразовательное отделение'],
         ])->mapWithKeys(fn (array $item): array => [
-            $item[1] => Department::updateOrCreate(
+            $item[1] => $this->writeRow(
+                Department::query(),
                 ['code' => $item[0]],
                 ['name' => $item[1], 'type' => 'academic', 'is_active' => true]
             ),
@@ -226,7 +235,8 @@ class DemoDataSeeder extends Seeder
             ['DEMO-TEACHER', 'Преподаватель', true],
             ['DEMO-DEPARTMENT-HEAD', 'Заведующий отделением', true],
         ])->mapWithKeys(fn (array $item): array => [
-            $item[1] => Position::updateOrCreate(
+            $item[1] => $this->writeRow(
+                Position::query(),
                 ['code' => $item[0]],
                 ['name' => $item[1], 'category' => 'teaching', 'is_teaching_position' => $item[2], 'is_active' => true]
             ),
@@ -250,13 +260,15 @@ class DemoDataSeeder extends Seeder
             $person = $this->seedPerson($lastName, $firstName, $middleName, null, $email, sprintf('+7900%07d', 1000000 + $index));
 
             $user = $index === 1
-                ? User::updateOrCreate(
+                ? $this->writeRow(
+                    User::query(),
                     ['email' => $email],
                     ['role_id' => $teacherRole->id, 'person_id' => $person->id, 'person_type' => 'person', 'name' => "{$lastName} {$firstName} {$middleName}", 'password' => Hash::make($demoPassword), 'is_active' => true]
                 )
                 : null;
 
-            $teacher = Teacher::updateOrCreate(
+            $teacher = $this->writeRow(
+                Teacher::query(),
                 ['email' => $email],
                 [
                     'person_id' => $person->id,
@@ -289,7 +301,8 @@ class DemoDataSeeder extends Seeder
             $course = (($index - 1) % 4) + 1;
             $program = $programs[($index - 1) % $programs->count()];
 
-            return Group::updateOrCreate(
+            return $this->writeRow(
+                Group::query(),
                 ['name' => sprintf('ДЕМО-%02d%d', $index, $course)],
                 [
                     'specialty' => $program->specialty?->name ?? 'Демонстрационная специальность',
@@ -319,13 +332,15 @@ class DemoDataSeeder extends Seeder
             $person = $this->seedPerson($lastName, $firstName, $middleName, $birthDate, $email, sprintf('+7910%07d', 1000000 + $index));
 
             $user = $index === 1
-                ? User::updateOrCreate(
+                ? $this->writeRow(
+                    User::query(),
                     ['email' => $email],
                     ['role_id' => $studentRole->id, 'person_id' => $person->id, 'person_type' => 'person', 'name' => "{$lastName} {$firstName} {$middleName}", 'password' => Hash::make($demoPassword), 'is_active' => true]
                 )
                 : null;
 
-            $student = Student::updateOrCreate(
+            $student = $this->writeRow(
+                Student::query(),
                 ['email' => $email],
                 [
                     'person_id' => $person->id,
@@ -389,7 +404,8 @@ class DemoDataSeeder extends Seeder
                     $teacher = $teachers[($groupIndex * 3 + $slotIndex * 7 + $dayOffset) % $teachers->count()];
                     $subject = $subjects[($groupIndex + $slotIndex + intdiv($dayOffset, 5)) % $subjects->count()];
                     $classroom = $classrooms[($groupIndex + $slotIndex + $dayOffset) % $classrooms->count()];
-                    $lessons->push(ScheduleLesson::updateOrCreate(
+                    $lessons->push($this->writeRow(
+                        ScheduleLesson::query(),
                         [
                             'group_id' => $group->id,
                             'teacher_id' => $teacher->id,
@@ -737,7 +753,8 @@ class DemoDataSeeder extends Seeder
             // не на весь контингент, и оставаться обозримым на экране.
             foreach (($byGroup[$group->id] ?? collect())->take(10) as $student) {
                 $index++;
-                $graduate = Graduate::updateOrCreate(
+                $graduate = $this->writeRow(
+                    Graduate::query(),
                     ['student_id' => $student->id],
                     [
                         'person_id' => $student->person_id,
@@ -759,7 +776,8 @@ class DemoDataSeeder extends Seeder
                     continue;
                 }
 
-                $diploma = $graduate->diploma()->updateOrCreate(
+                $diploma = $this->writeRow(
+                    $graduate->diploma(),
                     ['graduate_id' => $graduate->id],
                     [
                         'series' => 'СК',
@@ -775,7 +793,8 @@ class DemoDataSeeder extends Seeder
                 // Приложение не у всех: без этого не видно ни его выгрузки, ни
                 // того, что обратная загрузка его больше не теряет.
                 if ($index % 3 !== 0) {
-                    $diploma->supplement()->updateOrCreate(
+                    $this->writeRow(
+                        $diploma->supplement(),
                         ['diploma_id' => $diploma->id],
                         [
                             'series' => 'ПР',
@@ -899,7 +918,8 @@ class DemoDataSeeder extends Seeder
         $controlForms = ['Экзамен', 'Зачет', 'Дифференцированный зачет', 'Контрольная работа'];
 
         return $programs->map(function (EducationProgram $program, int $index) use ($subjects, $controlForms): Curriculum {
-            $curriculum = Curriculum::updateOrCreate(
+            $curriculum = $this->writeRow(
+                Curriculum::query(),
                 ['code' => sprintf('УП-ДЕМО-%02d', $index + 1)],
                 [
                     'education_program_id' => $program->id,
@@ -1072,14 +1092,16 @@ class DemoDataSeeder extends Seeder
     private function seedDigitalIdentities($students, $teachers): void
     {
         foreach ($students as $student) {
-            DigitalIdentity::updateOrCreate(
+            $this->writeRow(
+                DigitalIdentity::query(),
                 ['entity_type' => DigitalIdentity::ENTITY_STUDENT, 'entity_id' => $student->id],
                 ['person_id' => $student->person_id, 'token' => (string) Str::uuid(), 'status' => DigitalIdentity::STATUS_ACTIVE, 'issued_at' => now(), 'expires_at' => null, 'revoked_at' => null]
             );
         }
 
         foreach ($teachers as $teacher) {
-            DigitalIdentity::updateOrCreate(
+            $this->writeRow(
+                DigitalIdentity::query(),
                 ['entity_type' => DigitalIdentity::ENTITY_TEACHER, 'entity_id' => $teacher->id],
                 ['person_id' => $teacher->person_id, 'token' => (string) Str::uuid(), 'status' => DigitalIdentity::STATUS_ACTIVE, 'issued_at' => now(), 'expires_at' => null, 'revoked_at' => null]
             );
@@ -1274,6 +1296,38 @@ class DemoDataSeeder extends Seeder
         ];
     }
 
+    /**
+     * Записать строку по ключам: найденную обновить, недостающую создать.
+     *
+     * Это `updateOrCreate` без точки сохранения, и весь набор пишет строки
+     * только так. С Laravel 10.31 `updateOrCreate` и `firstOrCreate` создают
+     * строку через `createOrFirst`, а тот внутри уже открытой транзакции
+     * заворачивает вставку в `SAVEPOINT` (`Eloquent\Builder::withSavepointIfNeeded`)
+     * — чтобы поймать нарушение уникальности при гонке и подобрать чужую строку.
+     * Гонки в сидере нет, а цена есть: каждая точка сохранения получает
+     * собственный идентификатор транзакции и держит на нём блокировку **до конца
+     * внешней** транзакции.
+     *
+     * Замер 12.08.2026 на DEV: набор открывал 4970 таких точек за прогон и один
+     * занимал 78 % таблицы блокировок сервера (`max_locks_per_transaction` 64 ×
+     * `max_connections` 100 = 6400 записей на всех). Второй такой прогон рядом
+     * — и `SQLSTATE[53200] out of shared memory`. Под `RefreshDatabase` внешняя
+     * транзакция есть всегда, поэтому в прогоне это накапливалось до конца теста.
+     *
+     * @template TModel of Model
+     * @param  Builder<TModel>|Relation<TModel, Model, TModel>  $query
+     * @param  array<string, mixed>  $keys
+     * @param  array<string, mixed>  $values
+     * @return TModel
+     */
+    private function writeRow(Builder|Relation $query, array $keys, array $values): Model
+    {
+        $row = $query->firstOrNew($keys);
+        $row->fill($values)->save();
+
+        return $row;
+    }
+
     private function seedPerson(string $lastName, string $firstName, ?string $middleName, ?string $birthDate, string $email, string $phone): Person
     {
         $person = Person::firstOrNew(['email' => $email]);
@@ -1304,7 +1358,8 @@ class DemoDataSeeder extends Seeder
         // день, иначе нормальный уход после пары выглядит нарушением.
         $visiting = $index % 4 === 0;
 
-        $employee = Employee::updateOrCreate(
+        $employee = $this->writeRow(
+            Employee::query(),
             ['employee_number' => sprintf('DEMO-T%03d', $index)],
             [
                 'person_id' => $person->id,
@@ -1345,7 +1400,8 @@ class DemoDataSeeder extends Seeder
 
         foreach (range(1, 60) as $index) {
             $program = $programs[($index - 1) % $programs->count()];
-            ApplicantApplication::updateOrCreate(
+            $this->writeRow(
+                ApplicantApplication::query(),
                 [
                     'email' => sprintf('applicant.demo.%03d@%s', $index, self::DEMO_DOMAIN),
                     'record_type' => ApplicantApplication::RECORD_TYPE_LEGACY,

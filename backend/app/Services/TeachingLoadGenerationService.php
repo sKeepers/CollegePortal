@@ -171,10 +171,16 @@ class TeachingLoadGenerationService
                     'sort_order' => $subject->sequence,
                 ];
 
-                $item = $load->items()->updateOrCreate(
-                    ['curriculum_subject_id' => $subject->id],
-                    $payload,
-                );
+                // Строка уже найдена выше — переиспользуем её, а не спрашиваем
+                // базу второй раз. Заодно уходит точка сохранения: с Laravel
+                // 10.31 `updateOrCreate` создаёт строку через `createOrFirst`, а
+                // тот внутри открытой транзакции оборачивает вставку в
+                // `SAVEPOINT`. На одном вызове это незаметно, но набор зовёт
+                // генератор по разу на группу, и в прогоне под `RefreshDatabase`
+                // отсюда набиралось 1440 точек сохранения из 4970 — почти треть
+                // (замер 12.08.2026).
+                $item = $existing ?? $load->items()->make(['curriculum_subject_id' => $subject->id]);
+                $item->fill($payload)->save();
                 AuditLogService::log('Teaching Load', $operation === 'create' ? 'teaching_load_item_generated' : 'teaching_load_item_regenerated', $item, null, $item->getAttributes(), user: $user);
             }
         }
