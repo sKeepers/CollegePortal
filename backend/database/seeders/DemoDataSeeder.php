@@ -101,6 +101,9 @@ class DemoDataSeeder extends Seeder
             $lessons = $this->seedWeeklySchedule($groups, $teachers, $subjects, $classrooms);
             $marks = $this->seedJournalSamples($lessons, $students);
             $this->seedJournalEngine($lessons, $marks);
+            // Отметки больше не нужны: держать их до конца наполнения значит
+            // нести двадцать пять тысяч строк через все оставшиеся шаги.
+            unset($marks);
             $this->seedTeachingLoads($groups, $teachers);
             $this->seedDigitalIdentities($students, $teachers);
             $this->seedAccessEvents($students, $teachers, $lessons);
@@ -551,11 +554,20 @@ class DemoDataSeeder extends Seeder
             ->whereIn('legacy_schedule_lesson_id', $lessonIds)
             ->pluck('id', 'legacy_schedule_lesson_id');
 
+        // Строки уходят в базу пачками по ходу, а не копятся целиком: журнал на
+        // две недели это двадцать пять тысяч отметок и десять тысяч оценок, и
+        // вторая их копия в памяти рядом с первой упирала прогон в потолок —
+        // запрос к стенду отвечал пятисотой там, где раньше проходил.
         $attendanceRows = [];
         foreach ($marks['attendance'] as $mark) {
             $journalId = $journalIds[$mark['schedule_lesson_id']] ?? null;
             if ($journalId === null) {
                 continue;
+            }
+
+            if (count($attendanceRows) >= 1000) {
+                JournalAttendance::query()->insert($attendanceRows);
+                $attendanceRows = [];
             }
 
             $attendanceRows[] = [
@@ -570,11 +582,21 @@ class DemoDataSeeder extends Seeder
             ];
         }
 
+        if ($attendanceRows !== []) {
+            JournalAttendance::query()->insert($attendanceRows);
+            $attendanceRows = [];
+        }
+
         $gradeRows = [];
         foreach ($marks['grades'] as $mark) {
             $journalId = $journalIds[$mark['schedule_lesson_id']] ?? null;
             if ($journalId === null) {
                 continue;
+            }
+
+            if (count($gradeRows) >= 1000) {
+                JournalGrade::query()->insert($gradeRows);
+                $gradeRows = [];
             }
 
             $gradeRows[] = [
@@ -587,12 +609,8 @@ class DemoDataSeeder extends Seeder
             ];
         }
 
-        foreach (array_chunk($attendanceRows, 1000) as $chunk) {
-            JournalAttendance::query()->insert($chunk);
-        }
-
-        foreach (array_chunk($gradeRows, 1000) as $chunk) {
-            JournalGrade::query()->insert($chunk);
+        if ($gradeRows !== []) {
+            JournalGrade::query()->insert($gradeRows);
         }
     }
 
@@ -610,9 +628,13 @@ class DemoDataSeeder extends Seeder
      */
     private function startedLessons($lessons)
     {
-        $today = Carbon::today();
+        $now = now();
 
-        return $lessons->filter(fn (ScheduleLesson $lesson): bool => $lesson->lesson_date->lessThanOrEqualTo($today));
+        return $lessons->filter(function (ScheduleLesson $lesson) use ($now): bool {
+            $startedAt = $lesson->lesson_date->copy()->setTimeFromTimeString($this->timeString($lesson->starts_at));
+
+            return $startedAt->lessThanOrEqualTo($now);
+        });
     }
 
     /** Время занятия строкой «ЧЧ:ММ»: в модели это может быть и строка, и дата. */
@@ -928,6 +950,13 @@ class DemoDataSeeder extends Seeder
         $rows = [];
 
         foreach (range(self::HISTORY_DAYS, 0) as $daysAgo) {
+            // События уходят в базу днём, а не все четырнадцать разом: копить
+            // тридцать тысяч строк в памяти незачем.
+            if ($rows !== []) {
+                AccessEvent::query()->insert($rows);
+                $rows = [];
+            }
+
             $day = Carbon::today()->subDays($daysAgo);
             $weekend = $day->isWeekend();
 
@@ -1002,8 +1031,8 @@ class DemoDataSeeder extends Seeder
             }
         }
 
-        foreach (array_chunk($rows, 1000) as $chunk) {
-            AccessEvent::query()->insert($chunk);
+        if ($rows !== []) {
+            AccessEvent::query()->insert($rows);
         }
     }
 
