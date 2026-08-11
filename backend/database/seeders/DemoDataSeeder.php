@@ -421,10 +421,16 @@ class DemoDataSeeder extends Seeder
     {
         $studentsByGroup = $students->groupBy('group_id');
         $past = $this->startedLessons($lessons);
-        $lessonIds = $past->pluck('id');
 
-        Attendance::query()->whereIn('schedule_lesson_id', $lessonIds)->delete();
-        Grade::query()->whereIn('schedule_lesson_id', $lessonIds)->delete();
+        // Снимается всё расписание, а наполняются только начавшиеся пары.
+        // Удалять по тому же списку, что и наполнять, недостаточно: отметки за
+        // сегодня, поставленные прошлым наполнением, пережили бы новое — а пара
+        // ещё не началась, и на экране это выглядело бы как «отмечен, но в
+        // здание не входил». Ровно так стенд и выглядел: 583 расхождения из
+        // ниоткуда.
+        $allLessonIds = $lessons->pluck('id');
+        Attendance::query()->whereIn('schedule_lesson_id', $allLessonIds)->delete();
+        Grade::query()->whereIn('schedule_lesson_id', $allLessonIds)->delete();
 
         $now = now();
         $attendanceRows = [];
@@ -505,12 +511,15 @@ class DemoDataSeeder extends Seeder
         $today = Carbon::today();
         $past = $this->startedLessons($lessons);
 
+        // Журнал прошлого наполнения снимается по всему расписанию, а не по
+        // начавшимся парам: иначе запись за сегодня, сделанная вчерашним
+        // наполнением, переживёт новое и будет утверждать, что пара уже прошла.
+        $lessonIds = $past->pluck('id');
+        JournalLesson::query()->whereIn('legacy_schedule_lesson_id', $lessons->pluck('id'))->delete();
+
         if ($past->isEmpty()) {
             return;
         }
-
-        $lessonIds = $past->pluck('id');
-        JournalLesson::query()->whereIn('legacy_schedule_lesson_id', $lessonIds)->delete();
 
         $signingTeacherId = Teacher::query()->whereNotNull('user_id')->value('id');
         $signerUserId = Teacher::query()->whereNotNull('user_id')->value('user_id');
