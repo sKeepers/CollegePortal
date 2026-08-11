@@ -1,11 +1,25 @@
 <script setup>
-import { reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Eye, EyeOff, LogIn } from '@lucide/vue'
 import { useAuthStore } from '../../stores/auth'
+import { api } from '../../services/api'
+import TelegramLoginButton from '../../components/auth/TelegramLoginButton.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
+const providers = ref([])
+const telegram = computed(() => providers.value.find((provider) => provider.code === 'telegram'))
+
+// Список открыт без входа: кнопку надо нарисовать до того, как человек опознан.
+// Отказ здесь не должен ломать форму — вход паролем работает и без внешних способов.
+onMounted(async () => {
+  try {
+    providers.value = (await api.authProviders())?.data || []
+  } catch {
+    providers.value = []
+  }
+})
 const showPassword = ref(false)
 const form = reactive({
   login: '',
@@ -16,6 +30,17 @@ const form = reactive({
 
 async function submit() {
   await auth.login({ login: form.login, password: form.password, staySignedIn: form.staySignedIn })
+  afterSignIn()
+}
+
+async function signInWithTelegram(user) {
+  // «Не выходить на этом устройстве» — тот же выбор, что и при входе паролем:
+  // галочка стоит рядом, и внешний вход не должен её игнорировать.
+  await auth.loginWithProvider('telegram', user, form.staySignedIn)
+  afterSignIn()
+}
+
+function afterSignIn() {
   // Пароль выдан порталом и напечатан на карточке — ведём человека туда, где он
   // заводит свой. Это предложение, а не запрет: со страницы можно уйти в любой раздел.
   router.push(auth.mustChangePassword ? '/account' : '/dashboard')
@@ -69,6 +94,13 @@ async function submit() {
             Абитуриенту
           </q-btn>
         </q-card-actions>
+
+        <!-- Только для тех, кто уже привязал мессенджер в «Моей учётной записи»:
+             новую учётную запись этот вход не создаёт никогда. -->
+        <q-card-section v-if="telegram" class="column items-center q-gutter-sm q-pt-none">
+          <div class="text-caption text-grey-7">Или войдите через Telegram, если привязали его в портале</div>
+          <TelegramLoginButton :bot-username="telegram.config.bot_username" @authorized="signInWithTelegram" />
+        </q-card-section>
       </q-form>
     </q-card>
   </q-page>

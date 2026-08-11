@@ -10,6 +10,7 @@ use App\Observers\TeacherObserver;
 use App\Observers\UserObserver;
 use App\Support\Auth\ApiTokenResolver;
 use App\Support\Auth\Providers\ExternalIdentityProviders;
+use App\Support\Auth\Providers\TelegramLoginProvider;
 use App\Support\LoginIdentifier;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -27,10 +28,18 @@ class AppServiceProvider extends ServiceProvider
         // Один резолвер на запрос: его спрашивают и ограничитель частоты, и `api.token`.
         $this->app->scoped(ApiTokenResolver::class);
 
-        // Список внешних способов входа. Пуст, пока не сделаны AUTH-003 и AUTH-004:
-        // слой готов, провайдеров ещё нет. Добавлять их сюда, а не заводить рядом
-        // вторую схему хранения — ради этого слой и делался первым.
-        $this->app->singleton(ExternalIdentityProviders::class, fn (): ExternalIdentityProviders => new ExternalIdentityProviders([]));
+        // Список внешних способов входа. Провайдер подключается только когда настроен:
+        // без имени бота и токена Telegram-вход не появляется ни в списке, ни кнопкой,
+        // и портал работает ровно как до `AUTH-003`. MAX встанет сюда же, если владелец
+        // выберет один из путей — «входа через MAX» для стороннего сайта не существует.
+        $this->app->singleton(ExternalIdentityProviders::class, function (): ExternalIdentityProviders {
+            $token = config('services.telegram.bot_token');
+            $username = config('services.telegram.bot_username');
+
+            return new ExternalIdentityProviders(array_filter([
+                $token && $username ? new TelegramLoginProvider($token, $username) : null,
+            ]));
+        });
     }
 
     /**
@@ -63,6 +72,16 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perMinute(60)->by('ip|'.$request->ip()),
             ];
         });
+
+        // Вход через внешний способ. Считаем по адресу и только по нему: ключом из
+        // присланного payload воспользоваться нельзя — на момент подсчёта подпись ещё
+        // не проверена, и подбирающий менял бы идентификатор, получая каждому запросу
+        // свой счётчик. Та же ловушка, что в SEC-006 с токеном.
+        //
+        // Порог щедрее, чем у входа паролем: подобрать подпись HMAC нельзя, и счётчик
+        // здесь стоит против шума, а не против подбора. За общим NAT сидит весь колледж,
+        // и пять попыток в минуту на всех оказались бы теснее, чем нужно.
+        RateLimiter::for('auth.external', fn (Request $request) => Limit::perMinute(30)->by('ip|'.$request->ip()));
 
         RateLimiter::for('api.authenticated', function (Request $request) {
             // Считаем по человеку, а не по адресу: снаружи весь колледж приходит через

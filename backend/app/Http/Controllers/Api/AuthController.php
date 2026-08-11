@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Services\ExternalIdentityService;
+use App\Support\Auth\Providers\ExternalIdentityProviders;
 use App\Support\Auth\SessionCookie;
 use App\Support\LoginIdentifier;
 use Illuminate\Http\JsonResponse;
@@ -55,8 +57,67 @@ class AuthController extends Controller
 
         AuditLogService::log('auth', 'login', $user, null, ['login' => $login], $request, $user);
 
-        // Токен уходит в httpOnly cookie и в теле ответа больше не приходит: пока он
-        // лежал в хранилище браузера, любая XSS уносила сессию. Рядом ставится читаемый
+        return $this->sessionResponse($request, $user, $token);
+    }
+
+    /**
+     * Вход через внешний способ — `AUTH-003`. Учётная запись **не создаётся никогда**:
+     * если привязки нет, вход не состоится, и это железное правило всего слоя.
+     * Пароль здесь не спрашивается: подпись провайдера и есть подтверждение личности,
+     * а привязывал её человек, уже вошедший паролем.
+     */
+    public function loginWithProvider(Request $request, ExternalIdentityService $identities): JsonResponse
+    {
+        $data = $request->validate([
+            'provider' => ['required', 'string', 'max:32'],
+            'payload' => ['required', 'array'],
+        ]);
+
+        $user = $identities->resolveLinkedUser($data['provider'], $data['payload']);
+
+        if ($user === null) {
+            AuditLogService::log('auth', 'external_login_refused', ['type' => 'User', 'id' => null], null, [
+                'provider' => $data['provider'],
+            ], $request);
+
+            // Одно сообщение на оба случая — «подпись не сошлась» и «аккаунт ни к кому
+            // не привязан». Разделять их незачем: человеку делать надо одно и то же,
+            // а подбирающему разница подсказывает.
+            return response()->json([
+                'message' => 'Этот аккаунт не открывает вход в портал. Войдите паролем и привяжите его в разделе «Моя учётная запись».',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        if (! $user->is_active) {
+            return response()->json(['message' => 'Учетная запись отключена.'], Response::HTTP_FORBIDDEN);
+        }
+
+        $token = Str::random(80);
+        $ttl = (int) config('auth.api_token_ttl_minutes', 720);
+
+        $user->forceFill([
+            'api_token_hash' => Hash::make($token),
+            'api_token_lookup_hash' => hash('sha256', $token),
+            'api_token_expires_at' => now()->addMinutes($ttl),
+            'last_login_at' => now(),
+        ])->save();
+
+        AuditLogService::log('auth', 'login', $user, null, ['provider' => $data['provider']], $request, $user);
+
+        return $this->sessionResponse($request, $user, $token);
+    }
+
+    /**
+     * Ответ на успешный вход — один на все способы. Заводить второй значило бы, что
+     * внешний вход однажды разойдётся с обычным: у него окажется свой срок жизни
+     * cookie или забудется признак CSRF.
+     */
+    private function sessionResponse(Request $request, User $user, string $token): JsonResponse
+    {
+        $ttl = (int) config('auth.api_token_ttl_minutes', 720);
+
+        // Токен уходит в httpOnly cookie и в теле ответа не приходит: пока он лежал
+        // в хранилище браузера, любая XSS уносила сессию. Рядом ставится читаемый
         // признак CSRF — его фронтенд перекладывает в заголовок изменяющих запросов.
         $response = response()->json([
             'token_type' => 'Cookie',
@@ -72,6 +133,16 @@ class AuthController extends Controller
         }
 
         return $response;
+    }
+
+    /**
+     * Какие внешние способы входа подключены. Открыто без входа намеренно: кнопку
+     * надо нарисовать на форме входа, то есть до того, как человек опознан. Секрета
+     * здесь нет — имя бота видит каждый, кто открыл окно подтверждения Telegram.
+     */
+    public function providers(ExternalIdentityProviders $providers): JsonResponse
+    {
+        return response()->json(['data' => $providers->available()]);
     }
 
     public function me(Request $request): UserResource

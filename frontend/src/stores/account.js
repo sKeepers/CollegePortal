@@ -49,6 +49,20 @@ export const useAccountStore = defineStore('account', () => {
     availableProviders.value = payload?.available || []
   }
 
+  async function linkIdentity(provider, payload, currentPassword) {
+    saving.value = true
+    error.value = ''
+    try {
+      await api.post('account/identities', { provider, payload, current_password: currentPassword })
+      await loadIdentities()
+    } catch (err) {
+      error.value = err.message || 'Не удалось привязать способ входа'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
   async function unlinkIdentity(id, currentPassword) {
     saving.value = true
     error.value = ''
@@ -83,6 +97,6 @@ export const useAccountStore = defineStore('account', () => {
 
   return {
     account, identities, availableProviders, loading, saving, error,
-    load, saveContacts, changePassword, loadIdentities, unlinkIdentity,
+    load, saveContacts, changePassword, loadIdentities, linkIdentity, unlinkIdentity,
   }
 })

@@ -181,6 +181,12 @@ class ExternalIdentityTest extends TestCase
                 return 'Проверочный способ';
             }
 
+            /** У поддельного провайдера кнопки нет, рисовать браузеру нечего. */
+            public function publicConfig(): array
+            {
+                return [];
+            }
+
             public function verify(array $payload): ?ExternalIdentity
             {
                 return $this->verifies ? new ExternalIdentity((string) $payload['id'], 'аккаунт '.$payload['id']) : null;

@@ -7,6 +7,7 @@ import PageHeader from '../../components/ui/PageHeader.vue'
 import AppCard from '../../components/ui/AppCard.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
+import TelegramLoginButton from '../../components/auth/TelegramLoginButton.vue'
 import { formatPhone } from '../../utils/phone'
 import { useAccountStore } from '../../stores/account'
 
@@ -36,6 +37,12 @@ const passwordValid = computed(() =>
 // Пароль выдан порталом: предложение видно, пока человек не заведёт свой.
 const issuedPassword = computed(() => Boolean(account.value?.must_change_password))
 
+// Показываем кнопку привязки, только если Telegram подключён и ещё не привязан.
+const telegramToLink = computed(() => {
+  const linked = store.identities.some((identity) => identity.provider === 'telegram')
+  return linked ? null : store.availableProviders.find((provider) => provider.code === 'telegram')
+})
+
 watch(account, (value) => {
   contacts.email = value?.email || ''
   contacts.phone = value?.phone || ''
@@ -58,6 +65,21 @@ function askUnlink(identity) {
   }).onOk(async (currentPassword) => {
     await store.unlinkIdentity(identity.id, currentPassword)
     $q.notify({ type: 'positive', message: 'Способ входа отвязан' })
+  })
+}
+
+// Привязка подтверждается текущим паролем: перехваченной сессии мало, чтобы прицепить
+// свой мессенджер к чужой учётной записи и получить постоянный вход.
+function askLink(telegramUser) {
+  $q.dialog({
+    title: 'Привязать Telegram?',
+    message: 'Этот аккаунт станет открывать вход в портал. Подтвердите текущим паролем.',
+    prompt: { model: '', type: 'password', label: 'Текущий пароль' },
+    cancel: true,
+    persistent: true,
+  }).onOk(async (currentPassword) => {
+    await store.linkIdentity('telegram', telegramUser, currentPassword)
+    $q.notify({ type: 'positive', message: 'Telegram привязан' })
   })
 }
 
@@ -143,9 +165,19 @@ function formatDateTime(value) {
         <p v-else class="account-note">
           Кроме пароля, других способов входа пока нет.
           <template v-if="!store.availableProviders.length">
-            Вход через Telegram появится отдельной задачей — тогда его можно будет привязать здесь.
+            Вход через мессенджер на этом портале не подключён.
           </template>
         </p>
+
+        <!-- Привязать можно только то, что ещё не привязано: у человека один Telegram,
+             а не пять, и это же ограничение стоит в базе. -->
+        <div v-if="telegramToLink" class="account-link-provider">
+          <p class="account-note">
+            Привяжите Telegram, чтобы входить без пароля. Портал сохранит только идентификатор аккаунта
+            и то, как вас показать, — ни телефона, ни фотографии.
+          </p>
+          <TelegramLoginButton :bot-username="telegramToLink.config.bot_username" @authorized="askLink" />
+        </div>
       </AppCard>
 
       <AppCard>
@@ -190,6 +222,7 @@ function formatDateTime(value) {
 .account-details dd { margin: 0; color: #0f172a; overflow-wrap: anywhere; }
 .account-form { display: grid; gap: 12px; }
 .account-note { color: #64748b; font-size: 13px; margin: 12px 0 0; }
+.account-link-provider { display: grid; gap: 8px; margin-top: 12px; }
 .account-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 @media (max-width: 640px) {
   .account-details div { grid-template-columns: 1fr; gap: 2px; }

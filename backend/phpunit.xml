@@ -36,6 +36,14 @@
             «Failed asserting that false is true» без связи с правкой.
         -->
         <server name="DEMO_USER_PASSWORD" value="test1234"/>
+        <!--
+            То же самое и по той же причине: на стенде Telegram-вход настроен, и набор,
+            читающий ключи из `.env`, начинал видеть подключённый способ входа там, где
+            проверяется поведение без него. Тест, которому Telegram нужен, ставит эти
+            значения сам.
+        -->
+        <server name="TELEGRAM_LOGIN_BOT_USERNAME" value=""/>
+        <server name="TELEGRAM_LOGIN_BOT_TOKEN" value=""/>
         <server name="BROADCAST_CONNECTION" value="null"/>
         <server name="CACHE_STORE" value="array"/>
         <server name="DB_CONNECTION" value="sqlite"/>

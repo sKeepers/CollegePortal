@@ -75,6 +75,10 @@ use App\Http\Controllers\Api\UatController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:auth.login');
+// Вход через внешний способ и список подключённых способов — открыты без входа
+// намеренно: кнопку надо нарисовать и нажать до того, как человек опознан.
+Route::get('auth/providers', [AuthController::class, 'providers']);
+Route::post('auth/provider-login', [AuthController::class, 'loginWithProvider'])->middleware('throttle:auth.external');
 Route::get('settings/public', [AdminSettingController::class, 'publicSettings']);
 Route::get('public/specialties', [SpecialtyController::class, 'index']);
 Route::get('public/education-programs', [EducationProgramController::class, 'index']);

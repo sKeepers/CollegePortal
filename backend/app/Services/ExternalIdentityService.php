@@ -78,6 +78,32 @@ class ExternalIdentityService
     }
 
     /**
+     * Кому принадлежит проверенный ответ провайдера — или `null`, если подпись не сошлась
+     * либо аккаунт ни к кому не привязан.
+     *
+     * Это **не** «войти и завести пользователя»: метод только ищет существующую привязку
+     * и ничего не создаёт. Именно поэтому вход через мессенджер не может стать способом
+     * регистрации даже побочным эффектом. Пускать или нет решает контроллер — здесь
+     * проверяется лишь то, чей это аккаунт.
+     *
+     * @param array<string, mixed> $payload ответ провайдера
+     */
+    public function resolveLinkedUser(string $providerCode, array $payload): ?User
+    {
+        $provider = $this->providers->get($providerCode);
+        $identity = $provider?->verify($payload);
+
+        if ($identity === null) {
+            return null;
+        }
+
+        return UserIdentity::query()
+            ->where('provider', $providerCode)
+            ->where('provider_user_id', $identity->providerUserId)
+            ->first()?->user;
+    }
+
+    /**
      * Отвязка. Доступна и самому человеку, и администратору: если человек потерял
      * доступ к мессенджеру, снять привязку должен кто-то ещё, иначе аккаунт занят
      * навсегда и никто другой его не привяжет.

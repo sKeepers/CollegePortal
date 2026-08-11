@@ -48,6 +48,26 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * Вход через внешний способ. Учётную запись он не создаёт: непривязанный аккаунт
+   * получит отказ от сервера, и это правило слоя, а не особенность экрана.
+   */
+  async function loginWithProvider(provider, payload, staySignedIn = true) {
+    loading.value = true
+    error.value = ''
+
+    try {
+      const result = await api.loginWithProvider(provider, payload, staySignedIn)
+      user.value = result.user
+      initialized.value = true
+    } catch (caught) {
+      error.value = caught.message
+      throw caught
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function restore() {
     if (!api.hasSession()) {
       initialized.value = true
@@ -108,6 +128,7 @@ export const useAuthStore = defineStore('auth', () => {
     can,
     hasRole,
     login,
+    loginWithProvider,
     restore,
     logout,
   }

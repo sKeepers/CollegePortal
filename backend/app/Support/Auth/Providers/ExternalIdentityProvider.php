@@ -22,6 +22,15 @@ interface ExternalIdentityProvider
     public function name(): string;
 
     /**
+     * Что нужно браузеру, чтобы нарисовать кнопку провайдера. Секретов здесь быть
+     * не может: значение уходит во frontend и видно каждому, включая неавторизованных
+     * на форме входа. Ключ бота сюда не попадает ни при каких обстоятельствах.
+     *
+     * @return array<string, string>
+     */
+    public function publicConfig(): array;
+
+    /**
      * Проверить ответ провайдера и сказать, о ком он.
      *
      * @param array<string, mixed> $payload то, что прислал виджет или callback

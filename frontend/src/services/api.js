@@ -176,6 +176,22 @@ export const api = {
     })
   },
 
+  /**
+   * Вход через внешний способ. Пароль не передаётся: подтверждением служит подпись
+   * провайдера, которую проверяет сервер. Сессия выдаётся та же самая — cookie.
+   */
+  async loginWithProvider(provider, payload, staySignedIn = true) {
+    return request('/auth/provider-login', {
+      method: 'POST',
+      body: JSON.stringify({ provider, payload, staySignedIn }),
+    })
+  },
+
+  /** Какие способы входа подключены. Открыто без входа: кнопку рисуют на форме входа. */
+  async authProviders() {
+    return request('/auth/providers')
+  },
+
   async me() {
     return request('/auth/me')
   },

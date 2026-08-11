@@ -5,12 +5,12 @@ namespace App\Support\Auth\Providers;
 /**
  * Список подключённых внешних способов входа.
  *
- * Сейчас пуст: Telegram придёт с `AUTH-003`, MAX — с `AUTH-004`, и это не оплошность,
- * а порядок работ. Слой сделан первым, чтобы оба провайдера встали в готовое место,
- * а не принесли каждый свою схему хранения и свою проверку.
+ * Telegram пришёл с `AUTH-003` и подключается, только когда настроен: без имени бота
+ * и токена в `.env` список снова пуст. MAX ждёт выбора владельца — «входа через MAX»
+ * для стороннего сайта не существует.
  *
  * Пустой список означает ровно одно: привязать пока нечего. Всё остальное —
- * просмотр и отвязка — работает уже сейчас.
+ * просмотр и отвязка — работает и с пустым.
  */
 final class ExternalIdentityProviders
 {
@@ -30,11 +30,15 @@ final class ExternalIdentityProviders
         return $this->providers[$code] ?? null;
     }
 
-    /** @return list<array{code: string, name: string}> */
+    /** @return list<array{code: string, name: string, config: array<string, string>}> */
     public function available(): array
     {
         return array_values(array_map(
-            static fn (ExternalIdentityProvider $provider): array => ['code' => $provider->code(), 'name' => $provider->name()],
+            static fn (ExternalIdentityProvider $provider): array => [
+                'code' => $provider->code(),
+                'name' => $provider->name(),
+                'config' => $provider->publicConfig(),
+            ],
             $this->providers,
         ));
     }
