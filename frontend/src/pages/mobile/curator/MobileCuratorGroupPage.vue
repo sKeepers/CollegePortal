@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronLeft, ChevronRight, DoorOpen, Mail, Phone, Users } from '@lucide/vue'
+import { ChevronLeft, ChevronRight, DoorOpen, GraduationCap, Mail, Phone, Users } from '@lucide/vue'
 import { useMobileCuratorStore, eventDirectionLabel, eventTime } from '../../../stores/mobileCurator'
 import { formatCabinetDate } from '../../../stores/mobileTeacher'
 
@@ -14,6 +14,10 @@ const summary = computed(() => store.attendanceSummary || store.summary)
 const rangeLabel = computed(() => (store.range === 'week'
   ? `${formatCabinetDate(store.attendanceRange.from)} — ${formatCabinetDate(store.attendanceRange.to)}`
   : formatCabinetDate(store.date)))
+
+function scrollToAccess() {
+  document.getElementById('access')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 
 function statusTone(row) {
   if (row.status === 'late') return 'mobile-cabinet-tag--late'
@@ -43,6 +47,19 @@ watch(groupId, (id) => store.openGroup(id))
           <span>{{ store.students.length }} студентов, контакты у {{ store.studentsWithContacts }}</span>
         </div>
       </section>
+
+      <div class="mobile-cabinet-choice">
+        <button
+          type="button"
+          class="mobile-cabinet-choice-item"
+          @click="router.push(`/m/curator/groups/${groupId}/performance`)"
+        >
+          <GraduationCap :size="16" /> Успеваемость
+        </button>
+        <button type="button" class="mobile-cabinet-choice-item" @click="scrollToAccess">
+          <DoorOpen :size="16" /> Проходная
+        </button>
+      </div>
 
       <section class="mobile-cabinet-card">
         <header class="mobile-cabinet-day-header">
