@@ -75,11 +75,18 @@ const modeOptions = [
 ]
 
 const visibleModes = computed(() => modeOptions.filter((mode) => !mode.permission || hasPermission(mode.permission)))
-const isReadOnly = computed(() => store.selectedLesson?.status === 'signed' && !hasPermission('journal.reopen'))
+// Куратор видит занятия своей группы у других преподавателей — и только видит.
+// Признак приходит с сервера тем же правилом, которым сервер и отказывает:
+// вычислять его здесь заново значило бы завести второе правило доступа.
+const isForeignLesson = computed(() => store.selectedLesson?.can_edit === false)
+const isReadOnly = computed(() => isForeignLesson.value
+  || (store.selectedLesson?.status === 'signed' && !hasPermission('journal.reopen')))
 const canEdit = computed(() => hasPermission('journal.edit') && !isReadOnly.value)
 const canAttendance = computed(() => hasPermission('journal.attendance') && !isReadOnly.value)
 const canGrades = computed(() => hasPermission('journal.grades') && !isReadOnly.value)
-const canRequestEdit = computed(() => hasPermission('journal.edit') && store.selectedLesson?.status === 'signed')
+const canRequestEdit = computed(() => hasPermission('journal.edit')
+  && !isForeignLesson.value
+  && store.selectedLesson?.status === 'signed')
 
 const tableSubtitle = computed(() => {
   const stats = store.dashboardStats
@@ -402,6 +409,9 @@ onMounted(async () => {
       </div>
 
       <aside class="journal-side">
+        <q-banner v-if="isForeignLesson" dense class="journal-foreign-banner">
+          Занятие ведёт другой преподаватель. Вы видите его как куратор группы: отметки и оценки доступны только для просмотра.
+        </q-banner>
         <JournalLessonPanel
           :lesson="store.selectedLesson"
           :student="selectedStudent"
@@ -449,6 +459,7 @@ onMounted(async () => {
 .journal-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
 .journal-main { min-width: 0; display: grid; gap: 12px; }
 .journal-side { position: sticky; top: 76px; min-width: 0; }
+.journal-foreign-banner { margin-bottom: 8px; border-radius: 8px; background: var(--cp-info-soft, #eef4ff); color: var(--cp-text, #1f2933); }
 .journal-lessons-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
 .journal-lesson-tile { text-align: left; border: 1px solid var(--cp-border, #d9dee8); background: #fff; border-radius: 8px; padding: 10px; display: grid; gap: 4px; cursor: pointer; transition: border-color .15s ease, transform .15s ease; }
 .journal-lesson-tile:hover { transform: translateY(-1px); border-color: #2563eb; }
