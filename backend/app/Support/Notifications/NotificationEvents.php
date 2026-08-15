@@ -46,9 +46,9 @@ final class NotificationEvents
             [
                 'code' => self::SCHEDULE_CHANGED,
                 'name' => 'Изменения в расписании',
-                'hint' => 'Сразу, как расписание поправили.',
+                'hint' => 'В течение четверти часа после правки. Новое расписание на семестр изменением не считается.',
                 'audience' => ['student', 'teacher'],
-                'ready' => false,
+                'ready' => true,
             ],
             [
                 'code' => self::GRADES_DAILY,
@@ -81,9 +81,9 @@ final class NotificationEvents
             [
                 'code' => self::JOURNAL_UNCLOSED,
                 'name' => 'Незакрытый журнал',
-                'hint' => 'Утром следующего дня, если за вчера остались занятия без отметок.',
+                'hint' => 'Утром следующего дня, если за вчера остались незакрытые занятия.',
                 'audience' => ['teacher'],
-                'ready' => false,
+                'ready' => true,
             ],
         ];
     }
