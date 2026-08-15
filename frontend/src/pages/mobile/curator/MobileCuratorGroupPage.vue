@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronLeft, ChevronRight, DoorOpen, GraduationCap, Mail, Phone, Users } from '@lucide/vue'
+import { BookOpen, ChevronLeft, ChevronRight, DoorOpen, GraduationCap, Mail, Phone, Users } from '@lucide/vue'
 import { useMobileCuratorStore, eventDirectionLabel, eventTime } from '../../../stores/mobileCurator'
 import { formatCabinetDate } from '../../../stores/mobileTeacher'
 
@@ -55,6 +55,13 @@ watch(groupId, (id) => store.openGroup(id))
           @click="router.push(`/m/curator/groups/${groupId}/performance`)"
         >
           <GraduationCap :size="16" /> Успеваемость
+        </button>
+        <button
+          type="button"
+          class="mobile-cabinet-choice-item"
+          @click="router.push(`/m/curator/groups/${groupId}/lessons`)"
+        >
+          <BookOpen :size="16" /> Занятия
         </button>
         <button type="button" class="mobile-cabinet-choice-item" @click="scrollToAccess">
           <DoorOpen :size="16" /> Проходная

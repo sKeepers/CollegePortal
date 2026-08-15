@@ -60,6 +60,7 @@ const MobileTeacherLessonPage = () => import('../pages/mobile/teacher/MobileTeac
 const MobileCuratorHomePage = () => import('../pages/mobile/curator/MobileCuratorHomePage.vue')
 const MobileCuratorGroupPage = () => import('../pages/mobile/curator/MobileCuratorGroupPage.vue')
 const MobileCuratorPerformancePage = () => import('../pages/mobile/curator/MobileCuratorPerformancePage.vue')
+const MobileCuratorLessonsPage = () => import('../pages/mobile/curator/MobileCuratorLessonsPage.vue')
 const MobileAdminHomePage = () => import('../pages/mobile/admin/MobileAdminHomePage.vue')
 const StudentCabinetPage = () => import('../pages/student/StudentCabinetPage.vue')
 
@@ -159,6 +160,12 @@ export const routes = [
         name: 'mobile-curator-performance',
         component: MobileCuratorPerformancePage,
         meta: { title: 'Успеваемость' },
+      },
+      {
+        path: 'groups/:groupId/lessons',
+        name: 'mobile-curator-lessons',
+        component: MobileCuratorLessonsPage,
+        meta: { title: 'Занятия группы' },
       },
     ],
   },

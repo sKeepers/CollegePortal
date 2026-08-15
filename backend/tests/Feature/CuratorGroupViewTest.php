@@ -87,6 +87,31 @@ class CuratorGroupViewTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_lesson_list_of_the_group_says_what_may_be_edited(): void
+    {
+        $world = $this->world();
+
+        // Так занятия группы запрашивают оба экрана куратора: фильтром по
+        // группе, без своего эндпоинта.
+        $rows = collect($this->withApiAuth($world['curatorUser'])
+            ->getJson("/api/journal/lessons?group_id={$world['ownGroup']->id}")
+            ->assertOk()
+            ->json('data'))
+            ->keyBy('id');
+
+        $this->assertCount(2, $rows);
+        // Признак, по которому экран гасит кнопки правки: своё занятие правится,
+        // занятие другого преподавателя — нет.
+        $this->assertTrue($rows[$world['ownGroupByCurator']->id]['can_edit']);
+        $this->assertFalse($rows[$world['ownGroupByOther']->id]['can_edit']);
+
+        // Чужая группа фильтром не открывается: пустой список, а не отказ.
+        $this->withApiAuth($world['curatorUser'])
+            ->getJson("/api/journal/lessons?group_id={$world['foreignGroup']->id}")
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
     public function test_curator_cannot_change_a_lesson_of_their_group(): void
     {
         $world = $this->world();

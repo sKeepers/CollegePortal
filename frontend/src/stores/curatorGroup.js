@@ -34,6 +34,9 @@ export const useCuratorGroupStore = defineStore('curatorGroup', () => {
   const students = ref([])
   const studentsLoading = ref(false)
 
+  const lessons = ref([])
+  const lessonsLoading = ref(false)
+
   const filters = ref({ date_from: '', date_to: '' })
 
   const hasGroups = computed(() => groups.value.length > 0)
@@ -96,6 +99,30 @@ export const useCuratorGroupStore = defineStore('curatorGroup', () => {
     }
   }
 
+  /**
+   * Занятия группы берутся из журнала, а не из своего эндпоинта: с 12.08.2026
+   * журнал сам показывает куратору занятия его группы у любого преподавателя.
+   * Второй список тех же занятий означал бы второе правило, кто их видит.
+   */
+  async function loadLessons(id = groupId.value, on = {}) {
+    if (!id) return
+    lessonsLoading.value = true
+    try {
+      const params = { group_id: id, per_page: 100 }
+      const from = on.date_from ?? filters.value.date_from
+      const to = on.date_to ?? filters.value.date_to
+      if (from) params.date_from = from
+      if (to) params.date_to = to
+      const payload = await api.list('journal/lessons', params)
+      lessons.value = Array.isArray(payload?.data) ? payload.data : []
+    } catch (err) {
+      lessons.value = []
+      error.value = refusalMessage(err, 'Не удалось загрузить занятия группы')
+    } finally {
+      lessonsLoading.value = false
+    }
+  }
+
   async function open(id) {
     groupId.value = Number(id)
     await Promise.all([loadPerformance(id), loadStudents(id)])
@@ -111,6 +138,8 @@ export const useCuratorGroupStore = defineStore('curatorGroup', () => {
     performanceLoading,
     students,
     studentsLoading,
+    lessons,
+    lessonsLoading,
     filters,
     hasGroups,
     currentGroup,
@@ -122,6 +151,7 @@ export const useCuratorGroupStore = defineStore('curatorGroup', () => {
     loadGroups,
     loadPerformance,
     loadStudents,
+    loadLessons,
     open,
   }
 })
