@@ -52,7 +52,6 @@ class AttendanceAnalysisService
         [$dateFrom, $dateTo] = $this->dateRange($filters);
         $lessons = $this->lessons($dateFrom, $dateTo, $filters);
         $lessonsByTeacher = $lessons->groupBy('teacher_id');
-        $eventsByOwner = $this->allowedEvents($dateFrom, $dateTo, DigitalIdentity::ENTITY_TEACHER)->groupBy('entity_id');
         $schedules = $this->workSchedules();
         $currentAcademicYear = (string) SettingService::value('academic', 'current_academic_year', '');
 
@@ -63,6 +62,12 @@ class AttendanceAnalysisService
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->get();
+
+        // События спрашиваются после людей и только про них. Пока запрос шёл
+        // раньше отбора, он поднимал проходы всего колледжа: замер 15.08.2026 на
+        // стенде — 5736 строк ради 210, то есть 3,7 %. Цена росла вместе с
+        // общим потоком проходной, а не с тем, что спросили на экране.
+        $eventsByOwner = $this->allowedEvents($dateFrom, $dateTo, DigitalIdentity::ENTITY_TEACHER, $teachers->pluck('id'));
 
         $rows = $teachers->map(fn (Teacher $teacher) => $this->teacherRow(
             $teacher,
@@ -89,7 +94,6 @@ class AttendanceAnalysisService
         [$dateFrom, $dateTo] = $this->dateRange($filters);
         $lessons = $this->lessons($dateFrom, $dateTo, $filters);
         $lessonsByGroup = $lessons->groupBy('group_id');
-        $eventsByOwner = $this->allowedEvents($dateFrom, $dateTo, DigitalIdentity::ENTITY_STUDENT)->groupBy('entity_id');
         $markedPresent = $this->studentsMarkedPresent($dateFrom, $dateTo);
 
         $students = Student::query()
@@ -99,6 +103,10 @@ class AttendanceAnalysisService
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->get();
+
+        // См. пояснение в `teachers()`: события спрашиваются про уже отобранных
+        // людей, иначе экран одной группы поднимает проходную целиком.
+        $eventsByOwner = $this->allowedEvents($dateFrom, $dateTo, DigitalIdentity::ENTITY_STUDENT, $students->pluck('id'));
 
         $rows = $students->map(fn (Student $student) => $this->studentRow(
             $student,
@@ -230,14 +238,30 @@ class AttendanceAnalysisService
             ->get();
     }
 
-    private function allowedEvents(CarbonImmutable $dateFrom, CarbonImmutable $dateTo, string $entityType): EloquentCollection
+    /**
+     * Проходы уже отобранных людей, сгруппированные по владельцу.
+     *
+     * Идентификаторы обязательны: без них запрос отбирал по типу и результату, а
+     * по группе — нет, и экран куратора на двадцать человек читал проходы всего
+     * колледжа. Пустой список людей значит пустой ответ, а не «все».
+     *
+     * @param  \Illuminate\Support\Collection<int, int>  $ownerIds
+     * @return \Illuminate\Support\Collection<int, EloquentCollection<int, AccessEvent>>
+     */
+    private function allowedEvents(CarbonImmutable $dateFrom, CarbonImmutable $dateTo, string $entityType, Collection $ownerIds): Collection
     {
+        if ($ownerIds->isEmpty()) {
+            return collect();
+        }
+
         return AccessEvent::query()
             ->where('entity_type', $entityType)
             ->where('result', AccessEvent::RESULT_ALLOWED)
+            ->whereIn('entity_id', $ownerIds)
             ->whereBetween('event_time', [$dateFrom->startOfDay(), $dateTo->endOfDay()])
             ->orderBy('event_time')
-            ->get();
+            ->get()
+            ->groupBy('entity_id');
     }
 
     private function firstEvent(Collection $events, string $direction): ?AccessEvent
