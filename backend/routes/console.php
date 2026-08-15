@@ -60,3 +60,7 @@ Schedule::command('notifications:max-pull')->everyMinute()->withoutOverlapping()
 
 // Вечером, чтобы расписание на завтра пришло до конца дня, а не ночью.
 Schedule::command('notifications:lessons-tomorrow')->dailyAt('19:00');
+
+// Сводки за день идут после расписания и с зазором: два сообщения подряд в одну
+// секунду выглядят как сбой, а не как две разные новости.
+Schedule::command('notifications:journal-digest')->dailyAt('19:30');

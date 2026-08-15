@@ -53,16 +53,16 @@ final class NotificationEvents
             [
                 'code' => self::GRADES_DAILY,
                 'name' => 'Новые оценки',
-                'hint' => 'Сводкой за день: по решению владельца, иначе в сессию это десятки сообщений.',
+                'hint' => 'Сводкой за день, вечером.',
                 'audience' => ['student'],
-                'ready' => false,
+                'ready' => true,
             ],
             [
                 'code' => self::ATTENDANCE_DAILY,
                 'name' => 'Пропуски и опоздания',
-                'hint' => 'Сводкой за день.',
+                'hint' => 'Сводкой за день. О присутствии не сообщаем — только о том, что придётся объяснять.',
                 'audience' => ['student'],
-                'ready' => false,
+                'ready' => true,
             ],
             [
                 'code' => self::EXAMS,
