@@ -215,18 +215,25 @@ class CuratorGroupViewTest extends TestCase
         $this->assertSame(0, $data['summary']['with_failing']);
     }
 
-    public function test_second_teacher_card_does_not_hide_the_group(): void
+    public function test_a_stray_teacher_card_does_not_hide_the_group(): void
     {
         $world = $this->world();
 
-        // На стенде у `teacher@local` две карточки преподавателя, и `hasOne`
-        // берёт первую — пустую. Группа закреплена за второй, и куратор не
-        // видел собственной группы нигде.
-        $secondCard = Teacher::create([
-            'user_id' => $world['curatorUser']->id,
+        // Здесь заводилась **вторая карточка той же учётной записи**: на стенде у
+        // `teacher@local` их было две, `hasOne` брал первую — пустую, — и куратор
+        // не видел собственной группы нигде.
+        //
+        // С 16.08.2026 второй карточки быть не может: владелец решил свести их в
+        // одну, миграция `2026_08_16_000001` развела дубли и закрыла путь
+        // частичным уникальным индексом (`OneProfileCardPerAccountTest`). Ровно
+        // такую карточку она и оставляет после себя — без учётной записи, но в
+        // реестре, — поэтому проверяем, что чужая карточка рядом кураторскую
+        // группу по-прежнему не прячет.
+        $strayCard = Teacher::create([
+            'user_id' => null,
             'last_name' => 'Смирнова', 'first_name' => 'Елена', 'is_active' => true,
         ]);
-        $world['ownGroup']->update(['curator_id' => $secondCard->id]);
+        $this->assertNotNull($strayCard->id);
 
         $this->withApiAuth($world['curatorUser'])
             ->getJson('/api/curator/groups')

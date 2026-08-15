@@ -268,6 +268,8 @@ class DemoDataSeeder extends Seeder
                 )
                 : null;
 
+            $this->releaseOtherCards(Teacher::query(), $user, $email);
+
             $teacher = $this->writeRow(
                 Teacher::query(),
                 ['email' => $email],
@@ -339,6 +341,8 @@ class DemoDataSeeder extends Seeder
                     ['role_id' => $studentRole->id, 'person_id' => $person->id, 'person_type' => 'person', 'name' => "{$lastName} {$firstName} {$middleName}", 'password' => Hash::make($demoPassword), 'is_active' => true]
                 )
                 : null;
+
+            $this->releaseOtherCards(Student::query(), $user, $email);
 
             $student = $this->writeRow(
                 Student::query(),
@@ -1345,6 +1349,34 @@ class DemoDataSeeder extends Seeder
         $row->fill($values)->save();
 
         return $row;
+    }
+
+    /**
+     * Освободить учебные карточки, оставшиеся за учётной записью от прошлой жизни
+     * стенда.
+     *
+     * Набор садится на существующие служебные записи `teacher@local` и
+     * `student@local`, а на них уже могла висеть карточка с другим адресом — от
+     * UAT-набора, который свёл к ним `portal:merge-accounts`. Выходило две
+     * карточки на одну учётную запись, `User::teacher()` — `hasOne` и брал
+     * первую, поэтому кабинет с журналом выглядели пустыми при полном журнале на
+     * второй карточке. С 16.08.2026 это ещё и невозможно: частичный уникальный
+     * индекс не даст сохранить вторую.
+     *
+     * Чужая карточка не удаляется — теряет только учётную запись и остаётся
+     * видимой в реестре.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<covariant Model>  $cards
+     */
+    private function releaseOtherCards(Builder $cards, ?User $user, string $email): void
+    {
+        if ($user === null) {
+            return;
+        }
+
+        $cards->where('user_id', $user->id)
+            ->where('email', '!=', $email)
+            ->update(['user_id' => null]);
     }
 
     private function seedPerson(string $lastName, string $firstName, ?string $middleName, ?string $birthDate, string $email, string $phone): Person

@@ -212,13 +212,31 @@ class MergePortalAccountsCommand extends Command
     private function moveProfiles(User $survivor, $losers): void
     {
         foreach ($losers as $loser) {
-            Student::query()->where('user_id', $loser->id)->update(['user_id' => $survivor->id]);
-            Teacher::query()->where('user_id', $loser->id)->update(['user_id' => $survivor->id]);
+            // Карточка переезжает, только если у выжившего своей нет. Пока
+            // переносились все подряд, на одной учётной записи оказывались две,
+            // а `User::teacher()` — `hasOne`: он брал первую, и кабинет с
+            // журналом выглядели пустыми, хотя работа висела на второй.
+            // Чужая карточка при этом не пропадает — остаётся без учётной
+            // записи, и её видно в списке преподавателей.
+            $this->moveProfile(Student::query(), $survivor, $loser);
+            $this->moveProfile(Teacher::query(), $survivor, $loser);
 
             if (! $survivor->person_id && $loser->person_id) {
                 $survivor->forceFill(['person_id' => $loser->person_id, 'person_type' => $loser->person_type])->save();
             }
         }
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<covariant \Illuminate\Database\Eloquent\Model>  $cards
+     */
+    private function moveProfile($cards, User $survivor, User $loser): void
+    {
+        $survivorHasOne = (clone $cards)->where('user_id', $survivor->id)->exists();
+
+        (clone $cards)->where('user_id', $loser->id)->update([
+            'user_id' => $survivorHasOne ? null : $survivor->id,
+        ]);
     }
 
     /**

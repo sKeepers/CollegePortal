@@ -98,6 +98,17 @@ class DemoDataSeederTest extends TestCase
 
         $this->assertSame(600, Student::query()->count());
         $this->assertSame(70, Teacher::query()->count());
+
+        // Набор садится на существующие служебные записи, и на них могла висеть
+        // карточка от UAT-набора. Две карточки на одной записи — это пустой
+        // кабинет при полном журнале: `User::teacher()` берёт первую.
+        foreach (['teachers' => Teacher::query(), 'students' => Student::query()] as $what => $cards) {
+            $this->assertSame(
+                0,
+                $cards->clone()->whereNotNull('user_id')->select('user_id')->groupBy('user_id')->havingRaw('count(*) > 1')->get()->count(),
+                "В {$what} нет учётной записи с двумя карточками"
+            );
+        }
         $this->assertGreaterThanOrEqual(670, Person::query()->count());
         $this->assertSame(600, Student::query()->whereNotNull('person_id')->count());
         $this->assertSame(70, Teacher::query()->whereNotNull('person_id')->count());
