@@ -49,6 +49,39 @@ export const useAccountStore = defineStore('account', () => {
     availableProviders.value = payload?.available || []
   }
 
+  // Уведомления: каналы, галочки и одноразовый код привязки.
+  const notifications = ref(null)
+
+  async function loadNotifications() {
+    notifications.value = (await api.list('account/notifications'))?.data || null
+  }
+
+  async function setNotification(event, channel, enabled) {
+    saving.value = true
+    error.value = ''
+    try {
+      notifications.value = (await api.post('account/notifications', { event, channel, enabled }))?.data || notifications.value
+    } catch (err) {
+      error.value = err.message || 'Не удалось изменить подписку'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function requestLinkCode() {
+    saving.value = true
+    error.value = ''
+    try {
+      return (await api.post('account/notifications/link-code'))?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось получить код привязки'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
   async function linkIdentity(provider, payload, currentPassword) {
     saving.value = true
     error.value = ''
@@ -96,7 +129,8 @@ export const useAccountStore = defineStore('account', () => {
   }
 
   return {
-    account, identities, availableProviders, loading, saving, error,
+    account, identities, availableProviders, notifications, loading, saving, error,
     load, saveContacts, changePassword, loadIdentities, linkIdentity, unlinkIdentity,
+    loadNotifications, setNotification, requestLinkCode,
   }
 })

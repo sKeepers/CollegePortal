@@ -48,6 +48,7 @@ class PermissionTableAndProxyTest extends TestCase
         'api/account/identities/{identity}',
         // Галочки уведомлений: свои, как почта и пароль. Права у них нет намеренно.
         'api/account/notifications',
+        'api/account/notifications/link-code',
         'api/dashboard/layouts',
         'api/dashboard/layouts/reset',
         'api/dashboard/layouts/{dashboardLayout}',

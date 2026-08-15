@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
-import { KeyRound, LogIn, Mail, Phone, UserRound } from '@lucide/vue'
+import { Bell, KeyRound, LogIn, Mail, Phone, UserRound } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppCard from '../../components/ui/AppCard.vue'
@@ -51,7 +51,27 @@ watch(account, (value) => {
 onMounted(async () => {
   await store.load()
   await store.loadIdentities()
+  // Отказ здесь не должен закрывать раздел: уведомления могут быть не подключены,
+  // а почта и пароль от этого не зависят.
+  await store.loadNotifications().catch(() => {})
 })
+
+// Уведомления. Канал один — MAX; галочка без начатого диалога это обещание,
+// которое портал не выполнит, поэтому состояния показываются раздельно.
+const notifyChannel = computed(() => store.notifications?.channels?.[0] || null)
+const linkCode = ref(null)
+
+function isSubscribed(event) {
+  return (store.notifications?.subscribed || []).includes(`${event.code}|${notifyChannel.value?.code}`)
+}
+
+async function toggleNotification(event, enabled) {
+  await store.setNotification(event.code, notifyChannel.value.code, enabled)
+}
+
+async function showLinkCode() {
+  linkCode.value = await store.requestLinkCode()
+}
 
 // Отвязка требует текущего пароля: перехваченной сессии мало, чтобы снять чужой
 // способ входа. Тем же паролем подтверждается и привязка.
@@ -180,6 +200,45 @@ function formatDateTime(value) {
         </div>
       </AppCard>
 
+      <AppCard v-if="notifyChannel">
+        <template #header><div class="account-card-title"><Bell :size="18" /> Уведомления в {{ notifyChannel.name }}</div></template>
+
+        <template v-if="!notifyChannel.chat_ready">
+          <p class="account-note">
+            Бот не может написать первым — сначала нужно с ним поздороваться. Возьмите код, откройте бота
+            в {{ notifyChannel.name }}, нажмите «Старт» и отправьте код сообщением.
+          </p>
+          <div class="account-actions">
+            <q-btn outline no-caps :loading="store.saving" @click="showLinkCode">Получить код привязки</q-btn>
+          </div>
+          <div v-if="linkCode" class="account-link-code">
+            <strong>{{ linkCode.code }}</strong>
+            <span>отправьте боту {{ linkCode.bot_username ? '@' + linkCode.bot_username : '' }} — код действует 15 минут</span>
+          </div>
+        </template>
+
+        <template v-else>
+          <p class="account-note">
+            Приходит только то, что отмечено. Снятая галочка прекращает отправку сразу.
+          </p>
+          <q-list dense>
+            <q-item v-for="event in store.notifications.events" :key="event.code">
+              <q-item-section>
+                <q-item-label>{{ event.name }}</q-item-label>
+                <q-item-label caption>{{ event.hint }}<template v-if="!event.ready"> · пока не отправляется</template></q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-toggle
+                  :model-value="isSubscribed(event)"
+                  :disable="!event.ready || store.saving"
+                  @update:model-value="(value) => toggleNotification(event, value)"
+                />
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </template>
+      </AppCard>
+
       <AppCard>
         <template #header><div class="account-card-title"><KeyRound :size="18" /> Пароль</div></template>
         <template v-if="!showPassword">
@@ -223,6 +282,9 @@ function formatDateTime(value) {
 .account-form { display: grid; gap: 12px; }
 .account-note { color: #64748b; font-size: 13px; margin: 12px 0 0; }
 .account-link-provider { display: grid; gap: 8px; margin-top: 12px; }
+.account-link-code { display: grid; gap: 4px; margin-top: 12px; }
+.account-link-code strong { font-size: 24px; letter-spacing: 4px; font-family: monospace; }
+.account-link-code span { color: #64748b; font-size: 13px; }
 .account-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 @media (max-width: 640px) {
   .account-details div { grid-template-columns: 1fr; gap: 2px; }

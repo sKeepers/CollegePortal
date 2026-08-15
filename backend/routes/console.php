@@ -3,6 +3,7 @@
 use App\Services\PersonService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -46,3 +47,16 @@ Artisan::command('person:link-existing {--dry-run : Show planned links without w
 })->purpose('Safely create Person records and link existing profiles.');
 
 // Applicant document registry command is auto-discovered by Laravel.
+
+/*
+ * Первое расписание задач в проекте. `installer/docker-compose.yml` поднимает
+ * `schedule:run` раз в минуту с самого начала, но регистрировать в нём было нечего —
+ * значит, `NOTIFY-001` заодно впервые проверит, работает ли этот механизм на PROD.
+ *
+ * Очередь обновлений бота читается **одним** процессом: она общая и с указателем,
+ * два читателя растащили бы события. Планировщик и есть этот один процесс.
+ */
+Schedule::command('notifications:max-pull')->everyMinute()->withoutOverlapping();
+
+// Вечером, чтобы расписание на завтра пришло до конца дня, а не ночью.
+Schedule::command('notifications:lessons-tomorrow')->dailyAt('19:00');

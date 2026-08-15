@@ -74,11 +74,18 @@ class NotificationSubscriptionService
         }
 
         if ($enabled) {
-            NotificationSubscription::firstOrCreate([
+            // `firstOrNew` + `save`, а не `firstOrCreate`: последний внутри транзакции
+            // открывает точку сохранения на каждую вставку, а таблица блокировок одна
+            // на сервер — на этом уже валился демонстрационный набор, см. «Грабли».
+            $subscription = NotificationSubscription::firstOrNew([
                 'user_id' => $user->id,
                 'event' => $event,
                 'channel' => $channelCode,
             ]);
+
+            if (! $subscription->exists) {
+                $subscription->save();
+            }
         } else {
             NotificationSubscription::query()
                 ->where('user_id', $user->id)

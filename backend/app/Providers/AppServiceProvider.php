@@ -38,11 +38,18 @@ class AppServiceProvider extends ServiceProvider
         // показываются, отправлять некуда, портал работает как до `NOTIFY-001`.
         // Telegram сюда не встал не по забывчивости — с боевого сервера его адреса
         // отвечают через раз, замер в docs/NOTIFY_001_PLAN.md.
+        // Сам канал разрешается всегда: его зовёт и служба привязки, которой нужна
+        // очередь обновлений. А вот в список подключённых он попадает только с токеном —
+        // список и решает, есть ли уведомления вообще.
+        $this->app->singleton(MaxNotificationChannel::class, fn (): MaxNotificationChannel => new MaxNotificationChannel(
+            (string) (config('services.max.bot_token') ?: ''),
+        ));
+
         $this->app->singleton(NotificationChannels::class, function (): NotificationChannels {
             $token = config('services.max.bot_token');
 
             return new NotificationChannels(array_filter([
-                $token ? new MaxNotificationChannel($token) : null,
+                $token ? $this->app->make(MaxNotificationChannel::class) : null,
             ]));
         });
 

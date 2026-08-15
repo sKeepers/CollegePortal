@@ -101,6 +101,7 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     // человек распоряжается сам.
     Route::get('account/notifications', [AccountNotificationController::class, 'index']);
     Route::post('account/notifications', [AccountNotificationController::class, 'update']);
+    Route::post('account/notifications/link-code', [AccountNotificationController::class, 'linkCode']);
     // Мобильные кабинеты. Право решает видимость раздела, а не то, чьи данные
     // видно: кабинет отдаёт только данные вошедшего — преподаватель находится
     // по `teachers.user_id`, и чужой день не открывается подстановкой
