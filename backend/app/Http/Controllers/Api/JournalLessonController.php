@@ -16,6 +16,8 @@ use App\Models\ScheduleLesson;
 use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Services\CuratorScopeService;
+use App\Services\JournalLessonAccess;
 use App\Services\JournalService;
 use App\Support\Csv\CsvExport;
 use Illuminate\Database\Eloquent\Builder;
@@ -28,7 +30,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class JournalLessonController extends Controller
 {
-    public function __construct(private readonly JournalService $journalService) {}
+    public function __construct(
+        private readonly JournalService $journalService,
+        private readonly CuratorScopeService $curatorScope,
+        private readonly JournalLessonAccess $access,
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -49,7 +55,7 @@ class JournalLessonController extends Controller
 
     public function show(Request $request, JournalLesson $lesson): JournalLessonResource
     {
-        $this->authorizeLesson($request->user(), $lesson, false);
+        $this->authorizeLesson($request->user(), $lesson, false, curatorMayRead: true);
         $loaded = $this->journalService->loadLesson($lesson);
         $this->filterStudentPayload($request->user(), $loaded);
 
@@ -317,7 +323,7 @@ class JournalLessonController extends Controller
 
     public function downloadFile(Request $request, JournalLesson $lesson, JournalLessonFile $file): StreamedResponse
     {
-        $this->authorizeLesson($request->user(), $lesson, false);
+        $this->authorizeLesson($request->user(), $lesson, false, curatorMayRead: true);
         abort_unless((int) $file->journal_lesson_id === (int) $lesson->id, 404);
 
         return Storage::disk('local')->download($file->path, $file->original_name);
@@ -336,7 +342,7 @@ class JournalLessonController extends Controller
     public function exportLesson(Request $request, JournalLesson $lesson): StreamedResponse
     {
         abort_unless($request->user()->hasPermission('journal.export'), 403);
-        $this->authorizeLesson($request->user(), $lesson, false);
+        $this->authorizeLesson($request->user(), $lesson, false, curatorMayRead: true);
         $lesson = $this->journalService->loadLesson($lesson);
 
         return CsvExport::download("journal-lesson-{$lesson->id}.csv", ['student', 'attendance', 'minutes_late', 'grade', 'comment'], function (callable $row) use ($lesson): void {
@@ -443,14 +449,37 @@ class JournalLessonController extends Controller
         };
     }
 
+    /**
+     * Чьи занятия человек видит в списках и выгрузках.
+     *
+     * Преподаватель — свои. Куратор — ещё и занятия своей группы, которые ведут
+     * другие: он тот же преподаватель, но по своей группе только смотрит.
+     * Правку это не открывает ни на строку — её пропускает `authorizeLesson`, и
+     * только на собственное занятие.
+     *
+     * Карточек преподавателя у учётной записи может быть несколько (на стенде у
+     * `teacher@local` их две), поэтому отбор идёт по всем, а не по первой:
+     * иначе половина собственных занятий пропадает из журнала молча.
+     */
     private function applyScope(Builder $query, User $user): void
     {
         if ($user->hasPermission('journal.view_all')) {
             return;
         }
 
-        if ($teacherId = Teacher::query()->where('user_id', $user->id)->value('id')) {
-            $query->where('teacher_id', $teacherId);
+        $teacherIds = $this->curatorScope->teacherIds($user);
+
+        if ($teacherIds->isNotEmpty()) {
+            $curatedGroupIds = $this->curatorScope->curatedGroupIds($user);
+
+            $query->where(function (Builder $scoped) use ($teacherIds, $curatedGroupIds): void {
+                $scoped->whereIn('teacher_id', $teacherIds->all());
+
+                if ($curatedGroupIds->isNotEmpty()) {
+                    $scoped->orWhereIn('group_id', $curatedGroupIds->all());
+                }
+            });
+
             return;
         }
 
@@ -494,24 +523,29 @@ class JournalLessonController extends Controller
         abort(403);
     }
 
-    private function authorizeLesson(User $user, JournalLesson $lesson, bool $write): void
+    /**
+     * Доступ к одному занятию.
+     *
+     * `$curatorMayRead` включается только там, где куратору действительно нужно
+     * посмотреть занятие своей группы: карточка, вложение, выгрузка. На заявке
+     * о правке и на подсказке по посещаемости он остаётся выключенным
+     * намеренно — это инструменты того, кто ведёт занятие, и открывать их
+     * куратору значит дать ему просить переоткрытие чужого журнала.
+     *
+     * Само правило живёт в `JournalLessonAccess`: его же спрашивает ресурс,
+     * когда решает, показывать ли экрану кнопки правки.
+     */
+    private function authorizeLesson(User $user, JournalLesson $lesson, bool $write, bool $curatorMayRead = false): void
     {
         if ($write && ! $user->hasPermission('journal.edit')) {
             abort(403);
         }
-        if ($user->hasRole('admin') || $user->hasPermission('journal.view_all')) {
-            return;
-        }
-        $teacherId = Teacher::query()->where('user_id', $user->id)->value('id');
-        if ($teacherId && (int) $lesson->teacher_id === (int) $teacherId) {
-            return;
-        }
-        if (! $write && ($student = Student::query()->where('user_id', $user->id)->first())) {
-            if ((int) $student->group_id === (int) $lesson->group_id) {
-                return;
-            }
-        }
-        abort(403);
+
+        $allowed = $write
+            ? $this->access->canEdit($user, $lesson)
+            : $this->access->canRead($user, $lesson, $curatorMayRead);
+
+        abort_unless($allowed, 403);
     }
 
     private function filterStudentPayload(User $user, JournalLesson $lesson): void

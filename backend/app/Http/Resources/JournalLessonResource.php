@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\JournalLessonAccess;
 use DateTimeInterface;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -63,6 +64,11 @@ class JournalLessonResource extends JsonResource
             ],
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
+            // Куратор видит занятия своей группы у других преподавателей и
+            // менять их не может. Признак считает сервер тем же кодом, которым
+            // отказывает: иначе экран покажет кнопку, а нажатие даст 403.
+            'can_edit' => $request->user() !== null
+                && app(JournalLessonAccess::class)->canEdit($request->user(), $this->resource),
         ];
     }
 

@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\AdminPermissionController;
 use App\Http\Controllers\Api\AdminSettingController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AdminUserController;
+use App\Http\Controllers\Api\CuratorGroupController;
 use App\Http\Controllers\Api\Admissions\AdmissionApplicationController as AdmissionsAdmissionApplicationController;
 use App\Http\Controllers\Api\Admissions\AdmissionDocumentFileController as AdmissionsAdmissionDocumentFileController;
 use App\Http\Controllers\Api\Admissions\ApplicationDocumentController as AdmissionsApplicationDocumentController;
@@ -125,6 +126,18 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     // своё право сам.
     Route::get('mobile/admin', [MobileAdminController::class, 'show'])
         ->middleware('permission:mobile.admin.view');
+    // Своя группа глазами куратора. Маршруты общие для компьютера и телефона:
+    // владелец попросил одну и ту же картину на обоих экранах, а два расчёта
+    // одной успеваемости однажды покажут два разных средних балла.
+    //
+    // Право взято то же, по которому куратор видит журнал: ничего сверх этого
+    // здесь не открывается, а чью группу видно — решает `groups.curator_id` в
+    // самом контроллере. Кто видит журнал целиком, видит здесь любую группу.
+    Route::middleware('permission:journal.view')->group(function (): void {
+        Route::get('curator/groups', [CuratorGroupController::class, 'index']);
+        Route::get('curator/groups/{group}/students', [CuratorGroupController::class, 'students']);
+        Route::get('curator/groups/{group}/performance', [CuratorGroupController::class, 'performance']);
+    });
     Route::get('dashboard/layouts', [DashboardLayoutController::class, 'index']);
     Route::post('dashboard/layouts', [DashboardLayoutController::class, 'store']);
     Route::post('dashboard/layouts/reset', [DashboardLayoutController::class, 'reset']);

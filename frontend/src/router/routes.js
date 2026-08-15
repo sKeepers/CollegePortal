@@ -25,6 +25,7 @@ const GraduationPage = () => import('../pages/graduation/GraduationPage.vue')
 const FrdoPage = () => import('../pages/frdo/FrdoPage.vue')
 const FisPage = () => import('../pages/fis/FisPage.vue')
 const ReportsPage = () => import('../pages/reports/ReportsPage.vue')
+const CuratorGroupPage = () => import('../pages/curator/CuratorGroupPage.vue')
 const AttendancePage = () => import('../pages/attendance/AttendancePage.vue')
 const AdmissionsPage = () => import('../pages/admissions/AdmissionsPage.vue')
 const AdmissionsFoundationPage = () => import('../pages/admissions/FoundationWorkspacePage.vue')
@@ -58,6 +59,7 @@ const MobileTeacherPassPage = () => import('../pages/mobile/teacher/MobileTeache
 const MobileTeacherLessonPage = () => import('../pages/mobile/teacher/MobileTeacherLessonPage.vue')
 const MobileCuratorHomePage = () => import('../pages/mobile/curator/MobileCuratorHomePage.vue')
 const MobileCuratorGroupPage = () => import('../pages/mobile/curator/MobileCuratorGroupPage.vue')
+const MobileCuratorPerformancePage = () => import('../pages/mobile/curator/MobileCuratorPerformancePage.vue')
 const MobileAdminHomePage = () => import('../pages/mobile/admin/MobileAdminHomePage.vue')
 const StudentCabinetPage = () => import('../pages/student/StudentCabinetPage.vue')
 
@@ -151,6 +153,12 @@ export const routes = [
         name: 'mobile-curator-group',
         component: MobileCuratorGroupPage,
         meta: { title: 'Моя группа' },
+      },
+      {
+        path: 'groups/:groupId/performance',
+        name: 'mobile-curator-performance',
+        component: MobileCuratorPerformancePage,
+        meta: { title: 'Успеваемость' },
       },
     ],
   },
@@ -268,6 +276,14 @@ export const routes = [
         name: 'journal',
         component: JournalPage,
         meta: { title: 'Журнал', permission: 'journal.view' },
+      },
+      {
+        // Раздел куратора закрыт тем же правом, что и журнал: ничего сверх
+        // журнала он не показывает, а чью группу видно — решает сервер.
+        path: 'curator/group',
+        name: 'curator-group',
+        component: CuratorGroupPage,
+        meta: { title: 'Моя группа', permission: 'journal.view' },
       },
       {
         path: 'teaching-load',

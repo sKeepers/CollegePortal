@@ -9,7 +9,8 @@ use App\Models\Group;
 use App\Models\Student;
 use App\Models\Teacher;
 use App\Services\AttendanceAnalysisService;
-use Illuminate\Database\Eloquent\Builder;
+use App\Services\CuratorScopeService;
+use App\Services\GroupRosterService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -39,8 +40,11 @@ class MobileCuratorController extends Controller
     /** Сколько событий проходной показывает экран телефона. */
     private const EVENT_LIMIT = 100;
 
-    public function __construct(private readonly AttendanceAnalysisService $analysis)
-    {
+    public function __construct(
+        private readonly AttendanceAnalysisService $analysis,
+        private readonly CuratorScopeService $scope,
+        private readonly GroupRosterService $roster,
+    ) {
     }
 
     /** Кабинет: кто я и какие группы за мной закреплены. */
@@ -56,7 +60,7 @@ class MobileCuratorController extends Controller
             ]];
         }
 
-        $groups = $this->groupsOf($curator);
+        $groups = $this->groupsOf($request);
 
         return ['data' => [
             'curator' => new TeacherResource($curator),
@@ -175,15 +179,22 @@ class MobileCuratorController extends Controller
     }
 
     /**
-     * Группы куратора. Считается запросом на каждый вызов: смена куратора у
-     * группы обязана действовать сразу, а не после перевхода.
+     * Группы куратора. Считает `CuratorScopeService` — тем же кодом, которым их
+     * считают журнал и раздел успеваемости: три ответа на вопрос «чья это
+     * группа» однажды разойдутся.
      *
      * @return Collection<int, Group>
      */
-    private function groupsOf(Teacher $curator): Collection
+    private function groupsOf(Request $request): Collection
     {
+        $groupIds = $this->scope->curatedGroupIds($request->user());
+
+        if ($groupIds->isEmpty()) {
+            return collect();
+        }
+
         return Group::query()
-            ->where('curator_id', $curator->id)
+            ->whereIn('id', $groupIds->all())
             ->withCount('students')
             ->orderBy('name')
             ->get();
@@ -197,9 +208,7 @@ class MobileCuratorController extends Controller
      */
     private function authorizeGroup(Request $request, Group $group): void
     {
-        $curator = $this->curator($request);
-
-        if ($curator === null || (int) $group->curator_id !== (int) $curator->id) {
+        if (! $this->scope->curates($request->user(), $group)) {
             abort(403, 'Эта группа не закреплена за вами.');
         }
     }
@@ -207,16 +216,7 @@ class MobileCuratorController extends Controller
     /** @return Collection<int, Student> */
     private function studentsOf(Group $group): Collection
     {
-        return Student::query()
-            ->where('group_id', $group->id)
-            ->where(function (Builder $query): void {
-                $query->whereNull('archived_at')->where(function (Builder $inner): void {
-                    $inner->whereNull('status')->orWhereNotIn('status', ['archived', 'expelled']);
-                });
-            })
-            ->orderBy('last_name')
-            ->orderBy('first_name')
-            ->get();
+        return $this->roster->active($group);
     }
 
     /** @return array<string, mixed> */

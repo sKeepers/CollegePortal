@@ -44,6 +44,19 @@ watch(groupId, (id) => store.openGroup(id))
         </div>
       </section>
 
+      <div class="mobile-cabinet-choice">
+        <button
+          type="button"
+          class="mobile-cabinet-choice-item"
+          @click="router.push(`/m/curator/groups/${groupId}/performance`)"
+        >
+          <GraduationCap :size="16" /> Успеваемость
+        </button>
+        <button type="button" class="mobile-cabinet-choice-item" @click="scrollToAccess">
+          <DoorOpen :size="16" /> Проходная
+        </button>
+      </div>
+
       <section class="mobile-cabinet-card">
         <header class="mobile-cabinet-day-header">
           <div><h2>{{ rangeLabel }}</h2></div>
