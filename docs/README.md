@@ -198,6 +198,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [SCHEDULE_ENGINE.md](SCHEDULE_ENGINE.md)
 - [SCHEDULE_VISUAL_EDITOR.md](SCHEDULE_VISUAL_EDITOR.md)
 - [СТРАТЕГИЯ_РЕАЛИЗАЦИИ_ПРИЕМНОЙ_КОМИССИИ.md](СТРАТЕГИЯ_РЕАЛИЗАЦИИ_ПРИЕМНОЙ_КОМИССИИ.md)
+- [SESSION_HANDOFF_2026-08-16.md](SESSION_HANDOFF_2026-08-16.md)
 - [SECURITY_REVIEW.md](SECURITY_REVIEW.md)
 - [SETTINGS.md](SETTINGS.md)
 - [SYSTEM_REQUIREMENTS.md](SYSTEM_REQUIREMENTS.md)
