@@ -116,6 +116,16 @@ class DemoDataSeederTest extends TestCase
         $this->assertGreaterThan(0, AccessEvent::query()->where('result', AccessEvent::RESULT_DENIED)->count());
         $this->assertGreaterThan(0, AccessEvent::query()->where('direction', AccessEvent::DIRECTION_OUT)->count());
 
+        // Проходы связаны с настоящими точками справочника. Пока набор писал
+        // название строкой и связь не ставил, «Кто в здании» складывал весь
+        // стенд в группу «точка вне справочника» — и выглядело это поломкой
+        // отчёта, а не пустого справочника.
+        $this->assertSame(
+            0,
+            AccessEvent::query()->where('device_name', 'Демо-турникет')->whereNull('access_point_id')->count(),
+            'Демонстрационный проход без точки прохода не попадёт ни в один корпус'
+        );
+
         // Журнал, учебные планы и нагрузка: экраны открывались пустыми при
         // полутора тысячах занятий в расписании, потому что их сущностей набор
         // не создавал вовсе.

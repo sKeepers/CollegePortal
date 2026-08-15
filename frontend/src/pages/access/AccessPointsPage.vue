@@ -8,8 +8,14 @@ import AppTable from '../../components/ui/AppTable.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import { useAccessBuildingsStore } from '../../stores/accessBuildings'
+import { useAuthStore } from '../../stores/auth'
 
 const store = useAccessBuildingsStore()
+// Код точки правит только администратор — решение владельца. Поле не прячем, а
+// показываем только для чтения: тому, кто не может его менять, всё равно нужно
+// видеть, что именно прописано в сканере. Запрет держится на сервере, в
+// `StoreAccessPointRequest`; здесь он только объяснён человеку заранее.
+const auth = useAuthStore()
 
 const buildingColumns = [
   { name: 'name', label: 'Корпус', field: 'name', align: 'left', sortable: true },
@@ -143,7 +149,16 @@ onMounted(() => store.loadReference())
         <q-card-section class="column q-gutter-sm">
           <q-select v-model="pointForm.building_id" dense outlined emit-value map-options label="Корпус" :options="store.buildingOptions" />
           <q-input v-model="pointForm.name" dense outlined label="Название" hint="Должно совпадать с тем, что прописано в сканере." />
-          <q-input v-model="pointForm.code" dense outlined label="Код" />
+          <q-input
+            v-model="pointForm.code"
+            dense
+            outlined
+            label="Код"
+            :readonly="!auth.isAdmin"
+            :hint="auth.isAdmin
+              ? 'Короткий код латиницей — то, что набирают в сканере при установке. Сканер присылает его или название, регистр и пробелы неважны.'
+              : 'Код связывает точку со сканером на проходной и меняется только администратором.'"
+          />
           <q-input v-model="pointForm.description" dense outlined label="Описание" />
           <q-toggle v-model="pointForm.is_active" label="Активна" />
         </q-card-section>

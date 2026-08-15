@@ -57,7 +57,12 @@ export const useAccessBuildingsStore = defineStore('accessBuildings', () => {
     saving.value = true
     error.value = ''
     try {
-      if (payload.id) await api.update('access/buildings', payload.id, payload)
+      // `api.update` — это `PATCH`, а маршруты справочника объявлены на `PUT`, и
+      // правка с экрана отвечала `405`. Отправляем `PUT`: запрос и так несёт
+      // запись целиком, а сервер проверяет её целиком — `StoreBuildingRequest`
+      // требует название при каждом сохранении. Тем же способом правятся
+      // дисциплины плана (`curricula.js`) и занятия журнала (`journal.js`).
+      if (payload.id) await api.put(`access/buildings/${payload.id}`, payload)
       else await api.create('access/buildings', payload)
       await loadReference()
     } catch (err) {
@@ -72,7 +77,7 @@ export const useAccessBuildingsStore = defineStore('accessBuildings', () => {
     saving.value = true
     error.value = ''
     try {
-      if (payload.id) await api.update('access/points', payload.id, payload)
+      if (payload.id) await api.put(`access/points/${payload.id}`, payload)
       else await api.create('access/points', payload)
       await loadReference()
     } catch (err) {

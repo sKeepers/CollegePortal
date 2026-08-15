@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\AccessEvent;
+use App\Models\AccessPoint;
 use App\Models\Attendance;
 use App\Models\ApplicantApplication;
 use App\Models\Classroom;
@@ -1143,7 +1144,22 @@ class DemoDataSeeder extends Seeder
             ->where('device_name', 'Демо-турникет')
             ->delete();
 
-        $points = ['Главный вход', 'Главный вход', 'Главный вход', 'Служебный вход', 'Концертный зал'];
+        // Проходы раскладываются по настоящим точкам справочника, а не по
+        // выдуманным названиям. Пока набор писал «Главный вход» строкой и не
+        // ставил связь, все демо-события попадали в группу «точка вне
+        // справочника», и отчёт «Кто в здании» на стенде выглядел сломанным —
+        // хотя сломан был не отчёт. Точки заводит миграция
+        // `2026_08_15_000001`, своих набор не создаёт.
+        $points = AccessPoint::query()->where('is_active', true)->orderBy('sort_order')->orderBy('id')->get();
+
+        if ($points->isEmpty()) {
+            // Молча пропустить нельзя: пропадёт целый раздел стенда, и искать
+            // причину будут в проходной, а не в пустом справочнике.
+            $this->command?->warn('Справочник точек прохода пуст — события проходной не наполнены.');
+
+            return;
+        }
+
         $rows = [];
 
         foreach (range(self::HISTORY_DAYS, 0) as $daysAgo) {
@@ -1166,7 +1182,7 @@ class DemoDataSeeder extends Seeder
                     continue;
                 }
 
-                $point = $points[mt_rand(0, count($points) - 1)];
+                $point = $points[mt_rand(0, $points->count() - 1)];
                 // Человек приходит к своей первой паре, а не к общим 8:30.
                 // Пока приход был привязан к фиксированному времени, опоздать
                 // мог только тот, у кого первая пара ровно в 8:30, — таких на
@@ -1279,13 +1295,16 @@ class DemoDataSeeder extends Seeder
     }
 
     /** @return array<string, mixed> */
-    private function accessRow(DigitalIdentity $identity, string $point, string $direction, Carbon $time, Carbon $now, string $result = AccessEvent::RESULT_ALLOWED, ?string $reason = null): array
+    private function accessRow(DigitalIdentity $identity, AccessPoint $point, string $direction, Carbon $time, Carbon $now, string $result = AccessEvent::RESULT_ALLOWED, ?string $reason = null): array
     {
         return [
             'digital_identity_id' => $identity->id,
             'entity_type' => $identity->entity_type,
             'entity_id' => $identity->entity_id,
-            'access_point' => $point,
+            // Строка остаётся: событие проходной обязано пережить переименование
+            // и удаление точки. Связь — чтобы отчёт знал корпус.
+            'access_point' => $point->name,
+            'access_point_id' => $point->id,
             'device_name' => 'Демо-турникет',
             'direction' => $direction,
             'event_time' => $time,

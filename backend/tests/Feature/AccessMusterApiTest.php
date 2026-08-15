@@ -65,11 +65,18 @@ class AccessMusterApiTest extends TestCase
             ->assertJsonPath('data.access_point_id', null)
             ->assertJsonPath('data.access_point', 'Калитка у склада');
 
-        $this->getJson('/api/access/muster')
+        $response = $this->getJson('/api/access/muster')
             ->assertOk()
-            ->assertJsonPath('data.inside_now', 1)
-            ->assertJsonPath('data.buildings.1.building_name', 'Точка прохода не указана')
-            ->assertJsonPath('data.buildings.1.people.0.full_name', 'Иванов Дмитрий');
+            ->assertJsonPath('data.inside_now', 1);
+
+        // Группу ищем по названию, а не по месту в списке: с 15.08.2026
+        // справочник заводится миграцией и в прогоне не пуст, поэтому номер
+        // группы «вне справочника» зависит от числа настоящих корпусов.
+        $unassigned = collect($response->json('data.buildings'))
+            ->firstWhere('building_name', 'Точка прохода не указана');
+
+        $this->assertNotNull($unassigned, 'Человек с неизвестной точкой обязан попасть в отдельную группу');
+        $this->assertSame('Иванов Дмитрий', $unassigned['people'][0]['full_name']);
     }
 
     public function test_muster_lists_people_by_building_and_keeps_empty_buildings(): void
