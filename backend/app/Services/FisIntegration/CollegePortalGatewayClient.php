@@ -22,10 +22,17 @@ class CollegePortalGatewayClient
     public function runDiagnostics(): array { return $this->post('/diagnostics/run', []); }
     public function latestDiagnostics(): array { return $this->get('/diagnostics/latest'); }
 
+    /**
+     * Читающие методы подписываются наравне с пишущими. Без подписи шлюз отвечает
+     * `auth_required: Missing HMAC headers` на всё, что закрыто, — а закрыты у него
+     * здоровье адаптера и последняя диагностика. Открытыми остаются только `/health`,
+     * `/version`, `/capabilities` и `/adapters`, поэтому отсутствие подписи здесь
+     * замечалось не сразу: четыре метода из шести работали.
+     */
     public function get(string $path): array
     {
         $this->ensureGatewayEnabled();
-        try { $response = $this->client()->get($path); }
+        try { $response = $this->client()->withHeaders($this->signer->headers('GET', $path, ''))->get($path); }
         catch (ConnectionException $exception) { throw new FisIntegrationException('CollegePortal Gateway connection failed: '.$this->redact($exception->getMessage())); }
         return $this->responseData($response, 'CollegePortal Gateway request failed');
     }
