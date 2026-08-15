@@ -1,7 +1,11 @@
 const ROLE_ROUTE_PREFIXES = {
   admission: ['/dashboard', '/admissions/foundation'],
   student: ['/dashboard', '/schedule', '/student', '/identity/my-pass', '/m/student'],
-  teacher: ['/dashboard', '/schedule', '/journal', '/attendance', '/teaching-load', '/identity/my-pass', '/m/teacher'],
+  // `/curator/group` открыт преподавателю намеренно: куратором назначают
+  // карточку преподавателя, а учётная запись при этом чаще всего с ролью
+  // `teacher`. Данные раздел не открывает — их разграничивает сервер по
+  // `groups.curator_id`, и человеку без групп он покажет объяснение.
+  teacher: ['/dashboard', '/schedule', '/journal', '/attendance', '/teaching-load', '/curator/group', '/identity/my-pass', '/m/teacher'],
 }
 
 function matchesPrefix(path, prefix) {

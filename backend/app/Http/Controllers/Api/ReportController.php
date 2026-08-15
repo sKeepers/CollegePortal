@@ -9,6 +9,7 @@ use App\Models\Group;
 use App\Models\ScheduleLesson;
 use App\Models\Student;
 use App\Models\Subject;
+use App\Services\JournalLessonAccess;
 use App\Support\Csv\CsvExport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,8 +17,21 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
+/**
+ * Сводные отчёты журнала по группе.
+ *
+ * Право `journal.view` открывает раздел, но не выбор группы: до 16.08.2026
+ * `group_id` брался из запроса как есть, и любой преподаватель мог построить
+ * оценки и посещаемость **любой** группы колледжа. Теперь группу проверяет
+ * `JournalLessonAccess::canReadGroup` — тем же кодом, которым журнал решает,
+ * чьи занятия человек видит.
+ */
 class ReportController extends Controller
 {
+    public function __construct(private readonly JournalLessonAccess $access)
+    {
+    }
+
     public function attendanceByGroup(Request $request): JsonResponse
     {
         $validated = $this->validateAttendanceReportRequest($request);
@@ -96,7 +110,7 @@ class ReportController extends Controller
 
     private function validateAttendanceReportRequest(Request $request): array
     {
-        return Validator::make($request->all(), [
+        $validated = Validator::make($request->all(), [
             'group_id' => ['required', 'integer', 'exists:groups,id'],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
@@ -105,11 +119,31 @@ class ReportController extends Controller
             'group_id.exists' => 'Группа не найдена.',
             'date_to.after_or_equal' => 'Дата окончания должна быть не раньше даты начала.',
         ])->validate();
+
+        $this->authorizeGroup($request, (int) $validated['group_id']);
+
+        return $validated;
+    }
+
+    /**
+     * Единственная точка, где решается, чью группу можно спросить.
+     *
+     * Проверка стоит в разборе запроса намеренно: через него проходят все
+     * четыре маршрута — два отчёта и две выгрузки, — и новый отчёт не
+     * проскочит мимо неё молча.
+     */
+    private function authorizeGroup(Request $request, int $groupId): void
+    {
+        abort_unless(
+            $this->access->canReadGroup($request->user(), $groupId),
+            403,
+            'Отчёт строится по своим группам: где вы куратор или ведёте занятия.',
+        );
     }
 
     private function validateGradeReportRequest(Request $request): array
     {
-        return Validator::make($request->all(), [
+        $validated = Validator::make($request->all(), [
             'group_id' => ['required', 'integer', 'exists:groups,id'],
             'subject_id' => ['required', 'integer', 'exists:subjects,id'],
             'date_from' => ['nullable', 'date'],
@@ -121,6 +155,10 @@ class ReportController extends Controller
             'subject_id.exists' => 'Дисциплина не найдена.',
             'date_to.after_or_equal' => 'Дата окончания должна быть не раньше даты начала.',
         ])->validate();
+
+        $this->authorizeGroup($request, (int) $validated['group_id']);
+
+        return $validated;
     }
 
     private function buildAttendanceByGroupReport(array $filters): array

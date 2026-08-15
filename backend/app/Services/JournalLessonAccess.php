@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\JournalLesson;
+use App\Models\ScheduleLesson;
 use App\Models\Student;
 use App\Models\User;
 
@@ -34,6 +35,46 @@ class JournalLessonAccess
         }
 
         return $this->curatorScope->teacherIds($user)->contains((int) $lesson->teacher_id);
+    }
+
+    /**
+     * Может ли человек видеть данные журнала по целой группе — оценки и
+     * посещаемость в отчётах.
+     *
+     * Своя группа — это две разные связи, и обе настоящие: куратор отвечает за
+     * группу, преподаватель ведёт в ней занятия. Отрезать вторую нельзя —
+     * преподаватель строит отчёт по группе, которой преподаёт, и это его
+     * ежедневная работа; открытой оставалась и третья возможность — любая
+     * группа колледжа любому, у кого есть `journal.view`, и вот её здесь и
+     * закрывают.
+     *
+     * Ведение ищется и в журнале, и в расписании: занятие могло не дойти до
+     * журнала, а отчёт по нему всё равно строится.
+     */
+    public function canReadGroup(User $user, int $groupId): bool
+    {
+        if ($user->hasRole('admin') || $user->hasPermission('journal.view_all')) {
+            return true;
+        }
+
+        if ($this->curatorScope->curates($user, $groupId)) {
+            return true;
+        }
+
+        $teacherIds = $this->curatorScope->teacherIds($user);
+
+        if ($teacherIds->isEmpty()) {
+            return false;
+        }
+
+        return JournalLesson::query()
+            ->where('group_id', $groupId)
+            ->whereIn('teacher_id', $teacherIds->all())
+            ->exists()
+            || ScheduleLesson::query()
+                ->where('group_id', $groupId)
+                ->whereIn('teacher_id', $teacherIds->all())
+                ->exists();
     }
 
     /** Может ли человек видеть это занятие. */

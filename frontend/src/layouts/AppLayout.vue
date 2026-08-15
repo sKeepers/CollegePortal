@@ -80,9 +80,12 @@ const navGroups = [
       { label: 'Расписание', to: '/schedule', icon: CalendarDays, permission: 'schedule.view' },
       { label: 'Успеваемость', to: '/student', icon: ClipboardList, roles: ['student'], permission: 'mobile.student.view' },
       { label: 'Журнал', to: '/journal', icon: ClipboardList, permission: 'journal.view' },
-      // Раздел куратора: успеваемость и состав своей группы. Показан роли,
-      // ради которой заведён, — у остальных он был бы пустым списком.
-      { label: 'Моя группа', to: '/curator/group', icon: UsersRound, roles: ['curator'], permission: 'journal.view' },
+      // Раздел куратора: успеваемость и состав своей группы. Роль здесь не
+      // спрашивается намеренно — куратором назначают карточку преподавателя, а
+      // учётная запись при этом может быть с ролью `teacher`, и по роли пункт
+      // до такого куратора не доходил. Кому групп не досталось, увидит
+      // объяснение, а не пустую таблицу.
+      { label: 'Моя группа', to: '/curator/group', icon: UsersRound, permission: 'journal.view' },
       { label: 'Посещаемость', to: '/attendance', icon: ClipboardList, permission: 'attendance.reports' },
       { label: 'Учебные планы', to: '/curricula', icon: BookOpen, permission: 'curricula.view' },
       { label: 'Нагрузка', to: '/teaching-load', icon: ClipboardList, permissionsAny: ['teachingload.view', 'view_own_data'] },
