@@ -65,20 +65,52 @@ class SettingService
         ];
     }
 
+    /**
+     * Досоздать недостающие настройки — одним чтением и одной вставкой.
+     *
+     * Раньше здесь шёл `firstOrCreate` на каждое определение, то есть `SELECT`
+     * на каждую из трёх десятков настроек **при каждом обращении к любой из
+     * них**. Замер на стенде 16.08.2026: экран посещаемости — 29 запросов к
+     * `settings` из 47, панель директора — 58 из 159. Ни одного из них не было
+     * видно снаружи: они выглядели как «ну, много мелких запросов».
+     *
+     * `insertOrIgnore` — это `ON CONFLICT DO NOTHING`: ловить нарушение
+     * уникальности исключением нельзя, на PostgreSQL упавшая вставка отравляет
+     * транзакцию целиком, а вызывают это и из транзакций тоже.
+     */
     public static function ensureDefaults(): void
     {
+        $existing = Setting::query()
+            ->get(['group', 'key'])
+            ->map(fn (Setting $setting): string => $setting->group.'|'.$setting->key)
+            ->flip();
+
+        $now = now();
+        $missing = [];
+
         foreach (self::definitions() as $group => $settings) {
             foreach ($settings as $key => $definition) {
-                Setting::query()->firstOrCreate(
-                    ['group' => $group, 'key' => $key],
-                    [
-                        'value' => $definition['value'],
-                        'type' => $definition['type'],
-                        'is_public' => $definition['is_public'],
-                        'description' => $definition['description'] ?? null,
-                    ],
-                );
+                if ($existing->has($group.'|'.$key)) {
+                    continue;
+                }
+
+                $missing[] = [
+                    'group' => $group,
+                    'key' => $key,
+                    // Приведение `array` пишет значение как JSON, а вставка идёт
+                    // мимо модели — кодируем сами и теми же флагами, что Eloquent.
+                    'value' => json_encode($definition['value']),
+                    'type' => $definition['type'],
+                    'is_public' => $definition['is_public'],
+                    'description' => $definition['description'] ?? null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
             }
+        }
+
+        if ($missing !== []) {
+            Setting::query()->insertOrIgnore($missing);
         }
     }
 
@@ -147,13 +179,27 @@ class SettingService
             ->toArray();
     }
 
+    /**
+     * Значение одной настройки.
+     *
+     * Умолчания досоздаются, только если спрошенной строки нет: настройка,
+     * которая уже лежит в базе, стоит один запрос, а не проверку всего
+     * каталога. Раньше каталог перепроверялся на каждое чтение, и один
+     * `value()` обходился в три десятка запросов.
+     */
     public static function value(string $group, string $key, mixed $fallback = null): mixed
     {
-        self::ensureDefaults();
-
         $setting = Setting::query()->where('group', $group)->where('key', $key)->first();
 
-        return $setting?->value ?? $fallback;
+        if ($setting !== null) {
+            return $setting->value ?? $fallback;
+        }
+
+        self::ensureDefaults();
+
+        // Через модель, а не `->value('value')`: приведение `array` разбирает
+        // JSON, а построитель отдал бы строку.
+        return Setting::query()->where('group', $group)->where('key', $key)->first()?->value ?? $fallback;
     }
 
     /**
