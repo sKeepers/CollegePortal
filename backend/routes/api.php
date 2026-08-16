@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\AccountIdentityController;
 use App\Http\Controllers\Api\AccountNotificationController;
+use App\Http\Controllers\Api\AdminNotificationController;
 use App\Http\Controllers\Api\AdminUserIdentityController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AccessGateController;
@@ -419,6 +420,10 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         // право то же. Своего права `AUTH-005` намеренно не заводила.
         Route::get('admin/users/{user}/identities', [AdminUserIdentityController::class, 'index']);
         Route::delete('admin/users/{user}/identities/{identity}', [AdminUserIdentityController::class, 'destroy']);
+        // Исполнитель распоряжения директора: снять чужую подписку на уведомления.
+        // Право то же, что у работы с учётной записью; след пишется в журнал аудита.
+        Route::get('admin/users/{user}/notifications', [AdminNotificationController::class, 'index']);
+        Route::delete('admin/users/{user}/notifications/{subscription}', [AdminNotificationController::class, 'destroy']);
         Route::post('admin/users/{user}/block', [AdminUserController::class, 'block']);
         Route::post('admin/users/{user}/unblock', [AdminUserController::class, 'unblock']);
         Route::apiResource('admin/users', AdminUserController::class);

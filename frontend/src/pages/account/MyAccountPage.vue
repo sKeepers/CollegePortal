@@ -59,6 +59,7 @@ onMounted(async () => {
 // Уведомления. Канал один — MAX; галочка без начатого диалога это обещание,
 // которое портал не выполнит, поэтому состояния показываются раздельно.
 const notifyChannel = computed(() => store.notifications?.channels?.[0] || null)
+const watchers = computed(() => store.notifications?.watchers || [])
 const linkCode = ref(null)
 
 function isSubscribed(event) {
@@ -237,6 +238,15 @@ function formatDateTime(value) {
             </q-item>
           </q-list>
         </template>
+
+        <!-- Отключить эти уведомления человек не может — так решил владелец, — но
+             узнавать о них случайно не должен: скрытая рассылка о себе обнаруживается
+             в худший момент. Показываем независимо от того, начат ли его собственный
+             диалог с ботом: пишут-то не ему. -->
+        <q-banner v-if="watchers.length" rounded class="bg-blue-1 text-blue-10 account-watchers">
+          Уведомления о вас получают: {{ watchers.map((watcher) => watcher.name || 'без имени').join(', ') }}.
+          Отключить их можно только распоряжением директора — обратитесь в учебную часть.
+        </q-banner>
       </AppCard>
 
       <AppCard>
@@ -285,6 +295,7 @@ function formatDateTime(value) {
 .account-link-code { display: grid; gap: 4px; margin-top: 12px; }
 .account-link-code strong { font-size: 24px; letter-spacing: 4px; font-family: monospace; }
 .account-link-code span { color: #64748b; font-size: 13px; }
+.account-watchers { margin-top: 12px; }
 .account-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 @media (max-width: 640px) {
   .account-details div { grid-template-columns: 1fr; gap: 2px; }

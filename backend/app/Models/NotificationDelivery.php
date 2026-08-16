@@ -22,12 +22,12 @@ class NotificationDelivery extends Model
     public const STATUS_SKIPPED = 'skipped';
 
     protected $fillable = [
-        'user_id', 'event', 'channel', 'dedupe_key', 'status', 'failure_reason', 'attempts', 'sent_at',
+        'user_id', 'event', 'channel', 'dedupe_key', 'status', 'failure_reason', 'attempts', 'sent_at', 'next_attempt_at',
     ];
 
     protected function casts(): array
     {
-        return ['attempts' => 'integer', 'sent_at' => 'datetime'];
+        return ['attempts' => 'integer', 'sent_at' => 'datetime', 'next_attempt_at' => 'datetime'];
     }
 
     public function user(): BelongsTo

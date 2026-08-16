@@ -51,7 +51,22 @@ class NotificationSubscriptionService
             ];
         }, $this->channels->available());
 
+        // Кто получает уведомления о человеке, кроме него самого. Отключить их он не
+        // может — так решил владелец, — но узнавать о них случайно не должен: скрытая
+        // рассылка о себе обнаруживается в худший момент.
+        $watchers = NotificationSubscription::query()
+            ->where('subject_user_id', $user->id)
+            ->where('user_id', '!=', $user->id)
+            ->with('user')
+            ->get()
+            ->map(fn (NotificationSubscription $row): array => [
+                'name' => $row->user?->name,
+                'event' => $row->event,
+            ])
+            ->values();
+
         return [
+            'watchers' => $watchers,
             'channels' => $channels,
             'events' => array_map(static fn (array $event): array => $event + [
                 'enabled' => array_map(
@@ -84,6 +99,9 @@ class NotificationSubscriptionService
             ]);
 
             if (! $subscription->exists) {
+                // Собственная подписка: получатель и предмет совпадают. Расходятся они
+                // там, где о человеке пишут кому-то ещё, — это заводится не отсюда.
+                $subscription->subject_user_id = $user->id;
                 $subscription->save();
             }
         } else {

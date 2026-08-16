@@ -25,6 +25,12 @@ use App\Support\Notifications\NotificationChannels;
  */
 class NotificationDispatcher
 {
+    /** Больше трёх попыток бессмысленно: заблокированный бот не разблокируется сам. */
+    public const MAX_ATTEMPTS = 3;
+
+    /** Пять минут, полчаса, три часа — задержка перед второй, третьей и далее попыткой. */
+    private const RETRY_DELAYS_MINUTES = [5, 30, 180];
+
     public function __construct(private readonly NotificationChannels $channels)
     {
     }
@@ -70,13 +76,87 @@ class NotificationDispatcher
             return null;
         }
 
-        $sent = $channel->send((string) $chatId, $text);
+        return $this->attempt($delivery, $channel, (string) $chatId, $text);
+    }
+
+    /**
+     * Повторить отправку тех, у кого срок следующей попытки настал.
+     *
+     * Мессенджер отвечает отказом чаще, чем кажется: человек удалил бота, заблокировал,
+     * сменил аккаунт, сеть моргнула. Без повтора первая же неудача теряет уведомление
+     * навсегда — и незаметно, потому что для планировщика она уже «обработана».
+     *
+     * Текста в журнале нет намеренно, поэтому повторяется **не текст, а факт**: сообщение
+     * собирается заново тем же событием. Значит повторять умеет только тот, кто умеет
+     * его составить, и здесь повтор ограничен доставкой — сборку передаёт вызывающий.
+     *
+     * @param callable(NotificationDelivery): ?string $compose как собрать текст заново;
+     *        `null` — событие больше неактуально, повторять нечего
+     * @return array{retried: int, sent: int, exhausted: int}
+     */
+    public function retryDue(callable $compose, int $limit = 100): array
+    {
+        $due = NotificationDelivery::query()
+            ->where('status', NotificationDelivery::STATUS_FAILED)
+            ->where('attempts', '<', self::MAX_ATTEMPTS)
+            ->whereNotNull('next_attempt_at')
+            ->where('next_attempt_at', '<=', now())
+            ->orderBy('next_attempt_at')
+            ->limit($limit)
+            ->get();
+
+        $result = ['retried' => 0, 'sent' => 0, 'exhausted' => 0];
+
+        foreach ($due as $delivery) {
+            $channel = $this->channels->get($delivery->channel);
+            $chatId = UserIdentity::query()
+                ->where('user_id', $delivery->user_id)
+                ->where('provider', $delivery->channel)
+                ->value('chat_id');
+            $text = $compose($delivery);
+
+            // Событие устарело или писать снова некуда — попытки прекращаем, но строку
+            // оставляем: по ней видно, что уведомление не дошло и почему.
+            if ($channel === null || blank($chatId) || $text === null) {
+                $delivery->forceFill(['next_attempt_at' => null])->save();
+                $result['exhausted']++;
+
+                continue;
+            }
+
+            $result['retried']++;
+            $this->attempt($delivery, $channel, (string) $chatId, $text);
+
+            if ($delivery->status === NotificationDelivery::STATUS_SENT) {
+                $result['sent']++;
+            } elseif ($delivery->attempts >= self::MAX_ATTEMPTS) {
+                $result['exhausted']++;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Одна попытка доставки и её след в журнале.
+     *
+     * Задержка растёт: пять минут, полчаса, три часа. Повторять чаще бессмысленно —
+     * если человек заблокировал бота, ничего не изменится ни через минуту, ни через час,
+     * а частые попытки только упрутся в ограничения мессенджера.
+     */
+    private function attempt(NotificationDelivery $delivery, $channel, string $chatId, string $text): NotificationDelivery
+    {
+        $sent = $channel->send($chatId, $text);
+        $attempts = $delivery->attempts + 1;
 
         $delivery->forceFill([
             'status' => $sent ? NotificationDelivery::STATUS_SENT : NotificationDelivery::STATUS_FAILED,
             'failure_reason' => $sent ? null : 'Канал не принял сообщение',
-            'attempts' => $delivery->attempts + 1,
+            'attempts' => $attempts,
             'sent_at' => $sent ? now() : null,
+            'next_attempt_at' => $sent || $attempts >= self::MAX_ATTEMPTS
+                ? null
+                : now()->addMinutes(self::RETRY_DELAYS_MINUTES[$attempts - 1] ?? 180),
         ])->save();
 
         return $delivery;

@@ -14,10 +14,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class NotificationSubscription extends Model
 {
-    protected $fillable = ['user_id', 'event', 'channel'];
+    protected $fillable = ['user_id', 'subject_user_id', 'event', 'channel'];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * О ком уведомление. Для собственной подписки совпадает с получателем; расходится
+     * там, где о человеке пишут кому-то ещё — так устроена родительская подписка.
+     */
+    public function subject(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'subject_user_id');
     }
 }
