@@ -3,19 +3,28 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\AttendanceResource;
 use App\Http\Resources\DigitalIdentityResource;
-use App\Http\Resources\GradeResource;
 use App\Http\Resources\ScheduleLessonResource;
+use App\Http\Resources\StudentAttendanceResource;
+use App\Http\Resources\StudentGradeResource;
 use App\Http\Resources\StudentResource;
-use App\Models\Attendance;
 use App\Models\DigitalIdentity;
-use App\Models\Grade;
+use App\Models\JournalAttendance;
+use App\Models\JournalGrade;
 use App\Models\ScheduleLesson;
 use App\Services\QrSvgService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
+/**
+ * Кабинет студента: расписание на день, свои оценки и отметки, QR-пропуск.
+ *
+ * Оценки и посещаемость читаются из журнала (`journal_grades`,
+ * `journal_attendance`) — оттуда, куда их ставит преподаватель. До 16.08.2026
+ * кабинет читал старые таблицы, в которые с июля не приходило ни одной живой
+ * записи, и студент не видел ни одной своей оценки; на стенде это было не
+ * видно, потому что демонстрационный набор наполнял обе пары сразу.
+ */
 class MobileStudentController extends Controller
 {
     public function show(Request $request, QrSvgService $qrSvgService): array
@@ -59,22 +68,31 @@ class MobileStudentController extends Controller
             }) ?? $schedule->first()
             : $schedule->first();
 
-        $grades = Grade::query()
-            ->with(['scheduleLesson.subject', 'scheduleLesson.teacher', 'scheduleLesson.group', 'scheduleLesson.classroom'])
+        $grades = JournalGrade::query()
+            ->with(['journalLesson.subject', 'journalLesson.teacher', 'gradeType'])
             ->where('student_id', $student->id)
+            ->whereNotNull('value')
+            ->where('value', '!=', '')
+            ->latest('marked_at')
             ->latest('id')
             ->limit(8)
             ->get();
 
-        $attendance = Attendance::query()
-            ->with(['scheduleLesson.subject', 'scheduleLesson.teacher', 'scheduleLesson.group', 'scheduleLesson.classroom'])
+        $attendance = JournalAttendance::query()
+            ->with(['journalLesson.subject', 'journalLesson.teacher'])
             ->where('student_id', $student->id)
+            // Заготовки, созданные журналом при открытии занятия, не отметки:
+            // студент не должен видеть «присутствовал» до того, как его
+            // отметили.
+            ->where('source', '!=', 'roster')
+            ->latest('marked_at')
             ->latest('id')
             ->limit(8)
             ->get();
 
-        $attendanceSummary = Attendance::query()
+        $attendanceSummary = JournalAttendance::query()
             ->where('student_id', $student->id)
+            ->where('source', '!=', 'roster')
             ->selectRaw('status, count(*) as total')
             ->groupBy('status')
             ->pluck('total', 'status');
@@ -97,13 +115,15 @@ class MobileStudentController extends Controller
                 'schedule_date' => $scheduleDate->toDateString(),
                 'today_schedule' => ScheduleLessonResource::collection($schedule),
                 'next_lesson' => $nextLesson ? new ScheduleLessonResource($nextLesson) : null,
-                'grades' => GradeResource::collection($grades),
-                'attendance' => AttendanceResource::collection($attendance),
+                'grades' => StudentGradeResource::collection($grades),
+                'attendance' => StudentAttendanceResource::collection($attendance),
                 'attendance_summary' => [
                     'present' => (int) ($attendanceSummary['present'] ?? 0),
                     'absent' => (int) ($attendanceSummary['absent'] ?? 0),
                     'late' => (int) ($attendanceSummary['late'] ?? 0),
                     'excused' => (int) ($attendanceSummary['excused'] ?? 0),
+                    'sick' => (int) ($attendanceSummary['sick'] ?? 0),
+                    'remote' => (int) ($attendanceSummary['remote'] ?? 0),
                 ],
                 'digital_identity' => $digitalIdentity ? new DigitalIdentityResource($digitalIdentity) : null,
                 'qr_svg' => $dynamicQr ? $qrSvgService->renderSvg($dynamicQr['payload']) : null,

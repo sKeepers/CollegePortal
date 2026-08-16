@@ -789,14 +789,15 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         Route::get('journal/lessons/{lesson}/export.csv', [JournalLessonController::class, 'exportLesson'])->middleware('permission:journal.export');
     });
 
-    // Старые точки посещаемости и оценок и сводные отчёты журнала.
-    Route::apiResource('attendance', AttendanceController::class)
-        ->middlewareFor(['index', 'show'], 'permission:journal.view')
-        ->middlewareFor(['store', 'update', 'destroy'], 'permission:journal.edit');
-
-    Route::apiResource('grades', GradeController::class)
-        ->middlewareFor(['index', 'show'], 'permission:journal.view')
-        ->middlewareFor(['store', 'update', 'destroy'], 'permission:journal.edit');
+    // Отметки и оценки студента списком — для его карточки и кабинета. Читают
+    // журнал; своей записи у них больше нет, и это главное здесь: оценку
+    // ставят в журнале, где у неё есть занятие, автор и подпись. Пока путей
+    // записи было два, половина оценок оказывалась вне журнала, а студент не
+    // видел ни одной (16.08.2026).
+    Route::get('attendance', [AttendanceController::class, 'index'])
+        ->middleware('permission:journal.view');
+    Route::get('grades', [GradeController::class, 'index'])
+        ->middleware('permission:journal.view');
 
     Route::get('reports/attendance-by-group', [ReportController::class, 'attendanceByGroup'])
         ->middleware('permission:journal.view');
