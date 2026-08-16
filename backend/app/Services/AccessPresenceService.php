@@ -118,31 +118,9 @@ class AccessPresenceService
      */
     private function resolveOwners(Collection $events): array
     {
-        $idsByType = $events
-            ->groupBy('entity_type')
-            ->map(fn (Collection $group): array => $group->pluck('entity_id')->filter()->unique()->values()->all());
-
-        $sources = [
-            'student' => fn (array $ids) => Student::query()->with('group')->whereIn('id', $ids)->get(),
-            'teacher' => fn (array $ids) => Teacher::query()->whereIn('id', $ids)->get(),
-            'employee' => fn (array $ids) => Employee::query()->with(['person', 'primaryDepartment'])->whereIn('id', $ids)->get(),
-        ];
-
-        $owners = [];
-
-        foreach ($sources as $type => $load) {
-            $ids = $idsByType->get($type, []);
-
-            if ($ids === []) {
-                continue;
-            }
-
-            foreach ($load($ids) as $model) {
-                $owners[$type.'-'.$model->getKey()] = $model;
-            }
-        }
-
-        return $owners;
+        // Сам разбор переехал в `AccessEventOwners`: 16.08.2026 та же беда
+        // нашлась в отчёте проходной, и второй копии кода лучше не заводить.
+        return app(AccessEventOwners::class)->map($events);
     }
 
     /**

@@ -43,8 +43,30 @@ class AccessEvent extends Model
         return $this->belongsTo(AccessPoint::class);
     }
 
+    /**
+     * Владелец, найденный заранее для целой пачки событий.
+     *
+     * Обычное свойство, а не атрибут: присваивание идёт мимо `setAttribute`, в
+     * `toArray()` оно не попадает и в базу не пишется. Заполняет его
+     * `App\Services\AccessEventOwners::attach`.
+     */
+    public ?Model $resolvedOwner = null;
+
+    /**
+     * Владелец пропуска: `entity_type` и `entity_id` указывают в три разные
+     * таблицы, поэтому это аксессор, а не связь, и `with()` его не подтянет.
+     *
+     * **Обращение к нему в цикле — запрос на каждую строку.** Список эвакуации
+     * на этом уже ловили (598 человек — 1129 запросов), отчёт проходной поймали
+     * следом: одна страница стоила 1810 запросов. Для списков сначала зовите
+     * `AccessEventOwners::attach`, тогда здесь вернётся уже найденное.
+     */
     public function getOwnerAttribute(): ?Model
     {
+        if ($this->resolvedOwner !== null) {
+            return $this->resolvedOwner;
+        }
+
         return match ($this->entity_type) {
             DigitalIdentity::ENTITY_STUDENT => Student::with('group')->find($this->entity_id),
             DigitalIdentity::ENTITY_TEACHER => Teacher::find($this->entity_id),

@@ -9,6 +9,7 @@ use App\Models\Teacher;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\LazyCollection;
 
 /**
@@ -29,8 +30,10 @@ class AccessReportService
     /** Сколько строк показывает экран. Выгрузка и счетчики этим не ограничены. */
     public const SCREEN_LIMIT = 200;
 
-    public function __construct(private readonly AttendanceAnalysisService $attendance)
-    {
+    public function __construct(
+        private readonly AttendanceAnalysisService $attendance,
+        private readonly AccessEventOwners $owners,
+    ) {
     }
 
     /**
@@ -82,11 +85,16 @@ class AccessReportService
         $limit = max(1, min($limit, 1000));
 
         return [
-            'rows' => $this->query($request)
-                ->with(['digitalIdentity', 'accessPoint.building'])
-                ->orderByDesc('event_time')
-                ->limit($limit)
-                ->get(),
+            // Владельцы пропусков — одним запросом на тип, а не по одному на
+            // строку: `AccessEvent::owner` это аксессор, и без предварительного
+            // разбора страница отчёта стоила 1810 запросов (замер 16.08.2026).
+            'rows' => $this->owners->attach(
+                $this->query($request)
+                    ->with(['digitalIdentity', 'accessPoint.building'])
+                    ->orderByDesc('event_time')
+                    ->limit($limit)
+                    ->get()
+            ),
             'total' => $this->query($request)->count(),
             'limit' => $limit,
         ];
@@ -100,10 +108,15 @@ class AccessReportService
      */
     public function stream(Request $request): LazyCollection
     {
+        // Владельцы разбираются пачками по тысяче: курсор остаётся курсором, в
+        // память попадает пачка, а не файл целиком, и запросов выходит три на
+        // тысячу строк вместо тысячи.
         return $this->query($request)
             ->with(['digitalIdentity', 'accessPoint.building'])
             ->orderByDesc('event_time')
-            ->lazy();
+            ->lazy()
+            ->chunk(1000)
+            ->flatMap(fn (LazyCollection $chunk): Collection => $this->owners->attach($chunk->collect()));
     }
 
     /**
