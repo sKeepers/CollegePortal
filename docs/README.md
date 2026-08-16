@@ -165,6 +165,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [JOURNAL_ENGINE.md](JOURNAL_ENGINE.md)
 - [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md)
 - [LAYOUT_GUIDELINES.md](LAYOUT_GUIDELINES.md)
+- [HANDOFF_IDENTITY_AREA_2026-08-16.md](HANDOFF_IDENTITY_AREA_2026-08-16.md)
 - [MILESTONE_002_REVIEW.md](MILESTONE_002_REVIEW.md)
 - [МОДЕЛЬ_ДАННЫХ_ПРИЕМНОЙ_КОМИССИИ.md](МОДЕЛЬ_ДАННЫХ_ПРИЕМНОЙ_КОМИССИИ.md)
 - [MAX_BOT_SETUP.md](MAX_BOT_SETUP.md)
