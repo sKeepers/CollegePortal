@@ -132,7 +132,6 @@ class AttendanceAnalysisService
     {
         $teachers = collect($this->teachersToday()['data']);
         $students = collect($this->studentsToday()['data']);
-        $studentThreshold = (int) SettingService::value('attendance', 'student_late_threshold_minutes', 10);
 
         return [
             'teachers' => $this->dashboardCounters($teachers, DigitalIdentity::ENTITY_TEACHER),
@@ -140,7 +139,12 @@ class AttendanceAnalysisService
             'attention' => [
                 'teachers_absent' => $this->attentionRows($teachers, [self::TEACHER_ABSENT], '/attendance?type=teachers&status=absent'),
                 'teachers_late' => $this->attentionRows($teachers, ['late'], '/attendance?type=teachers&status=late'),
-                'students_late_over_threshold' => $this->attentionRows($students->filter(fn (array $row) => ($row['late_minutes'] ?? 0) > $studentThreshold), ['late'], '/attendance?type=students&status=late'),
+                // Порог больше не применяется здесь вторым слоем: с 17.08.2026
+                // его учитывает сам разбор, и статус «Опоздал» уже означает
+                // «позже начала занятия больше, чем на порог». Пока порог жил
+                // только тут, панель директора его слушалась, а экран
+                // посещаемости и отчёты — нет, и два экрана расходились.
+                'students_late_over_threshold' => $this->attentionRows($students, ['late'], '/attendance?type=students&status=late'),
                 'schedule_without_entry' => $this->attentionRows($students->merge($teachers), [self::TEACHER_ABSENT, self::STUDENT_ABSENT], '/attendance?status=absent'),
                 // Отмечен на занятии, а в здание не входил. Это не про
                 // дисциплину студента, а про достоверность журнала, поэтому
@@ -297,7 +301,12 @@ class AttendanceAnalysisService
 
         $entry = CarbonImmutable::instance($firstEntry);
 
-        if ($entry->greaterThan($firstLessonStart)) {
+        // Порог опоздания задаёт заместитель директора в настройках. До
+        // 17.08.2026 он здесь не спрашивался вовсе: опоздавшим считался всякий,
+        // кто вошёл позже начала занятия хоть на секунду, а три настройки в
+        // каталоге с подписью «используется в аналитике посещаемости» не влияли
+        // ни на что. Человек ставил 15 минут, сохранял и ничего не менялось.
+        if ($entry->greaterThan($firstLessonStart->addMinutes($this->lateThresholdMinutes($personType)))) {
             return ['code' => 'late', 'label' => 'Опоздал', 'tone' => 'warning'];
         }
 
@@ -306,6 +315,28 @@ class AttendanceAnalysisService
         }
 
         return ['code' => $insideNow ? 'present' : 'arrived', 'label' => $personType === 'teacher' ? 'Пришел' : 'Вошел', 'tone' => 'success'];
+    }
+
+    /** @var array<string, int> прочитанные пороги, по одному чтению на разбор */
+    private array $lateThresholds = [];
+
+    /**
+     * Сколько минут опоздания прощается.
+     *
+     * Значения приходят из настроек и по умолчанию разные: преподавателю пять
+     * минут, студенту десять. Так и задумано в каталоге — преподаватель ведёт
+     * занятие, и его опоздание дороже.
+     *
+     * Значение запоминается на время разбора: `students()` и `teachers()`
+     * строят сотни строк, а внутри одного ответа порог меняться не может.
+     */
+    private function lateThresholdMinutes(string $personType): int
+    {
+        return $this->lateThresholds[$personType] ??= max(0, (int) SettingService::value(
+            'attendance',
+            $personType === 'teacher' ? 'teacher_late_threshold_minutes' : 'student_late_threshold_minutes',
+            $personType === 'teacher' ? 5 : 10,
+        ));
     }
 
     private function lateMinutes(?DateTimeInterface $firstEntry, ?CarbonImmutable $firstLessonStart): ?int
