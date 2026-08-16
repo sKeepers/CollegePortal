@@ -96,7 +96,7 @@ onBeforeUnmount(() => {
       <section class="mobile-student-card" id="journal">
         <header><Star :size="20" /><h2>Оценки</h2></header>
         <div v-if="store.grades.length" class="mobile-student-grade-grid">
-          <button v-for="grade in store.grades.slice(0, 6)" :key="grade.id" type="button" @click="openGrade(grade)"><strong>{{ grade.grade }}</strong><span>{{ grade.schedule_lesson?.subject?.name || 'Дисциплина' }}</span></button>
+          <button v-for="grade in store.grades.slice(0, 6)" :key="grade.id" type="button" @click="openGrade(grade)"><strong>{{ grade.grade }}</strong><span>{{ grade.lesson?.subject?.name || 'Дисциплина' }}</span></button>
         </div>
         <p v-else class="mobile-student-empty">Оценок пока нет.</p>
       </section>
@@ -109,7 +109,7 @@ onBeforeUnmount(() => {
           <span>Опоздал: {{ store.attendanceSummary.late }}</span>
         </div>
         <div v-if="store.attendance.length" class="mobile-student-list mobile-student-list--compact">
-          <article v-for="item in store.attendance.slice(0, 4)" :key="item.id" class="mobile-student-list-item"><div><strong>{{ item.schedule_lesson?.subject?.name || 'Занятие' }}</strong><span>{{ formatMobileDate(item.schedule_lesson?.lesson_date) }} · {{ attendanceLabel(item.status) }}<template v-if="item.status === 'late' && item.minutes_late"> · {{ item.minutes_late }} мин.</template></span></div></article>
+          <article v-for="item in store.attendance.slice(0, 4)" :key="item.id" class="mobile-student-list-item"><div><strong>{{ item.lesson?.subject?.name || 'Занятие' }}</strong><span>{{ formatMobileDate(item.lesson?.lesson_date) }} · {{ attendanceLabel(item.status) }}<template v-if="item.status === 'late' && item.minutes_late"> · {{ item.minutes_late }} мин.</template></span></div></article>
         </div>
       </section>
 
@@ -125,9 +125,9 @@ onBeforeUnmount(() => {
       <q-card class="mobile-student-grade-dialog">
         <q-card-section><div class="text-h6">Оценка {{ selectedGrade?.grade || '—' }}</div></q-card-section>
         <q-card-section class="mobile-student-grade-dialog__details">
-          <div><span>Дисциплина</span><strong>{{ selectedGrade?.schedule_lesson?.subject?.name || 'Не указана' }}</strong></div>
-          <div><span>Дата занятия</span><strong>{{ formatMobileDate(selectedGrade?.schedule_lesson?.lesson_date) }}</strong></div>
-          <div><span>Преподаватель</span><strong>{{ selectedGrade?.schedule_lesson?.teacher?.full_name || [selectedGrade?.schedule_lesson?.teacher?.last_name, selectedGrade?.schedule_lesson?.teacher?.first_name, selectedGrade?.schedule_lesson?.teacher?.middle_name].filter(Boolean).join(' ') || 'Не указан' }}</strong></div>
+          <div><span>Дисциплина</span><strong>{{ selectedGrade?.lesson?.subject?.name || 'Не указана' }}</strong></div>
+          <div><span>Дата занятия</span><strong>{{ formatMobileDate(selectedGrade?.lesson?.lesson_date) }}</strong></div>
+          <div><span>Преподаватель</span><strong>{{ selectedGrade?.lesson?.teacher?.full_name || [selectedGrade?.lesson?.teacher?.last_name, selectedGrade?.lesson?.teacher?.first_name, selectedGrade?.lesson?.teacher?.middle_name].filter(Boolean).join(' ') || 'Не указан' }}</strong></div>
           <div><span>Тип оценки</span><strong>{{ selectedGrade?.grade_type?.name || selectedGrade?.grade_type || 'Не указан' }}</strong></div>
           <div v-if="selectedGrade?.comment"><span>Комментарий</span><strong>{{ selectedGrade.comment }}</strong></div>
         </q-card-section>

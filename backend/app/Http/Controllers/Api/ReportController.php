@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Attendance;
-use App\Models\Grade;
 use App\Models\Group;
-use App\Models\ScheduleLesson;
+use App\Models\JournalAttendance;
+use App\Models\JournalGrade;
+use App\Models\JournalLesson;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Services\JournalLessonAccess;
@@ -55,6 +55,8 @@ class ReportController extends Controller
             'absent',
             'late',
             'excused',
+            'sick',
+            'remote',
             'unmarked',
         ], function (callable $row) use ($report): void {
             foreach ($report['students'] as $student) {
@@ -67,6 +69,8 @@ class ReportController extends Controller
                     $student['absent'],
                     $student['late'],
                     $student['excused'],
+                    $student['sick'],
+                    $student['remote'],
                     $student['unmarked'],
                 ]);
             }
@@ -167,7 +171,10 @@ class ReportController extends Controller
         $dateFrom = $filters['date_from'] ?? null;
         $dateTo = $filters['date_to'] ?? null;
 
-        $lessonIds = ScheduleLesson::query()
+        // Занятия и отметки берутся из журнала: там их ставит преподаватель.
+        // Старая пара таблиц с июля наполнялась только демонстрационным
+        // набором, и отчёт по ней показывал не работу, а набор.
+        $lessonIds = JournalLesson::query()
             ->where('group_id', $group->id)
             ->when($dateFrom, fn ($query, string $date) => $query->whereDate('lesson_date', '>=', $date))
             ->when($dateTo, fn ($query, string $date) => $query->whereDate('lesson_date', '<=', $date))
@@ -175,8 +182,12 @@ class ReportController extends Controller
 
         $totalLessons = $lessonIds->count();
 
-        $attendance = Attendance::query()
-            ->whereIn('schedule_lesson_id', $lessonIds)
+        $attendance = JournalAttendance::query()
+            ->whereIn('journal_lesson_id', $lessonIds)
+            // Строки `roster` журнал заводит сам при открытии занятия, до того
+            // как кого-либо отметили: считать их отметками значит показать
+            // «присутствовал» там, где занятие ещё не вели.
+            ->where('source', '!=', 'roster')
             ->get()
             ->groupBy('student_id');
 
@@ -197,6 +208,10 @@ class ReportController extends Controller
                     'absent' => $counts->get('absent', 0),
                     'late' => $counts->get('late', 0),
                     'excused' => $counts->get('excused', 0),
+                    // Журнал знает два статуса, которых старая таблица не
+                    // знала. Не показать их значило бы потерять отметки.
+                    'sick' => $counts->get('sick', 0),
+                    'remote' => $counts->get('remote', 0),
                     'marked_total' => $markedTotal,
                     'unmarked' => max(0, $totalLessons - $markedTotal),
                 ];
@@ -219,6 +234,8 @@ class ReportController extends Controller
                 'absent' => $students->sum('absent'),
                 'late' => $students->sum('late'),
                 'excused' => $students->sum('excused'),
+                'sick' => $students->sum('sick'),
+                'remote' => $students->sum('remote'),
                 'unmarked' => $students->sum('unmarked'),
             ],
             'students' => $students,
@@ -232,15 +249,17 @@ class ReportController extends Controller
         $dateFrom = $filters['date_from'] ?? null;
         $dateTo = $filters['date_to'] ?? null;
 
-        $lessonIds = ScheduleLesson::query()
+        $lessonIds = JournalLesson::query()
             ->where('group_id', $group->id)
             ->where('subject_id', $subject->id)
             ->when($dateFrom, fn ($query, string $date) => $query->whereDate('lesson_date', '>=', $date))
             ->when($dateTo, fn ($query, string $date) => $query->whereDate('lesson_date', '<=', $date))
             ->pluck('id');
 
-        $grades = Grade::query()
-            ->whereIn('schedule_lesson_id', $lessonIds)
+        $grades = JournalGrade::query()
+            ->whereIn('journal_lesson_id', $lessonIds)
+            ->whereNotNull('value')
+            ->where('value', '!=', '')
             ->get()
             ->groupBy('student_id');
 
@@ -251,7 +270,7 @@ class ReportController extends Controller
             ->get()
             ->map(function (Student $student) use ($grades): array {
                 $studentGrades = $grades->get($student->id, collect());
-                $gradeValues = $studentGrades->pluck('grade')->values();
+                $gradeValues = $studentGrades->pluck('value')->values();
                 $numericGrades = $gradeValues
                     ->filter(fn ($grade) => is_numeric($grade))
                     ->map(fn ($grade) => (float) $grade)

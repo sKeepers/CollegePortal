@@ -2,11 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\Attendance;
 use App\Models\Classroom;
 use App\Models\DigitalIdentity;
-use App\Models\Grade;
 use App\Models\Group;
+use App\Models\JournalAttendance;
+use App\Models\JournalGrade;
+use App\Models\JournalLesson;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\ScheduleLesson;
@@ -50,8 +51,21 @@ class MobileStudentApiTest extends TestCase
             'lesson_type' => 'lesson',
             'topic' => 'Повторение интервалов',
         ]);
-        Grade::create(['schedule_lesson_id' => $lesson->id, 'student_id' => $student->id, 'grade' => '5', 'grade_type' => 'classwork']);
-        Attendance::create(['schedule_lesson_id' => $lesson->id, 'student_id' => $student->id, 'status' => 'present']);
+        // Кабинет студента читает журнал, а не старые таблицы: оценку и
+        // отметку ставит преподаватель в занятии журнала (16.08.2026).
+        $journalLesson = JournalLesson::create([
+            'group_id' => $group->id,
+            'teacher_id' => $teacher->id,
+            'subject_id' => $subject->id,
+            'legacy_schedule_lesson_id' => $lesson->id,
+            'lesson_date' => today(),
+            'starts_at' => '09:00',
+            'ends_at' => '10:30',
+            'topic' => 'Повторение интервалов',
+            'status' => JournalLesson::STATUS_IN_PROGRESS,
+        ]);
+        JournalGrade::create(['journal_lesson_id' => $journalLesson->id, 'student_id' => $student->id, 'value' => '5', 'marked_at' => now()]);
+        JournalAttendance::create(['journal_lesson_id' => $journalLesson->id, 'student_id' => $student->id, 'status' => 'present', 'source' => 'manual', 'marked_at' => now()]);
         $identity = DigitalIdentity::create([
             'entity_type' => 'student',
             'entity_id' => $student->id,

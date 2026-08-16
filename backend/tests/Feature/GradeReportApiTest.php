@@ -2,16 +2,19 @@
 
 namespace Tests\Feature;
 
-use App\Models\Classroom;
-use App\Models\Grade;
 use App\Models\Group;
-use App\Models\ScheduleLesson;
+use App\Models\JournalGrade;
+use App\Models\JournalLesson;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Teacher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
+/**
+ * Отчёт об успеваемости группы считает оценки журнала — те, что ставит
+ * преподаватель. Старая таблица `grades` перестала быть источником 16.08.2026.
+ */
 class GradeReportApiTest extends TestCase
 {
     use RefreshDatabase;
@@ -29,24 +32,10 @@ class GradeReportApiTest extends TestCase
         [$student, $otherStudent] = $this->createStudents($context['group']);
         [$lesson, $otherLesson] = $this->createLessons($context);
 
-        Grade::create([
-            'schedule_lesson_id' => $lesson->id,
-            'student_id' => $student->id,
-            'grade' => '5',
-            'grade_type' => 'classwork',
-        ]);
-        Grade::create([
-            'schedule_lesson_id' => $otherLesson->id,
-            'student_id' => $student->id,
-            'grade' => '4',
-            'grade_type' => 'homework',
-        ]);
-        Grade::create([
-            'schedule_lesson_id' => $lesson->id,
-            'student_id' => $otherStudent->id,
-            'grade' => 'зачет',
-            'grade_type' => 'credit',
-        ]);
+        $this->grade($lesson, $student, '5');
+        $this->grade($otherLesson, $student, '4');
+        // Зачёт в среднее не входит, но в число оценок — да.
+        $this->grade($lesson, $otherStudent, 'зачет');
 
         $this->getJson("/api/reports/grades-by-group?group_id={$context['group']->id}&subject_id={$context['subject']->id}")
             ->assertOk()
@@ -59,18 +48,29 @@ class GradeReportApiTest extends TestCase
             ->assertJsonPath('data.students.1.average_grade', null);
     }
 
+    public function test_an_empty_grade_is_not_a_grade(): void
+    {
+        $context = $this->createContext();
+        [$student] = $this->createStudents($context['group']);
+        [$lesson] = $this->createLessons($context);
+
+        // Пустое значение журнал хранит как «оценки нет»: стёртая оценка не
+        // должна попадать в счёт.
+        $this->grade($lesson, $student, '');
+
+        $this->getJson("/api/reports/grades-by-group?group_id={$context['group']->id}&subject_id={$context['subject']->id}")
+            ->assertOk()
+            ->assertJsonPath('data.summary.grades_count', 0)
+            ->assertJsonPath('data.summary.average_grade', null);
+    }
+
     public function test_it_exports_grade_report_to_csv(): void
     {
         $context = $this->createContext();
         [$student] = $this->createStudents($context['group']);
         [$lesson] = $this->createLessons($context);
 
-        Grade::create([
-            'schedule_lesson_id' => $lesson->id,
-            'student_id' => $student->id,
-            'grade' => '5',
-            'grade_type' => 'classwork',
-        ]);
+        $this->grade($lesson, $student, '5');
 
         $response = $this->get("/api/reports/grades-by-group/export?group_id={$context['group']->id}&subject_id={$context['subject']->id}");
 
@@ -83,6 +83,16 @@ class GradeReportApiTest extends TestCase
         $this->assertStringContainsString('student;group;subject;grades', $content);
         $this->assertStringContainsString('Иванов Дмитрий Сергеевич', $content);
         $this->assertStringContainsString('Сольфеджио', $content);
+    }
+
+    private function grade(JournalLesson $lesson, Student $student, string $value): JournalGrade
+    {
+        return JournalGrade::create([
+            'journal_lesson_id' => $lesson->id,
+            'student_id' => $student->id,
+            'value' => $value,
+            'marked_at' => now(),
+        ]);
     }
 
     private function createContext(): array
@@ -101,10 +111,6 @@ class GradeReportApiTest extends TestCase
             'subject' => Subject::create([
                 'name' => 'Сольфеджио',
                 'code' => 'MUS-101',
-            ]),
-            'classroom' => Classroom::create([
-                'number' => '201',
-                'building' => 'Главный корпус',
             ]),
         ];
     }
@@ -132,26 +138,21 @@ class GradeReportApiTest extends TestCase
     private function createLessons(array $context): array
     {
         return [
-            ScheduleLesson::create([
-                'group_id' => $context['group']->id,
-                'teacher_id' => $context['teacher']->id,
-                'subject_id' => $context['subject']->id,
-                'classroom_id' => $context['classroom']->id,
-                'lesson_date' => '2026-09-02',
-                'starts_at' => '09:00',
-                'ends_at' => '10:30',
-                'lesson_type' => 'lesson',
-            ]),
-            ScheduleLesson::create([
-                'group_id' => $context['group']->id,
-                'teacher_id' => $context['teacher']->id,
-                'subject_id' => $context['subject']->id,
-                'classroom_id' => $context['classroom']->id,
-                'lesson_date' => '2026-09-03',
-                'starts_at' => '09:00',
-                'ends_at' => '10:30',
-                'lesson_type' => 'lesson',
-            ]),
+            $this->lesson($context, '2026-09-02'),
+            $this->lesson($context, '2026-09-03'),
         ];
+    }
+
+    private function lesson(array $context, string $date): JournalLesson
+    {
+        return JournalLesson::create([
+            'group_id' => $context['group']->id,
+            'teacher_id' => $context['teacher']->id,
+            'subject_id' => $context['subject']->id,
+            'lesson_date' => $date,
+            'starts_at' => '09:00',
+            'ends_at' => '10:30',
+            'status' => JournalLesson::STATUS_IN_PROGRESS,
+        ]);
     }
 }

@@ -17,6 +17,10 @@ const attendanceColumns = [
   { name: 'late', label: 'Опоздал', field: 'late', align: 'right', sortable: true },
   { name: 'absent', label: 'Отсутствовал', field: 'absent', align: 'right', sortable: true },
   { name: 'excused', label: 'По уважительной', field: 'excused', align: 'right', sortable: true },
+  // Два статуса журнала, которых старая таблица посещаемости не знала. Отчёт
+  // читает журнал с 16.08.2026, и без этих колонок отметки просто пропадали бы.
+  { name: 'sick', label: 'Болел', field: 'sick', align: 'right', sortable: true },
+  { name: 'remote', label: 'Дистанционно', field: 'remote', align: 'right', sortable: true },
   { name: 'unmarked', label: 'Не отмечен', field: 'unmarked', align: 'right', sortable: true },
 ]
 

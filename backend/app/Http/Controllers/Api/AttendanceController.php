@@ -3,67 +3,47 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreAttendanceRequest;
-use App\Http\Requests\UpdateAttendanceRequest;
-use App\Http\Resources\AttendanceResource;
-use App\Models\Attendance;
-use App\Services\JournalEntryService;
-use Illuminate\Http\JsonResponse;
+use App\Http\Resources\StudentAttendanceResource;
+use App\Models\JournalAttendance;
+use App\Models\JournalLesson;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Http\Response;
 
+/**
+ * Отметки посещаемости студента списком: карточка студента и его кабинет.
+ *
+ * **Читает журнал** — `journal_attendance`. Старая таблица `attendance` со
+ * своим CRUD была вторым источником правды: преподаватель отмечал в журнале, а
+ * карточка студента показывала таблицу, куда с июля не приходило ни одной живой
+ * отметки. Сведено 16.08.2026 решением владельца.
+ *
+ * Строки с `source = roster` отброшены: их создаёт сам журнал при открытии
+ * занятия, до того как преподаватель кого-либо отметил. Показывать их значило
+ * бы утверждать, что человек присутствовал на занятии, которое ещё не вели.
+ *
+ * Записи здесь больше нет: отметку ставят в журнале.
+ */
 class AttendanceController extends Controller
 {
-    public function __construct(
-        private readonly JournalEntryService $journalEntryService,
-    ) {
-    }
-
     public function index(Request $request): AnonymousResourceCollection
     {
-        $attendance = Attendance::query()
-            ->with(['scheduleLesson', 'student'])
-            ->when($request->integer('schedule_lesson_id'), fn ($query, int $lessonId) => $query->where('schedule_lesson_id', $lessonId))
-            ->when($request->integer('student_id'), fn ($query, int $studentId) => $query->where('student_id', $studentId))
-            ->when($request->string('status')->toString(), fn ($query, string $status) => $query->where('status', $status))
-            ->latest()
+        $attendance = JournalAttendance::query()
+            ->with(['journalLesson.subject', 'journalLesson.teacher', 'student'])
+            ->where('source', '!=', 'roster')
+            ->when($request->integer('student_id'), fn (Builder $query, int $id) => $query->where('student_id', $id))
+            ->when($request->integer('journal_lesson_id'), fn (Builder $query, int $id) => $query->where('journal_lesson_id', $id))
+            ->when($request->string('status')->toString(), fn (Builder $query, string $status) => $query->where('status', $status))
+            // Старый параметр продолжает работать через ссылку занятия журнала
+            // на строку расписания, из которой оно открыто.
+            ->when($request->integer('schedule_lesson_id'), fn (Builder $query, int $id) => $query->whereIn(
+                'journal_lesson_id',
+                JournalLesson::query()->where('legacy_schedule_lesson_id', $id)->select('id'),
+            ))
+            ->latest('marked_at')
+            ->latest('id')
             ->paginate(20);
 
-        return AttendanceResource::collection($attendance);
-    }
-
-    public function store(StoreAttendanceRequest $request): JsonResponse
-    {
-        $data = $request->validated();
-        $this->journalEntryService->ensureStudentBelongsToLessonGroup($data['schedule_lesson_id'], $data['student_id']);
-
-        $attendance = Attendance::create($data);
-
-        return (new AttendanceResource($attendance->load(['scheduleLesson', 'student'])))
-            ->response()
-            ->setStatusCode(Response::HTTP_CREATED);
-    }
-
-    public function show(Attendance $attendance): AttendanceResource
-    {
-        return new AttendanceResource($attendance->load(['scheduleLesson', 'student']));
-    }
-
-    public function update(UpdateAttendanceRequest $request, Attendance $attendance): AttendanceResource
-    {
-        $data = $request->mergedWithCurrentAttendance();
-        $this->journalEntryService->ensureStudentBelongsToLessonGroup($data['schedule_lesson_id'], $data['student_id']);
-
-        $attendance->update($request->validated());
-
-        return new AttendanceResource($attendance->load(['scheduleLesson', 'student']));
-    }
-
-    public function destroy(Attendance $attendance): Response
-    {
-        $attendance->delete();
-
-        return response()->noContent();
+        return StudentAttendanceResource::collection($attendance);
     }
 }
