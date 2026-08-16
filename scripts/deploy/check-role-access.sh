@@ -96,6 +96,9 @@ SECTIONS='
 Отчёты проходной|gate.reports|access/reports/summary,access/reports/events
 Корпуса и точки|gate.reports|access/buildings,access/points
 Цифровые пропуска|digitalpasses.manage,view_own_data|digital-identities
+Моя группа|journal.view|curator/groups
+Оценки студента|journal.view|grades
+Отметки студента|journal.view|attendance
 Мобильный кабинет студента|mobile.student.view|mobile/student
 Мобильный кабинет преподавателя|mobile.teacher.view|mobile/teacher
 Мобильный кабинет куратора|mobile.curator.view|mobile/curator
