@@ -3,7 +3,7 @@
 Updates are performed with `installer/update.sh` against an existing `/opt/college-portal` installation.
 
 ```bash
-sudo /opt/college-portal/installer/update.sh /path/to/college-portal-0.8.0-rc8.tar.gz
+sudo /opt/college-portal/installer/update.sh /path/to/college-portal-0.8.0-rc9.tar.gz
 ```
 
 The update script:

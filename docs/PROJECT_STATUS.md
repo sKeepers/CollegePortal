@@ -14,7 +14,7 @@
 
 Private DEV/UAT preparation after Release Candidate 0.8.x. Current project work is focused on final portal stabilization before a broader manual UAT pass.
 
-Текущий релиз — `0.8.0-rc8`, тег `v0.8.0-rc8`. **На PROD `https://portal.skki.ru` пока стоит `0.8.0-rc7`:** установка `rc8` — отдельное решение владельца, потому что она разлогинивает всех. Единственный источник истины о номере версии — `installer/VERSION`; в остальных документах номер допустим только в примерах команд и в исторических записях.
+Текущий релиз — `0.8.0-rc9`, тег `v0.8.0-rc9`. **На PROD `https://portal.skki.ru` пока стоит `0.8.0-rc7`:** установка — отдельное решение владельца, потому что она разлогинивает всех. Единственный источник истины о номере версии — `installer/VERSION`; в остальных документах номер допустим только в примерах команд и в исторических записях.
 
 This document is a navigation and status snapshot. GitHub Issues, Pull Requests and CI remain the authoritative live workflow when GitHub write access is available.
 

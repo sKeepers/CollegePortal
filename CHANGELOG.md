@@ -13,6 +13,29 @@
 
 ## Unreleased
 
+## 0.8.0-rc9 - Private Release Candidate
+
+Everything said about `rc8` still applies: installing this release signs everybody out, and permissions arrive with migrations rather than with the seeder. `rc8` was built but never installed — it is superseded by this one.
+
+### Added
+
+- Notifications reach a person in a messenger. A человек links MAX from their own account page, ticks what they want to hear about, and the portal writes to them: tomorrow's lessons, a schedule change, a journal left unclosed, a daily digest of grades and attendance. Nothing is sent to anybody who has not both linked an account and ticked a box — the bot cannot write first, so the tick is a real consent rather than a promise of one. Grades and debts travel as text by the owner's decision; the debt event waits for the portal to learn when a term starts and ends, which it does not yet.
+- The curator sees their own group. The same lesson screens a teacher gets, on the desktop and on the phone, and only for groups where they are the curator: the scope comes from `groups.curator_id` inside every endpoint, not from holding the permission that shows the section. A curator who curates nothing gets an explanation rather than an empty table.
+- The buildings and access points directory holds the college's three real buildings, and it can be edited again — the screen sent `PATCH` where the route declared `PUT`, so every save answered `405`. The code of a point, which ties the record to the hardware that sends it, is now editable by an administrator only: a typo there stops the gate recognising the point at all.
+
+### Fixed
+
+- A section that declares no permission is open to everyone who signed in. «Моя учётная запись» answered `403` to students, teachers and admissions while the server let all of them through: the browser router kept a table of allowed path prefixes per role, and `/account` was in none of them. The rule now matches the server — a route with no declared requirement is not the prefix table's business — so the next section for everybody does not repeat it.
+- A person cannot end up with two profile cards of one kind. Two paths created them: enrolling an applicant who already had a student card, and a demo run binding a second teacher to an existing account. Both are closed, and the pair that already existed on the stand is merged — that pair is why one teacher's cabinet and journal looked empty.
+- A group report belongs to whoever owns the group, not to whoever asks for it.
+- A permission typo in a role's set no longer passes silently: the seeder fails with the list of codes it could not find, instead of quietly granting a role less than intended.
+- One source for a mark: only the journal writes it.
+- The role sweep checks what it claims. A `500` counted as a pass, and one section was written on two lines; both are fixed, so «ноль расхождений» now means what it says.
+- Three measurements, all on live stand data: the attendance analysis asks about the people it was asked about rather than the whole college, the access report stops asking who each pass belongs to row by row, and reading one setting stops re-reading the whole catalogue.
+- The FIS gateway client signs its read requests too.
+- The demo set writes rows without savepoints — nested transactions were exhausting the PostgreSQL lock table during test runs.
+- The release build runs the test suite against PostgreSQL as well as SQLite. Until now a defect that only shows on PostgreSQL could ship in a green build.
+
 ## 0.8.0-rc8 - Private Release Candidate
 
 Installing this release signs everybody out. Session tokens moved into an httpOnly cookie, and the tokens issued to the old front end sit in `localStorage`, where nothing looks any more. No bridge was built on purpose: a bridge would have read once more exactly what this change hides. Everyone signs in again, once.

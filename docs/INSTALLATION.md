@@ -1,6 +1,6 @@
 # Installation
 
-This document describes a clean installation from a release archive such as `college-portal-0.8.0-rc8.tar.gz`.
+This document describes a clean installation from a release archive such as `college-portal-0.8.0-rc9.tar.gz`.
 
 ## Safety rules
 
