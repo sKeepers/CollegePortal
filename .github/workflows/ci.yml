@@ -125,6 +125,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Обход прав по API этот класс дефектов не ловит: сервер отвечает 200, а отказ
+      # выдаёт маршрутизатор в браузере. Проверка без зависимостей, идёт до сборки.
+      - name: Check role navigation rules
+        run: node scripts/check-role-navigation.mjs
+
       - name: Build
         run: npm run build
 

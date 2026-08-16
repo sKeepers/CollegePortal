@@ -17,8 +17,42 @@ export function primaryRoleCode(auth) {
   return auth.user?.role?.code || auth.roleCodes?.[0] || ''
 }
 
-export function isRoleScopedRouteAllowed(auth, path) {
+/**
+ * Объявляет ли маршрут хоть какое-то требование доступа.
+ *
+ * Роль-зависимые разделы объявляют право, роль или признак «только администратору» —
+ * их закрывает проверка ниже по цепочке и, главное, сервер. Раздел, не объявивший
+ * ничего, открыт любому вошедшему по замыслу.
+ */
+function declaresAccessRequirement(route) {
+  const meta = route?.meta
+  if (!meta) return false
+
+  return Boolean(
+    meta.permission
+    || meta.adminOnly
+    || meta.roles
+    || (meta.permissionsAny || meta.permissions)?.length
+    || meta.permissionsAll?.length,
+  )
+}
+
+/**
+ * @param {object|string} target маршрут (предпочтительно) или его путь
+ */
+export function isRoleScopedRouteAllowed(auth, target) {
+  const path = typeof target === 'string' ? target : target?.path
+
   if (!path || auth.hasRole?.('admin') || auth.hasRole?.('security')) return true
+
+  // Раздел без объявленного требования доступа открыт любому вошедшему — ровно как
+  // на сервере после `ARCH-001`. Таблица префиксов не вправе его закрывать.
+  //
+  // Именно здесь «Моя учётная запись» отвечала `403` студенту, преподавателю и
+  // приёмной комиссии: права у неё нет ни на сервере, ни у маршрута, но `/account`
+  // не попал ни в один список префиксов. Дописать его четвёртой строкой значило бы
+  // ждать того же от каждого следующего общего раздела — поэтому правило, а не строка.
+  if (typeof target === 'object' && !declaresAccessRequirement(target)) return true
 
   const prefixes = ROLE_ROUTE_PREFIXES[primaryRoleCode(auth)]
   if (!prefixes) return true

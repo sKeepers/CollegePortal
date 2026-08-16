@@ -75,7 +75,10 @@ router.beforeEach(async (to) => {
     return { path: '/access/mobile-scanner' }
   }
 
-  if (!isRoleScopedRouteAllowed(auth, to.path)) {
+  // Передаём маршрут целиком, а не путь: по его `meta` видно, объявляет ли раздел
+  // требование доступа. Без этого общий раздел вроде «Моей учётной записи» закрывался
+  // таблицей префиксов, хотя права у него нет ни здесь, ни на сервере.
+  if (!isRoleScopedRouteAllowed(auth, to)) {
     return { name: 'forbidden' }
   }
 
