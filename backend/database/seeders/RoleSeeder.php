@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Database\Seeder;
+use RuntimeException;
 
 class RoleSeeder extends Seeder
 {
@@ -393,9 +394,30 @@ class RoleSeeder extends Seeder
      */
     private const BASELINE_PERMISSIONS = ['reference.view'];
 
+    /**
+     * Код, которого нет в каталоге, раньше **молча выпадал**: `whereIn` возвращал
+     * меньше строк, `sync()` раскладывал что нашлось, установка проходила зелёной,
+     * а роль недосчитывалась права. Так уже терялись `gate.points.manage` и
+     * `students.bulk_accounts`, и заметили это только по жалобе на `403`.
+     *
+     * Опечатка в наборе роли теперь роняет установку с перечнем ненайденного.
+     * Это громче и дешевле: сидер выполняется один раз, и разбираться с ним в
+     * момент установки несравнимо легче, чем через месяц по чужому отказу.
+     */
     private function ids(array $codes)
     {
-        return Permission::whereIn('code', array_values(array_unique([...$codes, ...self::BASELINE_PERMISSIONS])))->pluck('id');
+        $requested = array_values(array_unique([...$codes, ...self::BASELINE_PERMISSIONS]));
+        $found = Permission::whereIn('code', $requested)->pluck('id', 'code');
+        $missing = array_values(array_diff($requested, $found->keys()->all()));
+
+        if ($missing !== []) {
+            throw new RuntimeException(
+                'RoleSeeder: ролям раздаются права, которых нет в каталоге — '.implode(', ', $missing)
+                .'. Добавьте их в permissions() и отдельной миграцией: без каталога право не выдаётся, а без миграции не появится на уже установленной системе.'
+            );
+        }
+
+        return $found->values();
     }
 
     private function syncPermissions(string $roleCode, $permissionIds): void
