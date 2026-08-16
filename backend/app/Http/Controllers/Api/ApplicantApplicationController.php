@@ -215,6 +215,17 @@ class ApplicantApplicationController extends Controller
         $student = DB::transaction(function () use ($request, $applicantApplication): Student {
             $person = $this->resolvePerson($applicantApplication);
 
+            // У человека не бывает двух карточек студента: связи к профилю — `hasOne`,
+            // и вторая карточка молча перекрывает первую, а кабинет и журнал у неё
+            // пустые. На этом уже стояли двумя карточками преподавателя. Массовое
+            // зачисление такую попытку пропускает мимо, одиночное — отказывает:
+            // здесь зачисляют по одному и осознанно.
+            if (Student::where('person_id', $person->id)->exists()) {
+                throw ValidationException::withMessages([
+                    'person' => ['У этого человека уже есть карточка студента — проверьте, не зачислен ли он раньше.'],
+                ]);
+            }
+
             $student = Student::create([
                 'person_id' => $person->id,
                 'group_id' => $request->integer('group_id'),

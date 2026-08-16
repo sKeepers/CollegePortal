@@ -367,6 +367,38 @@ class ApplicantApplicationApiTest extends TestCase
         $this->assertSame('accepted', $application->fresh()->status);
     }
 
+    public function test_it_refuses_to_give_a_person_a_second_student_card(): void
+    {
+        $program = $this->createProgram();
+        $group = $this->createGroup($program);
+        $person = app(PersonService::class)->createPerson([
+            'last_name' => 'Анохин',
+            'first_name' => 'Дмитрий',
+            'middle_name' => 'Алексеевич',
+            'birth_date' => '2010-03-14',
+        ]);
+        Student::create([
+            'person_id' => $person->id,
+            'group_id' => $group->id,
+            'last_name' => 'Анохин',
+            'first_name' => 'Дмитрий',
+            'birth_date' => '2010-03-14',
+            'status' => 'active',
+            'enrollment_date' => '2025-09-01',
+        ]);
+        $application = ApplicantApplication::create($this->payload($program, ['status' => 'accepted']));
+        $this->receiveAllDocuments($application);
+
+        $this->postJson("/api/applicant-applications/{$application->id}/enroll", [
+            'group_id' => $group->id,
+            'enrollment_date' => '2026-09-01',
+        ])->assertStatus(422)->assertJsonValidationErrors('person');
+
+        // Вторая карточка не заведена, а заявление осталось незачисленным.
+        $this->assertSame(1, Student::query()->count());
+        $this->assertSame('accepted', $application->fresh()->status);
+    }
+
     public function test_it_rejects_enrollment_when_required_documents_are_missing(): void
     {
         $program = $this->createProgram();
