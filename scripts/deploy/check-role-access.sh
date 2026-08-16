@@ -11,6 +11,23 @@
 # Ожидание берётся не из головы, а из прав самой роли: скрипт спрашивает
 # `/api/auth/me` и сравнивает право показа раздела с фактическим ответом.
 #
+# Право в третьей колонке: запятая — «или», плюс — «и». Так же складываются
+# проверки у маршрута.
+#
+# **Таблица — не украшение, она и есть охват.** 16.08.2026 обход рапортовал
+# «715 запросов, 0 расхождений» ровно столько же дней подряд, сколько таблицу не
+# трогали: за это время прибавились кураторская группа, отчёты по группам,
+# заявки на правку журнала, отчёты кадров, конфликты и покрытие расписания,
+# настройки, резервные копии и приёмка UAT — 46 точек входа мимо проверки.
+# Добавили раздел — допишите строку, иначе «расхождений нет» будет означать
+# «мы там не смотрели».
+#
+# Чего здесь нет намеренно: разделы, открытые каждому вошедшему (`auth/me`,
+# `account/*`, `dashboard/layouts`, `public/*`, `settings/public`) — у модели
+# «право есть → 200, права нет → 403» для них нет ожидания; и диагностики шлюза
+# ФИС (`fis/outbound/gateway/*`) — они ходят на внешний узел, и обход зависел бы
+# от чужой сети.
+#
 # После `SEC-002` вход отдаёт токен в httpOnly cookie, а не в теле ответа,
 # поэтому здесь cookie jar (`curl -c/-b`), а не заголовок Authorization.
 #
@@ -89,7 +106,31 @@ SECTIONS='
 Роли|roles.manage|admin/roles
 Разрешения|permissions.manage|admin/permissions,admin/permissions/roles/list
 Аудит|audit.view|admin/audit
-Корзина|trash.manage|trash,deletion-requests/pending
+Корзина|trash.manage|trash,deletion-requests/pending,deletion-requests
+Журнал: заявки на правку|journal.view+journal.reopen|journal/edit-requests/pending,journal/edit-requests/history
+Журнал: выгрузки|journal.view+journal.export|journal/export/group.csv,journal/export/teacher.csv
+Моя группа|journal.view|curator/groups
+Отметки и оценки|journal.view|attendance,grades
+Отчёты по группам|journal.view|reports/attendance-by-group,reports/grades-by-group
+Отчёты по группам: выгрузка|journal.export|reports/attendance-by-group/export,reports/grades-by-group/export
+История посещаемости|attendance.reports|attendance/history
+События проходной|gate.reports|access/events
+Расписание: выгрузка|schedule.view|schedule-lessons/export
+Расписание: конфликты|schedule.view+schedule.view_conflicts|schedule/conflicts
+Расписание: покрытие часов|schedule.view+schedule.view_coverage|schedule/coverage
+Расписание: шаблоны|schedule.view+schedule.manage_templates|schedule/templates
+Кадровые отчёты|hr.calendar.view+hr.reports.view|hr/reports/absences,hr/reports/absences.csv
+Сотрудники: выгрузка|hr.employees.view|employees/export
+Справочники приёмной|admissions.reference.view|admissions/reference
+Заявления: сводка|admissions.view|applicant-applications/stats
+Полнота карточек|students.view|students/card-completeness/summary
+Настройки|settings.manage|admin/settings
+Резервные копии|settings.manage|admin/database-backups
+Справочники|reference.view|admin/reference/catalogs,admin/reference/items
+Пользователи: люди|users.manage|admin/users/people
+Управление данными: выгрузка|demo_data.manage|admin/demo-data/export
+Приёмка UAT|uat.manage|admin/uat/config,admin/uat/runs,admin/uat/feedback
+Приёмка UAT: выгрузки|uat.manage|admin/uat/export/results.csv,admin/uat/export/feedback.csv
 '
 
 problems=0
@@ -120,9 +161,18 @@ for login in $ACCOUNTS; do
         if [[ "$is_admin" != "0" ]]; then
             expected=allow
         else
+            # Запятая — «или», плюс — «и»: ровно так складываются проверки у
+            # маршрута. Несколько `permission:` на одном маршруте требуют всех
+            # разом, альтернативы внутри одной перечисляются через запятую.
             IFS=',' read -ra gates <<< "$gate"
             for one in "${gates[@]}"; do
-                if printf '%s\n' "$held" | grep -qx "$one"; then
+                enough=1
+                IFS='+' read -ra needed <<< "$one"
+                for need in "${needed[@]}"; do
+                    printf '%s\n' "$held" | grep -qx "$need" || { enough=0; break; }
+                done
+
+                if [[ "$enough" == 1 ]]; then
                     expected=allow
                     break
                 fi
@@ -134,7 +184,13 @@ for login in $ACCOUNTS; do
             status=$(curl -sk -b "$jar" -o /dev/null -w '%{http_code}' "$BASE/$path")
             checked=$((checked + 1))
 
-            if [[ "$expected" == allow && "$status" == "403" ]]; then
+            if [[ "$status" =~ ^5 ]]; then
+                # Падение сервера — это не «доступ есть». Пока смотрели только на
+                # 403, ответ 500 у роли с правом читался как разрешение, и обход
+                # рапортовал бы «расхождений нет» о сломанном разделе.
+                echo "ОШИБКА   $login  $section  GET $path — $status"
+                problems=$((problems + 1))
+            elif [[ "$expected" == allow && "$status" == "403" ]]; then
                 echo "ЗАКРЫТО  $login  $section  GET $path — 403, хотя право $gate есть"
                 problems=$((problems + 1))
             elif [[ "$expected" == deny && "$status" != "403" ]]; then
