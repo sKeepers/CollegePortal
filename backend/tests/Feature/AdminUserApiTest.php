@@ -20,7 +20,7 @@ class AdminUserApiTest extends TestCase
 
     public function test_admin_can_create_update_block_unblock_and_delete_user(): void
     {
-        $role = Role::create(['name' => 'Преподаватель', 'code' => 'teacher']);
+        $role = Role::firstOrCreate(['code' => 'teacher'], ['name' => 'Преподаватель']);
         $person = Person::create(['last_name' => 'Иванов', 'first_name' => 'Иван', 'status' => 'active']);
 
         $this->withApiAuth()
@@ -72,7 +72,7 @@ class AdminUserApiTest extends TestCase
 
     public function test_user_validation_errors_are_localized(): void
     {
-        $role = Role::create(['name' => 'Преподаватель', 'code' => 'teacher']);
+        $role = Role::firstOrCreate(['code' => 'teacher'], ['name' => 'Преподаватель']);
         User::factory()->create(['email' => 'duplicate@example.test']);
 
         $this->withApiAuth()
@@ -147,7 +147,7 @@ class AdminUserApiTest extends TestCase
 
     public function test_user_update_allows_current_email_and_blank_password(): void
     {
-        $role = Role::create(['name' => 'Преподаватель', 'code' => 'teacher']);
+        $role = Role::firstOrCreate(['code' => 'teacher'], ['name' => 'Преподаватель']);
         $user = User::factory()->create([
             'name' => 'Редактируемый пользователь',
             'email' => 'editable@example.test',
@@ -174,7 +174,7 @@ class AdminUserApiTest extends TestCase
 
     public function test_non_user_manager_cannot_open_users_api(): void
     {
-        $role = Role::create(['name' => 'Учебная часть', 'code' => 'academic_office']);
+        $role = Role::firstOrCreate(['code' => 'academic_office'], ['name' => 'Учебная часть']);
         $permission = Permission::create(['name' => 'Справочники: управление', 'code' => 'reference.manage']);
         $role->permissions()->sync([$permission->id]);
         $user = $this->createApiUser(roleCode: 'academic_office');
@@ -187,7 +187,7 @@ class AdminUserApiTest extends TestCase
 
     public function test_admin_can_provision_profile_and_receive_one_time_credential_card(): void
     {
-        Role::create(['name' => 'Преподаватель', 'code' => 'teacher']);
+        Role::firstOrCreate(['code' => 'teacher'], ['name' => 'Преподаватель']);
         $teacher = Teacher::create([
             'last_name' => 'Петрова',
             'first_name' => 'Анна',
@@ -218,7 +218,7 @@ class AdminUserApiTest extends TestCase
 
     public function test_user_without_users_manage_cannot_provision_account(): void
     {
-        Role::create(['name' => 'Преподаватель', 'code' => 'teacher']);
+        Role::firstOrCreate(['code' => 'teacher'], ['name' => 'Преподаватель']);
         $teacher = Teacher::create(['last_name' => 'Петрова', 'first_name' => 'Анна', 'is_active' => true]);
         $user = $this->createApiUser(roleCode: 'academic_office');
 
@@ -230,7 +230,7 @@ class AdminUserApiTest extends TestCase
     public function test_portal_user_seeder_creates_one_account_per_role_outside_production(): void
     {
         foreach (PortalUserSeeder::accounts() as $account) {
-            Role::create(['name' => $account['name'], 'code' => $account['role']]);
+            Role::firstOrCreate(['code' => $account['role']], ['name' => $account['name']]);
         }
 
         Group::create(['name' => 'ТЕСТ-11', 'specialty' => 'Тестовая', 'course' => 1, 'year_start' => 2026]);
@@ -264,7 +264,7 @@ class AdminUserApiTest extends TestCase
     public function test_portal_user_seeder_keeps_existing_names(): void
     {
         foreach (PortalUserSeeder::accounts() as $account) {
-            Role::create(['name' => $account['name'], 'code' => $account['role']]);
+            Role::firstOrCreate(['code' => $account['role']], ['name' => $account['name']]);
         }
 
         User::create([

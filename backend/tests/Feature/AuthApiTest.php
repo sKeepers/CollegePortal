@@ -15,7 +15,7 @@ class AuthApiTest extends TestCase
 
     public function test_user_can_login_and_get_token(): void
     {
-        $role = Role::create(['name' => 'Administrator', 'code' => 'admin']);
+        $role = Role::firstOrCreate(['code' => 'admin'], ['name' => 'Administrator']);
         $user = User::factory()->create([
             'role_id' => $role->id,
             'email' => 'admin@example.test',
@@ -171,7 +171,7 @@ class AuthApiTest extends TestCase
      */
     public function test_wrong_logins_from_one_address_do_not_lock_out_another_account(): void
     {
-        $role = Role::create(['name' => 'Преподаватель', 'code' => 'teacher']);
+        $role = Role::firstOrCreate(['code' => 'teacher'], ['name' => 'Преподаватель']);
         User::factory()->create([
             'role_id' => $role->id,
             'username' => 'petrova.av',
@@ -191,7 +191,7 @@ class AuthApiTest extends TestCase
     /** Подбор пароля к одной учетной записи обязан упираться в счетчик. */
     public function test_repeated_attempts_against_one_account_are_throttled(): void
     {
-        $role = Role::create(['name' => 'Преподаватель', 'code' => 'teacher']);
+        $role = Role::firstOrCreate(['code' => 'teacher'], ['name' => 'Преподаватель']);
         User::factory()->create([
             'role_id' => $role->id,
             'username' => 'petrova.av',
@@ -215,7 +215,7 @@ class AuthApiTest extends TestCase
      */
     public function test_phone_login_spellings_share_one_attempt_counter(): void
     {
-        $role = Role::create(['name' => 'Преподаватель', 'code' => 'teacher']);
+        $role = Role::firstOrCreate(['code' => 'teacher'], ['name' => 'Преподаватель']);
         User::factory()->create([
             'role_id' => $role->id,
             'username' => '+79990000001',

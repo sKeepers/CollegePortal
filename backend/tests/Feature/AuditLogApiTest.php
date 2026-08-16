@@ -95,7 +95,7 @@ class AuditLogApiTest extends TestCase
 
     public function test_user_actions_are_logged(): void
     {
-        $role = Role::create(['name' => 'Преподаватель', 'code' => 'teacher']);
+        $role = Role::firstOrCreate(['code' => 'teacher'], ['name' => 'Преподаватель']);
         $this->withApiAuth();
 
         $this->postJson('/api/admin/users', [

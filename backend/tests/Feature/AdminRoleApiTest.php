@@ -42,7 +42,7 @@ class AdminRoleApiTest extends TestCase
 
     public function test_role_assigned_to_user_cannot_be_deleted(): void
     {
-        $role = Role::create(['name' => 'Назначенная роль', 'code' => 'assigned_role']);
+        $role = Role::firstOrCreate(['code' => 'assigned_role'], ['name' => 'Назначенная роль']);
         $user = User::factory()->create(['role_id' => $role->id]);
         $user->roles()->sync([$role->id => ['is_primary' => true]]);
 
@@ -54,8 +54,8 @@ class AdminRoleApiTest extends TestCase
 
     public function test_admin_can_assign_multiple_roles_to_user(): void
     {
-        $primary = Role::create(['name' => 'Основная роль', 'code' => 'primary_role']);
-        $extra = Role::create(['name' => 'Дополнительная роль', 'code' => 'extra_role']);
+        $primary = Role::firstOrCreate(['code' => 'primary_role'], ['name' => 'Основная роль']);
+        $extra = Role::firstOrCreate(['code' => 'extra_role'], ['name' => 'Дополнительная роль']);
         $user = User::factory()->create(['role_id' => $primary->id]);
 
         $this->withApiAuth()

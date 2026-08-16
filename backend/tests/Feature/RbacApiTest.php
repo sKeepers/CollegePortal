@@ -124,10 +124,7 @@ class RbacApiTest extends TestCase
 
     private function createRoleWithPermissions(string $roleCode, array $permissionCodes): Role
     {
-        $role = Role::create([
-            'name' => str($roleCode)->replace('_', ' ')->title()->toString(),
-            'code' => $roleCode,
-        ]);
+        $role = Role::firstOrCreate(['code' => $roleCode], ['name' => str($roleCode)->replace('_', ' ')->title()->toString()]);
 
         $permissionIds = collect($permissionCodes)
             ->map(fn (string $code) => Permission::create(['name' => $code, 'code' => $code, 'module' => 'Test', 'system' => false, 'active' => true])->id);

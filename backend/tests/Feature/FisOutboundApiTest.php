@@ -200,7 +200,7 @@ class FisOutboundApiTest extends TestCase
     private function userWith(array $permissions): User
     {
         $user = User::factory()->create();
-        $role = Role::create(['name' => 'Test Role '.substr(md5(json_encode($permissions)), 0, 8), 'code' => 'test_'.md5(json_encode($permissions)), 'description' => 'Test role']);
+        $role = Role::firstOrCreate(['code' => 'test_'.md5(json_encode($permissions))], ['name' => 'Test Role '.substr(md5(json_encode($permissions)), 0, 8), 'description' => 'Test role']);
         foreach ($permissions as $code) {
             $permission = Permission::firstOrCreate(['code' => $code], ['name' => $code, 'module' => 'Test', 'description' => $code, 'system' => true, 'active' => true]);
             $role->permissions()->syncWithoutDetaching([$permission->id]);

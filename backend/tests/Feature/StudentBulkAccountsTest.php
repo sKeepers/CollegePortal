@@ -22,7 +22,7 @@ class StudentBulkAccountsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Role::create(['name' => 'Студент', 'code' => 'student']);
+        Role::firstOrCreate(['code' => 'student'], ['name' => 'Студент']);
         $this->withApiAuth();
     }
 

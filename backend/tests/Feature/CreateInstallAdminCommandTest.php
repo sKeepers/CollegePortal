@@ -14,7 +14,7 @@ class CreateInstallAdminCommandTest extends TestCase
 
     public function test_it_creates_first_admin_user(): void
     {
-        $role = Role::create(['name' => 'Administrator', 'code' => 'admin']);
+        $role = Role::firstOrCreate(['code' => 'admin'], ['name' => 'Administrator']);
 
         $this->artisan('install:create-admin', [
             '--email' => 'first.admin@example.test',
@@ -32,7 +32,7 @@ class CreateInstallAdminCommandTest extends TestCase
 
     public function test_it_rejects_short_admin_password(): void
     {
-        Role::create(['name' => 'Administrator', 'code' => 'admin']);
+        Role::firstOrCreate(['code' => 'admin'], ['name' => 'Administrator']);
 
         $this->artisan('install:create-admin', [
             '--email' => 'first.admin@example.test',

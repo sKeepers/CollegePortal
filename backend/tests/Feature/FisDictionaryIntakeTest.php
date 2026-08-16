@@ -193,7 +193,7 @@ class FisDictionaryIntakeTest extends TestCase
     private function userWith(array $permissions): User
     {
         $user = User::factory()->create();
-        $role = Role::create(['name' => 'FIS dict '.substr(md5(json_encode($permissions)), 0, 8), 'code' => 'fis_dict_'.md5(json_encode($permissions)), 'description' => 'Test role']);
+        $role = Role::firstOrCreate(['code' => 'fis_dict_'.md5(json_encode($permissions))], ['name' => 'FIS dict '.substr(md5(json_encode($permissions)), 0, 8), 'description' => 'Test role']);
         foreach ($permissions as $code) {
             $permission = Permission::firstOrCreate(['code' => $code], ['name' => $code, 'module' => 'Test', 'description' => $code, 'system' => true, 'active' => true]);
             $role->permissions()->syncWithoutDetaching([$permission->id]);

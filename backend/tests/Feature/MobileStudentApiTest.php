@@ -26,7 +26,7 @@ class MobileStudentApiTest extends TestCase
 
     public function test_it_returns_mobile_student_cabinet_data(): void
     {
-        $role = Role::create(['code' => 'student', 'name' => 'Студент']);
+        $role = Role::firstOrCreate(['code' => 'student'], ['name' => 'Студент']);
         // Кабинет закрыт правом `mobile.student.view` с `ARCH-001`, шага 3.
         // Раньше маршрут лежал в общей авторизованной группе, и право
         // спрашивал только маршрутизатор фронтенда.

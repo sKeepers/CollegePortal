@@ -103,11 +103,7 @@ class ReferenceReadAccessTest extends TestCase
     private function userWith(array $permissions): User
     {
         $user = User::factory()->create();
-        $role = Role::create([
-            'name' => 'Чтение '.substr(md5(json_encode($permissions)), 0, 8),
-            'code' => 'read_'.substr(md5(json_encode($permissions)), 0, 12),
-            'description' => 'Test role',
-        ]);
+        $role = Role::firstOrCreate(['code' => 'read_'.substr(md5(json_encode($permissions)), 0, 12)], ['name' => 'Чтение '.substr(md5(json_encode($permissions)), 0, 8), 'description' => 'Test role']);
 
         foreach ($permissions as $code) {
             $permission = Permission::firstOrCreate(

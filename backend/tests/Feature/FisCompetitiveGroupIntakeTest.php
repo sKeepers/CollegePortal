@@ -207,11 +207,7 @@ class FisCompetitiveGroupIntakeTest extends TestCase
     private function userWith(array $permissions): User
     {
         $user = User::factory()->create();
-        $role = Role::create([
-            'name' => 'Конкурсы '.substr(md5(json_encode($permissions)), 0, 8),
-            'code' => 'cg_'.substr(md5(json_encode($permissions)), 0, 12),
-            'description' => 'Test role',
-        ]);
+        $role = Role::firstOrCreate(['code' => 'cg_'.substr(md5(json_encode($permissions)), 0, 12)], ['name' => 'Конкурсы '.substr(md5(json_encode($permissions)), 0, 8), 'description' => 'Test role']);
 
         foreach ($permissions as $code) {
             $permission = Permission::firstOrCreate(

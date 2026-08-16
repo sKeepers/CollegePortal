@@ -147,11 +147,7 @@ class StudentFilterAndReferenceAccessTest extends TestCase
     private function userWith(array $permissions): User
     {
         $user = User::factory()->create();
-        $role = Role::create([
-            'name' => 'Фильтры '.substr(md5(json_encode($permissions)), 0, 8),
-            'code' => 'filters_'.substr(md5(json_encode($permissions)), 0, 12),
-            'description' => 'Test role',
-        ]);
+        $role = Role::firstOrCreate(['code' => 'filters_'.substr(md5(json_encode($permissions)), 0, 12)], ['name' => 'Фильтры '.substr(md5(json_encode($permissions)), 0, 8), 'description' => 'Test role']);
 
         foreach ($permissions as $code) {
             $permission = Permission::firstOrCreate(

@@ -111,7 +111,7 @@ class UniversalImportApiTest extends TestCase
 
     public function test_it_imports_employee_work_schedule_and_provisions_requested_account(): void
     {
-        Role::create(['name' => 'Сотрудник', 'code' => 'employee']);
+        Role::firstOrCreate(['code' => 'employee'], ['name' => 'Сотрудник']);
         Department::create(['code' => 'study', 'name' => 'Учебная часть']);
         Position::create(['code' => 'methodist', 'name' => 'Методист']);
         $file = $this->xlsxFile('employees-schedule.xlsx', [
@@ -263,7 +263,7 @@ class UniversalImportApiTest extends TestCase
 
     public function test_it_provisions_requested_student_account_without_password_in_job_result(): void
     {
-        Role::create(['name' => 'Студент', 'code' => 'student']);
+        Role::firstOrCreate(['code' => 'student'], ['name' => 'Студент']);
         $group = Group::create(['name' => 'ИСП-101', 'specialty' => 'Инструментальное исполнительство', 'course' => 1, 'year_start' => 2026]);
         $file = $this->csvFile('students-auto-account.csv', "Фамилия;Имя;Группа;Телефон;Создать учетную запись\nИванов;Дмитрий;{$group->name};+79990000002;да\n");
 

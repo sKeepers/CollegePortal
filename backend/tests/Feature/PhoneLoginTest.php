@@ -31,7 +31,7 @@ class PhoneLoginTest extends TestCase
 
     public function test_provisioned_login_is_the_phone_in_one_form(): void
     {
-        Role::create(['name' => 'Студент', 'code' => 'student']);
+        Role::firstOrCreate(['code' => 'student'], ['name' => 'Студент']);
         $student = $this->student('89331785695');
 
         $account = app(AccountProvisioningService::class)->provision($student);
@@ -41,7 +41,7 @@ class PhoneLoginTest extends TestCase
 
     public function test_person_without_phone_gets_surname_with_initials(): void
     {
-        Role::create(['name' => 'Студент', 'code' => 'student']);
+        Role::firstOrCreate(['code' => 'student'], ['name' => 'Студент']);
         $student = Student::create([
             'group_id' => $this->group()->id,
             'last_name' => 'Альгашова',
@@ -77,7 +77,7 @@ class PhoneLoginTest extends TestCase
 
     private function studentWithAccount(string $phone): Student
     {
-        Role::create(['name' => 'Студент', 'code' => 'student']);
+        Role::firstOrCreate(['code' => 'student'], ['name' => 'Студент']);
         $student = $this->student($phone);
         app(AccountProvisioningService::class)->provision($student);
         $student->refresh();

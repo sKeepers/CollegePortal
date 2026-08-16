@@ -18,7 +18,7 @@ class AccountPassProvisioningTest extends TestCase
 
     public function test_account_creation_issues_a_digital_pass(): void
     {
-        Role::create(['name' => 'Студент', 'code' => 'student']);
+        Role::firstOrCreate(['code' => 'student'], ['name' => 'Студент']);
         $group = Group::create(['name' => 'ИСП-101', 'specialty' => 'Инструментальное исполнительство', 'course' => 1, 'year_start' => 2026]);
         $student = Student::create([
             'group_id' => $group->id,
@@ -42,7 +42,7 @@ class AccountPassProvisioningTest extends TestCase
 
     public function test_existing_active_pass_is_not_reissued(): void
     {
-        Role::create(['name' => 'Преподаватель', 'code' => 'teacher']);
+        Role::firstOrCreate(['code' => 'teacher'], ['name' => 'Преподаватель']);
         $teacher = Teacher::create([
             'last_name' => 'Петров',
             'first_name' => 'Алексей',
