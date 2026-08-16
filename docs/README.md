@@ -168,6 +168,8 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [MILESTONE_002_REVIEW.md](MILESTONE_002_REVIEW.md)
 - [МОДЕЛЬ_ДАННЫХ_ПРИЕМНОЙ_КОМИССИИ.md](МОДЕЛЬ_ДАННЫХ_ПРИЕМНОЙ_КОМИССИИ.md)
 - [MAX_BOT_SETUP.md](MAX_BOT_SETUP.md)
+- [MOB_003_FIELD_CHECKS.md](MOB_003_FIELD_CHECKS.md)
+- [MOB_CABINETS_FIELD_CHECKS.md](MOB_CABINETS_FIELD_CHECKS.md)
 - [MOBILE_ACCESS_SCANNER.md](MOBILE_ACCESS_SCANNER.md)
 - [NOTIFY_001_PLAN.md](NOTIFY_001_PLAN.md)
 - [PASSWORD_POLICY_DECISION.md](PASSWORD_POLICY_DECISION.md)
