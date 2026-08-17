@@ -9,6 +9,7 @@ use App\Http\Requests\Admissions\UpdateAdmissionApplicationRequest;
 use App\Http\Resources\Admissions\AdmissionApplicationResource;
 use App\Services\Admissions\AdmissionApplicationService;
 use App\Services\AuditLogService;
+use App\Services\FisIntegration\FisApplicationReadinessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -38,6 +39,23 @@ class AdmissionApplicationController extends Controller
         ], user: $request->user());
 
         return AdmissionApplicationResource::collection($this->applications->paginate($filters));
+    }
+
+    /**
+     * Чего не хватает заявлению для выгрузки в ФИС ГИА и Приёма.
+     *
+     * Это не действие, а взгляд на ту же карточку глазами схемы ФИС, поэтому и
+     * право то же — просмотр заявления. Проверка ничего не пишет.
+     *
+     * До неё оператор узнавал о недостающем **при сборке пакета**, когда заявлений
+     * уже сотни и непонятно, чьё чинить.
+     */
+    public function fisReadiness(int $application, FisApplicationReadinessService $readiness): JsonResponse
+    {
+        $model = $this->applications->find($application);
+        abort_if(! $model, Response::HTTP_NOT_FOUND);
+
+        return response()->json(['data' => $readiness->check($model)]);
     }
 
     public function show(Request $request, int $application): AdmissionApplicationResource

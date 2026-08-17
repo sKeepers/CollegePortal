@@ -283,6 +283,11 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     Route::get('admissions/applications/{application}', [AdmissionsAdmissionApplicationController::class, 'show'])
         ->whereNumber('application')
         ->middleware('permission:admissions.application.view');
+    // Готовность заявления к выгрузке в ФИС. Право то же, что у просмотра: это
+    // не действие, а взгляд на карточку глазами схемы ФИС.
+    Route::get('admissions/applications/{application}/fis-readiness', [AdmissionsAdmissionApplicationController::class, 'fisReadiness'])
+        ->whereNumber('application')
+        ->middleware('permission:admissions.application.view');
     Route::post('admissions/applications', [AdmissionsAdmissionApplicationController::class, 'store'])
         ->middleware('permission:admissions.application.create');
     Route::patch('admissions/applications/{application}', [AdmissionsAdmissionApplicationController::class, 'update'])

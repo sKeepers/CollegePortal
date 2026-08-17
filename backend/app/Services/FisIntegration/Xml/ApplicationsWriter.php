@@ -44,8 +44,16 @@ class ApplicationsWriter
     ) {
     }
 
-    /** @return array<string, int> */
-    public function write(XMLWriter $writer, XmlFieldWriter $fields, CompositionBlockers $blockers, FisOutboundPackage $package): array
+    /**
+     * @param  int|null  $onlyApplicationId  проверить одно заявление вместо всей кампании.
+     *                                       Нужно карточке абитуриента: она показывает, чего
+     *                                       не хватает для выгрузки, **до** сборки пакета, и
+     *                                       обязана судить по тем же правилам. Отдельная
+     *                                       проверка однажды разошлась бы со сборкой, и
+     *                                       карточка обещала бы готовность, которой нет.
+     * @return array<string, int>
+     */
+    public function write(XMLWriter $writer, XmlFieldWriter $fields, CompositionBlockers $blockers, FisOutboundPackage $package, ?int $onlyApplicationId = null): array
     {
         if (! $package->admission_year) {
             $blockers->add(
@@ -68,6 +76,7 @@ class ApplicationsWriter
                 'documentSet.educationDocument.documentType',
             ])
             ->where('admission_year', $package->admission_year)
+            ->when($onlyApplicationId !== null, fn ($query) => $query->whereKey($onlyApplicationId))
             ->orderBy('id')
             ->get()
             ->reject(fn (AdmissionApplication $application): bool => $application->isDraft());
@@ -76,7 +85,11 @@ class ApplicationsWriter
             $blockers->add(
                 'no_source_data',
                 'Applications',
-                'За '.$package->admission_year.' год нет зарегистрированных заявлений приёмной комиссии.',
+                $onlyApplicationId !== null
+                    // Проверка одного заявления: «нет данных за год» звучало бы так,
+                    // будто дело в кампании, а дело в самом заявлении.
+                    ? 'Заявление не зарегистрировано или относится к другому году приёма: выгружать нечего.'
+                    : 'За '.$package->admission_year.' год нет зарегистрированных заявлений приёмной комиссии.',
             );
 
             return ['applications' => 0];
