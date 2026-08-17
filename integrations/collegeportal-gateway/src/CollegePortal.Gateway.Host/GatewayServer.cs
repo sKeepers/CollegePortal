@@ -103,7 +103,34 @@ namespace CollegePortal.Gateway
         private static byte[] ReadBody(HttpListenerRequest request) { using (var ms = new MemoryStream()) { request.InputStream.CopyTo(ms); return ms.ToArray(); } }
         private static Dictionary<string, string> Headers(HttpListenerRequest request) { var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); foreach (string key in request.Headers.Keys) dict[key] = request.Headers[key]; return dict; }
         private static void Write(HttpListenerContext ctx, int status, string json) { var bytes = Encoding.UTF8.GetBytes(json); ctx.Response.StatusCode = status; ctx.Response.ContentType = "application/json; charset=utf-8"; ctx.Response.ContentLength64 = bytes.Length; ctx.Response.OutputStream.Write(bytes, 0, bytes.Length); ctx.Response.OutputStream.Close(); }
-        private static string Payload(GatewayPayload payload, string version) { return "{\"ok\":" + (payload.Ok ? "true" : "false") + ",\"error_code\":\"" + Json(payload.Code) + "\",\"message\":\"" + Json(payload.Message) + "\",\"latency_ms\":" + payload.LatencyMs + ",\"gateway_version\":\"" + Json(version) + "\"}"; }
+        // `data` появляется только когда ФИС что-то вернула. Экранируется он иначе,
+        // чем сообщения: `Json()` заменяет кавычки на апострофы, и для текста это
+        // годится, а для XML означало бы порчу данных.
+        private static string Payload(GatewayPayload payload, string version) { return "{\"ok\":" + (payload.Ok ? "true" : "false") + ",\"error_code\":\"" + Json(payload.Code) + "\",\"message\":\"" + Json(payload.Message) + "\",\"latency_ms\":" + payload.LatencyMs + ",\"gateway_version\":\"" + Json(version) + "\"" + (string.IsNullOrEmpty(payload.Data) ? "" : ",\"data\":\"" + JsonString(payload.Data) + "\"") + "}"; }
+
+        /// <summary>Строгое экранирование строки JSON — без потери символов.</summary>
+        private static string JsonString(string value)
+        {
+            var builder = new StringBuilder((value ?? "").Length + 32);
+
+            foreach (var character in value ?? "") {
+                switch (character) {
+                    case '"': builder.Append("\\\""); break;
+                    case '\\': builder.Append("\\\\"); break;
+                    case '\b': builder.Append("\\b"); break;
+                    case '\f': builder.Append("\\f"); break;
+                    case '\n': builder.Append("\\n"); break;
+                    case '\r': builder.Append("\\r"); break;
+                    case '\t': builder.Append("\\t"); break;
+                    default:
+                        if (character < ' ') { builder.Append("\\u").Append(((int)character).ToString("x4")); }
+                        else { builder.Append(character); }
+                        break;
+                }
+            }
+
+            return builder.ToString();
+        }
         private static string Error(string code, string message) { return "{\"ok\":false,\"error_code\":\"" + Json(code) + "\",\"message\":\"" + Json(message) + "\"}"; }
         private static string Json(string value) { return (value ?? "").Replace("\\", "\\\\").Replace("\"", "'").Replace("\r", " ").Replace("\n", " "); }
         private static string LastSegment(string path) { var index = path.LastIndexOf('/'); return index >= 0 ? path.Substring(index + 1) : path; }
