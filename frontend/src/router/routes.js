@@ -259,18 +259,23 @@ export const routes = [
         meta: { title: 'Аудитории', permission: 'classrooms.view' },
       },
       {
-        // Специальности и программы закрыты одним правом: в таблице
-        // EnsurePermission оба префикса отображаются в reference.manage.
+        // Раздел открыт и тем, кто их правит, и тем, кому они нужны по работе:
+        // учебным частям — срок обучения, форма, квалификация для диплома.
+        // Было закрыто только `reference.manage`, и получалось «данные читаются,
+        // а раздела нет»: сервер отдаёт списки по `reference.view`, выданному
+        // всем, а меню и маршрутизатор держали правку. Создание и правка на
+        // экране всё равно закрыты отдельной проверкой на сервере — читатель
+        // получит раздел только на чтение.
         path: 'specialties',
         name: 'specialties',
         component: SpecialtiesPage,
-        meta: { title: 'Специальности', permission: 'reference.manage' },
+        meta: { title: 'Специальности', permissionsAny: ['reference.manage', 'reference.programs.view'] },
       },
       {
         path: 'education-programs',
         name: 'education-programs',
         component: EducationProgramsPage,
-        meta: { title: 'Образовательные программы', permission: 'reference.manage' },
+        meta: { title: 'Образовательные программы', permissionsAny: ['reference.manage', 'reference.programs.view'] },
       },
       {
         path: 'schedule',
