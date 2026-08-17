@@ -127,7 +127,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [FIS_DATA_MAPPING.md](FIS_DATA_MAPPING.md)
 - [FIS_GATEWAY_AGENT.md](FIS_GATEWAY_AGENT.md)
 - [FIS_GATEWAY_WINDOWS_INSTALLATION.md](FIS_GATEWAY_WINDOWS_INSTALLATION.md)
-- [FIS_LOAD_QUICKSTART.md](FIS_LOAD_QUICKSTART.md)
+- [FIS_LOAD_QUICKSTART.md](FIS_LOAD_QUICKSTART.md) — **что нажимать: инструкция для работающего с порталом, а не для настраивающего**
 - [FIS_OPERATIONS_GUIDE.md](FIS_OPERATIONS_GUIDE.md)
 - [FIS_OUTBOUND_PACKAGES.md](FIS_OUTBOUND_PACKAGES.md)
 - [FIS_SECURITY.md](FIS_SECURITY.md)

@@ -726,7 +726,7 @@ onMounted(async () => {
                   color="positive"
                   :loading="store.saving"
                   @click="markExported"
-                  ><CheckCircle2 :size="15" class="q-mr-xs" /> Exported</q-btn
+                  ><CheckCircle2 :size="15" class="q-mr-xs" /> Отправлено</q-btn
                 ><q-btn
                   dense
                   outline
