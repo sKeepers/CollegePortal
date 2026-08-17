@@ -36,8 +36,13 @@ return [
     // может указать справочник портала явно, и в предпросмотре видно, что
     // именно выбрано. Справочник направлений подготовки сюда не входит — он
     // всегда становится специальностями.
+    // Коды сверены с живым ответом метода `/dictionary` 18.08.2026 — до этого
+    // портал знал два кода из сорока девяти, а форму обучения и источник
+    // финансирования оператор выбирал вручную, потому что их коды были неизвестны.
     'dictionary_intake' => [
         '4' => ['catalog' => 'admission_application_statuses', 'dictionary' => 'ApplicationStatusID'],
+        '14' => ['catalog' => 'education_forms', 'dictionary' => 'EducationFormID'],
+        '15' => ['catalog' => 'funding_forms', 'dictionary' => 'EducationSourceID'],
         '22' => ['catalog' => 'admission_identity_document_types', 'dictionary' => 'IdentityDocumentTypeID'],
     ],
 
