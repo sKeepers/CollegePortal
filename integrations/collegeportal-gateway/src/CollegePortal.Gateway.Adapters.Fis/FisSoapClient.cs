@@ -140,7 +140,12 @@ namespace CollegePortal.Gateway
                 }
             }
             catch (WebException ex) {
-                return GatewayPayload.Fail("soap_fault", Elapsed(start), ex.Status + ": " + ex.GetType().Name);
+                // `ex.Status` в одиночку не отвечает ни на один вопрос: `ProtocolError`
+                // значит «сервис ответил не-успехом», и всё. Настоящая причина — в
+                // коде HTTP и в теле ответа, где ФИС кладёт SOAP-fault. Без них
+                // первый живой вызов заканчивается словом «ProtocolError», и дальше
+                // гадают о сети, адресе и учётных данных сразу.
+                return GatewayPayload.Fail("soap_fault", Elapsed(start), Describe(ex));
             }
             catch (Exception ex) {
                 return GatewayPayload.Fail("soap_error", Elapsed(start), ex.GetType().Name);
@@ -150,6 +155,42 @@ namespace CollegePortal.Gateway
         private static int Elapsed(DateTime start)
         {
             return (int)(DateTime.UtcNow - start).TotalMilliseconds;
+        }
+
+        /// <summary>
+        /// Что именно ответил сервис: статус транспорта, код HTTP и начало тела.
+        ///
+        /// Тело обрезается: в SOAP-fault нужен `faultstring`, он идёт первым, а
+        /// целиком ответ может быть страницей на сотни килобайт. Секретов в теле
+        /// быть не может — учётные данные уходят **в запросе**, а не приходят в
+        /// ответе; на всякий случай наружу всё равно идёт через `RedactDiagnosticData`.
+        /// </summary>
+        private static string Describe(WebException ex)
+        {
+            var description = ex.Status.ToString();
+            var response = ex.Response as HttpWebResponse;
+
+            if (response == null) {
+                return description + ": " + ex.Message;
+            }
+
+            description += " HTTP " + (int)response.StatusCode;
+
+            try {
+                using (var reader = new StreamReader(response.GetResponseStream(), Encoding.UTF8)) {
+                    var body = reader.ReadToEnd();
+                    body = body.Replace("\r", " ").Replace("\n", " ").Trim();
+
+                    if (body.Length > 400) {
+                        body = body.Substring(0, 400) + "…";
+                    }
+
+                    return body.Length == 0 ? description : description + ": " + body;
+                }
+            }
+            catch {
+                return description;
+            }
         }
 
         private static string Escape(string value)
