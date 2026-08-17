@@ -82,6 +82,11 @@ Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttl
 // намеренно: кнопку надо нарисовать и нажать до того, как человек опознан.
 Route::get('auth/providers', [AuthController::class, 'providers']);
 Route::post('auth/provider-login', [AuthController::class, 'loginWithProvider'])->middleware('throttle:auth.external');
+
+// Вход по коду из бота. Запрос кода и его проверка считаются разными счётчиками:
+// первый защищает от рассылки кодов чужим людям, второй — от подбора шести цифр.
+Route::post('auth/code/request', [AuthController::class, 'requestCode'])->middleware('throttle:auth.code.request');
+Route::post('auth/code/login', [AuthController::class, 'loginWithCode'])->middleware('throttle:auth.code.login');
 Route::get('settings/public', [AdminSettingController::class, 'publicSettings']);
 Route::get('public/specialties', [SpecialtyController::class, 'index']);
 Route::get('public/education-programs', [EducationProgramController::class, 'index']);

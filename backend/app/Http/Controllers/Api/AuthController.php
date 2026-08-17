@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Services\Auth\LoginCodeService;
 use App\Services\ExternalIdentityService;
 use App\Support\Auth\Providers\ExternalIdentityProviders;
 use App\Support\Auth\SessionCookie;
@@ -103,6 +104,66 @@ class AuthController extends Controller
         ])->save();
 
         AuditLogService::log('auth', 'login', $user, null, ['provider' => $data['provider']], $request, $user);
+
+        return $this->sessionResponse($request, $user, $token);
+    }
+
+    /**
+     * Запросить код входа — человек ввёл логин и нажал «Получить код».
+     *
+     * Ответ **одинаков всегда**, что бы ни случилось внутри: логина нет, мессенджер
+     * не привязан, диалог с ботом не начат, отправка не удалась. Иначе форма входа
+     * становится способом перебирать учётные записи колледжа и заодно узнавать, у
+     * кого привязан мессенджер. Что произошло на самом деле, знает журнал.
+     */
+    public function requestCode(Request $request, LoginCodeService $codes): JsonResponse
+    {
+        $data = $request->validate(['login' => ['required', 'string', 'max:255']]);
+
+        $codes->request($data['login'], $request->ip());
+
+        return response()->json([
+            'message' => 'Если такая учётная запись есть и к ней привязан мессенджер, код отправлен в него.',
+            'expires_in' => $codes->ttlSeconds(),
+        ]);
+    }
+
+    /**
+     * Войти по коду. Пароль не спрашивается: подтверждением служит владение
+     * привязанным аккаунтом мессенджера, а привязывал его человек, вошедший паролем.
+     */
+    public function loginWithCode(Request $request, LoginCodeService $codes): JsonResponse
+    {
+        $data = $request->validate([
+            'login' => ['required', 'string', 'max:255'],
+            'code' => ['required', 'string', 'max:16'],
+        ]);
+
+        $user = $codes->verify($data['login'], $data['code']);
+
+        if ($user === null) {
+            AuditLogService::log('auth', 'login_code_refused', ['type' => 'User', 'id' => null], null, [
+                'login' => $data['login'],
+            ], $request);
+
+            // Одно сообщение на «код не тот», «код просрочен» и «кода не было»:
+            // человеку делать надо одно и то же, а подбирающему разница подсказывает.
+            return response()->json([
+                'message' => 'Код неверен или устарел. Запросите новый.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $token = Str::random(80);
+        $ttl = (int) config('auth.api_token_ttl_minutes', 720);
+
+        $user->forceFill([
+            'api_token_hash' => Hash::make($token),
+            'api_token_lookup_hash' => hash('sha256', $token),
+            'api_token_expires_at' => now()->addMinutes($ttl),
+            'last_login_at' => now(),
+        ])->save();
+
+        AuditLogService::log('auth', 'login', $user, null, ['method' => 'code'], $request, $user);
 
         return $this->sessionResponse($request, $user, $token);
     }

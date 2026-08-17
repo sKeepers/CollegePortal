@@ -192,6 +192,28 @@ export const api = {
     return request('/auth/providers')
   },
 
+  /**
+   * Попросить бота прислать код входа.
+   *
+   * Ответ сервера одинаков всегда — и когда логина нет, и когда мессенджер не
+   * привязан. Экран поэтому не пытается по нему что-то понять: он просто
+   * переходит ко второму шагу.
+   */
+  async requestLoginCode(login) {
+    return request('/auth/code/request', {
+      method: 'POST',
+      body: JSON.stringify({ login }),
+    })
+  },
+
+  /** Войти по коду из бота. Пароль не передаётся. Сессия та же самая — cookie. */
+  async loginWithCode(login, code, staySignedIn = true) {
+    return request('/auth/code/login', {
+      method: 'POST',
+      body: JSON.stringify({ login, code, staySignedIn }),
+    })
+  },
+
   async me() {
     return request('/auth/me')
   },

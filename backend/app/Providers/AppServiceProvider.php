@@ -104,6 +104,30 @@ class AppServiceProvider extends ServiceProvider
         // и пять попыток в минуту на всех оказались бы теснее, чем нужно.
         RateLimiter::for('auth.external', fn (Request $request) => Limit::perMinute(30)->by('ip|'.$request->ip()));
 
+        // Запрос кода входа. Порог по логину жёсткий и намеренно: каждый запрос —
+        // это сообщение в мессенджер живому человеку, и без счётчика форма входа
+        // превращается в способ забросать его кодами. По адресу считаем щедро:
+        // за общим NAT сидит весь колледж.
+        RateLimiter::for('auth.code.request', function (Request $request) {
+            $login = LoginIdentifier::canonical((string) $request->input('login'));
+
+            return [
+                Limit::perMinute(2)->by('code-request|'.($login !== '' ? $login : $request->ip())),
+                Limit::perMinute(20)->by('ip|'.$request->ip()),
+            ];
+        });
+
+        // Проверка кода. Шесть цифр подбираются перебором, поэтому счётчик здесь
+        // тесный. Второй рубеж — у самого кода: после пяти ошибок он сгорает.
+        RateLimiter::for('auth.code.login', function (Request $request) {
+            $login = LoginIdentifier::canonical((string) $request->input('login'));
+
+            return [
+                Limit::perMinute(5)->by('code-login|'.($login !== '' ? $login : $request->ip())),
+                Limit::perMinute(60)->by('ip|'.$request->ip()),
+            ];
+        });
+
         RateLimiter::for('api.authenticated', function (Request $request) {
             // Считаем по человеку, а не по адресу: снаружи весь колледж приходит через
             // один NAT, и общий счётчик несколько одновременно работающих выбивали бы

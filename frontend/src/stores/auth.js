@@ -68,6 +68,27 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * Вход по коду из бота. Отдельная функция, а не флаг у `login`: у неё свои
+   * два шага и свой текст ошибки, и смешивать их значило бы, что «неверный
+   * пароль» однажды покажется человеку, который пароль не вводил.
+   */
+  async function loginWithCode(login, code, staySignedIn = true) {
+    loading.value = true
+    error.value = ''
+
+    try {
+      const result = await api.loginWithCode(login, code, staySignedIn)
+      user.value = result.user
+      initialized.value = true
+    } catch (caught) {
+      error.value = caught.message
+      throw caught
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function restore() {
     if (!api.hasSession()) {
       initialized.value = true
@@ -129,6 +150,7 @@ export const useAuthStore = defineStore('auth', () => {
     hasRole,
     login,
     loginWithProvider,
+    loginWithCode,
     restore,
     logout,
   }
