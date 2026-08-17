@@ -1,6 +1,9 @@
 # Copy to C:\CollegePortalGateway\config\gateway.private.config and protect ACL.
 BindPrefix=http://+:8099/
-AllowedPortalIps=192.168.34.104
+# Адреса самого портала: DEV и PROD. В образце стоял 192.168.34.104 - это сервер
+# Moodle, а не портал; на узле из-за этого шли отказы 403 ip_denied, пока список
+# не исправили 12.08.2026. Здесь исправлено, чтобы новая установка не повторила.
+AllowedPortalIps=192.168.34.114,192.168.34.99
 SharedSecret=CHANGE_ME_GENERATE_LONG_RANDOM_SECRET
 InstallRoot=C:\CollegePortalGateway
 FisTestEndpoint=http://10.0.3.1:8383/api/import/ImportService.svc
@@ -16,3 +19,11 @@ NonceStorePath=C:\CollegePortalGateway\cache\nonces.txt
 DiagnosticsPath=C:\CollegePortalGateway\diagnostics\latest.json
 OfficialSpecStatus=not_imported
 ServiceVersion=0.2.0-dev
+
+# Учётные данные ФИС ГИА и Приёма. Только здесь, на шлюзовом узле: портал ходит
+# в ФИС через шлюз и знать их ему незачем - в .env портала им не место.
+# Уходят полем Root/AuthData внутри тела SOAP-запроса, так описано в XSD 4.9.
+# InstitutionID необязателен; пустая строка значит "не передавать".
+FisLogin=
+FisSecret=
+FisInstitutionID=

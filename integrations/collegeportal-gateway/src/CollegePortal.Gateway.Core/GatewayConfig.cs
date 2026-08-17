@@ -25,6 +25,14 @@ namespace CollegePortal.Gateway
         public string ServiceVersion = "0.2.0-dev";
         public string OfficialSpecStatus = "not_imported";
 
+        // Учётные данные ФИС. Живут только здесь, на шлюзовом узле: портал ходит
+        // в ФИС не сам, и знать их ему незачем. В `.env` портала им не место.
+        // Передаются полем `Root/AuthData` внутри тела запроса — так описано в
+        // официальной XSD 4.9; ни заголовка авторизации, ни сертификата нет.
+        public string FisLogin = "";
+        public string FisSecret = "";
+        public string FisInstitutionId = "";
+
         public static GatewayConfig Load(string path)
         {
             var cfg = new GatewayConfig();
@@ -53,6 +61,9 @@ namespace CollegePortal.Gateway
             cfg.DiagnosticsPath = Get(values, "DiagnosticsPath", cfg.DiagnosticsPath);
             cfg.ServiceVersion = Get(values, "ServiceVersion", cfg.ServiceVersion);
             cfg.OfficialSpecStatus = Get(values, "OfficialSpecStatus", cfg.OfficialSpecStatus);
+            cfg.FisLogin = Get(values, "FisLogin", cfg.FisLogin);
+            cfg.FisSecret = Get(values, "FisSecret", cfg.FisSecret);
+            cfg.FisInstitutionId = Get(values, "FisInstitutionID", cfg.FisInstitutionId);
             return cfg;
         }
 

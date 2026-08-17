@@ -34,10 +34,17 @@ namespace CollegePortal.Gateway
         public GatewayPayload ExecuteReadOnly(string operation, string bodyJson)
         {
             if (operation == "zkspd_check" || operation == "test_service_check") return _soap.ZkspdCheck();
-            if (operation == "dictionaries_list") return _soap.CallReadOnly("GetTestDictionariesList", "");
-            if (operation == "dictionaries_details") return _soap.CallReadOnly("GetTestDictionaryDetails", "");
-            if (operation == "institution_info") return _soap.CallReadOnly("GetInstitutionInfo", "");
-            if (operation == "check_application") return _soap.CallReadOnly("GetTestCheckApplication", "");
+
+            // Тестовые операции контракта параметров не принимают вовсе
+            // (`xs:sequence/` в `import-service-wrapper.xsd`), поэтому тело
+            // операции пустое — и это не упущение, а форма из контракта.
+            if (operation == "dictionaries_list") return _soap.CallReadOnly("GetTestDictionariesList");
+            if (operation == "dictionaries_details") return _soap.CallReadOnly("GetTestDictionaryDetails");
+            if (operation == "check_application") return _soap.CallReadOnly("GetTestCheckApplication");
+
+            // А эта — боевая: принимает элемент `data` с произвольным XML, и
+            // именно туда кладётся блок авторизации.
+            if (operation == "institution_info") return _soap.CallAuthenticated("GetInstitutionInfo", "");
             return GatewayPayload.Fail("unsupported_operation", 0, "FIS adapter read-only operation is not supported.");
         }
 
@@ -48,11 +55,23 @@ namespace CollegePortal.Gateway
             return GatewayPayload.Fail("unsupported_operation", 0, "FIS adapter command is not supported.");
         }
 
+        /// <summary>
+        /// Из диагностики вычищается не только общий секрет портала и шлюза, но и
+        /// пароль ФИС: он теперь есть в конфиге, а диагностика уходит в портал.
+        /// </summary>
         public string RedactDiagnosticData(string value)
         {
             if (value == null) return "";
-            var secret = _config.SharedSecret ?? "";
-            return secret.Length == 0 ? value : value.Replace(secret, "[redacted]");
+
+            value = Redact(value, _config.SharedSecret);
+            value = Redact(value, _config.FisSecret);
+
+            return value;
+        }
+
+        private static string Redact(string value, string secret)
+        {
+            return string.IsNullOrEmpty(secret) ? value : value.Replace(secret, "[redacted]");
         }
     }
 }
