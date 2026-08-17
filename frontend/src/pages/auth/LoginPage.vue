@@ -19,8 +19,46 @@ onMounted(async () => {
   } catch {
     providers.value = []
   }
+
+  await signInFromMiniApp()
 })
+
+/**
+ * Портал, открытый внутри мессенджера, входит сам.
+ *
+ * Данные запуска подписаны ключом бота и проверяются на сервере — здесь только
+ * находим их и передаём. Кнопки у этого способа нет намеренно: снаружи
+ * мини-приложения данных запуска не существует, и рисовать было бы нечего.
+ *
+ * Неудача молчалива: человек просто видит обычную форму. Показывать «вход из
+ * приложения не удался» тому, кто открыл портал в браузере, незачем.
+ */
+async function signInFromMiniApp() {
+  const launches = [
+    { provider: 'telegram_miniapp', initData: window.Telegram?.WebApp?.initData },
+    { provider: 'max_miniapp', initData: window.WebApp?.initData },
+  ]
+
+  const launch = launches.find((candidate) => typeof candidate.initData === 'string' && candidate.initData.length > 0)
+
+  if (!launch || !providers.value.some((provider) => provider.code === launch.provider)) {
+    return
+  }
+
+  miniAppSignIn.value = true
+
+  try {
+    await auth.loginWithProvider(launch.provider, { init_data: launch.initData }, true)
+    afterSignIn()
+  } catch {
+    // Привязки нет или подпись не сошлась — остаётся обычная форма.
+    auth.error = ''
+  } finally {
+    miniAppSignIn.value = false
+  }
+}
 const showPassword = ref(false)
+const miniAppSignIn = ref(false)
 const form = reactive({
   login: '',
   password: '',
@@ -102,7 +140,13 @@ function afterSignIn() {
         </div>
       </q-card-section>
 
-      <q-form class="cp-login-form" @submit.prevent="submit">
+      <!-- Портал открыт внутри мессенджера: вход идёт сам, форму показывать рано. -->
+      <q-card-section v-if="miniAppSignIn" class="column items-center q-gutter-sm">
+        <q-spinner color="primary" size="28px" />
+        <div class="text-caption text-grey-7">Входим по данным мессенджера…</div>
+      </q-card-section>
+
+      <q-form v-else class="cp-login-form" @submit.prevent="submit">
         <q-card-section class="q-gutter-md">
           <q-input
             v-model="form.login"

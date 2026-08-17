@@ -97,8 +97,11 @@ class ExternalIdentityService
             return null;
         }
 
+        // Ищем по коду **привязки**, а не по коду способа входа: у мини-приложения
+        // они разные, и вошедший из Telegram-приложения иначе оказался бы
+        // непривязанным при живой привязке Telegram.
         return UserIdentity::query()
-            ->where('provider', $providerCode)
+            ->where('provider', $provider->identityCode())
             ->where('provider_user_id', $identity->providerUserId)
             ->first()?->user;
     }

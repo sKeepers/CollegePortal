@@ -176,6 +176,12 @@ class ExternalIdentityTest extends TestCase
                 return 'проверочный';
             }
 
+            /** Привязка и способ входа тут совпадают — расходятся они только у мини-приложения. */
+            public function identityCode(): string
+            {
+                return 'проверочный';
+            }
+
             public function name(): string
             {
                 return 'Проверочный способ';

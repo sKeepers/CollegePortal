@@ -10,6 +10,7 @@ use App\Observers\TeacherObserver;
 use App\Observers\UserObserver;
 use App\Support\Auth\ApiTokenResolver;
 use App\Support\Auth\Providers\ExternalIdentityProviders;
+use App\Support\Auth\Providers\MiniAppLoginProvider;
 use App\Support\Auth\Providers\TelegramLoginProvider;
 use App\Support\Notifications\MaxNotificationChannel;
 use App\Support\Notifications\NotificationChannels;
@@ -56,9 +57,15 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ExternalIdentityProviders::class, function (): ExternalIdentityProviders {
             $token = config('services.telegram.bot_token');
             $username = config('services.telegram.bot_username');
+            $maxToken = config('services.max.bot_token');
 
+            // Виджету нужно имя бота — его рисуют на форме. Мини-приложению не нужно
+            // ничего, кроме токена: кнопки у него нет, портал внутри мессенджера
+            // входит сам. Поэтому у входа из приложения условие короче.
             return new ExternalIdentityProviders(array_filter([
                 $token && $username ? new TelegramLoginProvider($token, $username) : null,
+                $token ? new MiniAppLoginProvider('telegram_miniapp', 'telegram', 'Telegram (мини-приложение)', $token) : null,
+                $maxToken ? new MiniAppLoginProvider('max_miniapp', 'max', 'MAX (мини-приложение)', $maxToken) : null,
             ]));
         });
     }

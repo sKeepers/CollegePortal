@@ -41,6 +41,12 @@ final class TelegramLoginProvider implements ExternalIdentityProvider
         return self::CODE;
     }
 
+    /** Привязка Telegram одна на оба входа — виджет и мини-приложение. */
+    public function identityCode(): string
+    {
+        return self::CODE;
+    }
+
     public function name(): string
     {
         return 'Telegram';
