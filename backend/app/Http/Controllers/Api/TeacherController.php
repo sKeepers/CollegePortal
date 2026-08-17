@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreTeacherRequest;
 use App\Http\Requests\UpdateTeacherRequest;
 use App\Http\Resources\TeacherResource;
+use App\Models\Person;
 use App\Models\Teacher;
 use App\Services\PersonService;
 use App\Services\TeacherCsvService;
@@ -13,6 +14,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TeacherController extends Controller
@@ -47,11 +50,51 @@ class TeacherController extends Controller
 
     public function store(StoreTeacherRequest $request): JsonResponse
     {
-        $teacher = Teacher::create($request->validated());
+        $data = $request->validated();
+
+        $teacher = DB::transaction(function () use ($data): Teacher {
+            $teacher = Teacher::create($data);
+            $person = $this->resolvePerson($teacher, $data['person_id'] ?? null);
+
+            $this->people->linkProfile($teacher, $person);
+            // Тем же путём, что и правка: ФИО и контакты принадлежат человеку, а
+            // копия в карточке — зеркало. Заодно копия и человек не расходятся
+            // с первой же секунды, если карточка легла на уже заведённого.
+            $this->people->updateFromProfile($person, $data);
+
+            return $teacher->refresh();
+        });
 
         return (new TeacherResource($teacher))
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
+    }
+
+    /**
+     * Человек для новой карточки преподавателя.
+     *
+     * Заводится всегда — как при зачислении студента и при заведении сотрудника.
+     * Без него карточка остаётся сиротой: в «Людях» её не видно, кадровая запись
+     * и цифровая идентичность к ней не пристыковываются, а зеркало общих данных
+     * до неё не достаёт, потому что ищет по `person_id`. Ровно это и случилось с
+     * карточками, заведёнными через API на боевом портале 16.08.2026.
+     */
+    private function resolvePerson(Teacher $teacher, ?int $personId): Person
+    {
+        if ($personId !== null) {
+            return Person::findOrFail($personId);
+        }
+
+        $data = $this->people->dataFromProfile($teacher);
+        $duplicates = $this->people->findPossibleDuplicates($data);
+
+        if ($duplicates->count() > 1) {
+            throw ValidationException::withMessages([
+                'person_id' => ['Нашлось несколько подходящих карточек человека. Укажите нужную явно и повторите.'],
+            ]);
+        }
+
+        return $duplicates->first() ?: $this->people->createPerson($data);
     }
 
     public function show(Teacher $teacher): TeacherResource

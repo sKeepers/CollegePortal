@@ -14,6 +14,9 @@ class StoreTeacherRequest extends FormRequest
     public function rules(): array
     {
         return [
+            // Человека можно указать явно — это единственный выход, когда по ФИО и
+            // контактам подходит несколько карточек: угадывать за оператора нельзя.
+            'person_id' => ['nullable', 'integer', 'exists:people,id'],
             'user_id' => ['nullable', 'integer', 'exists:users,id', 'unique:teachers,user_id'],
             'last_name' => ['required', 'string', 'max:255'],
             'first_name' => ['required', 'string', 'max:255'],
