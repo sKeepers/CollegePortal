@@ -11,6 +11,14 @@ namespace CollegePortal.Gateway
         public string[] AllowedPortalIps = new string[0];
         public string SharedSecret = "";
         public string FisTestEndpoint = "http://10.0.3.1:8383/api/import/ImportService.svc";
+
+        // Адрес, по которому принимаются сами вызовы, отличается от адреса службы
+        // суффиксом `/import`. Замерено 18.08.2026: POST на `.svc` отвечает 404 со
+        // страницей WCF, POST на `.svc/import` — 200 и разбором нашего XML.
+        // В контракте этого адреса нет: `wsdl:service` там есть, а портов и
+        // привязок — ноль, поэтому вывести его было неоткуда.
+        // Пусто — значит «взять `FisTestEndpoint` и дописать `/import`».
+        public string FisTestImportEndpoint = "";
         public bool EnableDangerousOperations = false;
         public bool FisProductionEnabled = false;
         public int MaxBodyBytes = 1048576;
@@ -48,6 +56,7 @@ namespace CollegePortal.Gateway
             cfg.AllowedPortalIps = Get(values, "AllowedPortalIps", "").Split(',').Select(x => x.Trim()).Where(x => x.Length > 0).ToArray();
             cfg.SharedSecret = Get(values, "SharedSecret", cfg.SharedSecret);
             cfg.FisTestEndpoint = Get(values, "FisTestEndpoint", cfg.FisTestEndpoint);
+            cfg.FisTestImportEndpoint = Get(values, "FisTestImportEndpoint", cfg.FisTestImportEndpoint);
             cfg.EnableDangerousOperations = bool.Parse(Get(values, "EnableDangerousOperations", cfg.EnableDangerousOperations.ToString()));
             cfg.FisProductionEnabled = bool.Parse(Get(values, "FisProductionEnabled", cfg.FisProductionEnabled.ToString()));
             cfg.MaxBodyBytes = int.Parse(Get(values, "MaxBodyBytes", cfg.MaxBodyBytes.ToString()));

@@ -35,15 +35,16 @@ namespace CollegePortal.Gateway
         {
             if (operation == "zkspd_check" || operation == "test_service_check") return _soap.ZkspdCheck();
 
-            // Тестовые операции контракта параметров не принимают вовсе
-            // (`xs:sequence/` в `import-service-wrapper.xsd`), поэтому тело
-            // операции пустое — и это не упущение, а форма из контракта.
-            if (operation == "dictionaries_list") return _soap.CallReadOnly("GetTestDictionariesList");
-            if (operation == "dictionaries_details") return _soap.CallReadOnly("GetTestDictionaryDetails");
-            if (operation == "check_application") return _soap.CallReadOnly("GetTestCheckApplication");
-
-            // А эта — боевая: принимает элемент `data` с произвольным XML, и
-            // именно туда кладётся блок авторизации.
+            // Блок авторизации уходит во **всех** операциях, включая тестовые.
+            //
+            // По контракту (`import-service-wrapper.xsd`) тестовые операции не
+            // принимают ничего — `xs:sequence/`, — и сначала так и было сделано.
+            // Живой сервис 18.08.2026 сказал иначе: на пустое тело он отвечает
+            // «ошибки валидации XML. Не найден тег AuthData». Контракт и служба
+            // расходятся, и права здесь служба.
+            if (operation == "dictionaries_list") return _soap.CallAuthenticated("GetTestDictionariesList", "");
+            if (operation == "dictionaries_details") return _soap.CallAuthenticated("GetTestDictionaryDetails", "");
+            if (operation == "check_application") return _soap.CallAuthenticated("GetTestCheckApplication", "");
             if (operation == "institution_info") return _soap.CallAuthenticated("GetInstitutionInfo", "");
             return GatewayPayload.Fail("unsupported_operation", 0, "FIS adapter read-only operation is not supported.");
         }

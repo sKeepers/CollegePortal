@@ -109,6 +109,22 @@ namespace CollegePortal.Gateway
             return builder.ToString();
         }
 
+        /// <summary>
+        /// Куда уходят вызовы. Это **не** адрес службы: у него есть суффикс
+        /// `/import`. Проверка ЗКСПД при этом стучится в саму службу — GET по ней
+        /// отвечает `200`, и именно это подтверждает, что канал жив.
+        /// </summary>
+        private string SoapEndpoint()
+        {
+            if (!string.IsNullOrEmpty(_config.FisTestImportEndpoint)) {
+                return _config.FisTestImportEndpoint;
+            }
+
+            var baseAddress = (_config.FisTestEndpoint ?? "").TrimEnd('/');
+
+            return baseAddress + "/import";
+        }
+
         private GatewayPayload Call(string methodName, string innerXml)
         {
             var action = ServiceNamespace + PortTypeName + "/" + methodName;
@@ -123,7 +139,7 @@ namespace CollegePortal.Gateway
             var start = DateTime.UtcNow;
 
             try {
-                var request = (HttpWebRequest)WebRequest.Create(_config.FisTestEndpoint);
+                var request = (HttpWebRequest)WebRequest.Create(SoapEndpoint());
                 request.Method = "POST";
                 request.ContentType = "text/xml; charset=utf-8";
                 request.Headers.Add("SOAPAction", "\"" + action + "\"");
