@@ -36,7 +36,7 @@ const headerOptions = computed(() => (store.currentJob?.headers || []).map((head
 const result = computed(() => store.currentJob?.result || null)
 const fisResult = computed(() => store.currentJob?.source === 'fis_admissions' ? (store.currentJob?.result || store.currentJob?.metadata || null) : null)
 const isFisJob = computed(() => store.currentJob?.source === 'fis_admissions')
-const canFisApply = computed(() => Boolean(store.currentJob?.source === 'fis_admissions' && store.currentJob?.id && fisResult.value && (fisResult.value.critical_errors || 0) === 0 && (fisResult.value.ambiguous_duplicates || 0) === 0 && (fisResult.value.unresolved_competitions || 0) === 0 && (fisResult.value.total_rows || 0) === 149))
+const canFisApply = computed(() => Boolean(store.currentJob?.source === 'fis_admissions' && store.currentJob?.id && fisResult.value && (fisResult.value.critical_errors || 0) === 0 && (fisResult.value.ambiguous_duplicates || 0) === 0 && (fisResult.value.unresolved_competitions || 0) === 0 && (fisResult.value.total_rows || 0) > 0))
 const errors = computed(() => store.currentJob?.validation_errors || [])
 const canPreview = computed(() => Boolean(dataType.value && file.value))
 const canConfirm = computed(() => Boolean(store.currentJob?.id && Object.keys(mapping).length))
@@ -89,7 +89,7 @@ async function handleFisDryRun() {
   if (!canManage.value || !fisFile.value) return
   await store.fisDryRun(fisFile.value)
   const hasBlockers = (fisResult.value?.critical_errors || 0) > 0 || (fisResult.value?.ambiguous_duplicates || 0) > 0 || (fisResult.value?.unresolved_competitions || 0) > 0
-  $q.notify({ type: hasBlockers ? 'warning' : 'positive', message: hasBlockers ? 'Dry-run ФИС требует проверки' : 'Dry-run ФИС прошел без критических ошибок', position: 'top-right' })
+  $q.notify({ type: hasBlockers ? 'warning' : 'positive', message: hasBlockers ? 'Пробный проход: есть замечания, смотрите отчёт' : 'Пробный проход прошёл без критических ошибок', position: 'top-right' })
 }
 async function handleFisApply() {
   if (!canManage.value || !canFisApply.value) return
@@ -139,8 +139,8 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
           <div class="fis-import-controls">
             <q-file v-if="canManage" v-model="fisFile" outlined dense accept=".xls,.xlsx" label="Файл ФИС XLS/XLSX"><template #prepend><Upload :size="16" /></template></q-file>
             <q-btn v-if="canManage" outline color="primary" :disable="!fisFile" :loading="store.saving" @click="handleFisAnalyze">Распознать</q-btn>
-            <q-btn v-if="canManage" color="primary" :disable="!fisFile" :loading="store.saving" @click="handleFisDryRun">Dry-run</q-btn>
-            <q-btn v-if="canManage" color="negative" outline :disable="!canFisApply" :loading="store.saving" @click="handleFisApply">Подтвердить apply</q-btn>
+            <q-btn v-if="canManage" color="primary" :disable="!fisFile" :loading="store.saving" @click="handleFisDryRun">Пробный проход</q-btn>
+            <q-btn v-if="canManage" color="negative" outline :disable="!canFisApply" :loading="store.saving" @click="handleFisApply">Применить</q-btn>
           </div>
           <q-stepper flat animated alternative-labels class="fis-import-steps" :model-value="fisResult ? 6 : 1">
             <q-step :name="1" title="Файл" :done="Boolean(store.currentJob?.source === 'fis_admissions')" />
