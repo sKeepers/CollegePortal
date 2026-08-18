@@ -1576,6 +1576,28 @@ onMounted(async () => {
                   </q-banner>
                 </div>
               </section>
+
+              <!-- Требования схемы ФИС — отдельно от комплектности документов:
+                   там правила приёмной комиссии, здесь то, без чего заявление не
+                   пройдёт выгрузку, и совпадают они не всегда. -->
+              <section class="admissions-foundation-section">
+                <h3>Выгрузка в ФИС ГИА</h3>
+                <div v-if="store.fisReadinessLoading" class="text-caption text-grey-7">Проверяем…</div>
+                <template v-else-if="store.fisReadiness">
+                  <div class="admissions-foundation-checklist">
+                    <div :class="['admissions-foundation-check', store.fisReadiness.ready ? 'is-ready' : 'is-pending']">
+                      <span>Готовность к выгрузке</span>
+                      <strong>{{ store.fisReadiness.ready ? 'Готово' : 'Не хватает данных' }}</strong>
+                    </div>
+                  </div>
+                  <div v-if="store.fisReadiness.blockers?.length" class="admissions-foundation-blockers">
+                    <q-banner v-for="(item, index) in store.fisReadiness.blockers" :key="`${item.code}-${index}`" rounded class="admissions-foundation-warning">
+                      <strong>{{ item.field || item.code }}</strong><span>{{ item.message }}</span>
+                    </q-banner>
+                  </div>
+                </template>
+                <div v-else class="text-caption text-grey-7">Проверка недоступна.</div>
+              </section>
             </q-tab-panel>
 
             <q-tab-panel name="files" class="q-pa-none">

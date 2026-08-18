@@ -104,6 +104,9 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
   const educationDocuments = ref([])
   const documentSet = ref(null)
   const readiness = ref(null)
+  // Готовность к выгрузке в ФИС — отдельно от комплектности документов: там
+  // правила приёмной комиссии, здесь требования схемы ФИС, и совпадают они не всегда.
+  const fisReadiness = ref(null)
   const auditLogs = ref([])
   const selectedApplication = ref(null)
   const selectedId = ref(null)
@@ -114,6 +117,7 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
   const choicesLoading = ref(false)
   const documentsLoading = ref(false)
   const readinessLoading = ref(false)
+  const fisReadinessLoading = ref(false)
   const auditLoading = ref(false)
   const applicantsLoading = ref(false)
   const peopleLoading = ref(false)
@@ -183,6 +187,7 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
         loadChoices(selectedId.value),
         loadApplicationDocuments(selectedId.value),
         loadReadiness(selectedId.value),
+        loadFisReadiness(selectedId.value),
         loadAudit(selectedId.value),
       ])
       return selectedApplication.value
@@ -435,6 +440,33 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
     }
   }
 
+  /**
+   * Чего заявлению не хватает для выгрузки в ФИС.
+   *
+   * Отказ здесь не должен ломать карточку: ФИС — не единственное, ради чего её
+   * открывают. Поэтому ошибка гасится в собственное состояние, а не в общее
+   * `detailsError`, которое закрыло бы экран целиком.
+   */
+  async function loadFisReadiness(applicationId = selectedId.value) {
+    if (!applicationId) {
+      fisReadiness.value = null
+      return null
+    }
+
+    fisReadinessLoading.value = true
+
+    try {
+      const payload = await api.list(`admissions/applications/${applicationId}/fis-readiness`)
+      fisReadiness.value = data(payload)
+      return fisReadiness.value
+    } catch {
+      fisReadiness.value = null
+      return null
+    } finally {
+      fisReadinessLoading.value = false
+    }
+  }
+
   async function loadAudit(applicationId = selectedId.value) {
     if (!applicationId) {
       auditLogs.value = []
@@ -527,7 +559,7 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
     try {
       const updated = data(await api.update('admissions/applications', applicationId, payload))
       selectedApplication.value = updated
-      await Promise.all([loadReadiness(applicationId), loadAudit(applicationId)])
+      await Promise.all([loadReadiness(applicationId), loadFisReadiness(applicationId), loadAudit(applicationId)])
       return updated
     } catch (err) {
       validationErrors.value = err.errors || {}
@@ -548,6 +580,7 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
         loadApplications(),
         loadApplicationDocuments(applicationId),
         loadReadiness(applicationId),
+        loadFisReadiness(applicationId),
         loadAudit(applicationId),
       ])
       return registered
@@ -657,14 +690,14 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
   async function assignIdentityDocument(applicationId, documentId) {
     const set = data(await api.put(`admissions/applications/${applicationId}/identity-document`, { document_id: documentId }))
     documentSet.value = set
-    await Promise.all([loadApplicationDocuments(applicationId), loadReadiness(applicationId), loadAudit(applicationId)])
+    await Promise.all([loadApplicationDocuments(applicationId), loadReadiness(applicationId), loadFisReadiness(applicationId), loadAudit(applicationId)])
     return set
   }
 
   async function assignEducationDocument(applicationId, documentId) {
     const set = data(await api.put(`admissions/applications/${applicationId}/education-document`, { document_id: documentId }))
     documentSet.value = set
-    await Promise.all([loadApplicationDocuments(applicationId), loadReadiness(applicationId), loadAudit(applicationId)])
+    await Promise.all([loadApplicationDocuments(applicationId), loadReadiness(applicationId), loadFisReadiness(applicationId), loadAudit(applicationId)])
     return set
   }
 
@@ -722,7 +755,7 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
       : `/admissions/identity-documents/${documentId}/files`
 
     const uploaded = data(await api.upload(path, formData))
-    await Promise.all([loadApplicationDocuments(applicationId), loadReadiness(applicationId), loadAudit(applicationId)])
+    await Promise.all([loadApplicationDocuments(applicationId), loadReadiness(applicationId), loadFisReadiness(applicationId), loadAudit(applicationId)])
     return uploaded
   }
 
@@ -806,6 +839,9 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
     currentEducationDocuments,
     documentSet,
     readiness,
+    fisReadiness,
+    fisReadinessLoading,
+    loadFisReadiness,
     auditLogs,
     sortedChoices,
     selectedApplication,
