@@ -135,7 +135,14 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
   const currentEducationDocuments = computed(() => educationDocuments.value.filter((document) => !document.replaced_at && !document.archived_at))
 
   function requestParams(tableOptions = {}) {
-    const rowsPerPage = Number(tableOptions.rowsPerPage ?? pagination.value.per_page ?? 20)
+    // `rowsPerPage = 0` у таблицы означает «показать все», а сервер требует от
+    // единицы до сотни и отвечает «per page: значение меньше допустимого».
+    // Отказ приходил на пустом экране и выглядел поломкой портала, хотя это
+    // размер страницы. `??` здесь не спасал: ноль — не `null`.
+    const requested = Number(tableOptions.rowsPerPage ?? pagination.value.per_page)
+    const rowsPerPage = Number.isFinite(requested) && requested >= 1
+      ? Math.min(requested, 100)
+      : 20
 
     return {
       q: filters.value.q,
