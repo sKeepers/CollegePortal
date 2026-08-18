@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\FisIntegration\Exceptions\FisIntegrationException;
 use App\Services\FisIntegration\FisCompetitiveGroupIntakeService;
 use App\Services\FisIntegration\FisDictionaryIntakeService;
+use App\Services\FisIntegration\GatewayFisTransport;
 use App\Services\FisIntegration\Xml\FisDictionaryXmlParser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,15 +31,12 @@ class FisDictionaryIntakeController extends Controller
     ) {
     }
 
-    public function preview(Request $request): JsonResponse
+    public function preview(Request $request, GatewayFisTransport $gateway): JsonResponse
     {
-        $data = $request->validate([
-            'file' => ['required', 'file', 'max:20480'],
-            'catalog' => ['nullable', 'string', 'max:100'],
-        ]);
+        $data = $request->validate($this->rules());
 
-        return $this->answer(function () use ($data): array {
-            $xml = (string) file_get_contents($data['file']->getRealPath());
+        return $this->answer(function () use ($data, $gateway): array {
+            $xml = $this->source($data, $gateway);
 
             return $this->parser->detectKind($xml) === 'institution_export'
                 ? $this->competitiveGroups->preview($xml)
@@ -46,23 +44,72 @@ class FisDictionaryIntakeController extends Controller
         });
     }
 
-    public function apply(Request $request): JsonResponse
+    public function apply(Request $request, GatewayFisTransport $gateway): JsonResponse
     {
-        $data = $request->validate([
-            'file' => ['required', 'file', 'max:20480'],
-            'catalog' => ['nullable', 'string', 'max:100'],
+        $data = $request->validate($this->rules() + [
             'dictionary' => ['nullable', 'string', 'max:100'],
             'environment' => ['nullable', 'in:test,production'],
         ]);
 
-        return $this->answer(function () use ($data): array {
-            $xml = (string) file_get_contents($data['file']->getRealPath());
+        return $this->answer(function () use ($data, $gateway): array {
+            $xml = $this->source($data, $gateway);
             $environment = $data['environment'] ?? 'test';
 
             return $this->parser->detectKind($xml) === 'institution_export'
                 ? $this->competitiveGroups->apply($xml, $environment)
                 : $this->dictionaries->apply($xml, $environment, $data['catalog'] ?? null, $data['dictionary'] ?? null);
         });
+    }
+
+    /**
+     * Файл **или** запрос к ФИС. Раньше был только файл, и после того как шлюз
+     * научился приносить данные, оператору пришлось бы нажать диагностику,
+     * скопировать XML, сохранить его в файл и загрузить обратно в тот же портал.
+     *
+     * @return array<string, list<string>>
+     */
+    private function rules(): array
+    {
+        return [
+            'file' => ['required_without:fetch', 'file', 'max:20480'],
+            'fetch' => ['required_without:file', 'nullable', 'in:dictionaries,dictionary,institution'],
+            // Код нужен только составу справочника: у списка и у сведений об
+            // организации выбирать нечего.
+            'code' => ['required_if:fetch,dictionary', 'nullable', 'integer', 'min:1'],
+            'catalog' => ['nullable', 'string', 'max:100'],
+        ];
+    }
+
+    /**
+     * XML, который будем разбирать: из загруженного файла или прямо из ФИС.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function source(array $data, GatewayFisTransport $gateway): string
+    {
+        if (($data['fetch'] ?? null) === null) {
+            return (string) file_get_contents($data['file']->getRealPath());
+        }
+
+        $answer = match ($data['fetch']) {
+            'dictionaries' => $gateway->dictionariesList(),
+            'dictionary' => $gateway->dictionaryDetails((string) $data['code']),
+            'institution' => $gateway->institutionInfo(),
+        };
+
+        // Отказ ФИС приходит с успешным кодом HTTP и телом `Error`: шлюз уже
+        // разобрал это и сказал `ok: false`. Пересказываем причину как есть.
+        if (! ($answer['ok'] ?? false)) {
+            throw new FisIntegrationException(trim(($answer['error_code'] ?? 'fis_error').': '.($answer['message'] ?? '')));
+        }
+
+        $xml = (string) ($answer['data'] ?? '');
+
+        if ($xml === '') {
+            throw new FisIntegrationException('ФИС ответила без данных: разбирать нечего.');
+        }
+
+        return $xml;
     }
 
     private function answer(callable $callback): JsonResponse
