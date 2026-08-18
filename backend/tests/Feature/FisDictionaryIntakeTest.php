@@ -31,7 +31,10 @@ class FisDictionaryIntakeTest extends TestCase
         $this->withApiAuth($this->userWith(['fis.outbound.view', 'fis.settings.manage']));
         Specialty::query()->create(['code' => '53.02.03', 'name' => 'Старое название']);
 
-        $response = $this->post('/api/fis/dictionaries/apply', ['file' => $this->file($this->directionsXml())])
+        // `rename` указан явно: с 18.08.2026 переименование по умолчанию не
+        // делается — в реестре ФИС название бывает устаревшим, а обмену имена не
+        // мешают. Здесь проверяется именно переименование, поэтому его и просим.
+        $response = $this->post('/api/fis/dictionaries/apply', ['file' => $this->file($this->directionsXml()), 'rename' => 1])
             ->assertOk()
             ->assertJsonPath('data.kind', 'directions')
             ->assertJsonPath('data.created', 1)

@@ -57,9 +57,16 @@ class FisDictionaryIntakeService
     }
 
     /**
-     * @return array<string, mixed>
+     * @param  bool  $rename  переименовывать ли специальности под формулировки ФИС.
+     *                        По умолчанию **нет**: замер 18.08.2026 на тестовом контуре показал, что в
+     *                        реестре название может быть устаревшим — по коду
+     *                        `51.02.03` там «Библиотековедение», хотя специальность
+     *                        давно называется иначе. Обмену имена не мешают вовсе:
+     *                        специальность находится по **коду**, а в ФИС уходит
+     *                        `DirectionID` из привязки. Переименование — вопрос
+     *                        документов, и решать его должен человек.
      */
-    public function apply(string $xml, string $environment, ?string $catalogCode = null, ?string $dictionary = null): array
+    public function apply(string $xml, string $environment, ?string $catalogCode = null, ?string $dictionary = null, bool $rename = false): array
     {
         if ($this->parser->detectKind($xml) === 'dictionary_list') {
             throw new FisIntegrationException('Список справочников применять некуда: это оглавление, а не состав справочника. Загрузите ответ метода получения элементов справочника.');
@@ -68,7 +75,7 @@ class FisDictionaryIntakeService
         $data = $this->parser->parseDictionaryData($xml);
 
         return $data['kind'] === 'directions'
-            ? $this->applyDirections($data, $environment)
+            ? $this->applyDirections($data, $environment, $rename)
             : $this->applyPlain($data, $environment, $catalogCode, $dictionary);
     }
 
@@ -115,14 +122,15 @@ class FisDictionaryIntakeService
     /**
      * @return array<string, mixed>
      */
-    private function applyDirections(array $data, string $environment): array
+    private function applyDirections(array $data, string $environment, bool $rename): array
     {
         $created = 0;
         $updated = 0;
         $mapped = 0;
         $skipped = [];
+        $renamesOffered = [];
 
-        DB::transaction(function () use ($data, $environment, &$created, &$updated, &$mapped, &$skipped): void {
+        DB::transaction(function () use ($data, $environment, $rename, &$created, &$updated, &$mapped, &$skipped, &$renamesOffered): void {
             foreach ($data['items'] as $item) {
                 $code = $this->normalizeCode($item['code'] ?? null);
                 $name = trim((string) ($item['name'] ?? ''));
@@ -143,8 +151,14 @@ class FisDictionaryIntakeService
                     ]);
                     $created++;
                 } elseif (trim((string) $specialty->name) !== $name) {
-                    $specialty->update(['name' => $name]);
-                    $updated++;
+                    // Расхождение имён — не ошибка и обмену не мешает: специальность
+                    // находится по коду. Поэтому по умолчанию оно только показывается.
+                    if ($rename) {
+                        $specialty->update(['name' => $name]);
+                        $updated++;
+                    } else {
+                        $renamesOffered[] = ['code' => $code, 'name_current' => trim((string) $specialty->name), 'name_incoming' => $name];
+                    }
                 }
 
                 if (filled($item['id'] ?? null)) {
@@ -161,6 +175,7 @@ class FisDictionaryIntakeService
 
         AuditLogService::log('fis_dictionaries', 'directions_applied', null, null, [
             'dictionary' => $data['code'], 'created' => $created, 'updated' => $updated, 'mapped' => $mapped,
+            'renames_offered' => count($renamesOffered),
         ]);
 
         return [
@@ -170,6 +185,9 @@ class FisDictionaryIntakeService
             'updated' => $updated,
             'mapped' => $mapped,
             'skipped' => $skipped,
+            // Что ФИС называет иначе. Переименовано не было: чтобы применить, нужен
+            // явный `rename`. Список показывается всегда — расхождение полезно видеть.
+            'renames_offered' => $renamesOffered,
         ];
     }
 

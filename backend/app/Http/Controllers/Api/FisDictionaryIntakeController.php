@@ -49,6 +49,10 @@ class FisDictionaryIntakeController extends Controller
         $data = $request->validate($this->rules() + [
             'dictionary' => ['nullable', 'string', 'max:100'],
             'environment' => ['nullable', 'in:test,production'],
+            // Переименовывать ли специальности под формулировки ФИС. По умолчанию
+            // нет: в реестре ФИС (по крайней мере в тестовом контуре) название бывает устаревшим, а обмену имена не
+            // мешают — специальность находится по коду.
+            'rename' => ['sometimes', 'boolean'],
         ]);
 
         return $this->answer(function () use ($data, $gateway): array {
@@ -57,7 +61,7 @@ class FisDictionaryIntakeController extends Controller
 
             return $this->parser->detectKind($xml) === 'institution_export'
                 ? $this->competitiveGroups->apply($xml, $environment)
-                : $this->dictionaries->apply($xml, $environment, $data['catalog'] ?? null, $data['dictionary'] ?? null);
+                : $this->dictionaries->apply($xml, $environment, $data['catalog'] ?? null, $data['dictionary'] ?? null, (bool) ($data['rename'] ?? false));
         });
     }
 
