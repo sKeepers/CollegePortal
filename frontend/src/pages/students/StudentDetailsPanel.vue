@@ -151,6 +151,7 @@ function removePhoto() {
               <div><dt>Статус</dt><dd>{{ statusLabels[student.status] || student.status }}</dd></div>
               <div><dt>Дата зачисления</dt><dd>{{ student.enrollment_date || '—' }}</dd></div>
               <div><dt>Приказ о зачислении</dt><dd>{{ student.enrollment_order_number || '—' }}<template v-if="student.enrollment_order_date"> от {{ student.enrollment_order_date }}</template></dd></div>
+              <div><dt>Личное дело</dt><dd>{{ student.personal_file_number || '—' }}</dd></div>
             </dl>
           </section>
 

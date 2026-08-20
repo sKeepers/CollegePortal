@@ -36,6 +36,9 @@ class StoreStudentRequest extends FormRequest
             'funding_form' => ['nullable', 'string', 'max:80'],
             'enrollment_date' => ['nullable', 'date'],
             'enrollment_order_number' => ['nullable', 'string', 'max:100'],
+            // Уникальность не проверяется: границы, в которых номер обязан быть
+            // уникальным, ещё уточняются в учебной части.
+            'personal_file_number' => ['nullable', 'string', 'max:50'],
             'enrollment_order_date' => ['nullable', 'date'],
         ];
     }

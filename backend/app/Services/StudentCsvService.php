@@ -34,7 +34,7 @@ class StudentCsvService
         'id', 'group_id', 'group', 'last_name', 'first_name', 'middle_name', 'birth_date',
         'phone', 'email', 'snils', 'address', 'passport_series', 'passport_number',
         'passport_issue_date', 'passport_issued_by', 'status', 'course', 'education_form',
-        'enrollment_date', 'enrollment_order_number', 'enrollment_order_date',
+        'enrollment_date', 'enrollment_order_number', 'enrollment_order_date', 'personal_file_number',
         'education_document_type', 'education_document_series', 'education_document_number',
         'education_document_issue_date', 'education_document_organization', 'education_graduation_year',
     ];
@@ -66,6 +66,11 @@ class StudentCsvService
         'адрес' => 'address',
         'приказ о зачислении' => 'enrollment_order_number',
         'дата приказа о зачислении' => 'enrollment_order_date',
+        // В бумажных списках колледжа этот номер стоит в столбце «Алфавитный
+        // классификатор» — принимаем оба написания, чтобы файл заходил как есть.
+        'номер личного дела' => 'personal_file_number',
+        'личное дело' => 'personal_file_number',
+        'алфавитный классификатор' => 'personal_file_number',
         'серия паспорта' => 'passport_series',
         'номер паспорта' => 'passport_number',
         'дата выдачи паспорта' => 'passport_issue_date',
@@ -127,6 +132,7 @@ class StudentCsvService
                             $student->address,
                             $student->enrollment_order_number,
                             $student->enrollment_order_date?->toDateString(),
+                            $student->personal_file_number,
                             $identity?->series ?: $student->passport_series,
                             $identity?->number ?: $student->passport_number,
                             $identity?->issue_date?->toDateString() ?: $student->passport_issue_date?->toDateString(),
@@ -341,6 +347,7 @@ class StudentCsvService
             'education_form' => ['nullable', 'string', 'max:80'],
             'enrollment_date' => ['nullable', 'date'],
             'enrollment_order_number' => ['nullable', 'string', 'max:100'],
+            'personal_file_number' => ['nullable', 'string', 'max:50'],
             'enrollment_order_date' => ['nullable', 'date'],
             'education_document_type' => ['nullable', 'string', 'max:255'],
             'education_document_series' => ['nullable', 'string', 'max:20'],

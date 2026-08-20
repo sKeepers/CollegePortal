@@ -45,6 +45,7 @@ const form = reactive({
   enrollment_date: '',
   enrollment_order_number: '',
   enrollment_order_date: '',
+  personal_file_number: '',
 })
 
 watch(
@@ -71,6 +72,7 @@ watch(
       enrollment_date: student?.enrollment_date || '',
       enrollment_order_number: student?.enrollment_order_number || '',
       enrollment_order_date: student?.enrollment_order_date || '',
+      personal_file_number: student?.personal_file_number || '',
     })
   },
   { immediate: true },
@@ -131,6 +133,13 @@ function submitForm() {
           <q-select v-model="form.education_form" dense outlined clearable emit-value map-options label="Форма обучения" :options="[{ label: 'Очная', value: 'Очная' }, { label: 'Заочная', value: 'Заочная' }]" />
           <q-input v-model="form.enrollment_order_number" dense outlined label="Приказ о зачислении" />
           <q-input v-model="form.enrollment_order_date" dense outlined type="date" label="Дата приказа" stack-label />
+          <q-input
+            v-model="form.personal_file_number"
+            dense
+            outlined
+            label="Номер личного дела"
+            hint="Он же номер зачётной книжки и номер в алфавитном классификаторе"
+          />
         </div>
       </AppFormSection>
 

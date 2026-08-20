@@ -35,6 +35,9 @@ class Student extends Model
         'enrollment_date',
         'enrollment_order_number',
         'enrollment_order_date',
+        // Номер личного дела, он же номер зачётной книжки, он же номер в
+        // алфавитном классификаторе бумажных списков — это один номер.
+        'personal_file_number',
         'education_form',
         'funding_form',
         'archived_at',

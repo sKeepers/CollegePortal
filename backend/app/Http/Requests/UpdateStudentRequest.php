@@ -36,6 +36,7 @@ class UpdateStudentRequest extends FormRequest
             'funding_form' => ['sometimes', 'nullable', 'string', 'max:80'],
             'enrollment_date' => ['sometimes', 'nullable', 'date'],
             'enrollment_order_number' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'personal_file_number' => ['sometimes', 'nullable', 'string', 'max:50'],
             'enrollment_order_date' => ['sometimes', 'nullable', 'date'],
         ];
     }

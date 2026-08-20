@@ -36,6 +36,7 @@ class StudentResource extends JsonResource
             'enrollment_date' => $this->enrollment_date?->toDateString(),
             'enrollment_order_number' => $this->enrollment_order_number,
             'enrollment_order_date' => $this->enrollment_order_date?->toDateString(),
+            'personal_file_number' => $this->personal_file_number,
             'specialty' => $this->group?->specialty ?? $this->group?->educationProgram?->specialty?->name,
             'archived_at' => $this->archived_at?->toISOString(),
             // Полнота карточки приходит из AdmissionDocumentReadinessService и кладётся

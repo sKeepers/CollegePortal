@@ -69,7 +69,10 @@ class StudentController extends Controller
                     $query
                         ->where('last_name', $operator, "%{$search}%")
                         ->orWhere('first_name', $operator, "%{$search}%")
-                        ->orWhere('middle_name', $operator, "%{$search}%");
+                        ->orWhere('middle_name', $operator, "%{$search}%")
+                        // По номеру личного дела студента ищут не реже, чем по
+                        // фамилии: в бумажных списках и ведомостях стоит он.
+                        ->orWhere('personal_file_number', $operator, "%{$search}%");
                 });
             })
             ->orderBy('last_name')
