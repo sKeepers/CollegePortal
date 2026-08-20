@@ -39,7 +39,7 @@ class FisAdmissionsImportHandlerTest extends TestCase
         $this->assertDatabaseHas('import_jobs', ['source' => 'fis_admissions', 'status' => 'analyzed']);
     }
 
-    public function test_dry_run_reads_xls_and_masks_personal_data_without_db_changes(): void
+    public function test_dry_run_shows_snils_and_hides_address_without_db_changes(): void
     {
         $this->createPrograms();
         $path = $this->fixture('xls', [
@@ -53,7 +53,10 @@ class FisAdmissionsImportHandlerTest extends TestCase
         $this->assertSame(1, $summary['new_persons']);
         $this->assertSame(0, $summary['critical_errors']);
         $this->assertDatabaseCount('people', 0);
-        $this->assertStringContainsString('***', $summary['preview_rows'][0]['snils']);
+        // СНИЛС виден целиком — по нему оператор сверяет строку с исходным файлом.
+        $this->assertSame('112-233-445 95', $summary['preview_rows'][0]['snils']);
+        $this->assertStringNotContainsString('*', $summary['preview_rows'][0]['snils']);
+        // Адрес по-прежнему скрыт: снимали маскировку только со СНИЛС.
         $this->assertSame('[скрыто]', $summary['preview_rows'][0]['address']);
     }
 

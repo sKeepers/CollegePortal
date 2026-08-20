@@ -551,7 +551,10 @@ class FisAdmissionsImportHandler
             'application_number' => $row['external_application_number'],
             'fio' => trim($row['last_name'].' '.$row['first_name'].' '.$row['middle_name']),
             'birth_date' => $row['birth_date'],
-            'snils' => $this->maskSnils($row['snils']),
+            // СНИЛС в предпросмотре показывается целиком по решению владельца:
+            // оператор сверяет строки с исходным файлом, а по трём цифрам из
+            // середины это невозможно. Паспорт и адрес остаются скрытыми.
+            'snils' => $row['snils'],
             'email' => $this->maskEmail($row['email']),
             'address' => $row['address'] ? '[скрыто]' : '',
             'competition' => $row['competition_name'],
@@ -648,11 +651,6 @@ class FisAdmissionsImportHandler
         };
     }
 
-    private function digits(string $value): string
-    {
-        return preg_replace('/\D+/', '', $value) ?? '';
-    }
-
     private function normalizedSnils(string $value): array
     {
         try {
@@ -688,14 +686,12 @@ class FisAdmissionsImportHandler
     {
         if ($value === null) { return null; }
         $lower = mb_strtolower($column);
-        if (str_contains($lower, 'снилс')) { return $this->maskSnils($this->digits($value)); }
+        // СНИЛС в строке об ошибке показывается ровно таким, как он записан в
+        // файле: чинить предстоит именно это значение, а по маске не видно, что
+        // с ним не так — лишняя цифра, буква или пустое место.
+        if (str_contains($lower, 'снилс')) { return $value; }
         if (str_contains($lower, 'паспорт') || str_contains($lower, 'документ') || str_contains($lower, 'адрес')) { return '[скрыто]'; }
         return $value;
-    }
-
-    private function maskSnils(string $value): string
-    {
-        return $value === '' ? '' : '***-***-'.substr($value, -5, 3).' **';
     }
 
     private function maskEmail(string $value): string
