@@ -2,7 +2,8 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
-import { PencilLine, RefreshCw, Search, UserRound } from '@lucide/vue'
+import { PencilLine, RefreshCw, Search, Trash2, UserRound } from '@lucide/vue'
+import DeletionRequestDialog from '../../components/trash/DeletionRequestDialog.vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -97,6 +98,30 @@ const actions = computed(() => {
 // Карточка человека — единственное место записи общих данных и единственное место,
 // где общее поле можно очистить: профильные карточки видят человека не целиком.
 const canUpdate = computed(() => auth.can('people.update'))
+const canRequestDeletion = computed(() => auth.can('trash.request'))
+
+const deletionRequestVisible = ref(false)
+
+/**
+ * Пометить карточку человека на удаление.
+ *
+ * Сразу она не удаляется: заявку смотрит администратор, а одобренная карточка
+ * уходит в корзину вместе с профилями, учётными записями и пропусками — и
+ * оттуда возвращается целиком.
+ */
+function askDeletionRequest() {
+  if (!canRequestDeletion.value || !selected.value) return
+  deletionRequestVisible.value = true
+}
+
+function onDeletionRequested() {
+  $q.notify({
+    type: 'positive',
+    position: 'top-right',
+    timeout: 2500,
+    message: `${selected.value?.full_name || 'Карточка'}: заявка на удаление отправлена администратору`,
+  })
+}
 const editDialog = ref(false)
 const saveError = ref('')
 const editForm = reactive({
@@ -270,6 +295,9 @@ onMounted(async () => {
                 <PencilLine :size="16" class="q-mr-xs" /> Изменить данные
               </q-btn>
               <q-btn v-for="action in actions" :key="action.label" no-caps unelevated class="workspace-panel__action" :to="action.to">{{ action.label }}</q-btn>
+              <q-btn v-if="canRequestDeletion" outline no-caps color="negative" @click="askDeletionRequest">
+                <Trash2 :size="16" class="q-mr-xs" /> Пометить на удаление
+              </q-btn>
             </div>
           </template>
           <dl class="people-details">
@@ -312,6 +340,14 @@ onMounted(async () => {
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <DeletionRequestDialog
+      v-model="deletionRequestVisible"
+      subject-type="person"
+      :subject-id="selected?.id ?? null"
+      :subject-label="selected?.full_name || ''"
+      @requested="onDeletionRequested"
+    />
   </AppPage>
 </template>
 

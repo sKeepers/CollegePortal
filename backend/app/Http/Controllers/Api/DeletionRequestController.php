@@ -22,6 +22,25 @@ class DeletionRequestController extends Controller
     {
     }
 
+    /**
+     * Что будет удалено вместе с карточкой и что этому мешает.
+     *
+     * Спрашивается до пометки: удалять молча нельзя, связанные записи надо
+     * показать и предложить снять вместе — а то, что снять нельзя, назвать.
+     */
+    public function dependents(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'subject_type' => ['required', Rule::in(array_keys(DeletionRequestService::SUBJECTS))],
+            'subject_id' => ['required', 'integer'],
+        ]);
+
+        return response()->json(['data' => $this->service->dependents(
+            $data['subject_type'],
+            (int) $data['subject_id'],
+        )]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([

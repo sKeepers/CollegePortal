@@ -391,6 +391,9 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     // решает и чистит корзину только администратор.
     Route::post('deletion-requests', [DeletionRequestController::class, 'store'])
         ->middleware('permission:trash.request');
+    // Что уйдёт вместе с карточкой. Спрашивает тот же, кто помечает, — право то же.
+    Route::get('deletion-requests/dependents', [DeletionRequestController::class, 'dependents'])
+        ->middleware('permission:trash.request');
     Route::get('deletion-requests/pending', [DeletionRequestController::class, 'pending'])
         ->middleware('permission:trash.manage');
     Route::get('deletion-requests', [DeletionRequestController::class, 'index'])

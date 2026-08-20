@@ -6,9 +6,15 @@ use App\Models\Admissions\Applicant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Person extends Model
 {
+    // Помеченный на удаление человек уходит в корзину и перестаёт попадать в
+    // раздел «Люди», в поиск и в проверку дублей — но остаётся возвратным,
+    // пока администратор не вычистит корзину.
+    use SoftDeletes;
+
     protected $fillable = [
         'uuid',
         'last_name',

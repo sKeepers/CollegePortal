@@ -26,10 +26,28 @@ export const useTrashStore = defineStore('trash', () => {
     student: 'Студент',
     teacher: 'Преподаватель',
     employee: 'Сотрудник',
+    person: 'Человек',
   }
 
   function subjectLabel(type) {
     return SUBJECT_LABELS[type] || type
+  }
+
+  /**
+   * Что уйдёт вместе с карточкой и что этому мешает.
+   *
+   * Спрашивается перед пометкой: удалять молча нельзя. У человека вместе с
+   * карточкой снимаются его профильные карточки, учётные записи и пропуска —
+   * это и показывается; записи приёмной комиссии и выпуска, наоборот, удалению
+   * мешают, и их портал называет отдельно.
+   */
+  async function loadDependents(subjectType, subjectId) {
+    const payload = await api.list('deletion-requests/dependents', {
+      subject_type: subjectType,
+      subject_id: subjectId,
+    })
+
+    return payload?.data || { cascade: [], blockers: [] }
   }
 
   /**
@@ -135,6 +153,7 @@ export const useTrashStore = defineStore('trash', () => {
     error,
     pendingCount,
     subjectLabel,
+    loadDependents,
     requestDeletion,
     loadPending,
     loadHistory,

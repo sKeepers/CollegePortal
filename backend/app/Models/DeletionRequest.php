@@ -21,13 +21,13 @@ class DeletionRequest extends Model
     public const STATUS_REJECTED = 'rejected';
 
     protected $fillable = [
-        'subject_type', 'subject_id', 'subject_label', 'reason', 'status',
+        'subject_type', 'subject_id', 'subject_label', 'cascade', 'reason', 'status',
         'requested_by', 'reviewed_by', 'reviewed_at', 'review_comment',
     ];
 
     protected function casts(): array
     {
-        return ['reviewed_at' => 'datetime'];
+        return ['reviewed_at' => 'datetime', 'cascade' => 'array'];
     }
 
     /** Карточка может быть уже удалена — заявку это не отменяет. */
