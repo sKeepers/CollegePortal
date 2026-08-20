@@ -113,6 +113,15 @@ temp/
 *.csv
 !docs/external-services/**/*.xlsx
 !docs/import-templates/**/*.csv
+# Состав групп — не персональные данные: только названия, специальности, курс и
+# год набора. Файл нужен, чтобы те же группы завести на PROD тем же импортом.
+!docs/groups-*.csv
+
+# Настоящие списки студентов и приказы о зачислении содержат персональные данные:
+# ФИО, адреса, телефоны, школы. Владелец кладёт их в docs/external-services для
+# работы, но в git они попасть не должны ни при каком `git add -A`.
+docs/external-services/Списки студентов*
+docs/external-services/Prikaz-*
 admin_credentials.txt
 **/admin_credentials.txt
 installer/runtime/
