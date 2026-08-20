@@ -551,12 +551,13 @@ class FisAdmissionsImportHandler
             'application_number' => $row['external_application_number'],
             'fio' => trim($row['last_name'].' '.$row['first_name'].' '.$row['middle_name']),
             'birth_date' => $row['birth_date'],
-            // СНИЛС в предпросмотре показывается целиком по решению владельца:
-            // оператор сверяет строки с исходным файлом, а по трём цифрам из
-            // середины это невозможно. Паспорт и адрес остаются скрытыми.
+            // Предпросмотр показывается целиком, без масок — решение владельца
+            // 21.08.2026. Смысл экрана в том, чтобы сверить строки с исходным
+            // файлом до записи в базу, а по замазанным полям этого не сделать:
+            // не видно ни лишней цифры в СНИЛС, ни перепутанного адреса.
             'snils' => $row['snils'],
-            'email' => $this->maskEmail($row['email']),
-            'address' => $row['address'] ? '[скрыто]' : '',
+            'email' => $row['email'],
+            'address' => $row['address'],
             'competition' => $row['competition_name'],
             'competition_matched' => $programMatched,
             'person' => $person ? 'найден Person #'.$person->id : 'новый Person',
@@ -567,7 +568,9 @@ class FisAdmissionsImportHandler
 
     private function rowIssue(int $row, string $column, string $reason, ?string $value = null): array
     {
-        return ['row' => $row, 'column' => $column, 'reason' => $reason, 'value' => $this->maskSensitive($column, $value)];
+        // Значение показывается ровно таким, как оно записано в файле: чинить
+        // предстоит именно его, а по маске не видно, что не так.
+        return ['row' => $row, 'column' => $column, 'reason' => $reason, 'value' => $value];
     }
 
     private function value(array $row, string $field): string
@@ -682,22 +685,4 @@ class FisAdmissionsImportHandler
         return sha1(implode('|', [$row['snils'], $row['last_name'], $row['first_name'], $row['middle_name'], $row['birth_date']]));
     }
 
-    private function maskSensitive(string $column, ?string $value): ?string
-    {
-        if ($value === null) { return null; }
-        $lower = mb_strtolower($column);
-        // СНИЛС в строке об ошибке показывается ровно таким, как он записан в
-        // файле: чинить предстоит именно это значение, а по маске не видно, что
-        // с ним не так — лишняя цифра, буква или пустое место.
-        if (str_contains($lower, 'снилс')) { return $value; }
-        if (str_contains($lower, 'паспорт') || str_contains($lower, 'документ') || str_contains($lower, 'адрес')) { return '[скрыто]'; }
-        return $value;
-    }
-
-    private function maskEmail(string $value): string
-    {
-        if (! str_contains($value, '@')) { return $value; }
-        [$name, $domain] = explode('@', $value, 2);
-        return mb_substr($name, 0, 1).'***@'.$domain;
-    }
 }

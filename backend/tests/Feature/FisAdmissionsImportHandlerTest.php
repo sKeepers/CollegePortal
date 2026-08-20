@@ -39,7 +39,7 @@ class FisAdmissionsImportHandlerTest extends TestCase
         $this->assertDatabaseHas('import_jobs', ['source' => 'fis_admissions', 'status' => 'analyzed']);
     }
 
-    public function test_dry_run_shows_snils_and_hides_address_without_db_changes(): void
+    public function test_dry_run_shows_every_field_unmasked_without_db_changes(): void
     {
         $this->createPrograms();
         $path = $this->fixture('xls', [
@@ -53,11 +53,16 @@ class FisAdmissionsImportHandlerTest extends TestCase
         $this->assertSame(1, $summary['new_persons']);
         $this->assertSame(0, $summary['critical_errors']);
         $this->assertDatabaseCount('people', 0);
-        // СНИЛС виден целиком — по нему оператор сверяет строку с исходным файлом.
+        // Предпросмотр показывается без масок: по нему оператор сверяет строки с
+        // исходным файлом до записи в базу, и замазанное поле сверить нельзя.
         $this->assertSame('112-233-445 95', $summary['preview_rows'][0]['snils']);
-        $this->assertStringNotContainsString('*', $summary['preview_rows'][0]['snils']);
-        // Адрес по-прежнему скрыт: снимали маскировку только со СНИЛС.
-        $this->assertSame('[скрыто]', $summary['preview_rows'][0]['address']);
+        // Адрес собирается из региона, типа населённого пункта и улицы.
+        $this->assertSame('Ставропольский край, город, ул. Учебная, 1', $summary['preview_rows'][0]['address']);
+        $this->assertSame('ivanov@example.test', $summary['preview_rows'][0]['email']);
+        foreach (['snils', 'address', 'email'] as $field) {
+            $this->assertStringNotContainsString('*', $summary['preview_rows'][0][$field]);
+            $this->assertStringNotContainsString('скрыто', $summary['preview_rows'][0][$field]);
+        }
     }
 
     public function test_apply_endpoint_requires_a_validated_dry_run_job(): void

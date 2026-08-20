@@ -61,6 +61,14 @@ class AdmissionApplicationResource extends JsonResource
                     'citizenship' => $this->applicant->person->citizenship,
                     'phone' => $this->applicant->person->phone,
                     'email' => $this->applicant->person->email,
+                    // Настоящий СНИЛС отдаётся тому же кругу, что и в карточке
+                    // человека: маска рядом остаётся для всех остальных. Без этого
+                    // поля даже администратор видел в заявлении одни звёздочки.
+                    'snils' => $this->when(
+                        (bool) ($request->user()?->hasPermission('admissions.document.download_sensitive')
+                            || $request->user()?->hasPermission('people.update')),
+                        $this->applicant->person->snils,
+                    ),
                     'snils_masked' => $masking->snils($this->applicant->person->snils),
                     'has_snils' => filled($this->applicant->person->snils),
                     'status' => $this->applicant->person->status,

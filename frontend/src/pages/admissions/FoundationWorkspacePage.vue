@@ -1359,7 +1359,9 @@ onMounted(async () => {
                   <div><dt>Гражданство</dt><dd>{{ selectedPerson?.citizenship || '—' }}</dd></div>
                   <div><dt>Телефон</dt><dd>{{ formatPhone(selectedPerson?.phone, '—') }}</dd></div>
                   <div><dt>Email</dt><dd>{{ selectedPerson?.email || '—' }}</dd></div>
-                  <div><dt>СНИЛС</dt><dd>{{ selectedPerson?.snils_masked || 'Не указан' }}</dd></div>
+                  <!-- Настоящий СНИЛС приходит только тому, кому портал его отдаёт;
+                       остальным приходит одна маска. Так же устроен показ документов. -->
+                  <div><dt>СНИЛС</dt><dd>{{ selectedPerson?.snils || selectedPerson?.snils_masked || 'Не указан' }}</dd></div>
                 </dl>
               </section>
             </q-tab-panel>
@@ -1380,7 +1382,9 @@ onMounted(async () => {
                   <div><dt>Гражданство</dt><dd>{{ selectedPerson?.citizenship || '—' }}</dd></div>
                   <div><dt>Телефон</dt><dd>{{ formatPhone(selectedPerson?.phone, '—') }}</dd></div>
                   <div><dt>Email</dt><dd>{{ selectedPerson?.email || '—' }}</dd></div>
-                  <div><dt>СНИЛС</dt><dd>{{ selectedPerson?.snils_masked || 'Не указан' }}</dd></div>
+                  <!-- Настоящий СНИЛС приходит только тому, кому портал его отдаёт;
+                       остальным приходит одна маска. Так же устроен показ документов. -->
+                  <div><dt>СНИЛС</dt><dd>{{ selectedPerson?.snils || selectedPerson?.snils_masked || 'Не указан' }}</dd></div>
                   <div><dt>Статус</dt><dd>{{ personStatusLabel(selectedPerson?.status) }}</dd></div>
                 </dl>
               </section>
