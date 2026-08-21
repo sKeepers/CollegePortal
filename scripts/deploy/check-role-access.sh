@@ -78,7 +78,7 @@ SECTIONS='
 Нагрузка|teachingload.view|teaching-loads/export
 Своя нагрузка|teachingload.view,view_own_data|teaching-loads
 Экзамены и ГИА|exams.view|exams,exams/export
-Выпускники|graduation.view|graduates,graduates/export
+Выпускники и дипломы|graduation.view|graduates,graduates/export
 ФРДО|frdo.view|frdo-packages
 ФИС|fis.view|fis-packages
 ФИС обмен|fis.outbound.view|fis/outbound/packages,fis/outbound/spec-info
@@ -90,11 +90,12 @@ SECTIONS='
 Приёмная комиссия|admissions.application.view|admissions/applications,admissions/applicants
 Заявления|admissions.view|applicant-applications,applicant-applications/export,admissions/stats
 Сотрудники|hr.employees.view|employees,departments,positions
-Кадровый календарь|hr.calendar.view|hr/calendar
-Подразделения и должности|hr.employees.view|departments,positions
-Кто в здании|gate.reports|access/muster
-Отчёты проходной|gate.reports|access/reports/summary,access/reports/events
-Корпуса и точки|gate.reports|access/buildings,access/points
+Календарь|hr.calendar.view|hr/calendar
+Подразделения|hr.departments.manage|departments
+Должности|hr.positions.manage|positions
+Кто сейчас в здании|gate.reports|access/muster
+Отчеты по проходам|gate.reports|access/reports/summary,access/reports/events
+Корпуса и точки прохода|gate.points.manage|access/buildings,access/points
 Цифровые пропуска|digitalpasses.manage,view_own_data|digital-identities
 Мобильный кабинет студента|mobile.student.view|mobile/student
 Мобильный кабинет преподавателя|mobile.teacher.view|mobile/teacher
@@ -107,6 +108,13 @@ SECTIONS='
 Разрешения|permissions.manage|admin/permissions,admin/permissions/roles/list
 Аудит|audit.view|admin/audit
 Корзина|trash.manage|trash,deletion-requests/pending,deletion-requests
+Успеваемость|mobile.student.view|mobile/student
+Отчеты|journal.view|reports/attendance-by-group,reports/grades-by-group
+RFID-карты|rfid.cards.view|rfid-cards
+Проходная|gate.scan|access/events
+Мобильный сканер|gate.scan|access/events
+Настройки колледжа|settings.manage|admin/settings
+UAT|uat.manage|admin/uat/runs,admin/uat/feedback
 Журнал: заявки на правку|journal.view+journal.reopen|journal/edit-requests/pending,journal/edit-requests/history
 Журнал: выгрузки|journal.view+journal.export|journal/export/group.csv,journal/export/teacher.csv
 Моя группа|journal.view|curator/groups

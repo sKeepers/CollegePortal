@@ -754,10 +754,13 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     Route::post('teaching-loads/import', [TeachingLoadController::class, 'import'])->middleware('permission:teachingload.edit');
     Route::post('teaching-loads/{teachingLoad}/items', [TeachingLoadController::class, 'storeItem'])->middleware('permission:teachingload.edit');
     Route::delete('teaching-load-items/{teachingLoadItem}', [TeachingLoadController::class, 'destroyItem'])->middleware('permission:teachingload.edit');
-    // Список нагрузки открыт ещё и по `view_own_data`: преподаватель видит свою.
-    // Пустой профиль даёт пустой список, а не отказ, — это `TeachingLoadController`.
+    // Список нагрузки открыт ещё и по `teachingload.view_own`: преподаватель
+    // видит свою. Раньше здесь стояло `view_own_data` — право с тем же
+    // смыслом, но выданное почти каждой роли, и раздел «Нагрузка»
+    // показывался восьми ролям из тринадцати. Пустой профиль даёт пустой
+    // список, а не отказ, — это `TeachingLoadController`.
     Route::apiResource('teaching-loads', TeachingLoadController::class)
-        ->middlewareFor('index', 'permission:teachingload.view,view_own_data')
+        ->middlewareFor('index', 'permission:teachingload.view,teachingload.view_own')
         ->middlewareFor('show', 'permission:teachingload.view')
         ->middlewareFor(['store', 'update', 'destroy'], 'permission:teachingload.edit');
 

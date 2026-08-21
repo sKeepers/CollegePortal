@@ -185,6 +185,7 @@ class RoleSeeder extends Seeder
             ['module' => 'Identity', 'code' => 'gate.reports', 'name' => 'Проходная: отчеты', 'description' => 'Просмотр событий, отчетов и списка находящихся в здании.'],
             ['module' => 'Identity', 'code' => 'gate.points.manage', 'name' => 'Проходная: корпуса и точки прохода', 'description' => 'Ведение справочника корпусов и точек прохода.'],
             ['module' => 'Identity', 'code' => 'digitalpasses.manage', 'name' => 'Цифровые пропуска: управление', 'description' => 'Выпуск, отзыв и просмотр QR-пропусков.'],
+            ['module' => 'Study', 'code' => 'teachingload.view_own', 'name' => 'Нагрузка: своя', 'description' => 'Просмотр собственной учебной нагрузки преподавателем.'],
             ['module' => 'Identity', 'code' => 'rfid.cards.view', 'name' => 'RFID-карты: просмотр', 'description' => 'Просмотр списка карт и того, у кого они на руках.'],
             ['module' => 'Identity', 'code' => 'rfid.cards.manage', 'name' => 'RFID-карты: ведение', 'description' => 'Заведение карт, выдача, приём, блокировка и списание.'],
 
@@ -412,7 +413,7 @@ class RoleSeeder extends Seeder
 
     private function teacherPermissions(): array
     {
-        return ['dashboard.view', 'hr.calendar.view', 'schedule.view', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.export', 'attendance.view', 'exams.view', 'view_own_data', 'mobile.teacher.view'];
+        return ['dashboard.view', 'hr.calendar.view', 'schedule.view', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.export', 'attendance.view', 'exams.view', 'view_own_data', 'teachingload.view_own', 'mobile.teacher.view'];
     }
 
     private function studentPermissions(): array

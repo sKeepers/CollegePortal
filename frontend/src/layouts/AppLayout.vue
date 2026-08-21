@@ -89,7 +89,9 @@ const navGroups = [
       { label: 'Моя группа', to: '/curator/group', icon: UsersRound, permission: 'journal.view' },
       { label: 'Посещаемость', to: '/attendance', icon: ClipboardList, permission: 'attendance.reports' },
       { label: 'Учебные планы', to: '/curricula', icon: BookOpen, permission: 'curricula.view' },
-      { label: 'Нагрузка', to: '/teaching-load', icon: ClipboardList, permissionsAny: ['teachingload.view', 'view_own_data'] },
+      // Своя нагрузка открывается отдельным правом, а не общим «видеть своё»:
+      // то есть почти у всех, и раздел показывался охраннику с комендантом.
+      { label: 'Нагрузка', to: '/teaching-load', icon: ClipboardList, permissionsAny: ['teachingload.view', 'teachingload.view_own'] },
       { label: 'Экзамены и ГИА', to: '/exams', icon: ClipboardList, permission: 'exams.view' },
       { label: 'Выпускники и дипломы', to: '/graduation', icon: GraduationCap, permission: 'graduation.view' },
       { label: 'ФРДО', to: '/frdo', icon: FileText, permission: 'frdo.view' },
