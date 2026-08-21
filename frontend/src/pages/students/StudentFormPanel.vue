@@ -46,6 +46,7 @@ const form = reactive({
   enrollment_order_number: '',
   enrollment_order_date: '',
   personal_file_number: '',
+  personal_file_letter: '',
 })
 
 watch(
@@ -73,6 +74,7 @@ watch(
       enrollment_order_number: student?.enrollment_order_number || '',
       enrollment_order_date: student?.enrollment_order_date || '',
       personal_file_number: student?.personal_file_number || '',
+      personal_file_letter: student?.personal_file_letter || '',
     })
   },
   { immediate: true },
@@ -138,7 +140,15 @@ function submitForm() {
             dense
             outlined
             label="Номер личного дела"
-            hint="Он же номер зачётной книжки и номер в алфавитном классификаторе"
+            hint="Он же номер зачётной книжки. Пустой — портал выдаст следующий свободный"
+          />
+          <q-input
+            v-model="form.personal_file_letter"
+            dense
+            outlined
+            maxlength="1"
+            label="Буква дела"
+            hint="У каждой буквы своя нумерация. Пустая — берётся из фамилии; менять, только если дело заведено под прежней фамилией"
           />
         </div>
       </AppFormSection>

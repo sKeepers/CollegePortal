@@ -5,13 +5,27 @@ namespace App\Observers;
 use App\Models\Student;
 use App\Services\DigitalPassIssueService;
 use App\Services\DigitalPassRevocationService;
+use App\Services\PersonalFileNumberService;
 
 class StudentObserver
 {
     public function __construct(
         private readonly DigitalPassRevocationService $digitalPasses,
         private readonly DigitalPassIssueService $issue,
+        private readonly PersonalFileNumberService $personalFile,
     ) {
+    }
+
+    /**
+     * Буква личного дела проставляется до вставки, номер — если его не дали.
+     *
+     * Здесь, а не в контроллере: карточку заводят и руками, и загрузкой, и
+     * зачислением из приёмной комиссии. Номер, пришедший из файла, не трогается:
+     * там он настоящий, из алфавитной книги колледжа.
+     */
+    public function creating(Student $student): void
+    {
+        $this->personalFile->assign($student);
     }
 
     /**

@@ -38,10 +38,22 @@ class StoreStudentRequest extends FormRequest
             'enrollment_date' => ['nullable', 'date'],
             'enrollment_order_number' => ['nullable', 'string', 'max:100'],
             // Номер обязан быть свободен в пределах своей буквы: у каждой буквы
-            // алфавита своя нумерация (учебная часть, 21.08.2026).
+            // алфавита своя нумерация (учебная часть, 21.08.2026). При заведении
+            // буква берётся из фамилии — это и есть момент присвоения; передать
+            // её явно можно, если дело заводилось под прежней фамилией.
             'personal_file_number' => ['nullable', 'string', 'max:50',
-                new FreePersonalFileNumber($this->string('last_name')->toString())],
+                new FreePersonalFileNumber($this->personalFileLetter())],
+            'personal_file_letter' => ['nullable', 'string', 'max:1'],
             'enrollment_order_date' => ['nullable', 'date'],
         ];
+    }
+
+    private function personalFileLetter(): ?string
+    {
+        return FreePersonalFileNumber::normalizeLetter(
+            $this->filled('personal_file_letter')
+                ? $this->string('personal_file_letter')->toString()
+                : $this->string('last_name')->toString(),
+        );
     }
 }

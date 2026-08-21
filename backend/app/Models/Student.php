@@ -38,6 +38,8 @@ class Student extends Model
         // Номер личного дела, он же номер зачётной книжки, он же номер в
         // алфавитном классификаторе бумажных списков — это один номер.
         'personal_file_number',
+        // Буква закрепляется за делом при заведении и при смене фамилии не меняется.
+        'personal_file_letter',
         'education_form',
         'funding_form',
         'archived_at',

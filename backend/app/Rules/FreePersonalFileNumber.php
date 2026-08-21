@@ -9,25 +9,23 @@ use Illuminate\Contracts\Validation\ValidationRule;
 /**
  * Номер личного дела занят в пределах своей буквы.
  *
- * Выяснено в учебной части 21.08.2026: **у каждой буквы алфавита своя
- * нумерация**. Поэтому Иванов и Петров могут законно носить один и тот же
- * номер, а два Ивановых — нет. Ключ уникальности здесь пара «первая буква
- * фамилии + номер», а не номер сам по себе: на настоящих списках 2026-2027
- * номер повторяется 108 раз, и все эти повторы правильные.
+ * У каждой буквы алфавита своя нумерация (учебная часть, 21.08.2026). Поэтому
+ * Иванов и Петров могут законно носить один и тот же номер, а два дела под
+ * буквой «И» с одним номером — нет.
  *
- * Проверка живёт в приложении, а не в базе, по двум причинам. Первая буква
- * фамилии — величина вычисляемая, и она меняется, когда человек меняет фамилию.
- * Вторая: в данных колледжа конфликты ещё есть (на 21.08.2026 их два), и
- * ограничение в базе не дало бы загрузить контингент вовсе.
+ * **Буква берётся хранимая, а не из текущей фамилии.** Дело заводится один раз,
+ * и номер остаётся за человеком при смене фамилии: студентка с номером 115 была
+ * Ильясовой, стала Черковой — её дело так и числится по «И». Вычисляй мы букву
+ * из фамилии, здесь получился бы ложный конфликт с чужим 115 на «Ч», а сам
+ * номер при каждом замужестве менял бы принадлежность.
  *
- * Отбор по номеру идёт запросом, а сравнение буквы — в памяти: `left()` и
- * `substr()` пишутся по-разному на PostgreSQL и SQLite, а строк с одним номером
- * заведомо единицы.
+ * Проверка живёт в приложении, а не индексом в базе: в данных колледжа конфликты
+ * ещё встречаются, и жёсткое ограничение не дало бы загрузить контингент.
  */
 class FreePersonalFileNumber implements ValidationRule
 {
     public function __construct(
-        private readonly ?string $lastName,
+        private readonly ?string $letter,
         private readonly ?int $ignoreStudentId = null,
     ) {
     }
@@ -35,7 +33,7 @@ class FreePersonalFileNumber implements ValidationRule
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         $number = trim((string) $value);
-        $letter = self::letterOf($this->lastName);
+        $letter = self::normalizeLetter($this->letter);
 
         if ($number === '' || $letter === null) {
             return;
@@ -43,9 +41,9 @@ class FreePersonalFileNumber implements ValidationRule
 
         $taken = Student::query()
             ->where('personal_file_number', $number)
+            ->where('personal_file_letter', $letter)
             ->when($this->ignoreStudentId !== null, fn ($query) => $query->whereKeyNot($this->ignoreStudentId))
-            ->get(['id', 'last_name', 'first_name', 'middle_name'])
-            ->first(fn (Student $student): bool => self::letterOf($student->last_name) === $letter);
+            ->first(['id', 'last_name', 'first_name', 'middle_name']);
 
         if ($taken === null) {
             return;
@@ -53,13 +51,13 @@ class FreePersonalFileNumber implements ValidationRule
 
         $name = trim(implode(' ', array_filter([$taken->last_name, $taken->first_name, $taken->middle_name])));
 
-        $fail("Номер личного дела {$number} на букву «{$letter}» уже занят: {$name}. У каждой буквы своя нумерация, повторяться номер внутри буквы не может.");
+        $fail("Номер личного дела {$number} по букве «{$letter}» уже занят: {$name}. У каждой буквы своя нумерация, повторяться номер внутри буквы не может.");
     }
 
-    public static function letterOf(?string $lastName): ?string
+    public static function normalizeLetter(?string $letter): ?string
     {
-        $lastName = trim((string) $lastName);
+        $letter = trim((string) $letter);
 
-        return $lastName === '' ? null : mb_strtoupper(mb_substr($lastName, 0, 1));
+        return $letter === '' ? null : mb_strtoupper(mb_substr($letter, 0, 1));
     }
 }

@@ -38,11 +38,12 @@ class UpdateStudentRequest extends FormRequest
             'funding_form' => ['sometimes', 'nullable', 'string', 'max:80'],
             'enrollment_date' => ['sometimes', 'nullable', 'date'],
             'enrollment_order_number' => ['sometimes', 'nullable', 'string', 'max:100'],
-            // Фамилию берём из запроса, а если её не меняют — из самой карточки:
-            // буква, в пределах которой номер обязан быть свободен, выводится
-            // именно из неё.
+            // Буква берётся хранимая, а не из фамилии: дело заведено один раз, и
+            // смена фамилии его принадлежности не меняет. Переставить букву можно
+            // только явно — тогда проверяется новая.
             'personal_file_number' => ['sometimes', 'nullable', 'string', 'max:50',
-                new FreePersonalFileNumber($this->lastNameForCheck(), $this->studentId())],
+                new FreePersonalFileNumber($this->personalFileLetter(), $this->studentId())],
+            'personal_file_letter' => ['sometimes', 'nullable', 'string', 'max:1'],
             'enrollment_order_date' => ['sometimes', 'nullable', 'date'],
         ];
     }
@@ -54,14 +55,29 @@ class UpdateStudentRequest extends FormRequest
         return $student instanceof Student ? $student->id : (is_numeric($student) ? (int) $student : null);
     }
 
-    private function lastNameForCheck(): ?string
+    /**
+     * Буква, по которой проверяется номер.
+     *
+     * Порядок такой: явно переданная в запросе, иначе хранимая у карточки, и
+     * только для старых карточек без буквы — выведенная из фамилии. Из фамилии
+     * **запроса** она не берётся никогда: смена фамилии дело не переносит.
+     */
+    private function personalFileLetter(): ?string
     {
-        if ($this->filled('last_name')) {
-            return $this->string('last_name')->toString();
+        if ($this->filled('personal_file_letter')) {
+            return FreePersonalFileNumber::normalizeLetter($this->string('personal_file_letter')->toString());
         }
 
         $id = $this->studentId();
 
-        return $id === null ? null : Student::query()->whereKey($id)->value('last_name');
+        if ($id === null) {
+            return null;
+        }
+
+        $student = Student::query()->whereKey($id)->first(['personal_file_letter', 'last_name']);
+
+        return FreePersonalFileNumber::normalizeLetter(
+            $student?->personal_file_letter ?: $student?->last_name,
+        );
     }
 }
