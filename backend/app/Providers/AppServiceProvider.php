@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\Employee;
 use App\Models\User;
 use App\Models\Student;
 use App\Models\Teacher;
+use App\Observers\EmployeeObserver;
 use App\Observers\StudentObserver;
 use App\Observers\TeacherObserver;
 use App\Observers\UserObserver;
@@ -77,6 +79,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Student::observe(StudentObserver::class);
         Teacher::observe(TeacherObserver::class);
+        Employee::observe(EmployeeObserver::class);
         User::observe(UserObserver::class);
 
         // Считать попытки нужно по тому же значению, по которому контроллер ищет

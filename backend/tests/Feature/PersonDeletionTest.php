@@ -197,6 +197,15 @@ class PersonDeletionTest extends TestCase
 
     private function attachPass(Person $person): DigitalIdentity
     {
+        // С 21.08.2026 пропуск выдаётся сам при заведении карточки, поэтому
+        // здесь берём выданный: заводить второй значило бы проверять состояние,
+        // которого в жизни не бывает — пропуск принадлежит человеку, и он один.
+        $issued = DigitalIdentity::query()->where('person_id', $person->id)->first();
+
+        if ($issued !== null) {
+            return $issued;
+        }
+
         return DigitalIdentity::query()->create([
             'person_id' => $person->id,
             'entity_type' => DigitalIdentity::ENTITY_EMPLOYEE,
