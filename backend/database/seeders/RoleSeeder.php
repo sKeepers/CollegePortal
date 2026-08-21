@@ -260,6 +260,8 @@ class RoleSeeder extends Seeder
             'schedule.view', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.view_all', 'journal.export', 'attendance.view', 'attendance.reports',
             'admissions.view', 'admissions.applicant.view', 'admissions.application.view', 'admissions.choice.view', 'admissions.document.view', 'admissions.document.download_sensitive', 'admissions.documents.view', 'admissions.documents.download', 'admissions.bulk_export', 'admissions.reference.view', 'curricula.view', 'curricula.subjects.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'graduation.view',
             'frdo.view', 'fis.view', 'fis.outbound.view', 'fis.outbound.status', 'gate.reports', 'audit.view', 'reference.manage', 'uat.manage', 'hr.employees.view', 'hr.calendar.view', 'hr.replacements.view', 'hr.reports.view',
+            // Своё собственное: без этого права директор не видел даже свой QR-пропуск.
+            'view_own_data',
         ];
     }
 
@@ -399,7 +401,9 @@ class RoleSeeder extends Seeder
         return ['dashboard.view', 'people.view', 'people.create', 'people.update', 'admissions.view', 'admissions.edit', 'admissions.applicant.view', 'admissions.applicant.manage', 'admissions.applicant.create', 'admissions.applicant.update', 'admissions.applicant.archive', 'admissions.application.view', 'admissions.application.create', 'admissions.application.update', 'admissions.application.register', 'admissions.application.manage', 'admissions.choice.view', 'admissions.choice.create', 'admissions.choice.update', 'admissions.choice.delete', 'admissions.document.view', 'admissions.document.create', 'admissions.document.update', 'admissions.document.delete', 'admissions.document.verify', 'admissions.document.download_sensitive', 'admissions.documents.view', 'admissions.documents.receive', 'admissions.documents.upload', 'admissions.documents.verify', 'admissions.documents.reject', 'admissions.documents.download', 'admissions.bulk_status', 'admissions.bulk_documents', 'admissions.bulk_recommend', 'admissions.bulk_assign', 'admissions.bulk_export', 'admissions.bulk_enroll', 'admissions.reference.view', 'students.view', 'groups.view', 'fis.outbound.view', 'fis.outbound.create', 'fis.outbound.generate', 'fis.outbound.validate', 'fis.outbound.send_test', 'fis.outbound.status', 'reference.manage', 'import.manage',
             // `ARCH-001`, шаг 2: отчёт посещаемости приёмная комиссия открывала
             // только через право-зонтик `view_reports`.
-            'attendance.reports', 'trash.request'];
+            'attendance.reports', 'trash.request',
+            // Своё собственное: без этого права не открывался даже свой QR-пропуск.
+            'view_own_data'];
     }
 
     private function teacherPermissions(): array
@@ -414,7 +418,9 @@ class RoleSeeder extends Seeder
 
     private function securityPermissions(): array
     {
-        return ['dashboard.view', 'gate.scan', 'gate.reports', 'gate.points.manage', 'digitalpasses.manage', 'attendance.view', 'attendance.reports'];
+        // `view_own_data` здесь не про чужие пропуска, а про свой: охранник ходит
+        // через ту же проходную, а своего QR-пропуска не видел.
+        return ['dashboard.view', 'gate.scan', 'gate.reports', 'gate.points.manage', 'digitalpasses.manage', 'attendance.view', 'attendance.reports', 'view_own_data'];
     }
 
     /**
