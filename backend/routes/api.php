@@ -564,6 +564,10 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         ->middleware('permission:rfid.cards.view');
     Route::post('rfid-cards/bind', [RfidCardController::class, 'bind'])
         ->middleware('permission:rfid.cards.manage');
+    Route::post('rfid-cards/journal/import', [RfidCardController::class, 'importJournalPreview'])
+        ->middleware('permission:rfid.cards.manage');
+    Route::post('rfid-cards/journal/import/{importJob}/confirm', [RfidCardController::class, 'importJournalConfirm'])
+        ->middleware('permission:rfid.cards.manage');
     Route::post('rfid-cards', [RfidCardController::class, 'store'])
         ->middleware('permission:rfid.cards.manage');
     Route::patch('rfid-cards/{rfidCard}', [RfidCardController::class, 'update'])

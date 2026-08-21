@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { CreditCard, Download, Plus, Printer, RefreshCw, Search, X } from '@lucide/vue'
+import { CreditCard, Download, Plus, Printer, RefreshCw, Search, Upload, X } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -41,6 +41,9 @@ const createForm = reactive({ uid: '', label: '', note: '' })
 const releaseVisible = ref(false)
 const releaseForm = reactive({ card: null, reason: 'left', note: '' })
 const printedAt = ref('')
+const importFileRef = ref(null)
+const importVisible = ref(false)
+const importJob = ref(null)
 
 const columns = [
   { name: 'uid', label: 'Номер карты', field: 'uid', align: 'left', sortable: true },
@@ -241,6 +244,35 @@ async function submitCreate() {
 async function openJournal() {
   await store.loadGroups()
   await store.loadJournal()
+}
+
+/**
+ * Загрузка журнала из файла: сначала показываем, что получится, и только
+ * потом пишем. Тот же порядок, что в разделе «Импорт данных».
+ */
+function pickJournalFile() {
+  importFileRef.value?.click?.()
+}
+
+async function onJournalFile(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) return
+
+  importJob.value = await store.previewJournalImport(file)
+  if (importJob.value) importVisible.value = true
+}
+
+async function confirmJournalImport() {
+  const job = importJob.value
+  if (!job) return
+
+  const done = await store.confirmJournalImport(job.id)
+  if (!done) return
+
+  importVisible.value = false
+  const summary = done.summary || {}
+  notify(`Загружено строк: ${summary.created || 0}, пропущено: ${summary.skipped || 0}, с ошибками: ${summary.failed || 0}`)
 }
 
 async function exportJournal() {
@@ -545,8 +577,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKey))
       <!-- Журнал: что происходило. Он же печатная форма. -->
       <q-tab-panel name="journal" class="q-pa-none">
         <AppToolbar>
-          <q-input v-model="store.journalFilters.from" dense outlined type="date" label="С" style="min-width: 160px" />
-          <q-input v-model="store.journalFilters.to" dense outlined type="date" label="По" style="min-width: 160px" />
+          <q-input v-model="store.journalFilters.from" dense outlined type="date" label="С" style="min-width: 150px" />
+          <q-input v-model="store.journalFilters.to" dense outlined type="date" label="По" style="min-width: 150px" />
           <q-select
             v-model="store.journalFilters.group_id"
             dense
@@ -555,7 +587,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKey))
             emit-value
             map-options
             label="Группа"
-            style="min-width: 220px"
+            style="min-width: 200px"
             :options="store.groupOptions"
           />
           <q-select
@@ -565,7 +597,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKey))
             emit-value
             map-options
             label="Состояние"
-            style="min-width: 180px"
+            style="min-width: 170px"
             :options="openOptions"
           />
           <q-space />
@@ -575,6 +607,16 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKey))
           <q-btn flat no-caps :disable="!store.journal.length || store.saving" @click="exportJournal">
             <Download :size="16" class="q-mr-xs" /> Выгрузить в Excel
           </q-btn>
+          <q-btn v-if="canManage" flat no-caps :disable="store.saving" @click="pickJournalFile">
+            <Upload :size="16" class="q-mr-xs" /> Загрузить журнал из Excel
+          </q-btn>
+          <input
+            ref="importFileRef"
+            type="file"
+            accept=".xlsx,.csv,.txt"
+            class="rfid-file-input"
+            @change="onJournalFile"
+          >
           <q-btn color="primary" unelevated no-caps :disable="!store.journal.length" @click="printJournal">
             <Printer :size="16" class="q-mr-xs" /> Печать
           </q-btn>
@@ -680,6 +722,36 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKey))
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="importVisible">
+      <q-card class="rfid-dialog">
+        <q-card-section class="text-h6">Загрузка журнала</q-card-section>
+        <q-card-section class="column q-gutter-sm">
+          <div class="rfid-block__hint">
+            Файл разобран, но ничего ещё не записано. Проверьте, что портал понял колонки, и подтвердите.
+            Строки, которые уже есть в журнале, будут пропущены.
+          </div>
+          <div><b>Файл:</b> {{ importJob?.original_filename || '—' }}</div>
+          <div><b>Строк в файле:</b> {{ importJob?.summary?.total ?? importJob?.preview_rows?.length ?? '—' }}</div>
+          <div v-if="importJob?.validation_errors?.length" class="rfid-import-errors">
+            <b>Строки с ошибками — они не загрузятся:</b>
+            <ul>
+              <li v-for="(row, index) in importJob.validation_errors.slice(0, 10)" :key="index">
+                строка {{ row.row || index + 1 }}: {{ (row.errors || []).join('; ') }}
+              </li>
+            </ul>
+            <div v-if="importJob.validation_errors.length > 10">
+              …и ещё {{ importJob.validation_errors.length - 10 }}
+            </div>
+          </div>
+          <div v-else>Ошибок в разборе нет.</div>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat no-caps label="Отмена" v-close-popup />
+          <q-btn color="primary" no-caps label="Записать в журнал" :loading="store.saving" @click="confirmJournalImport" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <q-dialog v-model="releaseVisible">
       <q-card class="rfid-dialog">
         <q-card-section class="text-h6">Отвязать карту {{ releaseForm.card?.uid }}</q-card-section>
@@ -735,6 +807,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKey))
 .rfid-counter__label { font-size: 12px; color: #64748b; }
 .rfid-actions { white-space: nowrap; }
 .rfid-dialog { min-width: min(520px, 92vw); }
+.rfid-file-input { display: none; }
+.rfid-import-errors { font-size: 13px; color: #b91c1c; }
+.rfid-import-errors ul { margin: 6px 0 0; padding-left: 18px; }
 .rfid-journal { margin-top: 12px; overflow-x: auto; }
 .rfid-journal__table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .rfid-journal__table th,
@@ -746,6 +821,21 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKey))
 }
 
 :deep(.rfid-scan-input) { font-size: 20px; font-family: ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: 1px; }
+
+/*
+  Содержимое панели выкладываем в строку. Поля ввода — блочные, и без этого они
+  встают друг под друга столбиком: фильтры журнала занимали пол-экрана в высоту.
+  Правило местное: общий стиль трогать не стал, его делят другие разделы.
+*/
+:deep(.app-toolbar__content) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+:deep(.app-toolbar) { padding: 8px 10px; }
 </style>
 
 <style>

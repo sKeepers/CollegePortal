@@ -3,15 +3,20 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\ImportJobResource;
 use App\Http\Resources\RfidCardIssueResource;
 use App\Http\Resources\RfidCardResource;
 use App\Models\Group;
+use App\Models\ImportJob;
 use App\Models\Person;
 use App\Models\RfidCard;
 use App\Models\RfidCardIssue;
 use App\Services\AuditLogService;
+use App\Services\Import\RfidCardIssueImportHandler;
 use App\Services\RfidCardJournalExport;
 use App\Services\RfidCardService;
+use App\Services\UniversalImportService;
+use RuntimeException;
 use App\Support\Rfid\CardNumber;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -247,6 +252,52 @@ class RfidCardController extends Controller
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Content-Disposition' => 'attachment; filename="'.$file['filename'].'"',
         ]);
+    }
+
+    /**
+     * Загрузка журнала из файла — рядом с выгрузкой, без похода в другой раздел.
+     *
+     * Механизм тот же, что у общего импорта: сопоставление колонок, проверка
+     * без записи, только потом запись. Второй реализации нет намеренно — иначе
+     * два пути разошлись бы поведением, и человек не знал бы, какому верить.
+     * Отдельный маршрут нужен из-за прав: у коменданта есть `rfid.cards.manage`
+     * и нет `import.manage`, открывающего загрузку всего подряд.
+     */
+    public function importJournalPreview(Request $request, UniversalImportService $import): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt,xlsx', 'max:10240'],
+        ], [
+            'file.required' => 'Выберите файл журнала.',
+            'file.mimes' => 'Журнал загружается книгой Excel или файлом CSV.',
+        ]);
+
+        try {
+            $job = $import->createPreview($request->file('file'), RfidCardIssueImportHandler::TYPE, $request->user());
+        } catch (RuntimeException $exception) {
+            return response()->json(['message' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        return response()->json(['data' => new ImportJobResource($job->fresh()->load('user'))], Response::HTTP_CREATED);
+    }
+
+    public function importJournalConfirm(Request $request, ImportJob $importJob, UniversalImportService $import): JsonResponse
+    {
+        abort_unless($importJob->data_type === RfidCardIssueImportHandler::TYPE, Response::HTTP_NOT_FOUND);
+
+        $data = $request->validate([
+            'mode' => ['nullable', 'string'],
+        ]);
+
+        try {
+            $job = $import->confirmJob($importJob, $importJob->mapping ?? [], $data['mode'] ?? 'skip_duplicates');
+        } catch (RuntimeException $exception) {
+            return response()->json(['message' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        AuditLogService::log('rfid', 'journal_imported', $job, null, ['summary' => $job->summary], $request);
+
+        return response()->json(['data' => new ImportJobResource($job->fresh()->load('user'))]);
     }
 
     private function journalQuery(array $filters): Builder

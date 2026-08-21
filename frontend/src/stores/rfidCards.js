@@ -133,6 +133,49 @@ export const useRfidCardsStore = defineStore('rfidCards', () => {
     }
   }
 
+  /**
+   * Загрузка журнала из файла: сначала проверка без записи, потом запись.
+   *
+   * Механизм общий с разделом «Импорт данных» — второй реализации нет, иначе
+   * два пути разошлись бы поведением.
+   */
+  async function previewJournalImport(file) {
+    saving.value = true
+    error.value = ''
+    try {
+      const form = new FormData()
+      form.append('file', file)
+
+      const payload = await api.upload('/rfid-cards/journal/import', form)
+
+      return payload?.data || null
+    } catch (err) {
+      fail(err, 'Не удалось разобрать файл журнала')
+
+      return null
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function confirmJournalImport(jobId, mode = 'skip_duplicates') {
+    saving.value = true
+    error.value = ''
+    try {
+      const payload = await api.create(`rfid-cards/journal/import/${jobId}/confirm`, { mode })
+      await loadJournal()
+      await load()
+
+      return payload?.data || null
+    } catch (err) {
+      fail(err, 'Не удалось загрузить журнал')
+
+      return null
+    } finally {
+      saving.value = false
+    }
+  }
+
   /** Поиск человека по фамилии — первый из двух входов в работу. */
   async function searchPeople(query) {
     const search = (query || '').trim()
@@ -189,11 +232,14 @@ export const useRfidCardsStore = defineStore('rfidCards', () => {
       const result = await api.list('rfid-cards/lookup', { uid: value })
 
       if (result?.found && result.person) {
+        // Карта у кого-то на руках — открываем владельца: это «пришёл сдать».
         person.value = result.person
         unknownCard.value = ''
       } else {
+        // Карта свободна или незнакома. Выбранного человека **не трогаем**:
+        // это главный порядок работы — сначала нашли фамилию, потом поднесли
+        // карту. Пока экран здесь сбрасывал человека, привязать её было нельзя.
         unknownCard.value = result?.uid || value
-        if (result?.found) person.value = null
       }
 
       return result
@@ -245,7 +291,8 @@ export const useRfidCardsStore = defineStore('rfidCards', () => {
     loading, searching, saving, error, filters, journalFilters,
     statusOptions, reasonOptions, groupOptions, counts,
     statusLabels: STATUS_LABELS, reasonLabels: REASON_LABELS,
-    load, loadGroups, loadJournal, exportJournalFile, searchPeople, selectPerson, clearPerson, refreshPerson,
+    load, loadGroups, loadJournal, exportJournalFile, previewJournalImport, confirmJournalImport,
+    searchPeople, selectPerson, clearPerson, refreshPerson,
     lookup, bind, create, issue, accept, release, remove, changeStatus,
   }
 })

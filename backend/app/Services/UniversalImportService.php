@@ -10,6 +10,7 @@ use App\Services\Import\ClassroomImportHandler;
 use App\Services\Import\CurriculumImportHandler;
 use App\Services\Import\EducationProgramImportHandler;
 use App\Services\Import\EmployeeImportHandler;
+use App\Services\Import\RfidCardIssueImportHandler;
 use App\Services\Import\GroupImportHandler;
 use App\Services\Import\ImportHandlerInterface;
 use App\Services\Import\ScheduleImportHandler;
@@ -62,6 +63,7 @@ class UniversalImportService
             new TeachingLoadImportHandler(),
             new ScheduleImportHandler($scheduleLessonService, $scheduleEngine),
             new EmployeeImportHandler($hrService, $accounts),
+            new RfidCardIssueImportHandler(),
         ] as $handler) {
             $this->handlers[$handler->type()] = $handler;
         }
