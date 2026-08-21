@@ -64,8 +64,9 @@ class StudentPersonalFileNumberTest extends TestCase
             ])->assertCreated();
         }
 
-        // Уникальности нет намеренно: в настоящих списках номер повторяется, и
-        // ограничение остановило бы загрузку контингента на середине.
+        // Повтор законен: фамилии на разные буквы, а у каждой буквы алфавита
+        // своя нумерация (учебная часть, 21.08.2026). Внутри одной буквы такой
+        // повтор уже не пройдёт — это проверяет PersonalFileNumberScopeTest.
         $this->assertSame(2, Student::query()->where('personal_file_number', '286')->count());
     }
 

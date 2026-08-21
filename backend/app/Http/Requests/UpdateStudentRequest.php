@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Student;
+use App\Rules\FreePersonalFileNumber;
 use App\Rules\Snils;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -36,8 +38,30 @@ class UpdateStudentRequest extends FormRequest
             'funding_form' => ['sometimes', 'nullable', 'string', 'max:80'],
             'enrollment_date' => ['sometimes', 'nullable', 'date'],
             'enrollment_order_number' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'personal_file_number' => ['sometimes', 'nullable', 'string', 'max:50'],
+            // Фамилию берём из запроса, а если её не меняют — из самой карточки:
+            // буква, в пределах которой номер обязан быть свободен, выводится
+            // именно из неё.
+            'personal_file_number' => ['sometimes', 'nullable', 'string', 'max:50',
+                new FreePersonalFileNumber($this->lastNameForCheck(), $this->studentId())],
             'enrollment_order_date' => ['sometimes', 'nullable', 'date'],
         ];
+    }
+
+    private function studentId(): ?int
+    {
+        $student = $this->route('student');
+
+        return $student instanceof Student ? $student->id : (is_numeric($student) ? (int) $student : null);
+    }
+
+    private function lastNameForCheck(): ?string
+    {
+        if ($this->filled('last_name')) {
+            return $this->string('last_name')->toString();
+        }
+
+        $id = $this->studentId();
+
+        return $id === null ? null : Student::query()->whereKey($id)->value('last_name');
     }
 }

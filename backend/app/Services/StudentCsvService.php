@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Group;
 use App\Models\Student;
+use App\Rules\FreePersonalFileNumber;
 use App\Services\Admissions\EducationDocumentService;
 use App\Services\Admissions\IdentityDocumentService;
 use App\Services\Admissions\PersonDocumentService;
@@ -189,6 +190,24 @@ class StudentCsvService
 
             $validated = $validator->validated();
             $student = isset($validated['id']) ? Student::find($validated['id']) : $this->findExisting($validated);
+
+            // Номер личного дела обязан быть свободен в пределах своей буквы:
+            // у каждой буквы алфавита своя нумерация. Проверять это правилом
+            // формы нельзя — нужна фамилия из той же строки, а `rules()` строки
+            // не видит; и нужен уже найденный студент, чтобы своя же запись не
+            // мешала обновлению.
+            $conflicts = [];
+            if (filled($validated['personal_file_number'] ?? null)) {
+                (new FreePersonalFileNumber($validated['last_name'] ?? null, $student?->id))
+                    ->validate('personal_file_number', $validated['personal_file_number'], function (string $message) use (&$conflicts): void {
+                        $conflicts[] = $message;
+                    });
+            }
+
+            if ($conflicts !== []) {
+                $errors[] = ['line' => $line, 'messages' => $conflicts];
+                continue;
+            }
 
             // Документ об образовании — не поле студента, а документ человека.
             $educationDocument = Arr::only($validated, self::EDUCATION_DOCUMENT_COLUMNS);

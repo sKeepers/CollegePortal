@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\FreePersonalFileNumber;
 use App\Rules\Snils;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -36,9 +37,10 @@ class StoreStudentRequest extends FormRequest
             'funding_form' => ['nullable', 'string', 'max:80'],
             'enrollment_date' => ['nullable', 'date'],
             'enrollment_order_number' => ['nullable', 'string', 'max:100'],
-            // Уникальность не проверяется: границы, в которых номер обязан быть
-            // уникальным, ещё уточняются в учебной части.
-            'personal_file_number' => ['nullable', 'string', 'max:50'],
+            // Номер обязан быть свободен в пределах своей буквы: у каждой буквы
+            // алфавита своя нумерация (учебная часть, 21.08.2026).
+            'personal_file_number' => ['nullable', 'string', 'max:50',
+                new FreePersonalFileNumber($this->string('last_name')->toString())],
             'enrollment_order_date' => ['nullable', 'date'],
         ];
     }

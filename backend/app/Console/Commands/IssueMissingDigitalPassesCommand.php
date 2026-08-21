@@ -39,8 +39,25 @@ class IssueMissingDigitalPassesCommand extends Command
             ->orderBy('last_name')
             ->get(['id', 'last_name', 'first_name', 'middle_name']);
 
+        // Люди без пропуска и без единой живой карточки. Пропуск им привязать не
+        // к чему, и это не поломка: карточку могли удалить. Но молчать о них
+        // нельзя — иначе «пропуск есть у всех» читается как «и у него тоже».
+        $orphans = Person::query()
+            ->whereDoesntHave('digitalIdentities', fn ($query) => $query->whereIn('status', [
+                DigitalIdentity::STATUS_ACTIVE,
+                DigitalIdentity::STATUS_SUSPENDED,
+            ]))
+            ->whereDoesntHave('students')
+            ->whereDoesntHave('teachers')
+            ->whereDoesntHave('employees')
+            ->count();
+
         if ($candidates->isEmpty()) {
-            $this->info('Пропуск есть у всех: людей без действующего пропуска не нашлось.');
+            $this->info('Пропуск есть у всех, кому его есть к чему привязать.');
+
+            if ($orphans > 0) {
+                $this->comment('Людей без пропуска и без единой карточки: '.$orphans.'. Им пропуск не выдаётся: привязать его не к чему.');
+            }
 
             return self::SUCCESS;
         }

@@ -69,7 +69,40 @@ class StudentImportHandler extends AbstractImportHandler
         return 'created';
     }
 
-    public function businessValidationErrors(array $data): array { if (blank($data['snils'] ?? null)) return []; try { $this->snils->normalize($data['snils']); return []; } catch (\Illuminate\Validation\ValidationException $exception) { return ['snils' => $exception->errors()['snils'] ?? [$exception->getMessage()]]; } }
+    /**
+     * Проверки, которые нельзя выразить правилами формы.
+     *
+     * Номер личного дела обязан быть свободен **в пределах своей буквы**: у
+     * каждой буквы алфавита своя нумерация, поэтому Иванов и Петров могут
+     * носить один номер, а два Ивановых — нет. Строка с занятым номером
+     * отклоняется до записи, чтобы загрузка не поставила второе такое же дело.
+     */
+    public function businessValidationErrors(array $data): array
+    {
+        $errors = [];
+
+        if (filled($data['snils'] ?? null)) {
+            try {
+                $this->snils->normalize($data['snils']);
+            } catch (\Illuminate\Validation\ValidationException $exception) {
+                $errors['snils'] = $exception->errors()['snils'] ?? [$exception->getMessage()];
+            }
+        }
+
+        if (filled($data['personal_file_number'] ?? null)) {
+            $messages = [];
+            (new \App\Rules\FreePersonalFileNumber($data['last_name'] ?? null))
+                ->validate('personal_file_number', $data['personal_file_number'], function (string $message) use (&$messages): void {
+                    $messages[] = $message;
+                });
+
+            if ($messages !== []) {
+                $errors['personal_file_number'] = $messages;
+            }
+        }
+
+        return $errors;
+    }
     protected function virtualFields(): array { return ['group_name','specialty','auto_account','education_document_type','education_document_series','education_document_number','education_document_issue_date','education_document_organization','education_graduation_year']; }
     private function studentStatus(?string $value): string { return match(mb_strtolower(trim((string)$value))) { 'академический отпуск','academic_leave'=>'academic_leave','выпускник','graduated'=>'graduated','отчислен','expelled'=>'expelled', default=>'active' }; }
 
