@@ -46,6 +46,7 @@ use App\Http\Controllers\Api\CurriculumController;
 use App\Http\Controllers\Api\DeletionRequestController;
 use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\DigitalIdentityController;
+use App\Http\Controllers\Api\RfidCardController;
 use App\Http\Controllers\Api\DemoDataController;
 use App\Http\Controllers\Api\DashboardAnalyticsController;
 use App\Http\Controllers\Api\DashboardLayoutController;
@@ -543,6 +544,22 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         Route::put('access/points/{access_point}', [AccessPointController::class, 'update']);
         Route::delete('access/points/{access_point}', [AccessPointController::class, 'destroy']);
     });
+
+    // RFID-карты. Ведёт комендант: заводит, выдаёт, принимает, блокирует.
+    // Выдача и приём — отдельные действия, а не правка поля: портал записывает,
+    // кому и когда, иначе учёт ничем не отличается от списка.
+    Route::get('rfid-cards', [RfidCardController::class, 'index'])
+        ->middleware('permission:rfid.cards.view');
+    Route::post('rfid-cards', [RfidCardController::class, 'store'])
+        ->middleware('permission:rfid.cards.manage');
+    Route::patch('rfid-cards/{rfidCard}', [RfidCardController::class, 'update'])
+        ->middleware('permission:rfid.cards.manage');
+    Route::post('rfid-cards/{rfidCard}/issue', [RfidCardController::class, 'issue'])
+        ->middleware('permission:rfid.cards.manage');
+    Route::post('rfid-cards/{rfidCard}/accept', [RfidCardController::class, 'accept'])
+        ->middleware('permission:rfid.cards.manage');
+    Route::post('rfid-cards/{rfidCard}/status', [RfidCardController::class, 'status'])
+        ->middleware('permission:rfid.cards.manage');
 
     // Цифровые пропуска. Список и свой QR открыты ещё и по `view_own_data`:
     // человек видит собственный пропуск, не имея права на чужие. Пустой профиль

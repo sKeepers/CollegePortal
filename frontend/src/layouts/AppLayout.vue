@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardList,
+  CreditCard,
   Database,
   DoorOpen,
   FileSpreadsheet,
@@ -133,6 +134,7 @@ const navGroups = [
       // что пропуск им выдан и работает. Право `view_own_data` и есть нужная
       // проверка: «показывать человеку его собственное».
       { label: 'Мой QR-пропуск', to: '/identity/my-pass', icon: QrCode, permissionsAny: ['mobile.student.pass', 'view_own_data'] },
+      { label: 'RFID-карты', to: '/identity/rfid-cards', icon: CreditCard, permission: 'rfid.cards.view' },
       { label: 'Проходная', to: '/access/gate', icon: DoorOpen, roles: ['admin', 'security'], permission: 'gate.scan' },
       { label: 'Мобильный сканер', to: '/access/mobile-scanner', icon: QrCode, roles: ['admin', 'security'], permission: 'gate.scan' },
       { label: 'Кто сейчас в здании', to: '/access/muster', icon: UsersRound, roles: ['admin', 'security', 'hr'], permission: 'gate.reports' },

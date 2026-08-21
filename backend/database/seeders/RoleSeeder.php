@@ -25,6 +25,7 @@ class RoleSeeder extends Seeder
             ['code' => 'hr', 'name' => 'Отдел кадров', 'description' => 'Ведение сотрудников, подразделений, должностей и кадровых статусов.'],
             ['code' => 'academic_office', 'name' => 'Учебная часть (legacy)', 'description' => 'Legacy-роль для совместимости.'],
             ['code' => 'curator', 'name' => 'Куратор группы', 'description' => 'Сопровождение закрепленной учебной группы.'],
+            ['code' => 'commandant', 'name' => 'Комендант', 'description' => 'Учёт RFID-карт: выдача, приём, блокировка.'],
         ];
 
         foreach ($roles as $role) {
@@ -50,6 +51,7 @@ class RoleSeeder extends Seeder
         $this->syncPermissions('student', $this->ids($this->studentPermissions()));
         $this->syncPermissions('employee', $this->ids(['dashboard.view', 'view_own_data']));
         $this->syncPermissions('security', $this->ids($this->securityPermissions()));
+        $this->syncPermissions('commandant', $this->ids($this->commandantPermissions()));
         $this->syncPermissions('hr', $this->ids($this->hrPermissions()));
         $this->syncPermissions('curator', $this->ids(array_values(array_unique(array_merge($this->teacherPermissions(), ['students.view', 'groups.view', 'attendance.reports', 'mobile.curator.view'])))));
     }
@@ -183,6 +185,8 @@ class RoleSeeder extends Seeder
             ['module' => 'Identity', 'code' => 'gate.reports', 'name' => 'Проходная: отчеты', 'description' => 'Просмотр событий, отчетов и списка находящихся в здании.'],
             ['module' => 'Identity', 'code' => 'gate.points.manage', 'name' => 'Проходная: корпуса и точки прохода', 'description' => 'Ведение справочника корпусов и точек прохода.'],
             ['module' => 'Identity', 'code' => 'digitalpasses.manage', 'name' => 'Цифровые пропуска: управление', 'description' => 'Выпуск, отзыв и просмотр QR-пропусков.'],
+            ['module' => 'Identity', 'code' => 'rfid.cards.view', 'name' => 'RFID-карты: просмотр', 'description' => 'Просмотр списка карт и того, у кого они на руках.'],
+            ['module' => 'Identity', 'code' => 'rfid.cards.manage', 'name' => 'RFID-карты: ведение', 'description' => 'Заведение карт, выдача, приём, блокировка и списание.'],
 
             ['module' => 'HR', 'code' => 'hr.employees.view', 'name' => 'Кадры: сотрудники просмотр', 'description' => 'Просмотр сотрудников.'],
             ['module' => 'HR', 'code' => 'hr.employees.create', 'name' => 'Кадры: сотрудники создание', 'description' => 'Прием сотрудников.'],
@@ -414,6 +418,16 @@ class RoleSeeder extends Seeder
     private function studentPermissions(): array
     {
         return ['dashboard.view', 'schedule.view', 'attendance.view', 'mobile.student.view', 'mobile.student.pass', 'view_own_data'];
+    }
+
+    /**
+     * Комендант ведёт RFID-карты и больше ничего: список людей ему нужен, чтобы
+     * выбрать, кому выдать карту, а «своё собственное» — чтобы видеть свой же
+     * QR-пропуск.
+     */
+    private function commandantPermissions(): array
+    {
+        return ['dashboard.view', 'view_own_data', 'people.view', 'rfid.cards.view', 'rfid.cards.manage'];
     }
 
     private function securityPermissions(): array

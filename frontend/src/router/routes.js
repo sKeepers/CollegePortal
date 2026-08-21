@@ -30,6 +30,7 @@ const AttendancePage = () => import('../pages/attendance/AttendancePage.vue')
 const AdmissionsPage = () => import('../pages/admissions/AdmissionsPage.vue')
 const AdmissionsFoundationPage = () => import('../pages/admissions/FoundationWorkspacePage.vue')
 const DigitalPassesPage = () => import('../pages/identity/DigitalPassesPage.vue')
+const RfidCardsPage = () => import('../pages/identity/RfidCardsPage.vue')
 const MyDigitalPassPage = () => import('../pages/identity/MyDigitalPassPage.vue')
 const AccessGatePage = () => import('../pages/access/AccessGatePage.vue')
 const MobileScannerPage = () => import('../pages/access/MobileScannerPage.vue')
@@ -424,6 +425,13 @@ export const routes = [
         name: 'identity-digital-passes',
         component: DigitalPassesPage,
         meta: { title: 'Цифровые пропуска', roles: ['admin', 'security'], permission: 'digitalpasses.manage' },
+      },
+      {
+        path: 'identity/rfid-cards',
+        name: 'identity-rfid-cards',
+        component: RfidCardsPage,
+        // Ролей не перечисляем: раздел открывает право, а не должность.
+        meta: { title: 'RFID-карты', permission: 'rfid.cards.view' },
       },
       {
         path: 'admin/audit',
