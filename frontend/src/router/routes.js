@@ -415,7 +415,9 @@ export const routes = [
         path: 'identity/my-pass',
         name: 'identity-my-pass',
         component: MyDigitalPassPage,
-        meta: { title: 'Мой QR-пропуск', roles: ['student', 'teacher', 'employee', 'hr'], permissionsAny: ['mobile.student.pass', 'view_own_data'] },
+        // Роли не перечисляем: пропуск принадлежит человеку, а не должности.
+        // Проверка одна — есть ли право видеть своё; см. пункт меню в AppLayout.
+        meta: { title: 'Мой QR-пропуск', permissionsAny: ['mobile.student.pass', 'view_own_data'] },
       },
       {
         path: 'identity/digital-passes',

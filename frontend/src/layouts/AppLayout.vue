@@ -126,7 +126,13 @@ const navGroups = [
   {
     label: 'Идентификация',
     items: [
-      { label: 'Мой QR-пропуск', to: '/identity/my-pass', icon: QrCode, roles: ['student', 'teacher', 'employee', 'hr'], permissionsAny: ['mobile.student.pass', 'view_own_data'] },
+      // Списка ролей здесь нет намеренно. Пропуск принадлежит человеку, а не
+      // должности: через ту же проходную ходят и директор, и администратор, и
+      // учебная часть. Пока роли были перечислены, свой пропуск видели четыре
+      // роли из тринадцати, а у остальных раздел просто отсутствовал — при том
+      // что пропуск им выдан и работает. Право `view_own_data` и есть нужная
+      // проверка: «показывать человеку его собственное».
+      { label: 'Мой QR-пропуск', to: '/identity/my-pass', icon: QrCode, permissionsAny: ['mobile.student.pass', 'view_own_data'] },
       { label: 'Проходная', to: '/access/gate', icon: DoorOpen, roles: ['admin', 'security'], permission: 'gate.scan' },
       { label: 'Мобильный сканер', to: '/access/mobile-scanner', icon: QrCode, roles: ['admin', 'security'], permission: 'gate.scan' },
       { label: 'Кто сейчас в здании', to: '/access/muster', icon: UsersRound, roles: ['admin', 'security', 'hr'], permission: 'gate.reports' },
