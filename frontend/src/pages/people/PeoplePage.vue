@@ -86,12 +86,17 @@ const actions = computed(() => {
   const employee = person.employees?.[0]
   const applicant = person.applicant_applications?.[0]
   const graduate = person.graduates?.[0]
-  if (student) items.push({ label: 'Открыть студента', to: { path: '/students', query: { selected: student.id } } })
-  if (teacher) items.push({ label: 'Открыть преподавателя', to: { path: '/teachers', query: { selected: teacher.id } } })
-  if (employee) items.push({ label: 'Открыть сотрудника', to: { path: '/hr/employees', query: { selected: employee.id } } })
-  if (applicant) items.push({ label: 'Открыть заявление', to: { path: '/admissions', query: { selected: applicant.id } } })
-  if (graduate) items.push({ label: 'Открыть выпускника', to: { path: '/graduation', query: { selected: graduate.id } } })
-  if (person.digital_identities?.length) items.push({ label: 'Цифровой пропуск', to: '/identity/digital-passes' })
+  // Кнопка показывается, только если человеку есть куда по ней перейти.
+  // Раньше проверялось лишь наличие профиля, и комендант видел «Открыть
+  // сотрудника» и «Цифровой пропуск», которые вели в закрытые для него
+  // разделы: нажатие заканчивалось отказом.
+  if (student && auth.can('students.view')) items.push({ label: 'Открыть студента', to: { path: '/students', query: { selected: student.id } } })
+  if (teacher && auth.can('teachers.view')) items.push({ label: 'Открыть преподавателя', to: { path: '/teachers', query: { selected: teacher.id } } })
+  if (employee && auth.can('hr.employees.view')) items.push({ label: 'Открыть сотрудника', to: { path: '/hr/employees', query: { selected: employee.id } } })
+  if (applicant && auth.can('admissions.view')) items.push({ label: 'Открыть заявление', to: { path: '/admissions', query: { selected: applicant.id } } })
+  if (graduate && auth.can('graduation.view')) items.push({ label: 'Открыть выпускника', to: { path: '/graduation', query: { selected: graduate.id } } })
+  if (person.digital_identities?.length && auth.can('digitalpasses.manage')) items.push({ label: 'Цифровой пропуск', to: '/identity/digital-passes' })
+  if (auth.can('rfid.cards.view')) items.push({ label: 'RFID-карты', to: '/identity/rfid-cards' })
   return items
 })
 
@@ -301,6 +306,16 @@ onMounted(async () => {
             </div>
           </template>
           <dl class="people-details">
+            <!-- Комендант заходит сюда за одним: какая карта у человека на руках. -->
+            <div v-if="selected.rfid_card !== undefined">
+              <dt>RFID-карта</dt>
+              <dd>
+                <template v-if="selected.rfid_card">
+                  {{ selected.rfid_card.uid }} — {{ selected.rfid_card.status_label }}
+                </template>
+                <template v-else>не выдана</template>
+              </dd>
+            </div>
             <div><dt>Дата рождения</dt><dd>{{ selected.birth_date || '—' }}</dd></div>
             <div><dt>Гражданство</dt><dd>{{ selected.citizenship || '—' }}</dd></div>
             <div><dt>СНИЛС</dt><dd>{{ selected.snils || '—' }}</dd></div>

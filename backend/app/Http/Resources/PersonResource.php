@@ -55,6 +55,16 @@ class PersonResource extends JsonResource
             'graduates' => GraduateResource::collection($this->whenLoaded('graduates')),
             'users' => UserResource::collection($this->whenLoaded('users')),
             'digital_identities' => DigitalIdentityResource::collection($this->whenLoaded('digitalIdentities')),
+            // Карта, которая сейчас на руках. Комендант заходит в «Люди» и
+            // должен видеть её прямо в карточке, не переходя в раздел карт.
+            'rfid_card' => $this->whenLoaded('currentRfidCard', fn () => $this->currentRfidCard === null ? null : [
+                'id' => $this->currentRfidCard->id,
+                'uid' => $this->currentRfidCard->uid,
+                'label' => $this->currentRfidCard->label,
+                'status' => $this->currentRfidCard->status,
+                'status_label' => RfidCardResource::statusLabel($this->currentRfidCard->status),
+                'issued_at' => $this->currentRfidCard->issued_at?->toISOString(),
+            ]),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

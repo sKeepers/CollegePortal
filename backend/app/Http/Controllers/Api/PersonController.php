@@ -78,6 +78,7 @@ class PersonController extends Controller
             'graduates.diploma',
             'users.roles',
             'digitalIdentities',
+            'currentRfidCard',
         ])->loadCount(['students', 'teachers', 'employees', 'applicants', 'applicantApplications', 'graduates', 'users', 'digitalIdentities']));
     }
 
@@ -168,6 +169,7 @@ class PersonController extends Controller
             'graduates.diploma',
             'users.roles',
             'digitalIdentities',
+            'currentRfidCard',
         ])->loadCount(['students', 'teachers', 'employees', 'applicants', 'applicantApplications', 'graduates', 'users', 'digitalIdentities']);
     }
 
