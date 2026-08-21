@@ -26,23 +26,49 @@ const auth = useAuthStore()
 const settingsStore = useSettingsStore()
 const loading = ref(false)
 const error = ref('')
-const totals = ref({ students: 0, groups: 0, teachers: 0, employees: 0, todayLessons: 0, applications: 0, insideNow: 0, denied: 0 })
+const totals = ref({ students: 0, groups: 0, teachers: 0, employees: 0, todayLessons: 0, applications: 0, insideNow: 0, denied: 0, cardsIssued: 0, cardsStock: 0 })
 
-const mockRecentActivity = [
-  { id: 1, title: 'Обновлена карточка студента', description: 'Изменены контактные данные и статус обучения', time: 'Сегодня' },
-  { id: 2, title: 'Импортированы группы', description: 'CSV-обмен завершен без критических ошибок', time: 'Вчера' },
-  { id: 3, title: 'Подготовлен отчет', description: 'Сводка по посещаемости готова к проверке', time: '2 дня назад' },
-]
-const mockNotifications = [
-  { id: 1, title: 'ФРДО', description: 'Интеграция запланирована после расширения карточки студента', status: 'План', tone: 'info' },
-  { id: 2, title: 'Расписание', description: 'Проверьте заполнение аудиторий для занятий на неделю', status: 'Внимание', tone: 'warning' },
-  { id: 3, title: 'Moodle', description: 'Подключение будет выполняться отдельным этапом', status: 'Ожидает', tone: 'neutral' },
-]
-const mockTasks = [
-  { id: 1, title: 'Проверить список студентов для ФРДО', due: 'До конца недели', status: 'В работе', tone: 'warning', done: false },
-  { id: 2, title: 'Сверить группы и образовательные программы', due: 'Сегодня', status: 'Важно', tone: 'danger', done: false },
-  { id: 3, title: 'Подготовить перенос раздела “Преподаватели”', due: 'Следующий этап', status: 'План', tone: 'info', done: false },
-]
+// Придуманных уведомлений и задач здесь больше нет. Три блока-заглушки —
+// «ФРДО», «Расписание», «Moodle» плюс список выдуманных дел — показывались
+// **всем**, у кого есть рабочий стол, независимо от роли и прав: комендант
+// видел напоминание про ФРДО, которого ему не открыть. На портале с живыми
+// сотрудниками это не украшение, а ложь: по такому напоминанию однажды пойдут
+// что-то делать. Уведомление теперь либо выведено из настоящих чисел, которые
+// человеку и так видны, либо его нет вовсе.
+
+/**
+ * Уведомления собираются из того, что человеку и так видно.
+ *
+ * Пустой список — нормальный исход: лучше не показать ничего, чем показать
+ * придуманное. Виджет в этом случае с рабочего стола убирается.
+ */
+const notifications = computed(() => {
+  if (isStudent.value) {
+    return [{ id: 'lessons', title: 'Расписание', description: 'Проверьте ближайшие занятия в личном кабинете.', status: 'Учебное', tone: 'info' }]
+  }
+
+  if (isAdmission.value) {
+    return [{ id: 'documents', title: 'Комплектность', description: 'Проверяйте документы и готовность заявлений перед регистрацией.', status: 'Приём', tone: 'info' }]
+  }
+
+  const items = []
+
+  if (isHr.value) {
+    items.push({ id: 'gate', title: 'Проходная', description: `Сейчас на территории: ${totals.value.insideNow}. Отказов: ${totals.value.denied}.`, status: 'Контроль', tone: 'info' })
+  }
+
+  if (auth.can('rfid.cards.view')) {
+    items.push({
+      id: 'cards',
+      title: 'RFID-карты',
+      description: `На руках: ${totals.value.cardsIssued}. На складе: ${totals.value.cardsStock}.`,
+      status: 'Учёт',
+      tone: totals.value.cardsStock === 0 ? 'warning' : 'info',
+    })
+  }
+
+  return items
+})
 
 const currentDate = computed(currentDateRu)
 const userName = computed(() => auth.user?.name || 'пользователь')
@@ -53,7 +79,7 @@ const isHr = computed(() => props.primaryRole === 'hr')
 const dashboardWidgets = computed(() => [
   { id: 'stats', title: isAdmission.value ? 'Приёмная комиссия' : 'Ключевые показатели', defaultSize: 'full' },
   { id: 'actions', title: 'Быстрые действия', defaultSize: 'medium' },
-  { id: 'notifications', title: isStudent.value ? 'Учебные уведомления' : isHr.value ? 'Кадровая сводка' : 'Рабочие уведомления', defaultSize: 'medium' },
+  notifications.value.length ? { id: 'notifications', title: isStudent.value ? 'Учебные уведомления' : isHr.value ? 'Кадровая сводка' : 'Рабочие уведомления', defaultSize: 'medium' } : null,
 ].filter(Boolean))
 const statItems = computed(() => [
   isAdmission.value ? { label: 'Заявления', value: totals.value.applications, icon: NotebookTabs } : null,
@@ -110,6 +136,8 @@ async function loadDashboard() {
     const employeesResult = isHr.value ? await api.list('employees', { per_page: 1 }).then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
     const accessResult = isHr.value ? await api.list('access/reports/summary').then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
     const lessonsResult = !isAdmission.value && auth.can('schedule.view') ? await api.list('schedule-lessons', { date: todayIso() }).then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
+    // Карты спрашиваем только у того, кто их ведёт: остальным этот запрос вернул бы отказ.
+    const cardsResult = auth.can('rfid.cards.view') ? await api.list('rfid-cards', { per_page: 200 }).then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
 
     if (applicationsResult?.status === 'fulfilled') totals.value.applications = extractTotal(applicationsResult.value)
     if (studentsResult?.status === 'fulfilled') totals.value.students = extractTotal(studentsResult.value)
@@ -118,6 +146,11 @@ async function loadDashboard() {
     if (employeesResult?.status === 'fulfilled') totals.value.employees = extractTotal(employeesResult.value)
     if (accessResult?.status === 'fulfilled') { totals.value.insideNow = accessResult.value?.data?.inside_now || 0; totals.value.denied = accessResult.value?.data?.denied || 0 }
     if (lessonsResult?.status === 'fulfilled') totals.value.todayLessons = extractTotal(lessonsResult.value)
+    if (cardsResult?.status === 'fulfilled') {
+      const cards = Array.isArray(cardsResult.value?.data) ? cardsResult.value.data : []
+      totals.value.cardsIssued = cards.filter((card) => card.status === 'issued').length
+      totals.value.cardsStock = cards.filter((card) => card.status === 'stock').length
+    }
 
     if (!isStudent.value && !isAdmission.value && [studentsResult, groupsResult, teachersResult, lessonsResult, employeesResult, accessResult].filter(Boolean).some((result) => result.status === 'rejected')) {
       error.value = 'Часть показателей не удалось загрузить'
@@ -152,7 +185,7 @@ onMounted(() => {
         <RecentActivityWidget :items="[]" />
       </template>
       <template #notifications>
-        <NotificationsWidget :items="isStudent ? [{ id: 1, title: 'Расписание', description: 'Проверьте ближайшие занятия в личном кабинете.', status: 'Учебное', tone: 'info' }] : isAdmission ? [{ id: 1, title: 'Комплектность', description: 'Проверяйте документы и готовность заявлений перед регистрацией.', status: 'Приём', tone: 'info' }] : isHr ? [{ id: 1, title: 'Проходная', description: `Сейчас на территории: ${totals.insideNow}. Отказов: ${totals.denied}.`, status: 'Контроль', tone: 'info' }] : mockNotifications" />
+        <NotificationsWidget :items="notifications" />
       </template>
     </PersonalDashboardLayout>
   </AppPage>
