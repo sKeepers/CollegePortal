@@ -93,19 +93,43 @@ export const useRfidCardsStore = defineStore('rfidCards', () => {
     loading.value = true
     error.value = ''
     try {
-      const query = { per_page: 500 }
-      const { from, to, group_id: groupId, reason, open } = journalFilters.value
-      if (from) query.from = from
-      if (to) query.to = to
-      if (groupId) query.group_id = groupId
-      if (reason) query.reason = reason
-      if (open !== null && open !== '') query.open = open
-
-      journal.value = rows(await api.list('rfid-cards/journal', query))
+      journal.value = rows(await api.list('rfid-cards/journal', { ...journalQuery(), per_page: 500 }))
     } catch (err) {
       fail(err, 'Не удалось загрузить журнал')
     } finally {
       loading.value = false
+    }
+  }
+
+  /** Отбор строк журнала — общий для экрана, печати и выгрузки. */
+  function journalQuery() {
+    const query = {}
+    const { from, to, group_id: groupId, reason, open } = journalFilters.value
+    if (from) query.from = from
+    if (to) query.to = to
+    if (groupId) query.group_id = groupId
+    if (reason) query.reason = reason
+    // Единицей и нулём, а не словами: проверка на сервере ждёт булево, а
+    // строка «true» ей не булево — фильтр падал с `validation.boolean`.
+    if (open !== null && open !== '') query.open = open ? 1 : 0
+
+    return query
+  }
+
+  /** Тот же журнал книгой Excel. */
+  async function exportJournalFile() {
+    saving.value = true
+    error.value = ''
+    try {
+      const query = new URLSearchParams(journalQuery()).toString()
+
+      return await api.download(`/rfid-cards/journal/export${query ? '?'+query : ''}`)
+    } catch (err) {
+      fail(err, 'Не удалось выгрузить журнал')
+
+      return null
+    } finally {
+      saving.value = false
     }
   }
 
@@ -221,7 +245,7 @@ export const useRfidCardsStore = defineStore('rfidCards', () => {
     loading, searching, saving, error, filters, journalFilters,
     statusOptions, reasonOptions, groupOptions, counts,
     statusLabels: STATUS_LABELS, reasonLabels: REASON_LABELS,
-    load, loadGroups, loadJournal, searchPeople, selectPerson, clearPerson, refreshPerson,
+    load, loadGroups, loadJournal, exportJournalFile, searchPeople, selectPerson, clearPerson, refreshPerson,
     lookup, bind, create, issue, accept, release, remove, changeStatus,
   }
 })

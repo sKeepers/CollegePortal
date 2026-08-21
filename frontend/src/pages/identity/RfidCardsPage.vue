@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { CreditCard, Plus, Printer, RefreshCw, Search, X } from '@lucide/vue'
+import { CreditCard, Download, Plus, Printer, RefreshCw, Search, X } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -214,7 +214,7 @@ async function submitRelease() {
 async function removeCard(card) {
   $q.dialog({
     title: 'Удалить карту',
-    message: `Карта ${card.uid} будет удалена насовсем. Удаляются только карты, которых никому не выдавали.`,
+    message: `Карта ${card.uid} будет удалена насовсем, вместе с её строками в журнале выдач. Так убирают запись, заведённую по ошибке — например, с опечаткой в номере. Настоящую карту, вышедшую из оборота, лучше списать: она останется в реестре.`,
     cancel: { flat: true, noCaps: true, label: 'Отмена' },
     ok: { color: 'negative', unelevated: true, noCaps: true, label: 'Удалить' },
     persistent: true,
@@ -241,6 +241,21 @@ async function submitCreate() {
 async function openJournal() {
   await store.loadGroups()
   await store.loadJournal()
+}
+
+async function exportJournal() {
+  const blob = await store.exportJournalFile()
+  if (!blob) return
+
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `Журнал выдачи RFID-карт ${new Date().toISOString().slice(0, 10)}.xlsx`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+  notify('Журнал выгружен в Excel')
 }
 
 function printJournal() {
@@ -405,14 +420,22 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKey))
                   >
                     Привязать карту
                   </q-btn>
+                  <!--
+                    Подписи отвечают на вопрос «что случилось с картой», а не
+                    «что сделает система»: комендант думает о человеке перед
+                    собой, а не о состояниях в базе.
+                  -->
                   <q-btn v-if="store.person.card" flat no-caps color="primary" :disable="store.saving" @click="acceptCurrent">
-                    Принять
+                    Принять — карту вернули
+                    <q-tooltip>Человек принёс карту. Она вернётся на склад, и её можно будет выдать другому.</q-tooltip>
                   </q-btn>
                   <q-btn v-if="store.person.card" flat no-caps color="negative" :disable="store.saving" @click="markLost">
                     Утеряна — выдать новую
+                    <q-tooltip>Карта потеряна: проход по ней закроется, а человек освободится под новую. Экран сразу будет ждать новую карту.</q-tooltip>
                   </q-btn>
                   <q-btn v-if="store.person.card" flat no-caps :disable="store.saving" @click="openRelease(store.person.card)">
-                    Отвязать
+                    Отвязать — карта не вернулась
+                    <q-tooltip>Карта осталась у человека: уволился, отчислился. Числиться за ним перестанет, причина запишется в журнал.</q-tooltip>
                   </q-btn>
                 </template>
               </div>
@@ -494,11 +517,20 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKey))
           <template #body-cell-person="props">
             <q-td :props="props">{{ props.row.person?.full_name || '—' }}</q-td>
           </template>
+          <template #body-cell-issued_at="props">
+            <q-td :props="props">{{ formatDateTime(props.row.issued_at) }}</q-td>
+          </template>
           <template #body-cell-actions="props">
             <q-td :props="props" class="rfid-actions">
               <template v-if="canManage">
-                <q-btn v-if="props.row.status === 'issued'" flat dense no-caps color="primary" :disable="store.saving" @click="accept(props.row)">Принять</q-btn>
-                <q-btn v-if="props.row.person_id" flat dense no-caps :disable="store.saving" @click="openRelease(props.row)">Отвязать</q-btn>
+                <q-btn v-if="props.row.status === 'issued'" flat dense no-caps color="primary" :disable="store.saving" @click="accept(props.row)">
+                  Принять
+                  <q-tooltip>Карту вернули: она уходит на склад и её можно выдать другому.</q-tooltip>
+                </q-btn>
+                <q-btn v-if="props.row.person_id" flat dense no-caps :disable="store.saving" @click="openRelease(props.row)">
+                  Отвязать
+                  <q-tooltip>Карта не вернулась — человек выбыл. Перестанет за ним числиться, причина уйдёт в журнал.</q-tooltip>
+                </q-btn>
                 <q-btn flat dense no-caps color="negative" :disable="store.saving" @click="changeStatus(props.row, 'lost')">Утеряна</q-btn>
                 <q-btn flat dense no-caps :disable="store.saving" @click="changeStatus(props.row, 'blocked')">Заблокировать</q-btn>
                 <q-btn v-if="props.row.status !== 'stock'" flat dense no-caps :disable="store.saving" @click="changeStatus(props.row, 'stock')">В оборот</q-btn>
@@ -539,6 +571,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKey))
           <q-space />
           <q-btn flat no-caps :disable="store.loading" @click="store.loadJournal">
             <RefreshCw :size="16" class="q-mr-xs" /> Показать
+          </q-btn>
+          <q-btn flat no-caps :disable="!store.journal.length || store.saving" @click="exportJournal">
+            <Download :size="16" class="q-mr-xs" /> Выгрузить в Excel
           </q-btn>
           <q-btn color="primary" unelevated no-caps :disable="!store.journal.length" @click="printJournal">
             <Printer :size="16" class="q-mr-xs" /> Печать
@@ -585,9 +620,14 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKey))
     </q-tab-panels>
 
     <!--
-      Печатная форма. На экране скрыта, при печати — единственное, что видно.
-      Столбец подписи пустой намеренно: ведомость подписывают на бумаге.
+      Печатная форма живёт в корне страницы, а не внутри раздела.
+      Скрывать её соседей через `visibility` было ошибкой: спрятанное
+      продолжает занимать место, и на печать уходили пустые листы, а таблица
+      оставалась зажатой в ширину колонки. Теперь соседи по корню просто
+      выключаются, и на бумаге остаётся одна ведомость во всю ширину.
+      Столбец подписи пустой намеренно: подписывают на бумаге.
     -->
+    <Teleport to="body">
     <div class="rfid-print">
       <h1>{{ printTitle }}</h1>
       <div class="rfid-print__period">{{ printPeriod }}</div>
@@ -619,6 +659,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKey))
         Всего записей: {{ store.journal.length }}. Напечатано {{ printedAt }}.
       </div>
     </div>
+    </Teleport>
 
     <q-dialog v-model="createVisible">
       <q-card class="rfid-dialog">
@@ -712,10 +753,10 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKey))
 .rfid-print { display: none; }
 
 @media print {
-  body * { visibility: hidden; }
-  .rfid-print,
-  .rfid-print * { visibility: visible; }
-  .rfid-print { display: block; position: absolute; left: 0; top: 0; width: 100%; padding: 0 12px; }
+  /* Соседи по корню выключаются целиком: `visibility` оставляла их место на
+     бумаге, и печать выдавала пустые листы. */
+  body > *:not(.rfid-print) { display: none !important; }
+  .rfid-print { display: block !important; width: 100%; padding: 0; }
   .rfid-print h1 { font-size: 16px; margin: 0 0 4px; }
   .rfid-print__period { font-size: 12px; margin-bottom: 10px; }
   .rfid-print table { width: 100%; border-collapse: collapse; font-size: 11px; }

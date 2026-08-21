@@ -558,6 +558,8 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         ->middleware('permission:rfid.cards.view');
     Route::get('rfid-cards/journal', [RfidCardController::class, 'journal'])
         ->middleware('permission:rfid.cards.view');
+    Route::get('rfid-cards/journal/export', [RfidCardController::class, 'exportJournal'])
+        ->middleware('permission:rfid.cards.view');
     Route::get('rfid-cards/groups', [RfidCardController::class, 'groups'])
         ->middleware('permission:rfid.cards.view');
     Route::post('rfid-cards/bind', [RfidCardController::class, 'bind'])

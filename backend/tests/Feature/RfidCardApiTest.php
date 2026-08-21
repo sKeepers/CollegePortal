@@ -254,6 +254,30 @@ class RfidCardApiTest extends TestCase
         $this->assertSame('left', $rows->firstWhere('is_open', false)['close_reason']);
     }
 
+    public function test_the_journal_filters_by_open_and_closed_issues(): void
+    {
+        $this->withApiAuth($this->commandant());
+        $first = $this->createPerson('Открытый');
+        $second = $this->createPerson('Закрытый');
+
+        $this->postJson('/api/rfid-cards/bind', ['person_id' => $first->id, 'uid' => '0000000801'])->assertOk();
+        $this->postJson('/api/rfid-cards/bind', ['person_id' => $second->id, 'uid' => '0000000802'])->assertOk();
+        $closed = RfidCard::query()->firstWhere('uid', '0000000802');
+        $this->postJson("/api/rfid-cards/{$closed->id}/accept")->assertOk();
+
+        // Фильтр «только на руках» приходит единицей и нулём. Со словом `true`
+        // проверка падала, и человек видел служебное `validation.boolean`.
+        $open = $this->getJson('/api/rfid-cards/journal?open=1')->assertOk()->json('data');
+        $this->assertCount(1, $open);
+        $this->assertTrue($open[0]['is_open']);
+
+        $done = $this->getJson('/api/rfid-cards/journal?open=0')->assertOk()->json('data');
+        $this->assertCount(1, $done);
+        $this->assertFalse($done[0]['is_open']);
+
+        $this->assertCount(2, $this->getJson('/api/rfid-cards/journal')->assertOk()->json('data'));
+    }
+
     public function test_a_card_nobody_ever_held_is_deleted(): void
     {
         $this->withApiAuth($this->commandant());
@@ -265,7 +289,7 @@ class RfidCardApiTest extends TestCase
         $this->assertNull(RfidCard::query()->find($card->id));
     }
 
-    public function test_a_card_with_history_is_written_off_instead_of_deleted(): void
+    public function test_a_card_on_someones_hands_is_not_deleted_until_it_is_settled(): void
     {
         $this->withApiAuth($this->commandant());
         $person = $this->createPerson('Историчный');
@@ -273,15 +297,33 @@ class RfidCardApiTest extends TestCase
         $this->postJson('/api/rfid-cards/bind', ['person_id' => $person->id, 'uid' => '0000000701'])->assertOk();
         $card = RfidCard::query()->firstWhere('uid', '0000000701');
 
-        // Удаление увело бы за собой строки журнала, а журнал — документ.
+        // Карта ходит по зданию: стереть её значило бы потерять след живой карты.
         $this->deleteJson("/api/rfid-cards/{$card->id}")
             ->assertStatus(422)
-            ->assertJsonPath('errors.card.0', 'Карту уже кому-то выдавали — удалить её нельзя, вместе с ней пропал бы журнал выдач. Спишите её: она выйдет из оборота, а история останется.');
+            ->assertJsonPath('errors.card.0', 'Карта сейчас на руках у человека. Сначала примите её или отвяжите — потом можно удалять.');
 
-        $this->postJson("/api/rfid-cards/{$card->id}/status", ['status' => 'written_off'])->assertOk();
+        // А ошибочную запись — например, с опечаткой в номере — убрать надо:
+        // списанная так и осталась бы висеть в реестре и путать.
+        $this->postJson("/api/rfid-cards/{$card->id}/accept")->assertOk();
+        $this->deleteJson("/api/rfid-cards/{$card->id}")->assertNoContent();
 
-        $this->assertNotNull(RfidCard::query()->find($card->id));
-        $this->assertSame(1, RfidCardIssue::query()->where('rfid_card_id', $card->id)->count());
+        $this->assertNull(RfidCard::query()->find($card->id));
+        $this->assertSame(0, RfidCardIssue::query()->where('rfid_card_id', $card->id)->count());
+    }
+
+    public function test_the_journal_is_exported_as_a_workbook(): void
+    {
+        $this->withApiAuth($this->commandant());
+        $person = $this->createPerson('Выгружаемый');
+        $this->postJson('/api/rfid-cards/bind', ['person_id' => $person->id, 'uid' => '0000000901'])->assertOk();
+
+        $response = $this->get('/api/rfid-cards/journal/export');
+
+        $response->assertOk()
+            ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        // Книга xlsx — это zip: начинается с PK.
+        $this->assertStringStartsWith('PK', $response->getContent());
     }
 
     public function test_the_short_reader_format_is_refused_instead_of_guessing(): void

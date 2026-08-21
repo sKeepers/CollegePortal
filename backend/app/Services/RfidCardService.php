@@ -106,7 +106,7 @@ class RfidCardService
             $card->forceFill([
                 'person_id' => $person->id,
                 'status' => RfidCard::STATUS_ISSUED,
-                'issued_at' => now()->toDateString(),
+                'issued_at' => now(),
                 'returned_at' => null,
                 'note' => $note ?? $card->note,
             ])->save();
@@ -139,7 +139,7 @@ class RfidCardService
             $card->forceFill([
                 'person_id' => null,
                 'status' => RfidCard::STATUS_STOCK,
-                'returned_at' => now()->toDateString(),
+                'returned_at' => now(),
                 'note' => $note ?? $card->note,
             ])->save();
         });
@@ -180,7 +180,7 @@ class RfidCardService
             $card->forceFill([
                 'person_id' => null,
                 'status' => $card->status === RfidCard::STATUS_ISSUED ? RfidCard::STATUS_STOCK : $card->status,
-                'returned_at' => now()->toDateString(),
+                'returned_at' => now(),
                 'note' => $note ?? $card->note,
             ])->save();
         });
@@ -193,22 +193,29 @@ class RfidCardService
     /**
      * Удалить карту насовсем.
      *
-     * Только ту, которой никогда никого не выдавали: заведённую по ошибке или с
-     * опечаткой в номере. Карту с историей удалять нельзя — вместе с ней
-     * каскадом ушли бы строки журнала, а журнал выдач это документ. Такую карту
-     * выводят из оборота списанием.
+     * Нужно для честной ошибки: номер набрали руками и промахнулись, карта
+     * завелась не та. Такую запись надо стирать, а не списывать — списанная
+     * останется в реестре и будет путать.
+     *
+     * Одно ограничение: карту, которая **сейчас у человека на руках**, удалить
+     * нельзя. Она существует физически, по ней ходят, и стереть её значило бы
+     * потерять след живой карты. Сначала примите или отвяжите.
+     *
+     * Строки журнала уходят вместе с картой — иначе они остались бы висеть без
+     * карты. След при этом не пропадает: удаление пишется в аудит вместе с
+     * номером и тем, у кого карта была.
      */
     public function delete(RfidCard $card): void
     {
-        $issued = RfidCardIssue::query()->where('rfid_card_id', $card->id)->exists();
-
-        if ($issued) {
+        if ($card->status === RfidCard::STATUS_ISSUED) {
             throw ValidationException::withMessages([
-                'card' => 'Карту уже кому-то выдавали — удалить её нельзя, вместе с ней пропал бы журнал выдач. Спишите её: она выйдет из оборота, а история останется.',
+                'card' => 'Карта сейчас на руках у человека. Сначала примите её или отвяжите — потом можно удалять.',
             ]);
         }
 
-        $old = $card->only(['uid', 'label', 'status', 'person_id']);
+        $issues = RfidCardIssue::query()->where('rfid_card_id', $card->id)->count();
+
+        $old = $card->only(['uid', 'label', 'status', 'person_id']) + ['issues' => $issues];
 
         AuditLogService::log('rfid', 'card_deleted', $card, $old, null);
 

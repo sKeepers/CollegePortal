@@ -53,8 +53,8 @@ class RfidCard extends Model
     protected function casts(): array
     {
         return [
-            'issued_at' => 'date',
-            'returned_at' => 'date',
+            'issued_at' => 'datetime',
+            'returned_at' => 'datetime',
         ];
     }
 

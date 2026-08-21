@@ -10,8 +10,11 @@ use App\Models\Person;
 use App\Models\RfidCard;
 use App\Models\RfidCardIssue;
 use App\Services\AuditLogService;
+use App\Services\RfidCardJournalExport;
 use App\Services\RfidCardService;
 use App\Support\Rfid\CardNumber;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -57,9 +60,6 @@ class RfidCardController extends Controller
 
         $cards = RfidCard::query()
             ->with('person')
-            // Удалить можно только карту без истории, и кнопку показывает
-            // именно этот счётчик — иначе она предлагала бы невозможное.
-            ->withCount('issues')
             ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('status', $status))
             ->when($filters['person_id'] ?? null, fn ($query, int $id) => $query->where('person_id', $id))
             ->when($filters['search'] ?? null, function ($query, string $search) use ($operator): void {
@@ -205,9 +205,53 @@ class RfidCardController extends Controller
             'reason' => ['nullable', Rule::in(RfidCardIssue::REASONS)],
             'open' => ['nullable', 'boolean'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:500'],
+        ], [
+            // Без своих сообщений наружу уходит служебный ключ вида
+            // `validation.boolean`, и человек видит его вместо объяснения.
+            'from.date' => 'Дата «с» не распознана.',
+            'to.date' => 'Дата «по» не распознана.',
+            'open.boolean' => 'Состояние выдачи задаётся как «на руках» или «закрыта».',
+            'reason.in' => 'Неизвестная причина закрытия выдачи.',
+            'per_page.integer' => 'Число строк на странице должно быть целым.',
         ]);
 
-        $issues = RfidCardIssue::query()
+        $issues = $this->journalQuery($filters)->paginate($filters['per_page'] ?? 100);
+
+        return RfidCardIssueResource::collection($issues);
+    }
+
+    /**
+     * Тот же журнал книгой Excel.
+     *
+     * Отбор строк общий с экраном — намеренно: выгрузка, которая показывает не
+     * то же самое, что человек видит перед собой, хуже, чем её отсутствие.
+     */
+    public function exportJournal(Request $request, RfidCardJournalExport $export): Response
+    {
+        $filters = $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+            'person_id' => ['nullable', 'integer'],
+            'rfid_card_id' => ['nullable', 'integer'],
+            'group_id' => ['nullable', 'integer'],
+            'reason' => ['nullable', Rule::in(RfidCardIssue::REASONS)],
+            'open' => ['nullable', 'boolean'],
+        ]);
+
+        $issues = $this->journalQuery($filters)->limit(10000)->get();
+        $file = $export->build($issues, $this->journalTitle($filters), $this->journalPeriod($filters));
+
+        AuditLogService::log('rfid', 'journal_exported', null, null, ['rows' => $issues->count()], $request);
+
+        return response($file['content'], Response::HTTP_OK, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="'.$file['filename'].'"',
+        ]);
+    }
+
+    private function journalQuery(array $filters): Builder
+    {
+        return RfidCardIssue::query()
             ->with(array_merge(
                 ['card', 'issuedBy', 'acceptedBy', 'person'],
                 array_map(fn (string $relation) => 'person.'.$relation, self::PERSON_RELATIONS),
@@ -227,10 +271,36 @@ class RfidCardController extends Controller
                     : $query->whereNotNull('returned_at');
             })
             ->orderByDesc('issued_at')
-            ->orderByDesc('id')
-            ->paginate($filters['per_page'] ?? 100);
+            ->orderByDesc('id');
+    }
 
-        return RfidCardIssueResource::collection($issues);
+    private function journalTitle(array $filters): string
+    {
+        $groupId = $filters['group_id'] ?? null;
+
+        if ($groupId === null) {
+            return 'Журнал выдачи RFID-карт';
+        }
+
+        $group = Group::query()->find($groupId);
+
+        return $group === null
+            ? 'Ведомость выдачи RFID-карт'
+            : 'Ведомость выдачи RFID-карт — '.$group->name;
+    }
+
+    private function journalPeriod(array $filters): string
+    {
+        $from = $filters['from'] ?? null;
+        $to = $filters['to'] ?? null;
+
+        if ($from === null && $to === null) {
+            return 'за всё время';
+        }
+
+        $format = fn (?string $value): string => $value === null ? '…' : Carbon::parse($value)->format('d.m.Y');
+
+        return 'за период '.$format($from).' — '.$format($to);
     }
 
     public function store(Request $request): JsonResponse
@@ -378,7 +448,7 @@ class RfidCardController extends Controller
                 'label' => $card->label,
                 'status' => $card->status,
                 'status_label' => RfidCardResource::statusLabel($card->status),
-                'issued_at' => $card->issued_at?->toDateString(),
+                'issued_at' => $card->issued_at?->toISOString(),
             ],
         ];
     }
