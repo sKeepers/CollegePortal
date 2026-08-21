@@ -550,6 +550,18 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     // кому и когда, иначе учёт ничем не отличается от списка.
     Route::get('rfid-cards', [RfidCardController::class, 'index'])
         ->middleware('permission:rfid.cards.view');
+    // Объявлены до `rfid-cards/{rfidCard}`: иначе «lookup» и «journal» ушли бы
+    // в параметр маршрута и искались бы как карты с такими номерами.
+    Route::get('rfid-cards/lookup', [RfidCardController::class, 'lookup'])
+        ->middleware('permission:rfid.cards.view');
+    Route::get('rfid-cards/people', [RfidCardController::class, 'people'])
+        ->middleware('permission:rfid.cards.view');
+    Route::get('rfid-cards/journal', [RfidCardController::class, 'journal'])
+        ->middleware('permission:rfid.cards.view');
+    Route::get('rfid-cards/groups', [RfidCardController::class, 'groups'])
+        ->middleware('permission:rfid.cards.view');
+    Route::post('rfid-cards/bind', [RfidCardController::class, 'bind'])
+        ->middleware('permission:rfid.cards.manage');
     Route::post('rfid-cards', [RfidCardController::class, 'store'])
         ->middleware('permission:rfid.cards.manage');
     Route::patch('rfid-cards/{rfidCard}', [RfidCardController::class, 'update'])
@@ -559,6 +571,10 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     Route::post('rfid-cards/{rfidCard}/accept', [RfidCardController::class, 'accept'])
         ->middleware('permission:rfid.cards.manage');
     Route::post('rfid-cards/{rfidCard}/status', [RfidCardController::class, 'status'])
+        ->middleware('permission:rfid.cards.manage');
+    Route::post('rfid-cards/{rfidCard}/release', [RfidCardController::class, 'release'])
+        ->middleware('permission:rfid.cards.manage');
+    Route::delete('rfid-cards/{rfidCard}', [RfidCardController::class, 'destroy'])
         ->middleware('permission:rfid.cards.manage');
 
     // Цифровые пропуска. Список и свой QR открыты ещё и по `view_own_data`:

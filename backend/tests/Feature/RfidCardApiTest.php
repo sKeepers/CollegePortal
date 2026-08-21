@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Permission;
 use App\Models\Person;
 use App\Models\RfidCard;
+use App\Models\RfidCardIssue;
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
@@ -39,7 +40,7 @@ class RfidCardApiTest extends TestCase
         $this->withApiAuth($this->commandant());
         $person = $this->createPerson('Проверкин');
 
-        $card = $this->postJson('/api/rfid-cards', ['uid' => 'CARD-001', 'label' => '№ 12'])
+        $card = $this->postJson('/api/rfid-cards', ['uid' => '0000000001', 'label' => '№ 12'])
             ->assertCreated()
             ->assertJsonPath('data.status', 'stock')
             ->json('data');
@@ -57,7 +58,7 @@ class RfidCardApiTest extends TestCase
         $this->withApiAuth($this->commandant());
         $first = $this->createPerson('Первый');
         $second = $this->createPerson('Второй');
-        $card = $this->createCard('CARD-002');
+        $card = $this->createCard('0000000002');
 
         $this->postJson("/api/rfid-cards/{$card->id}/issue", ['person_id' => $first->id])->assertOk();
 
@@ -72,8 +73,8 @@ class RfidCardApiTest extends TestCase
     {
         $this->withApiAuth($this->commandant());
         $person = $this->createPerson('Двойнов');
-        $first = $this->createCard('CARD-003');
-        $second = $this->createCard('CARD-004');
+        $first = $this->createCard('0000000003');
+        $second = $this->createCard('0000000004');
 
         $this->postJson("/api/rfid-cards/{$first->id}/issue", ['person_id' => $person->id])->assertOk();
 
@@ -81,24 +82,27 @@ class RfidCardApiTest extends TestCase
         // проходной прошли бы обе.
         $this->postJson("/api/rfid-cards/{$second->id}/issue", ['person_id' => $person->id])
             ->assertStatus(422)
-            ->assertJsonPath('errors.person_id.0', 'У человека уже есть карта на руках — CARD-003. Сначала примите её.');
+            ->assertJsonPath('errors.person_id.0', 'У человека уже есть карта на руках — 0000000003. Сначала примите её или отметьте утерянной.');
     }
 
     public function test_a_card_is_accepted_back_and_can_be_issued_again(): void
     {
         $this->withApiAuth($this->commandant());
         $person = $this->createPerson('Возвратов');
-        $card = $this->createCard('CARD-005');
+        $card = $this->createCard('0000000005');
 
         $this->postJson("/api/rfid-cards/{$card->id}/issue", ['person_id' => $person->id])->assertOk();
         $this->postJson("/api/rfid-cards/{$card->id}/accept")
             ->assertOk()
             ->assertJsonPath('data.status', 'stock');
 
-        // Человек в карте остаётся: «принята у кого» — это и есть история.
+        // Принятая карта ни за кем не числится: `person_id` — это «у кого она
+        // сейчас». Пока прежний владелец в ней оставался, сданная карта в
+        // реестре выглядела всё ещё выданной. Кто её держал — в журнале.
         $accepted = RfidCard::query()->find($card->id);
-        $this->assertSame($person->id, $accepted->person_id);
+        $this->assertNull($accepted->person_id);
         $this->assertNotNull($accepted->returned_at);
+        $this->assertSame($person->id, RfidCardIssue::query()->where('rfid_card_id', $card->id)->value('person_id'));
 
         $this->postJson("/api/rfid-cards/{$card->id}/issue", ['person_id' => $person->id])->assertOk();
     }
@@ -107,7 +111,7 @@ class RfidCardApiTest extends TestCase
     {
         $this->withApiAuth($this->commandant());
         $person = $this->createPerson('Потеряев');
-        $card = $this->createCard('CARD-006');
+        $card = $this->createCard('0000000006');
 
         $this->postJson("/api/rfid-cards/{$card->id}/status", ['status' => 'lost'])->assertOk();
 
@@ -122,7 +126,7 @@ class RfidCardApiTest extends TestCase
     public function test_issuing_through_the_status_route_is_refused(): void
     {
         $this->withApiAuth($this->commandant());
-        $card = $this->createCard('CARD-007');
+        $card = $this->createCard('0000000007');
 
         // Иначе карта оказалась бы «на руках» неизвестно у кого.
         $this->postJson("/api/rfid-cards/{$card->id}/status", ['status' => 'issued'])
@@ -135,16 +139,187 @@ class RfidCardApiTest extends TestCase
         $this->withApiAuth($this->userWith(['dashboard.view']));
 
         $this->getJson('/api/rfid-cards')->assertForbidden();
-        $this->postJson('/api/rfid-cards', ['uid' => 'CARD-008'])->assertForbidden();
+        $this->postJson('/api/rfid-cards', ['uid' => '0000000008'])->assertForbidden();
     }
 
     public function test_a_viewer_sees_the_registry_but_does_not_change_it(): void
     {
-        $this->createCard('CARD-009');
+        $this->createCard('0000000009');
         $this->withApiAuth($this->userWith(['rfid.cards.view']));
 
         $this->getJson('/api/rfid-cards')->assertOk()->assertJsonCount(1, 'data');
-        $this->postJson('/api/rfid-cards', ['uid' => 'CARD-010'])->assertForbidden();
+        $this->postJson('/api/rfid-cards', ['uid' => '0000000010'])->assertForbidden();
+    }
+
+    public function test_a_card_is_bound_by_the_reader_without_registering_it_first(): void
+    {
+        $this->withApiAuth($this->commandant());
+        $person = $this->createPerson('Пришедший');
+
+        // Главный путь: комендант нашёл человека и поднёс карту. Номер портал
+        // видит впервые — карта заводится сама, отдельного шага нет.
+        $this->postJson('/api/rfid-cards/bind', ['person_id' => $person->id, 'uid' => '0000000101'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'issued')
+            ->assertJsonPath('data.person_id', $person->id);
+
+        $card = RfidCard::query()->firstWhere('uid', '0000000101');
+        $this->assertNotNull($card, 'Незнакомая карта не завелась при привязке');
+        $this->assertSame(1, RfidCardIssue::query()->where('rfid_card_id', $card->id)->whereNull('returned_at')->count());
+    }
+
+    public function test_the_reader_finds_the_person_by_the_card_number(): void
+    {
+        $this->withApiAuth($this->commandant());
+        $person = $this->createPerson('Сдающий');
+        $this->postJson('/api/rfid-cards/bind', ['person_id' => $person->id, 'uid' => '0000000201'])->assertOk();
+
+        // Сценарий «пришёл сдать»: поднесли карту — открылся человек.
+        $this->getJson('/api/rfid-cards/lookup?uid=0000000201')
+            ->assertOk()
+            ->assertJsonPath('found', true)
+            ->assertJsonPath('person.full_name', 'Сдающий Проверочный');
+
+        // Тот же номер без ведущих нулей — та же карта. Считыватели дополняют
+        // номер нулями по-разному, и на этом легко потерять карту.
+        $this->getJson('/api/rfid-cards/lookup?uid=201')
+            ->assertOk()
+            ->assertJsonPath('found', true)
+            ->assertJsonPath('card.uid', '0000000201');
+
+        $this->getJson('/api/rfid-cards/lookup?uid=0000000999')
+            ->assertOk()
+            ->assertJsonPath('found', false);
+    }
+
+    public function test_a_lost_card_frees_the_person_for_a_new_one(): void
+    {
+        $this->withApiAuth($this->commandant());
+        $person = $this->createPerson('Потерявший');
+
+        $this->postJson('/api/rfid-cards/bind', ['person_id' => $person->id, 'uid' => '0000000301'])->assertOk();
+        $lost = RfidCard::query()->firstWhere('uid', '0000000301');
+
+        $this->postJson("/api/rfid-cards/{$lost->id}/status", ['status' => 'lost'])->assertOk();
+        $this->postJson('/api/rfid-cards/bind', ['person_id' => $person->id, 'uid' => '0000000302'])->assertOk();
+
+        $rows = collect($this->getJson('/api/rfid-cards/journal?person_id='.$person->id)->assertOk()->json('data'));
+
+        $this->assertCount(2, $rows, 'В журнале должно остаться обе выдачи: утерянная и новая');
+        $this->assertSame(1, $rows->where('is_open', true)->count());
+        $this->assertSame('lost', $rows->firstWhere('is_open', false)['close_reason']);
+    }
+
+    public function test_the_journal_keeps_the_whole_history_of_a_card(): void
+    {
+        $this->withApiAuth($this->commandant());
+        $first = $this->createPerson('Первый');
+        $second = $this->createPerson('Второй');
+
+        $this->postJson('/api/rfid-cards/bind', ['person_id' => $first->id, 'uid' => '0000000401'])->assertOk();
+        $card = RfidCard::query()->firstWhere('uid', '0000000401');
+        $this->postJson("/api/rfid-cards/{$card->id}/accept")->assertOk();
+        $this->postJson('/api/rfid-cards/bind', ['person_id' => $second->id, 'uid' => '0000000401'])->assertOk();
+
+        // Прежде карта помнила только последнего владельца, и «у кого она была
+        // в марте» ответить было нечем.
+        $rows = collect($this->getJson('/api/rfid-cards/journal?rfid_card_id='.$card->id)->assertOk()->json('data'));
+
+        $this->assertCount(2, $rows);
+        $this->assertSame($second->id, $rows->firstWhere('is_open', true)['person']['id']);
+        $this->assertSame('returned', $rows->firstWhere('is_open', false)['close_reason']);
+    }
+
+    public function test_an_unbound_card_goes_to_someone_else(): void
+    {
+        $this->withApiAuth($this->commandant());
+        $left = $this->createPerson('Уволившийся');
+        $next = $this->createPerson('Следующий');
+
+        $this->postJson('/api/rfid-cards/bind', ['person_id' => $left->id, 'uid' => '0000000501'])->assertOk();
+        $card = RfidCard::query()->firstWhere('uid', '0000000501');
+
+        // Карта осталась у уволившегося: физически не принимали, но числиться
+        // за ним она больше не должна.
+        $this->postJson("/api/rfid-cards/{$card->id}/release", ['reason' => 'left'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'stock')
+            ->assertJsonPath('data.person_id', null);
+
+        $this->postJson('/api/rfid-cards/bind', ['person_id' => $next->id, 'uid' => '0000000501'])
+            ->assertOk()
+            ->assertJsonPath('data.person_id', $next->id);
+
+        $rows = collect($this->getJson('/api/rfid-cards/journal?rfid_card_id='.$card->id)->assertOk()->json('data'));
+        $this->assertSame('left', $rows->firstWhere('is_open', false)['close_reason']);
+    }
+
+    public function test_a_card_nobody_ever_held_is_deleted(): void
+    {
+        $this->withApiAuth($this->commandant());
+        $card = $this->createCard('0000000601');
+
+        // Заведена по ошибке или с опечаткой в номере — удаляется без следа.
+        $this->deleteJson("/api/rfid-cards/{$card->id}")->assertNoContent();
+
+        $this->assertNull(RfidCard::query()->find($card->id));
+    }
+
+    public function test_a_card_with_history_is_written_off_instead_of_deleted(): void
+    {
+        $this->withApiAuth($this->commandant());
+        $person = $this->createPerson('Историчный');
+
+        $this->postJson('/api/rfid-cards/bind', ['person_id' => $person->id, 'uid' => '0000000701'])->assertOk();
+        $card = RfidCard::query()->firstWhere('uid', '0000000701');
+
+        // Удаление увело бы за собой строки журнала, а журнал — документ.
+        $this->deleteJson("/api/rfid-cards/{$card->id}")
+            ->assertStatus(422)
+            ->assertJsonPath('errors.card.0', 'Карту уже кому-то выдавали — удалить её нельзя, вместе с ней пропал бы журнал выдач. Спишите её: она выйдет из оборота, а история останется.');
+
+        $this->postJson("/api/rfid-cards/{$card->id}/status", ['status' => 'written_off'])->assertOk();
+
+        $this->assertNotNull(RfidCard::query()->find($card->id));
+        $this->assertSame(1, RfidCardIssue::query()->where('rfid_card_id', $card->id)->count());
+    }
+
+    public function test_the_short_reader_format_is_refused_instead_of_guessing(): void
+    {
+        $this->withApiAuth($this->commandant());
+
+        // «3+5» несёт не весь номер: дополнение нулями дало бы чужую карту.
+        $this->postJson('/api/rfid-cards', ['uid' => '0009,12345'])
+            ->assertStatus(422)
+            ->assertJsonPath('errors.uid.0', 'Считыватель отдаёт номер в формате «3+5» — он короче настоящего, и по нему карты можно перепутать. Переключите считыватель на десятичный формат из 10 цифр.');
+    }
+
+    public function test_the_personnel_office_issues_cards_too(): void
+    {
+        $this->seed(RoleSeeder::class);
+
+        $role = Role::query()->where('code', 'hr')->first();
+
+        $this->assertNotNull($role, 'Роль отдела кадров не заведена');
+        foreach (['rfid.cards.view', 'rfid.cards.manage'] as $code) {
+            $this->assertTrue($role->permissions()->where('code', $code)->exists(), "Отделу кадров не выдано {$code}");
+        }
+    }
+
+    public function test_the_people_list_shows_only_what_the_issue_needs(): void
+    {
+        $this->withApiAuth($this->commandant());
+        $this->createPerson('Искомый');
+
+        $rows = $this->getJson('/api/rfid-cards/people?search=Искомый')->assertOk()->json('data');
+
+        $this->assertCount(1, $rows);
+        $this->assertSame('Искомый Проверочный', $rows[0]['full_name']);
+        $this->assertNull($rows[0]['card'], 'У человека без карты она и не должна показываться');
+        // Паспорт, телефон и адрес для выдачи карты не нужны и не отдаются.
+        foreach (['phone', 'birth_date', 'snils', 'email'] as $field) {
+            $this->assertArrayNotHasKey($field, $rows[0]);
+        }
     }
 
     private function createCard(string $uid): RfidCard

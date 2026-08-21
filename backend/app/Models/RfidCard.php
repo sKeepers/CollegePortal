@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Физическая RFID-карта.
@@ -39,6 +41,7 @@ class RfidCard extends Model
 
     protected $fillable = [
         'uid',
+        'uid_raw',
         'label',
         'person_id',
         'status',
@@ -58,6 +61,26 @@ class RfidCard extends Model
     public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
+    }
+
+    /** Журнал выдач этой карты: кому и когда она попадала. */
+    public function issues(): HasMany
+    {
+        return $this->hasMany(RfidCardIssue::class);
+    }
+
+    /**
+     * Открытая выдача — та, что ещё не закрыта возвратом.
+     *
+     * Она может быть только одна: вторая означала бы, что карта одновременно у
+     * двоих.
+     */
+    public function currentIssue(): HasOne
+    {
+        return $this->hasOne(RfidCardIssue::class)->ofMany(
+            ['issued_at' => 'MAX'],
+            fn ($query) => $query->whereNull('returned_at'),
+        );
     }
 
     /** Карта на руках у человека — по ней можно ходить. */

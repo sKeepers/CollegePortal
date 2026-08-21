@@ -54,6 +54,16 @@ class Person extends Model
     public function graduates(): HasMany { return $this->hasMany(Graduate::class); }
     public function users(): HasMany { return $this->hasMany(User::class); }
     public function digitalIdentities(): HasMany { return $this->hasMany(DigitalIdentity::class); }
+    public function rfidCards(): HasMany { return $this->hasMany(RfidCard::class); }
+
+    /** Карта, которая сейчас на руках. У человека она одна. */
+    public function currentRfidCard(): HasOne
+    {
+        return $this->hasOne(RfidCard::class)->ofMany(
+            ['issued_at' => 'MAX'],
+            fn ($query) => $query->whereIn('status', [RfidCard::STATUS_ISSUED, RfidCard::STATUS_BLOCKED]),
+        );
+    }
     public function employees(): HasMany { return $this->hasMany(Employee::class); }
 
     public function primaryStudent(): HasOne { return $this->hasOne(Student::class)->latestOfMany(); }

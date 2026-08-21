@@ -25,6 +25,9 @@ class RfidCardResource extends JsonResource
                     $this->person?->middle_name,
                 ]))),
             ]),
+            // Удаляется только карта без истории: с историей вместе с ней
+            // каскадом ушёл бы журнал выдач. null — счётчик не запрашивали.
+            'can_delete' => $this->issues_count === null ? null : $this->issues_count === 0,
             'issued_at' => $this->issued_at?->toDateString(),
             'returned_at' => $this->returned_at?->toDateString(),
             'note' => $this->note,
