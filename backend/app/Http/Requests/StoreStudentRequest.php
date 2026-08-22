@@ -31,6 +31,7 @@ class StoreStudentRequest extends FormRequest
             'passport_number' => ['nullable', 'string', 'max:100'],
             'passport_issue_date' => ['nullable', 'date'],
             'passport_issued_by' => ['nullable', 'string', 'max:1000'],
+            'passport_department_code' => ['nullable', 'string', 'max:20'],
             'status' => ['required', Rule::in(['active', 'academic_leave', 'graduated', 'expelled'])],
             'course' => ['nullable', 'integer', 'min:1', 'max:6'],
             'education_form' => ['nullable', 'string', 'max:80'],

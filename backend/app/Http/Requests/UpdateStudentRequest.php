@@ -32,6 +32,7 @@ class UpdateStudentRequest extends FormRequest
             'passport_number' => ['sometimes', 'nullable', 'string', 'max:100'],
             'passport_issue_date' => ['sometimes', 'nullable', 'date'],
             'passport_issued_by' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'passport_department_code' => ['sometimes', 'nullable', 'string', 'max:20'],
             'status' => ['sometimes', 'required', Rule::in(['active', 'academic_leave', 'graduated', 'expelled'])],
             'course' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:6'],
             'education_form' => ['sometimes', 'nullable', 'string', 'max:80'],

@@ -30,6 +30,7 @@ class Student extends Model
         'passport_number',
         'passport_issue_date',
         'passport_issued_by',
+        'passport_department_code',
         'photo_path',
         'status',
         'enrollment_date',

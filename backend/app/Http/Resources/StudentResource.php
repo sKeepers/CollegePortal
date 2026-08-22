@@ -27,6 +27,7 @@ class StudentResource extends JsonResource
             'passport_number' => $this->when($request->user()?->hasPermission('students.update'), $this->passport_number),
             'passport_issue_date' => $this->when($request->user()?->hasPermission('students.update'), $this->passport_issue_date?->toDateString()),
             'passport_issued_by' => $this->when($request->user()?->hasPermission('students.update'), $this->passport_issued_by),
+            'passport_department_code' => $this->when($request->user()?->hasPermission('students.update'), $this->passport_department_code),
             'photo_path' => $this->photo_path,
             'photo_url' => $this->photo_path ? $request->getSchemeAndHttpHost().Storage::disk('public')->url($this->photo_path) : null,
             'status' => $this->status,

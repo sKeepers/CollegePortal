@@ -77,6 +77,7 @@ class IdentityDocumentService
             'number' => $this->trimmed($passport['number'] ?? null),
             'issue_date' => $this->trimmed($passport['issue_date'] ?? null),
             'issued_by' => $this->trimmed($passport['issued_by'] ?? null),
+            'subdivision_code' => $this->trimmed($passport['subdivision_code'] ?? null),
         ], fn ($value): bool => $value !== null);
 
         if (! isset($payload['series']) && ! isset($payload['number'])) {

@@ -39,6 +39,7 @@ const form = reactive({
   passport_number: '',
   passport_issue_date: '',
   passport_issued_by: '',
+  passport_department_code: '',
   status: 'active',
   course: '',
   education_form: '',
@@ -67,6 +68,7 @@ watch(
       passport_number: student?.passport_number || '',
       passport_issue_date: student?.passport_issue_date || '',
       passport_issued_by: student?.passport_issued_by || '',
+      passport_department_code: student?.passport_department_code || '',
       status: student?.status || 'active',
       course: student?.course || student?.group?.course || '',
       education_form: student?.education_form || '',
@@ -173,6 +175,7 @@ function submitForm() {
           <q-input v-model="form.passport_number" dense outlined label="Номер" />
           <q-input v-model="form.passport_issue_date" dense outlined type="date" label="Дата выдачи" stack-label />
           <q-input v-model="form.passport_issued_by" dense outlined label="Кем выдан" />
+          <q-input v-model="form.passport_department_code" dense outlined label="Код подразделения" mask="###-###" unmasked-value />
         </div>
         <q-banner v-if="passportMissing" dense class="student-form__warning">
           Паспорт обязателен для полноты карточки. Реквизиты сохраняются как документ человека,

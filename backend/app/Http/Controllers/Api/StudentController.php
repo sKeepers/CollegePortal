@@ -228,6 +228,7 @@ class StudentController extends Controller
             'number' => $data['passport_number'] ?? null,
             'issue_date' => $data['passport_issue_date'] ?? null,
             'issued_by' => $data['passport_issued_by'] ?? null,
+            'subdivision_code' => $data['passport_department_code'] ?? null,
         ], $request->user());
     }
 
