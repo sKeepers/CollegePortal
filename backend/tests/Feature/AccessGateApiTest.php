@@ -114,16 +114,19 @@ class AccessGateApiTest extends TestCase
 
     public function test_scan_unknown_token_creates_denied_event_without_owner(): void
     {
+        // Причина стала конкретнее с приёмом карт: строка, которая не QR и не
+        // номер карты, так и называется. Прежнее «Пропуск не найден» осталось
+        // за QR — оно про код правильного вида, который не разобрался.
         $this->postJson('/api/access/scan', ['token' => 'unknown-token'])
             ->assertOk()
             ->assertJsonPath('data.result', AccessEvent::RESULT_DENIED)
-            ->assertJsonPath('data.reason', 'Пропуск не найден.')
+            ->assertJsonPath('data.reason', 'Код не распознан. Это не QR-пропуск и не номер карты.')
             ->assertJsonPath('data.owner', null);
 
         $this->assertDatabaseHas('access_events', [
             'digital_identity_id' => null,
             'result' => AccessEvent::RESULT_DENIED,
-            'reason' => 'Пропуск не найден.',
+            'reason' => 'Код не распознан. Это не QR-пропуск и не номер карты.',
         ]);
     }
 
@@ -202,7 +205,7 @@ class AccessGateApiTest extends TestCase
         $this->postJson('/api/access/scan', ['token' => 'случайный текст'])
             ->assertOk()
             ->assertJsonPath('data.result', AccessEvent::RESULT_DENIED)
-            ->assertJsonPath('data.reason', 'Пропуск не найден.')
+            ->assertJsonPath('data.reason', 'Код не распознан. Это не QR-пропуск и не номер карты.')
             ->assertJsonPath('data.owner', null);
     }
 
