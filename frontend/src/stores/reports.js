@@ -54,7 +54,7 @@ export const useReportsStore = defineStore('reports', () => {
 
   async function loadDictionaries() {
     const [groupsPayload, subjectsPayload, teachersPayload] = await Promise.all([
-      api.list('groups').catch(() => null),
+      api.list('groups', { per_page: 200 }).catch(() => null),
       canReadSubjects.value ? api.list('subjects').catch(() => null) : Promise.resolve(null),
       canExportJournal.value ? api.list('teachers', { active_only: 1 }).catch(() => null) : Promise.resolve(null),
     ])

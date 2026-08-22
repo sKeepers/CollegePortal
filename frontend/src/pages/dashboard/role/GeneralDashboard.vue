@@ -131,7 +131,7 @@ async function loadDashboard() {
   try {
     const applicationsResult = isAdmission.value && auth.can('admissions.application.view') ? await api.list('admissions/applications', { per_page: 1 }).then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
     const studentsResult = !isAdmission.value && auth.can('students.view') ? await api.list('students').then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
-    const groupsResult = !isAdmission.value && auth.can('groups.view') ? await api.list('groups').then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
+    const groupsResult = !isAdmission.value && auth.can('groups.view') ? await api.list('groups', { per_page: 200 }).then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
     const teachersResult = !isAdmission.value && auth.can('teachers.view') ? await api.list('teachers', { active_only: 1 }).then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
     const employeesResult = isHr.value ? await api.list('employees', { per_page: 1 }).then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
     const accessResult = isHr.value ? await api.list('access/reports/summary').then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
