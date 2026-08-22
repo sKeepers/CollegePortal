@@ -64,6 +64,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [Стратегия реализации приемной комиссии](СТРАТЕГИЯ_РЕАЛИЗАЦИИ_ПРИЕМНОЙ_КОМИССИИ.md)
 - [Документы абитуриента](ДОКУМЕНТЫ_АБИТУРИЕНТА.md)
 - [Admissions FIS Import](FIS_ADMISSIONS_IMPORT.md)
+- [Дополнение карточек студентов из выгрузок ФИС ГИА](CONTINGENT_FIS_RECONCILIATION_2026-08.md) — что сошлось, что нет и что осталось владельцу после захода 23.08.2026
 - [Person Model](PERSON_MODEL.md)
 - [Identity Domain](IDENTITY_DOMAIN.md)
 - [Digital Passes](DIGITAL_PASSES.md)
