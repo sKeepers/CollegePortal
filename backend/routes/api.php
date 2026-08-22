@@ -46,6 +46,8 @@ use App\Http\Controllers\Api\CurriculumController;
 use App\Http\Controllers\Api\DeletionRequestController;
 use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\DigitalIdentityController;
+use App\Http\Controllers\Api\DormPlacementController;
+use App\Http\Controllers\Api\DormRoomController;
 use App\Http\Controllers\Api\RfidCardController;
 use App\Http\Controllers\Api\DemoDataController;
 use App\Http\Controllers\Api\DashboardAnalyticsController;
@@ -548,6 +550,23 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     // RFID-карты. Ведёт комендант: заводит, выдаёт, принимает, блокирует.
     // Выдача и приём — отдельные действия, а не правка поля: портал записывает,
     // кому и когда, иначе учёт ничем не отличается от списка.
+    // Общежитие: комнаты и заселение. Ведёт комендант общежития, заместитель по
+    // воспитательной работе смотрит.
+    Route::get('dorm/rooms', [DormRoomController::class, 'index'])
+        ->middleware('permission:dorm.rooms.view');
+    Route::post('dorm/rooms', [DormRoomController::class, 'store'])
+        ->middleware('permission:dorm.rooms.manage');
+    Route::patch('dorm/rooms/{dormRoom}', [DormRoomController::class, 'update'])
+        ->middleware('permission:dorm.rooms.manage');
+    Route::get('dorm/placements', [DormPlacementController::class, 'index'])
+        ->middleware('permission:dorm.placements.view');
+    Route::post('dorm/placements', [DormPlacementController::class, 'store'])
+        ->middleware('permission:dorm.placements.manage');
+    Route::post('dorm/placements/relocate', [DormPlacementController::class, 'relocate'])
+        ->middleware('permission:dorm.placements.manage');
+    Route::post('dorm/placements/move-out', [DormPlacementController::class, 'moveOut'])
+        ->middleware('permission:dorm.placements.manage');
+
     Route::get('rfid-cards', [RfidCardController::class, 'index'])
         ->middleware('permission:rfid.cards.view');
     // Объявлены до `rfid-cards/{rfidCard}`: иначе «lookup» и «journal» ушли бы

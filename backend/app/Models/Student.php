@@ -33,6 +33,7 @@ class Student extends Model
         'passport_department_code',
         'photo_path',
         'status',
+        'is_resident',
         'enrollment_date',
         'enrollment_order_number',
         'enrollment_order_date',
@@ -54,6 +55,7 @@ class Student extends Model
             'passport_issue_date' => 'date',
             'enrollment_order_date' => 'date',
             'course' => 'integer',
+            'is_resident' => 'boolean',
             'archived_at' => 'datetime',
         ];
     }

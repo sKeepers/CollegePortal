@@ -26,6 +26,8 @@ class RoleSeeder extends Seeder
             ['code' => 'academic_office', 'name' => 'Учебная часть (legacy)', 'description' => 'Legacy-роль для совместимости.'],
             ['code' => 'curator', 'name' => 'Куратор группы', 'description' => 'Сопровождение закрепленной учебной группы.'],
             ['code' => 'commandant', 'name' => 'Комендант', 'description' => 'Учёт RFID-карт: выдача, приём, блокировка.'],
+            ['code' => 'dorm_warden', 'name' => 'Комендант общежития', 'description' => 'Места, заселение, оплата, происшествия, ночные отсутствия.'],
+            ['code' => 'deputy_upbringing', 'name' => 'Заместитель директора по воспитательной работе', 'description' => 'Трудные, социальный паспорт, провинности, рекомендации о переселении.'],
         ];
 
         foreach ($roles as $role) {
@@ -52,6 +54,8 @@ class RoleSeeder extends Seeder
         $this->syncPermissions('employee', $this->ids(['dashboard.view', 'view_own_data']));
         $this->syncPermissions('security', $this->ids($this->securityPermissions()));
         $this->syncPermissions('commandant', $this->ids($this->commandantPermissions()));
+        $this->syncPermissions('dorm_warden', $this->ids($this->dormWardenPermissions()));
+        $this->syncPermissions('deputy_upbringing', $this->ids($this->deputyUpbringingPermissions()));
         $this->syncPermissions('hr', $this->ids($this->hrPermissions()));
         $this->syncPermissions('curator', $this->ids(array_values(array_unique(array_merge($this->teacherPermissions(), ['students.view', 'groups.view', 'attendance.reports', 'mobile.curator.view'])))));
     }
@@ -188,6 +192,21 @@ class RoleSeeder extends Seeder
             ['module' => 'Study', 'code' => 'teachingload.view_own', 'name' => 'Нагрузка: своя', 'description' => 'Просмотр собственной учебной нагрузки преподавателем.'],
             ['module' => 'Identity', 'code' => 'rfid.cards.view', 'name' => 'RFID-карты: просмотр', 'description' => 'Просмотр списка карт и того, у кого они на руках.'],
             ['module' => 'Identity', 'code' => 'rfid.cards.manage', 'name' => 'RFID-карты: ведение', 'description' => 'Заведение карт, выдача, приём, блокировка и списание.'],
+            ['module' => 'Dorm', 'code' => 'dorm.rooms.view', 'name' => 'Общежитие: комнаты', 'description' => 'Просмотр комнат и их занятости.'],
+            ['module' => 'Dorm', 'code' => 'dorm.rooms.manage', 'name' => 'Общежитие: ведение комнат', 'description' => 'Заведение и изменение комнат.'],
+            ['module' => 'Dorm', 'code' => 'dorm.placements.view', 'name' => 'Общежитие: заселения', 'description' => 'Просмотр заселений и переселений.'],
+            ['module' => 'Dorm', 'code' => 'dorm.placements.manage', 'name' => 'Общежитие: ведение заселений', 'description' => 'Заселение, переселение и выселение.'],
+            ['module' => 'Dorm', 'code' => 'dorm.payments.view', 'name' => 'Общежитие: оплата', 'description' => 'Просмотр отметок об оплате проживания.'],
+            ['module' => 'Dorm', 'code' => 'dorm.payments.manage', 'name' => 'Общежитие: ведение оплаты', 'description' => 'Отметки об оплате проживания.'],
+            ['module' => 'Dorm', 'code' => 'dorm.incidents.view', 'name' => 'Общежитие: происшествия', 'description' => 'Просмотр происшествий.'],
+            ['module' => 'Dorm', 'code' => 'dorm.incidents.manage', 'name' => 'Общежитие: ведение происшествий', 'description' => 'Запись происшествий и принятых мер.'],
+            ['module' => 'Dorm', 'code' => 'dorm.absences.view', 'name' => 'Общежитие: ночные отсутствия', 'description' => 'Просмотр ночных отсутствий и отлучек.'],
+            ['module' => 'Dorm', 'code' => 'dorm.leaves.manage', 'name' => 'Общежитие: ведение отлучек', 'description' => 'Отлучка с ведома: домой, на соревнования, в больницу.'],
+            ['module' => 'Dorm', 'code' => 'dorm.conduct.view', 'name' => 'Общежитие: провинности', 'description' => 'Просмотр записей о провинностях.'],
+            ['module' => 'Dorm', 'code' => 'dorm.conduct.manage', 'name' => 'Общежитие: ведение провинностей', 'description' => 'Запись провинностей и работа с ними.'],
+            ['module' => 'Dorm', 'code' => 'dorm.social.view', 'name' => 'Общежитие: социальный паспорт', 'description' => 'Просмотр социального паспорта и работы с трудными.'],
+            ['module' => 'Dorm', 'code' => 'dorm.social.manage', 'name' => 'Общежитие: ведение социального паспорта', 'description' => 'Ведение социального паспорта и работы с трудными.'],
+            ['module' => 'Dorm', 'code' => 'dorm.relocation.recommend', 'name' => 'Общежитие: рекомендация о переселении', 'description' => 'Рекомендация переселить проживающего.'],
 
             ['module' => 'HR', 'code' => 'hr.employees.view', 'name' => 'Кадры: сотрудники просмотр', 'description' => 'Просмотр сотрудников.'],
             ['module' => 'HR', 'code' => 'hr.employees.create', 'name' => 'Кадры: сотрудники создание', 'description' => 'Прием сотрудников.'],
@@ -396,6 +415,38 @@ class RoleSeeder extends Seeder
      * появляются: `HrService::resolvePerson` сам находит существующего человека
      * по ФИО и контактам и заводит нового только тогда, когда совпадений нет.
      */
+    /**
+     * Комендант общежития ведёт быт: места, заселение, оплату, происшествия.
+     *
+     * Провинностей и социального паспорта здесь нет намеренно — это самые
+     * чувствительные данные во всём портале, и они за заместителем.
+     */
+    private function dormWardenPermissions(): array
+    {
+        return [
+            'dashboard.view', 'view_own_data', 'people.view', 'students.view',
+            'dorm.rooms.view', 'dorm.rooms.manage',
+            'dorm.placements.view', 'dorm.placements.manage',
+            'dorm.payments.view', 'dorm.payments.manage',
+            'dorm.incidents.view', 'dorm.incidents.manage',
+            'dorm.absences.view', 'dorm.leaves.manage',
+        ];
+    }
+
+    /** Заместитель по воспитательной работе: трудные, паспорт, провинности. */
+    private function deputyUpbringingPermissions(): array
+    {
+        return [
+            'dashboard.view', 'view_own_data', 'people.view', 'students.view',
+            'dorm.rooms.view', 'dorm.placements.view',
+            'dorm.incidents.view', 'dorm.incidents.manage',
+            'dorm.absences.view',
+            'dorm.conduct.view', 'dorm.conduct.manage',
+            'dorm.social.view', 'dorm.social.manage',
+            'dorm.relocation.recommend',
+        ];
+    }
+
     private function hrPermissions(): array
     {
         return ['dashboard.view', 'hr.employees.view', 'hr.employees.create', 'hr.employees.update', 'hr.employees.dismiss', 'hr.employees.digital_pass.issue', 'hr.assignments.manage', 'hr.statuses.manage', 'hr.departments.manage', 'hr.positions.manage', 'hr.documents.view', 'hr.calendar.view', 'hr.calendar.manage', 'hr.absences.manage', 'hr.dismissals.manage', 'hr.replacements.view', 'hr.replacements.manage', 'hr.reports.view', 'hr.people.match', 'teachers.view', 'gate.reports', 'rfid.cards.view', 'rfid.cards.manage', 'view_own_data', 'trash.request'];
