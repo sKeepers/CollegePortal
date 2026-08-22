@@ -14,10 +14,9 @@ import AppErrorBanner from "../../components/ui/AppErrorBanner.vue";
 import AppTimeField from "../../components/ui/AppTimeField.vue";
 import AppStatusBadge from "../../components/ui/AppStatusBadge.vue";
 import AppConfirmDialog from "../../components/ui/AppConfirmDialog.vue";
+import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import WorkspacePanel from "../../components/workspace/WorkspacePanel.vue";
-import WorkspaceSplitter from "../../components/workspace/WorkspaceSplitter.vue";
 import { usePermissions } from "../../composables/usePermissions";
-import { useResizableWorkspace } from "../../composables/useResizableWorkspace";
 import {
   TABLE_ROWS_PER_PAGE_OPTIONS,
   createTablePagination,
@@ -54,10 +53,6 @@ const $q = useQuasar(),
   route = useRoute(),
   router = useRouter();
 const rowsKey = "collegePortal.exams.rowsPerPage";
-const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({
-  storageKey: "collegePortal.exams.splitter.v1",
-  resizeBodyClass: "exams-splitter-resizing",
-});
 const syncingQuery = ref(false),
   formVisible = ref(false),
   resultFormVisible = ref(false),
@@ -173,20 +168,16 @@ const selectedStudentOptions = computed(() =>
     : store.studentOptions,
 );
 const groupRoute = computed(() => ({
-  path: "/groups",
-  query: { selected: store.selectedExam?.group_id },
+  path: `/groups/${store.selectedExam?.group_id}`,
 }));
 const subjectRoute = computed(() => ({
-  path: "/subjects",
-  query: { selected: store.selectedExam?.subject_id },
+  path: `/subjects/${store.selectedExam?.subject_id}`,
 }));
 const teacherRoute = computed(() => ({
-  path: "/teachers",
-  query: { selected: store.selectedExam?.teacher_id },
+  path: `/teachers/${store.selectedExam?.teacher_id}`,
 }));
 const classroomRoute = computed(() => ({
-  path: "/classrooms",
-  query: { selected: store.selectedExam?.classroom_id },
+  path: `/classrooms/${store.selectedExam?.classroom_id}`,
 }));
 const journalRoute = computed(() => ({
   path: "/journal",
@@ -237,13 +228,12 @@ function updatePagination(p) {
   persistTablePagination(rowsKey, p);
 }
 function routeSelectedId() {
-  return route.query.selected ? String(route.query.selected) : "";
+  return route.params.id ? String(route.params.id) : "";
 }
 async function syncQuery(selectedId = routeSelectedId()) {
   const query = { ...route.query };
-  selectedId ? (query.selected = selectedId) : delete query.selected;
   syncingQuery.value = true;
-  await router.replace({ path: "/exams", query });
+  await router.replace({ path: selectedId ? `/exams/${selectedId}` : "/exams", query });
   syncingQuery.value = false;
 }
 async function selectExam(exam) {
@@ -354,7 +344,7 @@ async function exportCsv() {
   notify("Экспорт экзаменов подготовлен");
 }
 watch(
-  () => route.query.selected,
+  () => route.params.id,
   () => {
     if (!syncingQuery.value) store.selectById(routeSelectedId());
   },
@@ -454,8 +444,8 @@ onMounted(async () => {
         ><q-btn flat @click="resetFilters">Сбросить</q-btn></template
       ></AppFilterBar
     >
-    <div ref="workspaceRef" class="exams-workspace resizable-workspace" :style="workspaceStyle">
-      <div class="exams-main">
+    <div class="exams-workspace workspace-page" :class="{ 'workspace-page--card': Boolean(route.params.id) }">
+      <div class="exams-main workspace-page__list">
         <AppTable
           v-if="store.filteredExams.length || store.loading"
           :rows="store.filteredExams"
@@ -465,6 +455,7 @@ onMounted(async () => {
           :rows-per-page-options="TABLE_ROWS_PER_PAGE_OPTIONS"
           :table-row-class-fn="rowClass"
           @update:pagination="updatePagination"
+          :row-link="(row) => `/exams/${row.id}`"
           @row-click="(_, row) => selectExam(row)"
           ><template #body-cell-date="props"
             ><q-td :props="props"
@@ -535,8 +526,8 @@ onMounted(async () => {
           description="Создайте экзамен или импортируйте CSV."
         />
       </div>
-      <WorkspaceSplitter label="Изменить ширину карточки экзамена" @resize-start="startResize" @reset="resetSplitter" />
-      <aside class="exams-side">
+      <aside class="exams-side workspace-page__card">
+        <WorkspaceBackBar />
         <AppEmptyState
           v-if="!store.selectedExam"
           title="Экзамен не выбран"
@@ -597,8 +588,7 @@ onMounted(async () => {
                   ><q-td :props="props"
                     ><RouterLink
                       :to="{
-                        path: '/students',
-                        query: { selected: props.row.student_id },
+                        path: `/students/${props.row.student_id}`,
                       }"
                       class="entity-link-action"
                       >{{ studentName(props.row.student) }}</RouterLink

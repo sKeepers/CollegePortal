@@ -80,9 +80,8 @@ async function searchStudents(query) {
       subtitle: [student.group?.name, student.status].filter(Boolean).join(' · ') || 'Карточка студента',
       meta: [formatPhone(student.phone), student.email].filter(Boolean),
       route: {
-        path: '/students',
+        path: `/students/${student.id}`,
         query: {
-          selected: student.id,
           search: fullName(student) || query,
         },
       },
@@ -116,9 +115,8 @@ async function searchTeachers(query) {
       subtitle: [teacher.department, teacher.position].filter(Boolean).join(' · ') || 'Карточка преподавателя',
       meta: [formatPhone(teacher.phone), teacher.email, teacher.is_active ? 'Активен' : 'Неактивен'].filter(Boolean),
       route: {
-        path: '/teachers',
+        path: `/teachers/${teacher.id}`,
         query: {
-          selected: teacher.id,
           search: fullName(teacher) || query,
         },
       },
@@ -156,9 +154,8 @@ async function searchSubjects(query) {
         subject.description,
       ].filter(Boolean),
       route: {
-        path: '/subjects',
+        path: `/subjects/${subject.id}`,
         query: {
-          selected: subject.id,
           search: subject.name || query,
         },
       },
@@ -203,9 +200,8 @@ async function searchClassrooms(query) {
         classroom.description,
       ].filter(Boolean),
       route: {
-        path: '/classrooms',
+        path: `/classrooms/${classroom.id}`,
         query: {
-          selected: classroom.id,
           search: classroom.number || query,
         },
       },
@@ -243,9 +239,8 @@ async function searchApplicantApplications(query) {
       ].filter(Boolean).join(' · ') || 'Заявление абитуриента',
       meta: [formatPhone(application.phone), application.email, application.status].filter(Boolean),
       route: {
-        path: '/admissions',
+        path: `/admissions/${application.id}`,
         query: {
-          selected: application.id,
           search: fullName(application) || query,
         },
       },
@@ -284,8 +279,7 @@ async function searchGroups(query) {
       ].filter(Boolean).join(' · ') || 'Карточка группы',
       meta: [group.specialty, programLabel(group.education_program), teacherName(group.curator)].filter(Boolean),
       route: {
-        path: '/groups',
-        query: { selected: group.id },
+        path: `/groups/${group.id}`,
       },
       entity: group,
     }))

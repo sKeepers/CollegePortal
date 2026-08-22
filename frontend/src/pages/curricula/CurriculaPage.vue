@@ -13,10 +13,9 @@ import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
+import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
-import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import { usePermissions } from '../../composables/usePermissions'
-import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import { TABLE_ROWS_PER_PAGE_OPTIONS, createTablePagination, persistTablePagination } from '../../services/tableSettings'
 import { CONTROL_FORM_OPTIONS, CURRICULUM_STATUS_OPTIONS, statusLabel, statusTone, useCurriculaStore } from '../../stores/curricula'
 
@@ -34,7 +33,6 @@ const route = useRoute()
 const router = useRouter()
 const rowsPerPageKey = 'collegePortal.curricula.rowsPerPage'
 const syncingQuery = ref(false)
-const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.curricula.splitter.v1', resizeBodyClass: 'curricula-splitter-resizing' })
 const formVisible = ref(false)
 const subjectFormVisible = ref(false)
 const deleteDialogVisible = ref(false)
@@ -99,8 +97,8 @@ function controlLabel(item) { return item?.control_type_item?.name || CONTROL_FO
 function notify(message) { $q.notify({ type: 'positive', message, position: 'top-right', timeout: 1800 }) }
 function rowClass(row) { return Number(row.id) === Number(store.selectedId) ? 'curricula-row--selected' : '' }
 function updatePagination(pagination) { tablePagination.value = pagination; persistTablePagination(rowsPerPageKey, pagination) }
-function routeSelectedId() { return route.query.selected ? String(route.query.selected) : '' }
-async function syncQuery(selectedId = routeSelectedId()) { const query = { ...route.query }; selectedId ? query.selected = selectedId : delete query.selected; syncingQuery.value = true; await router.replace({ path: '/curricula', query }); syncingQuery.value = false }
+function routeSelectedId() { return route.params.id ? String(route.params.id) : '' }
+async function syncQuery(selectedId = routeSelectedId()) { const query = { ...route.query }; syncingQuery.value = true; await router.replace({ path: selectedId ? `/curricula/${selectedId}` : '/curricula', query }); syncingQuery.value = false }
 async function selectCurriculum(curriculum) { await store.select(curriculum); await syncQuery(curriculum?.id || '') }
 function openCreateForm() { if (!canCreate.value) return; editingCurriculum.value = null; codeEditable.value = false; Object.assign(curriculumForm, { code: '', education_program_id: '', name: '', qualification: '', year_start: new Date().getFullYear(), status: 'draft', description: '' }); formVisible.value = true }
 function openEditForm(curriculum) { if (!canUpdate.value) return; editingCurriculum.value = curriculum; codeEditable.value = false; Object.assign(curriculumForm, { code: curriculum.code || '', education_program_id: curriculum.education_program_id, name: curriculum.name, qualification: curriculum.qualification || '', year_start: curriculum.year_start, status: curriculum.status || 'draft', description: curriculum.description || '' }); formVisible.value = true }
@@ -115,7 +113,7 @@ async function applyFilters() { store.setFilters({ ...store.filters }); await sy
 async function resetFilters() { store.resetFilters(); await syncQuery('') }
 async function handleImport(file) { if (!canImport.value || !file) return; await store.importCsv(file); importFile.value = null; notify('Импорт учебных планов завершен') }
 async function exportCsv() { if (!canExport.value) return; await store.exportCsv(); notify('Экспорт учебных планов подготовлен') }
-watch(() => route.query.selected, async () => { if (!syncingQuery.value) await store.selectById(routeSelectedId()) })
+watch(() => route.params.id, async () => { if (!syncingQuery.value) await store.selectById(routeSelectedId()) })
 onMounted(async () => { await store.selectById(routeSelectedId()); await store.load(); if (!store.selectedCurriculum && store.filteredCurricula[0]) { await selectCurriculum(store.filteredCurricula[0]) } })
 </script>
 
@@ -147,9 +145,9 @@ onMounted(async () => { await store.selectById(routeSelectedId()); await store.l
       <template #actions><q-btn color="primary" @click="applyFilters">Применить</q-btn><q-btn flat @click="resetFilters">Сбросить</q-btn></template>
     </AppFilterBar>
 
-    <div ref="workspaceRef" class="curricula-workspace" :style="workspaceStyle">
-      <div class="curricula-main">
-        <AppTable v-if="store.filteredCurricula.length || store.loading" :rows="store.filteredCurricula" :columns="columns" :loading="store.loading" :pagination="tablePagination" :rows-per-page-options="TABLE_ROWS_PER_PAGE_OPTIONS" :table-row-class-fn="rowClass" @update:pagination="updatePagination" @row-click="(_, row) => selectCurriculum(row)">
+    <div class="curricula-workspace workspace-page" :class="{ 'workspace-page--card': Boolean(route.params.id) }">
+      <div class="curricula-main workspace-page__list">
+        <AppTable v-if="store.filteredCurricula.length || store.loading" :rows="store.filteredCurricula" :columns="columns" :loading="store.loading" :pagination="tablePagination" :rows-per-page-options="TABLE_ROWS_PER_PAGE_OPTIONS" :table-row-class-fn="rowClass" @update:pagination="updatePagination":row-link="(row) => `/curricula/${row.id}`"  @row-click="(_, row) => selectCurriculum(row)">
           <template #body-cell-name="props"><q-td :props="props"><button class="curricula-row-link" type="button" @click.stop="selectCurriculum(props.row)">{{ props.row.name }}</button><div class="curricula-secondary-cell">{{ specialtyName(props.row) }}</div></q-td></template>
           <template #body-cell-program="props"><q-td :props="props">{{ programName(props.row) }}</q-td></template>
           <template #body-cell-status="props"><q-td :props="props"><AppStatusBadge :label="statusLabel(props.row.status)" :tone="statusTone(props.row.status)" /></q-td></template>
@@ -159,9 +157,8 @@ onMounted(async () => { await store.selectById(routeSelectedId()); await store.l
         <AppEmptyState v-else title="Учебные планы не найдены" description="Создайте учебный план или импортируйте CSV." />
       </div>
 
-      <WorkspaceSplitter label="Изменить ширину карточки учебного плана" @resize-start="startResize" @reset="resetSplitter" />
-
-      <aside class="curricula-side">
+      <aside class="curricula-side workspace-page__card">
+        <WorkspaceBackBar />
         <AppEmptyState v-if="!store.selectedCurriculum" title="Учебный план не выбран" description="Выберите строку в таблице, чтобы открыть состав плана." />
         <WorkspacePanel v-else class="curricula-card" :title="store.selectedCurriculum.name" :subtitle="programName(store.selectedCurriculum)" :metrics="curriculumMetrics" :actions="curriculumActions">
           <template #status><AppStatusBadge :label="statusLabel(store.selectedCurriculum.status)" :tone="statusTone(store.selectedCurriculum.status)" /></template>

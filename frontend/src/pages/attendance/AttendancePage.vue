@@ -12,15 +12,13 @@ import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
+import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
-import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
-import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import { ATTENDANCE_REPORT_MODE_OPTIONS, ATTENDANCE_STATUS_OPTIONS, useAttendanceAnalysisStore } from '../../stores/attendanceAnalysis'
 
 const route = useRoute()
 const router = useRouter()
 const store = useAttendanceAnalysisStore()
-const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.attendance.splitter.v1', resizeBodyClass: 'attendance-splitter-resizing' })
 
 const todayColumns = [
   { name: 'full_name', label: 'ФИО', field: 'full_name', align: 'left', sortable: true },
@@ -222,8 +220,8 @@ onMounted(async () => {
       </AppCard>
     </section>
 
-    <div ref="workspaceRef" class="attendance-analysis-workspace" :style="workspaceStyle">
-      <div class="attendance-analysis-main">
+    <div class="attendance-analysis-workspace workspace-page" :class="{ 'workspace-page--card': Boolean(selected) }">
+      <div class="attendance-analysis-main workspace-page__list">
         <AppTable
           v-if="store.rows.length || store.loading"
           :rows="store.rows"
@@ -263,9 +261,8 @@ onMounted(async () => {
         <AppEmptyState v-else title="Нет данных для анализа" description="Добавьте расписание и события проходной, чтобы увидеть сопоставление посещаемости." />
       </div>
 
-      <WorkspaceSplitter label="Изменить ширину карточки посещаемости" @resize-start="startResize" @reset="resetSplitter" />
-
-      <aside class="attendance-analysis-side">
+      <aside class="attendance-analysis-side workspace-page__card">
+        <WorkspaceBackBar @back="store.selectedId = null" />
         <WorkspacePanel
           v-if="selected"
           :title="selected.full_name"

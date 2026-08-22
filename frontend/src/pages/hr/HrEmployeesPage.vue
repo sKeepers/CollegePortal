@@ -3,9 +3,8 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import { BadgeCheck, BriefcaseBusiness, Building2, CalendarDays, FileText, History, IdCard, UserRound } from '@lucide/vue'
+import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
-import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
-import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import AppCard from '../../components/ui/AppCard.vue'
 import PersonAccountActions from '../../components/identity/PersonAccountActions.vue'
 import DeletionRequestDialog from '../../components/trash/DeletionRequestDialog.vue'
@@ -116,10 +115,6 @@ const dictionaryColumns = [
 ]
 
 const selected = computed(() => store.selectedEmployee)
-const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({
-  storageKey: 'collegePortal.hr.employees.splitter.v1',
-  resizeBodyClass: 'hr-splitter-resizing',
-})
 
 function employeeRowClass(row) {
   return Number(row.id) === Number(store.selectedId) ? 'workspace-row--selected' : ''
@@ -443,12 +438,10 @@ watch(() => route.path, (path) => {
 
     <div
       v-if="activeTab === 'employees'"
-      ref="workspaceRef"
-      class="hr-layout"
-      :class="{ 'resizable-workspace': Boolean(selected) }"
-      :style="selected ? workspaceStyle : null"
+      class="hr-layout workspace-page"
+      :class="{ 'workspace-page--card': Boolean(selected) }"
     >
-      <div class="hr-main">
+      <div class="hr-main workspace-page__list">
         <AppCard>
           <div class="hr-filters">
             <q-input v-model="store.filters.search" dense outlined label="Поиск" clearable @keyup.enter="applyFilters" />
@@ -487,87 +480,83 @@ watch(() => route.path, (path) => {
         </AppCard>
       </div>
 
-      <WorkspaceSplitter
-        v-if="selected"
-        label="Изменить ширину карточки сотрудника"
-        @resize-start="startResize"
-        @reset="resetSplitter"
-      />
+      <div class="workspace-page__card">
+        <WorkspaceBackBar @back="store.selectedId = null" />
+        <WorkspacePanel
+          v-if="selected"
+          class="hr-workspace"
+          :title="selected.full_name"
+          :subtitle="[selected.employee_number, selected.primary_position?.name, selected.primary_department?.name]"
+          :metrics="metrics"
+          :actions="quickActions"
+        >
+          <template #photo>
+            <q-avatar size="72px" square class="hr-avatar"><img v-if="selected.photo_url" :src="selected.photo_url" alt="" /><UserRound v-else :size="36" /></q-avatar>
+          </template>
+          <template #status>
+            <q-chip :color="activeStatus?.color || 'grey'" text-color="white" dense>{{ statusLabel(selected.current_status || selected.status) }}</q-chip>
+          </template>
 
-      <WorkspacePanel
-        v-if="selected"
-        class="hr-workspace"
-        :title="selected.full_name"
-        :subtitle="[selected.employee_number, selected.primary_position?.name, selected.primary_department?.name]"
-        :metrics="metrics"
-        :actions="quickActions"
-      >
-        <template #photo>
-          <q-avatar size="72px" square class="hr-avatar"><img v-if="selected.photo_url" :src="selected.photo_url" alt="" /><UserRound v-else :size="36" /></q-avatar>
-        </template>
-        <template #status>
-          <q-chip :color="activeStatus?.color || 'grey'" text-color="white" dense>{{ statusLabel(selected.current_status || selected.status) }}</q-chip>
-        </template>
-
-        <q-tabs v-model="workspaceTab" dense align="left" class="text-primary q-mt-md">
-          <q-tab name="general" label="Общее" />
-          <q-tab name="assignments" label="Назначения" />
-          <q-tab name="statuses" label="Статусы" />
-          <q-tab name="documents" label="Документы" />
-          <q-tab name="history" label="История" />
-        </q-tabs>
-        <q-separator />
-        <q-tab-panels v-model="workspaceTab" animated class="bg-transparent">
-          <q-tab-panel name="general" class="q-px-none">
-            <div class="hr-info-grid">
-              <span>Телефон</span><strong>{{ formatPhone(selected.person?.phone, "—") }}</strong>
-              <span>Email</span><strong>{{ selected.person?.email || '—' }}</strong>
-              <span>Принят</span><strong>{{ formatDate(selected.hired_at) }}</strong>
-              <span>Уволен</span><strong>{{ formatDate(selected.dismissed_at) }}</strong>
-              <span>Тип занятости</span><strong>{{ employmentLabel(selected.employment_type) }}</strong>
-              <span>Преподаватель</span><strong>{{ selected.is_teacher ? 'Да' : 'Нет' }}</strong>
-            </div>
-            <div class="q-gutter-sm q-mt-md">
-              <q-btn v-if="canUpdate" outline no-caps color="primary" @click="openEmployeeDialog(selected)">Редактировать</q-btn>
-              <q-btn v-if="canManageStatuses" outline no-caps color="orange" @click="openStatusDialog('vacation')">Оформить отпуск</q-btn>
-              <q-btn v-if="canManageStatuses" outline no-caps color="deep-orange" @click="openStatusDialog('sick_leave')">Больничный</q-btn>
-              <q-btn v-if="canIssueDigitalPass" outline no-caps color="primary" :loading="store.saving" @click="confirmIssueDigitalPass(selected)"><BadgeCheck :size="16" class="q-mr-xs" />Выпустить цифровой пропуск</q-btn>
-              <q-btn v-if="canDismiss && selected.status !== 'dismissed'" outline no-caps color="negative" @click="confirmDismiss(selected)">Уволить</q-btn>
-              <!-- Увольнение и удаление — разное. Уволенный сотрудник остаётся в
-                   кадрах, а ошибочно заведённая карточка уходит к администратору. -->
-              <q-btn v-if="canRequestDeletion" outline no-caps color="negative" @click="askDeletionRequest(selected)">Пометить на удаление</q-btn>
-              <PersonAccountActions profile-type="employee" :profile-id="selected.id" :has-account="Boolean(selected.user_id)" />
-            </div>
-          </q-tab-panel>
-          <q-tab-panel name="assignments" class="q-px-none">
-            <q-btn v-if="canManageAssignments" color="primary" no-caps class="q-mb-sm" @click="openAssignmentDialog">Добавить назначение</q-btn>
-            <q-list bordered separator class="rounded-borders">
-              <q-item v-for="item in selected.assignments || []" :key="item.id">
-                <q-item-section>
-                  <q-item-label>{{ item.position?.name || 'Должность' }} · {{ item.department?.name || 'Подразделение' }}</q-item-label>
-                  <q-item-label caption>{{ formatDate(item.started_at) }} — {{ formatDate(item.ended_at) }} · {{ item.rate }} ставки</q-item-label>
-                </q-item-section>
-                <q-item-section side><q-chip v-if="item.is_primary" dense color="primary" text-color="white">Основное</q-chip></q-item-section>
-              </q-item>
-              <q-item v-if="!(selected.assignments || []).length"><q-item-section class="text-grey-7">Назначений пока нет</q-item-section></q-item>
-            </q-list>
-          </q-tab-panel>
-          <q-tab-panel name="statuses" class="q-px-none">
-            <div class="q-gutter-sm q-mb-sm"><q-btn v-if="canManageStatuses" color="primary" no-caps @click="openStatusDialog()">Добавить период</q-btn><q-btn outline no-caps color="primary" to="/hr/calendar">Открыть календарь</q-btn></div>
-            <q-list bordered separator class="rounded-borders">
-              <q-item v-for="item in selected.status_periods || []" :key="item.id">
-                <q-item-section>
-                  <q-item-label>{{ statusLabel(item.status) }} · {{ item.period_status || 'planned' }}</q-item-label>
-                  <q-item-label caption>{{ formatDate(item.date_from) }} — {{ formatDate(item.date_to) }} · {{ item.reason || 'Без причины' }}</q-item-label>
-                </q-item-section>
-              </q-item>
-              <q-item v-if="!(selected.status_periods || []).length"><q-item-section class="text-grey-7">История статусов пока пуста</q-item-section></q-item>
-            </q-list>
-          </q-tab-panel>
-          <q-tab-panel name="documents" class="q-px-none"><q-banner rounded class="bg-grey-2">Документы сотрудника подготовлены как вкладка MVP. Хранение файлов будет расширено в следующем этапе.</q-banner></q-tab-panel>
-          <q-tab-panel name="history" class="q-px-none"><q-banner rounded class="bg-grey-2">История кадровых действий фиксируется в Audit Log.</q-banner></q-tab-panel>
-        </q-tab-panels>
-      </WorkspacePanel>
+          <q-tabs v-model="workspaceTab" dense align="left" class="text-primary q-mt-md">
+            <q-tab name="general" label="Общее" />
+            <q-tab name="assignments" label="Назначения" />
+            <q-tab name="statuses" label="Статусы" />
+            <q-tab name="documents" label="Документы" />
+            <q-tab name="history" label="История" />
+          </q-tabs>
+          <q-separator />
+          <q-tab-panels v-model="workspaceTab" animated class="bg-transparent">
+            <q-tab-panel name="general" class="q-px-none">
+              <div class="hr-info-grid">
+                <span>Телефон</span><strong>{{ formatPhone(selected.person?.phone, "—") }}</strong>
+                <span>Email</span><strong>{{ selected.person?.email || '—' }}</strong>
+                <span>Принят</span><strong>{{ formatDate(selected.hired_at) }}</strong>
+                <span>Уволен</span><strong>{{ formatDate(selected.dismissed_at) }}</strong>
+                <span>Тип занятости</span><strong>{{ employmentLabel(selected.employment_type) }}</strong>
+                <span>Преподаватель</span><strong>{{ selected.is_teacher ? 'Да' : 'Нет' }}</strong>
+              </div>
+              <div class="q-gutter-sm q-mt-md">
+                <q-btn v-if="canUpdate" outline no-caps color="primary" @click="openEmployeeDialog(selected)">Редактировать</q-btn>
+                <q-btn v-if="canManageStatuses" outline no-caps color="orange" @click="openStatusDialog('vacation')">Оформить отпуск</q-btn>
+                <q-btn v-if="canManageStatuses" outline no-caps color="deep-orange" @click="openStatusDialog('sick_leave')">Больничный</q-btn>
+                <q-btn v-if="canIssueDigitalPass" outline no-caps color="primary" :loading="store.saving" @click="confirmIssueDigitalPass(selected)"><BadgeCheck :size="16" class="q-mr-xs" />Выпустить цифровой пропуск</q-btn>
+                <q-btn v-if="canDismiss && selected.status !== 'dismissed'" outline no-caps color="negative" @click="confirmDismiss(selected)">Уволить</q-btn>
+                <!-- Увольнение и удаление — разное. Уволенный сотрудник остаётся в
+                     кадрах, а ошибочно заведённая карточка уходит к администратору. -->
+                <q-btn v-if="canRequestDeletion" outline no-caps color="negative" @click="askDeletionRequest(selected)">Пометить на удаление</q-btn>
+                <PersonAccountActions profile-type="employee" :profile-id="selected.id" :has-account="Boolean(selected.user_id)" />
+              </div>
+            </q-tab-panel>
+            <q-tab-panel name="assignments" class="q-px-none">
+              <q-btn v-if="canManageAssignments" color="primary" no-caps class="q-mb-sm" @click="openAssignmentDialog">Добавить назначение</q-btn>
+              <q-list bordered separator class="rounded-borders">
+                <q-item v-for="item in selected.assignments || []" :key="item.id">
+                  <q-item-section>
+                    <q-item-label>{{ item.position?.name || 'Должность' }} · {{ item.department?.name || 'Подразделение' }}</q-item-label>
+                    <q-item-label caption>{{ formatDate(item.started_at) }} — {{ formatDate(item.ended_at) }} · {{ item.rate }} ставки</q-item-label>
+                  </q-item-section>
+                  <q-item-section side><q-chip v-if="item.is_primary" dense color="primary" text-color="white">Основное</q-chip></q-item-section>
+                </q-item>
+                <q-item v-if="!(selected.assignments || []).length"><q-item-section class="text-grey-7">Назначений пока нет</q-item-section></q-item>
+              </q-list>
+            </q-tab-panel>
+            <q-tab-panel name="statuses" class="q-px-none">
+              <div class="q-gutter-sm q-mb-sm"><q-btn v-if="canManageStatuses" color="primary" no-caps @click="openStatusDialog()">Добавить период</q-btn><q-btn outline no-caps color="primary" to="/hr/calendar">Открыть календарь</q-btn></div>
+              <q-list bordered separator class="rounded-borders">
+                <q-item v-for="item in selected.status_periods || []" :key="item.id">
+                  <q-item-section>
+                    <q-item-label>{{ statusLabel(item.status) }} · {{ item.period_status || 'planned' }}</q-item-label>
+                    <q-item-label caption>{{ formatDate(item.date_from) }} — {{ formatDate(item.date_to) }} · {{ item.reason || 'Без причины' }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-item v-if="!(selected.status_periods || []).length"><q-item-section class="text-grey-7">История статусов пока пуста</q-item-section></q-item>
+              </q-list>
+            </q-tab-panel>
+            <q-tab-panel name="documents" class="q-px-none"><q-banner rounded class="bg-grey-2">Документы сотрудника подготовлены как вкладка MVP. Хранение файлов будет расширено в следующем этапе.</q-banner></q-tab-panel>
+            <q-tab-panel name="history" class="q-px-none"><q-banner rounded class="bg-grey-2">История кадровых действий фиксируется в Audit Log.</q-banner></q-tab-panel>
+          </q-tab-panels>
+        </WorkspacePanel>
+      </div>
     </div>
 
     <AppCard v-else>

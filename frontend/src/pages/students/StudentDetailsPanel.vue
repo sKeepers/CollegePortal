@@ -73,7 +73,7 @@ const studentSubtitle = computed(() => [
   specialtyName.value,
 ])
 const studentMetrics = computed(() => [
-  { label: 'Группа', value: props.student?.group?.name || '—', to: props.student?.group_id ? { path: '/groups', query: { selected: props.student.group_id } } : null },
+  { label: 'Группа', value: props.student?.group?.name || '—', to: props.student?.group_id ? { path: `/groups/${props.student.group_id}`,} : null },
   { label: 'Курс', value: props.student?.course || props.student?.group?.course || '—' },
   { label: 'Статус', value: props.statusLabels[props.student?.status] || props.student?.status || '—' },
   { label: 'Средний балл', value: averageGrade.value },
@@ -84,7 +84,7 @@ const studentActions = computed(() => [
   { label: 'Учебный план', to: '/curricula' },
   { label: 'Цифровой пропуск', to: { path: '/identity/digital-passes', query: { owner: 'student', selected: props.student?.id } } },
   { label: 'История проходов', to: { path: '/access/reports', query: { type: 'student', q: studentName.value } } },
-  { label: 'Документы', to: { path: '/students', query: { selected: props.student?.id, tab: 'documents' } } },
+  { label: 'Документы', to: { path: `/students/${props.student?.id}`, query: { tab: 'documents' } } },
   { label: 'Выпуск', to: { path: '/graduation', query: { student: props.student?.id } } },
 ])
 
@@ -170,7 +170,7 @@ function removePhoto() {
               <div>
                 <dt>Группа</dt>
                 <dd>
-                  <q-btn v-if="student.group_id" flat dense no-caps class="entity-link-action" :to="{ path: '/groups', query: { selected: student.group_id } }">
+                  <q-btn v-if="student.group_id" flat dense no-caps class="entity-link-action" :to="{ path: `/groups/${student.group_id}`,}">
                     {{ student.group?.name || 'Открыть группу' }}
                   </q-btn>
                   <span v-else>—</span>

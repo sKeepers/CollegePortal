@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import { Download, Edit3, Plus, RefreshCw, Trash2, Upload } from '@lucide/vue'
+import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -11,13 +12,11 @@ import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
-import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import SubjectDetailsPanel from './SubjectDetailsPanel.vue'
 import SubjectFilters from './SubjectFilters.vue'
 import SubjectFormPanel from './SubjectFormPanel.vue'
 import { useSubjectsStore } from '../../stores/subjects'
 import { usePermissions } from '../../composables/usePermissions'
-import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import {
   TABLE_ROWS_PER_PAGE_OPTIONS,
   createTablePagination,
@@ -31,7 +30,6 @@ const route = useRoute()
 const router = useRouter()
 const SUBJECTS_ROWS_PER_PAGE_KEY = 'collegePortal.subjects.rowsPerPage'
 const syncingQueryFromUi = ref(false)
-const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.subjects.splitter.v1', resizeBodyClass: 'subjects-splitter-resizing' })
 const canCreate = computed(() => permissions.hasPermission('subjects.create') || permissions.hasPermission('subjects.edit'))
 const canUpdate = computed(() => permissions.hasPermission('subjects.update') || permissions.hasPermission('subjects.edit'))
 const canDelete = computed(() => permissions.hasPermission('subjects.delete') || permissions.hasPermission('subjects.edit'))
@@ -91,7 +89,7 @@ function updateTablePagination(pagination) {
 }
 
 function routeSelectedId() {
-  return route.query.selected ? String(route.query.selected) : ''
+  return route.params.id ? String(route.params.id) : ''
 }
 
 function routeSearchText() {
@@ -113,12 +111,6 @@ async function syncSubjectQuery({
 }) {
   const query = { ...route.query }
 
-  if (selectedId) {
-    query.selected = selectedId
-  } else {
-    delete query.selected
-  }
-
   if (searchText) {
     query.search = searchText
   } else {
@@ -132,7 +124,7 @@ async function syncSubjectQuery({
   }
 
   syncingQueryFromUi.value = true
-  await router.replace({ path: '/subjects', query })
+  await router.replace({ path: selectedId ? `/subjects/${selectedId}` : '/subjects', query })
   syncingQueryFromUi.value = false
 }
 
@@ -206,7 +198,7 @@ async function exportSubjects() {
 }
 
 watch(
-  () => [route.query.selected, route.query.search, route.query.teacher, route.query.action],
+  () => [route.params.id, route.query.search, route.query.teacher, route.query.action],
   async () => {
     if (syncingQueryFromUi.value) {
       return
@@ -318,8 +310,8 @@ onMounted(async () => {
       </ul>
     </q-banner>
 
-    <div ref="workspaceRef" class="subjects-layout" :style="workspaceStyle">
-      <div class="subjects-main">
+    <div class="subjects-layout workspace-page" :class="{ 'workspace-page--card': Boolean(route.params.id) }">
+      <div class="subjects-main workspace-page__list">
         <AppTable
           v-if="store.filteredSubjects.length || store.loading"
           :rows="store.filteredSubjects"
@@ -329,6 +321,7 @@ onMounted(async () => {
           :rows-per-page-options="TABLE_ROWS_PER_PAGE_OPTIONS"
           :table-row-class-fn="tableRowClass"
           @update:pagination="updateTablePagination"
+          :row-link="(row) => `/subjects/${row.id}`"
           @row-click="(_, row) => selectSubject(row)"
         >
           <template #body-cell-name="props">
@@ -386,9 +379,8 @@ onMounted(async () => {
         </AppEmptyState>
       </div>
 
-      <WorkspaceSplitter label="Изменить ширину карточки дисциплины" @resize-start="startResize" @reset="resetSplitter" />
-
-      <aside class="subjects-side">
+      <aside class="subjects-side workspace-page__card">
+        <WorkspaceBackBar />
         <SubjectDetailsPanel
           :subject="store.selectedSubject"
           :teachers="store.selectedSubjectTeachers"

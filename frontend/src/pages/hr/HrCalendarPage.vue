@@ -2,9 +2,8 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import { useQuasar } from "quasar";
 import AppCard from "../../components/ui/AppCard.vue";
+import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import WorkspacePanel from "../../components/workspace/WorkspacePanel.vue";
-import WorkspaceSplitter from "../../components/workspace/WorkspaceSplitter.vue";
-import { useResizableWorkspace } from "../../composables/useResizableWorkspace";
 import { useAuthStore } from "../../stores/auth";
 import { useHrStore } from "../../stores/hr";
 import { api } from "../../services/api";
@@ -12,11 +11,6 @@ import { api } from "../../services/api";
 const $q = useQuasar();
 const auth = useAuthStore();
 const store = useHrStore();
-const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({
-  storageKey: "collegePortal.hrCalendar.splitter.v1",
-  resizeBodyClass: "hr-calendar-splitter-resizing",
-  defaultDetailsWidth: 420,
-});
 const mode = ref("month");
 const selectedPeriod = ref(null);
 const selectedLesson = ref(null);
@@ -395,11 +389,10 @@ onMounted(load);
     </AppCard>
 
     <div
-      ref="workspaceRef"
-      class="hr-calendar-layout resizable-workspace"
-      :style="workspaceStyle"
+      class="hr-calendar-layout workspace-page"
+      :class="{ 'workspace-page--card': Boolean(selectedPeriod) }"
     >
-      <div class="hr-calendar-main">
+      <div class="hr-calendar-main workspace-page__list">
         <AppCard>
           <q-table
             flat
@@ -442,124 +435,126 @@ onMounted(load);
         </AppCard>
       </div>
 
-      <WorkspaceSplitter label="Изменить ширину карточки кадрового периода" @resize-start="startResize" @reset="resetSplitter" />
-      <WorkspacePanel
-        v-if="selectedPeriod"
-        class="hr-calendar-workspace"
-        :title="selectedPeriod.employee_name"
-        :subtitle="[selectedPeriod.department, selectedPeriod.position]"
-        :metrics="metrics"
-        :actions="[
-          {
-            label: 'Сотрудник',
-            to: `/hr/employees?employee=${selectedPeriod.employee_id}`,
-          },
-          {
-            label: 'Расписание',
-            to: `/schedule?teacher_id=${selectedPeriod.teacher_id}`,
-          },
-        ]"
-      >
-        <template #status
-          ><q-chip
-            dense
-            :color="statusColor(selectedPeriod.status)"
-            text-color="white"
-            >{{ statusLabel(selectedPeriod.status) }}</q-chip
-          ></template
+      <div class="workspace-page__card">
+        <WorkspaceBackBar @back="selectedPeriod = null" />
+        <WorkspacePanel
+          v-if="selectedPeriod"
+          class="hr-calendar-workspace"
+          :title="selectedPeriod.employee_name"
+          :subtitle="[selectedPeriod.department, selectedPeriod.position]"
+          :metrics="metrics"
+          :actions="[
+            {
+              label: 'Сотрудник',
+              to: `/hr/employees?employee=${selectedPeriod.employee_id}`,
+            },
+            {
+              label: 'Расписание',
+              to: `/schedule?teacher_id=${selectedPeriod.teacher_id}`,
+            },
+          ]"
         >
-        <div class="q-gutter-sm q-mb-md">
-          <q-btn
-            v-if="canManage"
-            outline
-            no-caps
-            color="negative"
-            @click="cancelPeriod(selectedPeriod)"
-            >Отменить период</q-btn
-          >
-        </div>
-        <q-table
-          flat
-          dense
-          title="Затронутые занятия"
-          :rows="store.affectedLessons"
-          :columns="lessonColumns"
-          row-key="id"
-          :rows-per-page-options="[5, 10, 20]"
-        >
-          <template #body-cell-time="props"
-            ><q-td :props="props"
-              >{{ props.row.starts_at }}–{{ props.row.ends_at }}</q-td
+          <template #status
+            ><q-chip
+              dense
+              :color="statusColor(selectedPeriod.status)"
+              text-color="white"
+              >{{ statusLabel(selectedPeriod.status) }}</q-chip
             ></template
           >
-          <template #body-cell-actions="props"
-            ><q-td :props="props"
-              ><q-btn
-                v-if="canReplace"
-                flat
-                dense
-                no-caps
-                color="primary"
-                @click="openCandidates(props.row)"
-                >Подобрать замену</q-btn
-              ></q-td
-            ></template
-          >
-        </q-table>
-        <q-separator class="q-my-md" />
-        <div v-if="selectedLesson">
-          <h3 class="text-subtitle1 q-mb-sm">Кандидаты на замену</h3>
-          <q-list bordered separator class="rounded-borders">
-            <q-item
-              v-for="candidate in store.candidates"
-              :key="candidate.teacher_id"
-              clickable
-              @click="replacementTeacherId = candidate.teacher_id"
-            >
-              <q-item-section>
-                <q-item-label>{{ candidate.full_name }}</q-item-label>
-                <q-item-label caption
-                  >Оценка {{ candidate.score }} ·
-                  {{ candidate.result }}</q-item-label
-                >
-              </q-item-section>
-              <q-item-section side
-                ><q-radio
-                  v-model="replacementTeacherId"
-                  :val="candidate.teacher_id"
-              /></q-item-section>
-            </q-item>
-          </q-list>
-          <div class="q-gutter-sm q-mt-md">
-            <q-btn outline no-caps color="primary" @click="previewReplacement"
-              >Preview</q-btn
-            >
+          <div class="q-gutter-sm q-mb-md">
             <q-btn
-              color="primary"
+              v-if="canManage"
+              outline
               no-caps
-              :disable="!replacementTeacherId"
-              @click="applyReplacement"
-              >Назначить замену</q-btn
+              color="negative"
+              @click="cancelPeriod(selectedPeriod)"
+              >Отменить период</q-btn
             >
           </div>
-          <q-banner
-            v-if="store.replacementPreview"
-            rounded
-            class="q-mt-md"
-            :class="
-              store.replacementPreview.can_apply
-                ? 'bg-green-1 text-positive'
-                : 'bg-orange-1 text-warning'
-            "
+          <q-table
+            flat
+            dense
+            title="Затронутые занятия"
+            :rows="store.affectedLessons"
+            :columns="lessonColumns"
+            row-key="id"
+            :rows-per-page-options="[5, 10, 20]"
           >
-            {{
-              store.replacementPreview.can_apply
-                ? "Замену можно применить"
-                : "Есть конфликты замены"
-            }}
-          </q-banner>
-        </div>
-      </WorkspacePanel>
+            <template #body-cell-time="props"
+              ><q-td :props="props"
+                >{{ props.row.starts_at }}–{{ props.row.ends_at }}</q-td
+              ></template
+            >
+            <template #body-cell-actions="props"
+              ><q-td :props="props"
+                ><q-btn
+                  v-if="canReplace"
+                  flat
+                  dense
+                  no-caps
+                  color="primary"
+                  @click="openCandidates(props.row)"
+                  >Подобрать замену</q-btn
+                ></q-td
+              ></template
+            >
+          </q-table>
+          <q-separator class="q-my-md" />
+          <div v-if="selectedLesson">
+            <h3 class="text-subtitle1 q-mb-sm">Кандидаты на замену</h3>
+            <q-list bordered separator class="rounded-borders">
+              <q-item
+                v-for="candidate in store.candidates"
+                :key="candidate.teacher_id"
+                clickable
+                @click="replacementTeacherId = candidate.teacher_id"
+              >
+                <q-item-section>
+                  <q-item-label>{{ candidate.full_name }}</q-item-label>
+                  <q-item-label caption
+                    >Оценка {{ candidate.score }} ·
+                    {{ candidate.result }}</q-item-label
+                  >
+                </q-item-section>
+                <q-item-section side
+                  ><q-radio
+                    v-model="replacementTeacherId"
+                    :val="candidate.teacher_id"
+                /></q-item-section>
+              </q-item>
+            </q-list>
+            <div class="q-gutter-sm q-mt-md">
+              <q-btn outline no-caps color="primary" @click="previewReplacement"
+                >Preview</q-btn
+              >
+              <q-btn
+                color="primary"
+                no-caps
+                :disable="!replacementTeacherId"
+                @click="applyReplacement"
+                >Назначить замену</q-btn
+              >
+            </div>
+            <q-banner
+              v-if="store.replacementPreview"
+              rounded
+              class="q-mt-md"
+              :class="
+                store.replacementPreview.can_apply
+                  ? 'bg-green-1 text-positive'
+                  : 'bg-orange-1 text-warning'
+              "
+            >
+              {{
+                store.replacementPreview.can_apply
+                  ? "Замену можно применить"
+                  : "Есть конфликты замены"
+              }}
+            </q-banner>
+          </div>
+        </WorkspacePanel>
+      </div>
     </div>
 
     <q-dialog v-model="createDialog" persistent>

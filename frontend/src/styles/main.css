@@ -677,6 +677,16 @@ body {
   display: none;
 }
 
+/*
+  Настройка «скрыть правую панель» и режим «фокус» относились к панели-спутнику,
+  которая стояла рядом со списком. Такой панели больше нет: карточка — это
+  состояние страницы целиком. Прятать её по этой настройке нельзя, иначе выбор
+  строки открывал бы пустой экран.
+*/
+.workspace-right-panel-hidden .workspace-page--card .workspace-page__card {
+  display: block;
+}
+
 .workspace-mode-presentation .cp-sidebar {
   display: none;
 }
@@ -1162,6 +1172,65 @@ body {
   max-width: 100%;
   min-width: 0;
   overflow: hidden;
+}
+
+/*
+  Карточка раскрывается на весь экран — решение владельца 22.08.2026,
+  docs/WORKSPACE_GUIDELINES.md.
+
+  Двухколоночной раскладки больше нет: список и карточка — два состояния одной
+  страницы, и каждое занимает всю ширину. Так список перестаёт ужиматься, а с
+  ним перестаёт прятаться за правым краем колонка с карандашом — единственный
+  способ исправить ошибку в данных. На 593 настоящих студентах именно это и
+  оказалось невыносимым.
+
+  `grid-template-columns` с `!important`: у страниц остались собственные
+  правила вида `.students-layout`, объявленные с той же силой, и полагаться на
+  порядок в файле здесь не стоит — правил таких два десятка, и написаны они в
+  разных местах.
+
+  Классы `workspace-page__list` и `workspace-page__card` проставлены явно, а не
+  выведены из положения в разметке: контейнеры на страницах называются
+  по-разному, а у двух из двадцати трёх карточки вовсе нет своего блока.
+*/
+.workspace-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 12px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.workspace-page__list,
+.workspace-page__card {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 !important;
+}
+
+.workspace-page:not(.workspace-page--card) .workspace-page__card {
+  display: none;
+}
+
+.workspace-page--card .workspace-page__list {
+  display: none;
+}
+
+/*
+  Полоса возврата над карточкой. Липкая: карточка высокая — шапка, вкладки,
+  реквизиты, документы, — и уехав вниз, человек иначе остаётся без выхода.
+*/
+.workspace-back {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 6px 0;
+  background: #f5f7fb;
 }
 
 .resizable-workspace { gap: 0; }

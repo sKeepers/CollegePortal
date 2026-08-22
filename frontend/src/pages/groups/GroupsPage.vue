@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import { Download, Edit3, Plus, RefreshCw, Trash2, Upload } from '@lucide/vue'
+import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -11,13 +12,11 @@ import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
-import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import GroupDetailsPanel from './GroupDetailsPanel.vue'
 import GroupFilters from './GroupFilters.vue'
 import GroupFormPanel from './GroupFormPanel.vue'
 import { useGroupsStore } from '../../stores/groups'
 import { usePermissions } from '../../composables/usePermissions'
-import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import {
   TABLE_ROWS_PER_PAGE_OPTIONS,
   createTablePagination,
@@ -31,7 +30,6 @@ const route = useRoute()
 const router = useRouter()
 const GROUPS_ROWS_PER_PAGE_KEY = 'collegePortal.groups.rowsPerPage'
 const syncingQueryFromUi = ref(false)
-const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.groups.splitter.v1', resizeBodyClass: 'groups-splitter-resizing' })
 const canCreate = computed(() => permissions.hasPermission('groups.create') || permissions.hasPermission('groups.edit'))
 const canUpdate = computed(() => permissions.hasPermission('groups.update') || permissions.hasPermission('groups.edit'))
 // Удаляет группу только администратор. Кнопки «Пометить на удаление» здесь нет
@@ -135,7 +133,7 @@ function updateTablePagination(pagination) {
 }
 
 function routeSelectedId() {
-  return route.query.selected ? String(route.query.selected) : ''
+  return route.params.id ? String(route.params.id) : ''
 }
 
 function routeAction() {
@@ -145,14 +143,8 @@ function routeAction() {
 async function syncSelectedQuery(groupId) {
   const query = { ...route.query }
 
-  if (groupId) {
-    query.selected = groupId
-  } else {
-    delete query.selected
-  }
-
   syncingQueryFromUi.value = true
-  await router.replace({ path: '/groups', query })
+  await router.replace({ path: groupId ? `/groups/${groupId}` : '/groups', query })
   syncingQueryFromUi.value = false
 }
 
@@ -220,7 +212,7 @@ async function exportGroups() {
 }
 
 watch(
-  () => [route.query.selected, route.query.action],
+  () => [route.params.id, route.query.action],
   () => {
     if (syncingQueryFromUi.value) {
       return
@@ -324,8 +316,8 @@ onMounted(async () => {
       </ul>
     </q-banner>
 
-    <div ref="workspaceRef" class="groups-layout" :style="workspaceStyle">
-      <div class="groups-main">
+    <div class="groups-layout workspace-page" :class="{ 'workspace-page--card': Boolean(route.params.id) }">
+      <div class="groups-main workspace-page__list">
         <AppTable
           v-if="store.filteredGroups.length || store.loading"
           :rows="store.filteredGroups"
@@ -335,6 +327,7 @@ onMounted(async () => {
           :rows-per-page-options="TABLE_ROWS_PER_PAGE_OPTIONS"
           :table-row-class-fn="tableRowClass"
           @update:pagination="updateTablePagination"
+          :row-link="(row) => `/groups/${row.id}`"
           @row-click="(_, row) => selectGroup(row)"
         >
           <template #body-cell-name="props">
@@ -383,9 +376,8 @@ onMounted(async () => {
         </AppEmptyState>
       </div>
 
-      <WorkspaceSplitter label="Изменить ширину карточки группы" @resize-start="startResize" @reset="resetSplitter" />
-
-      <aside class="groups-side">
+      <aside class="groups-side workspace-page__card">
+        <WorkspaceBackBar />
         <GroupDetailsPanel :group="store.selectedGroup" />
       </aside>
     </div>

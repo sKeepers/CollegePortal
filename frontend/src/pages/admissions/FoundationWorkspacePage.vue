@@ -32,9 +32,8 @@ import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
+import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
-import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
-import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import { humanizeApiMessage } from '../../services/api'
 import { createTablePagination, persistTablePagination } from '../../services/tableSettings'
 import {
@@ -76,19 +75,6 @@ const uploadCategory = ref('other')
 const uploadFiles = ref([])
 const rowsPerPageOptions = [10, 20, 50]
 const tablePagination = ref(createTablePagination(rowsKey, { sortBy: 'submitted_at', descending: true, rowsPerPage: 20 }))
-const {
-  resetSplitter,
-  startResize,
-  workspaceRef,
-  workspaceStyle,
-} = useResizableWorkspace({
-  storageKey: splitterKey,
-  defaultDetailsWidth: 480,
-  minDetailsWidth: 360,
-  maxDetailsWidth: 640,
-  minListWidth: 560,
-  resizeBodyClass: 'admissions-foundation-splitter-resizing',
-})
 
 const applicationForm = reactive({
   admission_year: new Date().getFullYear(),
@@ -762,7 +748,7 @@ function applyServerPagination() {
 }
 
 function routeSelectedId() {
-  return route.query.selected ? String(route.query.selected) : ''
+  return route.params.id ? String(route.params.id) : ''
 }
 
 function filtersFromRoute() {
@@ -776,7 +762,6 @@ function filtersFromRoute() {
 
 async function syncQuery(selectedId = routeSelectedId()) {
   const query = { ...route.query }
-  selectedId ? query.selected = selectedId : delete query.selected
   store.filters.status ? query.status = store.filters.status : delete query.status
   store.filters.admission_year ? query.admission_year = store.filters.admission_year : delete query.admission_year
   store.filters.source_id ? query.source_id = store.filters.source_id : delete query.source_id
@@ -784,7 +769,7 @@ async function syncQuery(selectedId = routeSelectedId()) {
   delete query.q
 
   syncingQuery.value = true
-  await router.replace({ path: '/admissions/foundation', query })
+  await router.replace({ path: selectedId ? `/admissions/foundation/${selectedId}` : '/admissions/foundation', query })
   syncingQuery.value = false
 }
 
@@ -1137,7 +1122,7 @@ async function uploadSelectedFiles() {
   }
 }
 
-watch(() => route.query.selected, async (value) => {
+watch(() => route.params.id, async (value) => {
   if (syncingQuery.value) return
   if (value) {
     await store.loadApplication(String(value)).catch(() => {})
@@ -1242,8 +1227,8 @@ onMounted(async () => {
       </template>
     </AppFilterBar>
 
-    <div ref="workspaceRef" class="admissions-foundation-workspace" :style="workspaceStyle">
-      <section class="admissions-foundation-main">
+    <div class="admissions-foundation-workspace workspace-page" :class="{ 'workspace-page--card': Boolean(route.params.id) }">
+      <section class="admissions-foundation-main workspace-page__list">
         <AppTable
           v-if="store.applications.length || store.loading"
           :rows="store.applications"
@@ -1254,6 +1239,7 @@ onMounted(async () => {
           :table-row-class-fn="tableRowClass"
           @update:pagination="updateTablePagination"
           @request="handleTableRequest"
+          :row-link="(row) => `/admissions/foundation/${row.id}`"
           @row-click="(_, row) => selectApplication(row)"
         >
           <template #body-cell-application_number="props">
@@ -1291,9 +1277,8 @@ onMounted(async () => {
         <AppEmptyState v-else title="Заявления не найдены" description="Измените фильтры или создайте новое заявление." />
       </section>
 
-      <WorkspaceSplitter label="Изменить ширину карточки заявления" @resize-start="startResize" @reset="resetSplitter" />
-
-      <aside class="admissions-foundation-side">
+      <aside class="admissions-foundation-side workspace-page__card">
+        <WorkspaceBackBar />
         <AppEmptyState v-if="!selected && !store.detailsError" title="Заявление не выбрано" description="Выберите строку или создайте новое заявление.">
           <FileSearch :size="44" />
         </AppEmptyState>

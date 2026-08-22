@@ -4,6 +4,7 @@ import { formatPhone } from '../../utils/phone'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import { Download, Edit3, Plus, RefreshCw, Trash2, Upload } from '@lucide/vue'
+import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -14,13 +15,11 @@ import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
 import DeletionRequestDialog from '../../components/trash/DeletionRequestDialog.vue'
-import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import TeacherDetailsPanel from './TeacherDetailsPanel.vue'
 import TeacherFilters from './TeacherFilters.vue'
 import TeacherFormPanel from './TeacherFormPanel.vue'
 import { useTeachersStore } from '../../stores/teachers'
 import { usePermissions } from '../../composables/usePermissions'
-import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import {
   TABLE_ROWS_PER_PAGE_OPTIONS,
   createTablePagination,
@@ -34,7 +33,6 @@ const route = useRoute()
 const router = useRouter()
 const TEACHERS_ROWS_PER_PAGE_KEY = 'collegePortal.teachers.rowsPerPage'
 const syncingQueryFromUi = ref(false)
-const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.teachers.splitter.v1', resizeBodyClass: 'teachers-splitter-resizing' })
 const canCreate = computed(() => permissions.hasPermission('teachers.create') || permissions.hasPermission('teachers.edit'))
 const canUpdate = computed(() => permissions.hasPermission('teachers.update') || permissions.hasPermission('teachers.edit'))
 // Удаление в два шага: помечает тот, кто ведёт карточку, удаляет администратор.
@@ -118,7 +116,7 @@ function updateTablePagination(pagination) {
 }
 
 function routeSelectedId() {
-  return route.query.selected ? String(route.query.selected) : ''
+  return route.params.id ? String(route.params.id) : ''
 }
 
 function routeSearchText() {
@@ -132,12 +130,6 @@ function routeAction() {
 async function syncTeacherQuery({ selectedId = routeSelectedId(), searchText = routeSearchText() }) {
   const query = { ...route.query }
 
-  if (selectedId) {
-    query.selected = selectedId
-  } else {
-    delete query.selected
-  }
-
   if (searchText) {
     query.search = searchText
   } else {
@@ -145,7 +137,7 @@ async function syncTeacherQuery({ selectedId = routeSelectedId(), searchText = r
   }
 
   syncingQueryFromUi.value = true
-  await router.replace({ path: '/teachers', query })
+  await router.replace({ path: selectedId ? `/teachers/${selectedId}` : '/teachers', query })
   syncingQueryFromUi.value = false
 }
 
@@ -227,7 +219,7 @@ async function exportTeachers() {
 }
 
 watch(
-  () => [route.query.selected, route.query.search, route.query.action],
+  () => [route.params.id, route.query.search, route.query.action],
   async () => {
     if (syncingQueryFromUi.value) {
       return
@@ -337,8 +329,8 @@ onMounted(async () => {
       </ul>
     </q-banner>
 
-    <div ref="workspaceRef" class="teachers-layout" :style="workspaceStyle">
-      <div class="teachers-main">
+    <div class="teachers-layout workspace-page" :class="{ 'workspace-page--card': Boolean(route.params.id) }">
+      <div class="teachers-main workspace-page__list">
         <AppTable
           v-if="store.filteredTeachers.length || store.loading"
           :rows="store.filteredTeachers"
@@ -348,6 +340,7 @@ onMounted(async () => {
           :rows-per-page-options="TABLE_ROWS_PER_PAGE_OPTIONS"
           :table-row-class-fn="tableRowClass"
           @update:pagination="updateTablePagination"
+          :row-link="(row) => `/teachers/${row.id}`"
           @row-click="(_, row) => selectTeacher(row)"
         >
           <template #body-cell-full_name="props">
@@ -411,9 +404,8 @@ onMounted(async () => {
         </AppEmptyState>
       </div>
 
-      <WorkspaceSplitter label="Изменить ширину карточки преподавателя" @resize-start="startResize" @reset="resetSplitter" />
-
-      <aside class="teachers-side">
+      <aside class="teachers-side workspace-page__card">
+        <WorkspaceBackBar />
         <TeacherDetailsPanel
           :teacher="store.selectedTeacher"
           :subjects="store.selectedTeacherSubjects"

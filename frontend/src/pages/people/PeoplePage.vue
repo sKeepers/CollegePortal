@@ -13,9 +13,8 @@ import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
+import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
-import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
-import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import { TABLE_ROWS_PER_PAGE_OPTIONS, createTablePagination, persistTablePagination } from '../../services/tableSettings'
 import { useAuthStore } from '../../stores/auth'
 import { usePeopleStore } from '../../stores/people'
@@ -30,18 +29,6 @@ const syncingQuery = ref(false)
 const rowsKey = 'collegePortal.people.rowsPerPage'
 const splitterKey = 'collegePortal.people.splitter.v1'
 const tablePagination = ref(createTablePagination(rowsKey, { sortBy: 'last_name', rowsPerPage: 20 }))
-const {
-  resetSplitter,
-  startResize,
-  workspaceRef,
-  workspaceStyle,
-} = useResizableWorkspace({
-  storageKey: splitterKey,
-  defaultDetailsWidth: 400,
-  minDetailsWidth: 340,
-  minListWidth: 520,
-  resizeBodyClass: 'people-splitter-resizing',
-})
 
 const DEFAULT_PROFILE = 'without_students'
 
@@ -90,11 +77,11 @@ const actions = computed(() => {
   // Раньше проверялось лишь наличие профиля, и комендант видел «Открыть
   // сотрудника» и «Цифровой пропуск», которые вели в закрытые для него
   // разделы: нажатие заканчивалось отказом.
-  if (student && auth.can('students.view')) items.push({ label: 'Открыть студента', to: { path: '/students', query: { selected: student.id } } })
-  if (teacher && auth.can('teachers.view')) items.push({ label: 'Открыть преподавателя', to: { path: '/teachers', query: { selected: teacher.id } } })
-  if (employee && auth.can('hr.employees.view')) items.push({ label: 'Открыть сотрудника', to: { path: '/hr/employees', query: { selected: employee.id } } })
-  if (applicant && auth.can('admissions.view')) items.push({ label: 'Открыть заявление', to: { path: '/admissions', query: { selected: applicant.id } } })
-  if (graduate && auth.can('graduation.view')) items.push({ label: 'Открыть выпускника', to: { path: '/graduation', query: { selected: graduate.id } } })
+  if (student && auth.can('students.view')) items.push({ label: 'Открыть студента', to: { path: `/students/${student.id}`,} })
+  if (teacher && auth.can('teachers.view')) items.push({ label: 'Открыть преподавателя', to: { path: `/teachers/${teacher.id}`,} })
+  if (employee && auth.can('hr.employees.view')) items.push({ label: 'Открыть сотрудника', to: { path: `/hr/employees/${employee.id}`,} })
+  if (applicant && auth.can('admissions.view')) items.push({ label: 'Открыть заявление', to: { path: `/admissions/${applicant.id}`,} })
+  if (graduate && auth.can('graduation.view')) items.push({ label: 'Открыть выпускника', to: { path: `/graduation/${graduate.id}`,} })
   if (person.digital_identities?.length && auth.can('digitalpasses.manage')) items.push({ label: 'Цифровой пропуск', to: '/identity/digital-passes' })
   if (auth.can('rfid.cards.view')) items.push({ label: 'RFID-карты', to: '/identity/rfid-cards' })
   return items
@@ -183,21 +170,20 @@ function statusLabel(status) {
 }
 function tableRowClass(row) { return Number(row.id) === Number(store.selectedId) ? 'people-row--selected' : '' }
 function updatePagination(pagination) { tablePagination.value = pagination; persistTablePagination(rowsKey, pagination) }
-function routeSelectedId() { return route.query.selected ? String(route.query.selected) : '' }
+function routeSelectedId() { return route.params.id ? String(route.params.id) : '' }
 async function syncQuery(selectedId = routeSelectedId()) {
   const query = { ...route.query }
-  selectedId ? query.selected = selectedId : delete query.selected
   store.filters.search ? query.search = store.filters.search : delete query.search
   store.filters.profile ? query.profile = store.filters.profile : delete query.profile
   syncingQuery.value = true
-  await router.replace({ path: '/people', query })
+  await router.replace({ path: selectedId ? `/people/${selectedId}` : '/people', query })
   syncingQuery.value = false
 }
 async function applyFilters() { await store.load(); await syncQuery('') }
 async function resetFilters() { store.resetFilters(); await store.load(); await syncQuery('') }
 async function selectPerson(person) { await store.select(person?.id); await syncQuery(person?.id || '') }
 
-watch(() => route.query.selected, (value) => { if (!syncingQuery.value) store.select(value ? String(value) : '') })
+watch(() => route.params.id, (value) => { if (!syncingQuery.value) store.select(value ? String(value) : '') })
 watch(() => [route.query.search, route.query.profile], async () => {
   if (syncingQuery.value) return
   store.filters.search = route.query.search ? String(route.query.search) : ''
@@ -248,8 +234,8 @@ onMounted(async () => {
       </template>
     </AppFilterBar>
 
-    <div ref="workspaceRef" class="people-workspace" :style="workspaceStyle">
-      <section class="people-main">
+    <div class="people-workspace workspace-page" :class="{ 'workspace-page--card': Boolean(route.params.id) }">
+      <section class="people-main workspace-page__list">
         <AppTable
           v-if="store.people.length || store.loading"
           :rows="store.people"
@@ -259,6 +245,7 @@ onMounted(async () => {
           :rows-per-page-options="TABLE_ROWS_PER_PAGE_OPTIONS"
           :table-row-class-fn="tableRowClass"
           @update:pagination="updatePagination"
+          :row-link="(row) => `/people/${row.id}`"
           @row-click="(_, row) => selectPerson(row)"
         >
           <template #body-cell-full_name="props">
@@ -282,9 +269,8 @@ onMounted(async () => {
         <AppEmptyState v-else title="Люди не найдены" description="Измените фильтры или выполните привязку существующих профилей." />
       </section>
 
-      <WorkspaceSplitter label="Изменить ширину карточки человека" @resize-start="startResize" @reset="resetSplitter" />
-
-      <aside class="people-side">
+      <aside class="people-side workspace-page__card">
+        <WorkspaceBackBar />
         <AppEmptyState v-if="!selected" title="Человек не выбран" description="Выберите строку, чтобы открыть связанные профили." />
         <WorkspacePanel v-else :title="selected.full_name" :subtitle="[formatPhone(selected.phone), selected.email].filter(Boolean)" :metrics="metrics" :actions="actions">
           <template #photo>

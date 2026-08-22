@@ -21,10 +21,9 @@ import AppEmptyState from "../../components/ui/AppEmptyState.vue";
 import AppLoading from "../../components/ui/AppLoading.vue";
 import AppErrorBanner from "../../components/ui/AppErrorBanner.vue";
 import AppStatusBadge from "../../components/ui/AppStatusBadge.vue";
+import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import WorkspacePanel from "../../components/workspace/WorkspacePanel.vue";
-import WorkspaceSplitter from "../../components/workspace/WorkspaceSplitter.vue";
 import { usePermissions } from "../../composables/usePermissions";
-import { useResizableWorkspace } from "../../composables/useResizableWorkspace";
 import {
   TABLE_ROWS_PER_PAGE_OPTIONS,
   createTablePagination,
@@ -46,7 +45,6 @@ const $q = useQuasar(),
   route = useRoute(),
   router = useRouter();
 const rowsKey = "collegePortal.frdo.rowsPerPage";
-const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: "collegePortal.frdo.splitter.v1", resizeBodyClass: "frdo-splitter-resizing" });
 const syncingQuery = ref(false),
   createVisible = ref(false);
 const tablePagination = ref(
@@ -152,13 +150,12 @@ function updatePagination(p) {
   persistTablePagination(rowsKey, p);
 }
 function routeSelectedId() {
-  return route.query.selected ? String(route.query.selected) : "";
+  return route.params.id ? String(route.params.id) : "";
 }
 async function syncQuery(selectedId = routeSelectedId()) {
   const query = { ...route.query };
-  selectedId ? (query.selected = selectedId) : delete query.selected;
   syncingQuery.value = true;
-  await router.replace({ path: "/frdo", query });
+  await router.replace({ path: selectedId ? `/frdo/${selectedId}` : "/frdo", query });
   syncingQuery.value = false;
 }
 async function selectPackage(pkg) {
@@ -216,7 +213,7 @@ async function resetFilters() {
   await syncQuery("");
 }
 watch(
-  () => route.query.selected,
+  () => route.params.id,
   () => {
     if (!syncingQuery.value) store.selectById(routeSelectedId());
   },
@@ -285,8 +282,8 @@ onMounted(async () => {
         ><q-btn flat @click="resetFilters">Сбросить</q-btn></template
       ></AppFilterBar
     >
-    <div ref="workspaceRef" class="frdo-workspace resizable-workspace" :style="workspaceStyle">
-      <div class="frdo-main">
+    <div class="frdo-workspace workspace-page" :class="{ 'workspace-page--card': Boolean(route.params.id) }">
+      <div class="frdo-main workspace-page__list">
         <AppTable
           v-if="store.filteredPackages.length || store.loading"
           :rows="store.filteredPackages"
@@ -296,6 +293,7 @@ onMounted(async () => {
           :rows-per-page-options="TABLE_ROWS_PER_PAGE_OPTIONS"
           :table-row-class-fn="rowClass"
           @update:pagination="updatePagination"
+          :row-link="(row) => `/frdo/${row.id}`"
           @row-click="(_, row) => selectPackage(row)"
           ><template #body-cell-name="props"
             ><q-td :props="props"
@@ -351,8 +349,8 @@ onMounted(async () => {
           description="Создайте пакет из выпускников за выбранный год."
         />
       </div>
-      <WorkspaceSplitter label="Изменить ширину карточки пакета ФРДО" @resize-start="startResize" @reset="resetSplitter" />
-      <aside class="frdo-side">
+      <aside class="frdo-side workspace-page__card">
+        <WorkspaceBackBar />
         <AppEmptyState
           v-if="!selected"
           title="Пакет не выбран"
@@ -419,8 +417,7 @@ onMounted(async () => {
                   <div>
                     <RouterLink
                       :to="{
-                        path: '/graduation',
-                        query: { selected: record.graduate_id },
+                        path: `/graduation/${record.graduate_id}`,
                       }"
                       class="entity-link-action frdo-record-title"
                       >{{ payload(record, "student") }}</RouterLink
@@ -448,8 +445,7 @@ onMounted(async () => {
                       dense
                       title="Открыть студента"
                       :to="{
-                        path: '/students',
-                        query: { selected: record.graduate?.student_id },
+                        path: `/students/${record.graduate?.student_id}`,
                       }"
                       ><ExternalLink :size="15"
                     /></q-btn>

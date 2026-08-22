@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import { Download, Edit3, Plus, RefreshCw, Trash2, Upload } from '@lucide/vue'
+import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -11,13 +12,11 @@ import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
-import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import SpecialtyDetailsPanel from './SpecialtyDetailsPanel.vue'
 import SpecialtyFilters from './SpecialtyFilters.vue'
 import SpecialtyFormPanel from './SpecialtyFormPanel.vue'
 import { specialtyTitle, useSpecialtiesStore } from '../../stores/specialties'
 import { usePermissions } from '../../composables/usePermissions'
-import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import {
   TABLE_ROWS_PER_PAGE_OPTIONS,
   createTablePagination,
@@ -31,10 +30,6 @@ const route = useRoute()
 const router = useRouter()
 const ROWS_PER_PAGE_KEY = 'collegePortal.specialties.rowsPerPage'
 const syncingQueryFromUi = ref(false)
-const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({
-  storageKey: 'collegePortal.specialties.splitter.v1',
-  resizeBodyClass: 'specialties-splitter-resizing',
-})
 
 // Справочник целиком закрыт одним правом: и чтение, и правка — reference.manage.
 const canManage = computed(() => permissions.hasPermission('reference.manage'))
@@ -74,7 +69,7 @@ function updateTablePagination(pagination) {
 }
 
 function routeSelectedId() {
-  return route.query.selected ? String(route.query.selected) : ''
+  return route.params.id ? String(route.params.id) : ''
 }
 
 function routeSearchText() {
@@ -88,11 +83,10 @@ function routeAction() {
 async function syncQuery({ selectedId = routeSelectedId(), searchText = routeSearchText() }) {
   const query = { ...route.query }
 
-  if (selectedId) { query.selected = selectedId } else { delete query.selected }
   if (searchText) { query.search = searchText } else { delete query.search }
 
   syncingQueryFromUi.value = true
-  await router.replace({ path: '/specialties', query })
+  await router.replace({ path: selectedId ? `/specialties/${selectedId}` : '/specialties', query })
   syncingQueryFromUi.value = false
 }
 
@@ -157,7 +151,7 @@ async function exportSpecialties() {
 }
 
 watch(
-  () => [route.query.selected, route.query.search, route.query.action],
+  () => [route.params.id, route.query.search, route.query.action],
   async () => {
     if (syncingQueryFromUi.value) return
 
@@ -260,8 +254,8 @@ onMounted(async () => {
       </ul>
     </q-banner>
 
-    <div ref="workspaceRef" class="specialties-layout" :style="workspaceStyle">
-      <div class="specialties-main">
+    <div class="specialties-layout workspace-page" :class="{ 'workspace-page--card': Boolean(route.params.id) }">
+      <div class="specialties-main workspace-page__list">
         <AppTable
           v-if="store.filteredSpecialties.length || store.loading"
           :rows="store.filteredSpecialties"
@@ -271,6 +265,7 @@ onMounted(async () => {
           :rows-per-page-options="TABLE_ROWS_PER_PAGE_OPTIONS"
           :table-row-class-fn="tableRowClass"
           @update:pagination="updateTablePagination"
+          :row-link="(row) => `/specialties/${row.id}`"
           @row-click="(_, row) => selectSpecialty(row)"
         >
           <template #body-cell-code="props">
@@ -324,9 +319,8 @@ onMounted(async () => {
         </AppEmptyState>
       </div>
 
-      <WorkspaceSplitter label="Изменить ширину карточки специальности" @resize-start="startResize" @reset="resetSplitter" />
-
-      <aside class="specialties-side">
+      <aside class="specialties-side workspace-page__card">
+        <WorkspaceBackBar />
         <SpecialtyDetailsPanel :specialty="store.selectedSpecialty" :programs="store.selectedSpecialtyPrograms" />
       </aside>
     </div>

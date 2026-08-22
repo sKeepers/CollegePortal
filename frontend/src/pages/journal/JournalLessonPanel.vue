@@ -51,8 +51,8 @@ const lessonMetrics = computed(() => [
 ])
 
 const lessonActions = computed(() => [
-  ...(auth.can('students.view') ? [{ label: props.student?.id ? 'Открыть студента' : 'Студенты группы', to: props.student?.id ? { path: '/students', query: { group: props.lesson?.group_id, selected: props.student.id } } : { path: '/students', query: { group: props.lesson?.group_id } }, disabled: !props.lesson?.group_id }] : []),
-  ...(auth.can('groups.view') ? [{ label: 'Группа', to: { path: '/groups', query: { selected: props.lesson?.group_id } }, disabled: !props.lesson?.group_id }] : []),
+  ...(auth.can('students.view') ? [{ label: props.student?.id ? 'Открыть студента' : 'Студенты группы', to: props.student?.id ? { path: `/students/${props.student.id}`, query: { group: props.lesson?.group_id } } : { path: '/students', query: { group: props.lesson?.group_id } }, disabled: !props.lesson?.group_id }] : []),
+  ...(auth.can('groups.view') ? [{ label: 'Группа', to: { path: `/groups/${props.lesson?.group_id}`,}, disabled: !props.lesson?.group_id }] : []),
   ...(auth.can('schedule.view') ? [{ label: 'Расписание', to: { path: '/schedule', query: { date: props.lesson?.lesson_date } } }] : []),
 ])
 

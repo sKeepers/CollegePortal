@@ -4,6 +4,7 @@ import { formatPhone } from '../../utils/phone'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import { Download, Edit3, Plus, RefreshCw, Trash2, Upload } from '@lucide/vue'
+import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -14,14 +15,12 @@ import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
 import DeletionRequestDialog from '../../components/trash/DeletionRequestDialog.vue'
-import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import StudentDetailsPanel from './StudentDetailsPanel.vue'
 import StudentFilters from './StudentFilters.vue'
 import StudentFormPanel from './StudentFormPanel.vue'
 import { useStudentsStore } from '../../stores/students'
 import { useReferenceOptionsStore } from '../../stores/referenceOptions'
 import { usePermissions } from '../../composables/usePermissions'
-import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import {
   TABLE_ROWS_PER_PAGE_OPTIONS,
   createTablePagination,
@@ -36,7 +35,6 @@ const route = useRoute()
 const router = useRouter()
 const STUDENTS_ROWS_PER_PAGE_KEY = 'collegePortal.students.rowsPerPage'
 const syncingQueryFromUi = ref(false)
-const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.students.splitter.v1', resizeBodyClass: 'students-splitter-resizing' })
 const canCreate = computed(() => permissions.hasPermission('students.create') || permissions.hasPermission('students.edit'))
 const canUpdate = computed(() => permissions.hasPermission('students.update') || permissions.hasPermission('students.edit'))
 // Удаление в два шага: помечает тот, кто ведёт карточку, удаляет администратор.
@@ -239,7 +237,7 @@ function routeGroupId() {
 }
 
 function routeSelectedId() {
-  return route.query.selected ? String(route.query.selected) : ''
+  return route.params.id ? String(route.params.id) : ''
 }
 
 function routeSearchText() {
@@ -264,12 +262,6 @@ async function syncStudentQuery({ groupId = routeGroupId(), selectedId = routeSe
     delete query.group
   }
 
-  if (selectedId) {
-    query.selected = selectedId
-  } else {
-    delete query.selected
-  }
-
   if (searchText) {
     query.search = searchText
   } else {
@@ -277,7 +269,7 @@ async function syncStudentQuery({ groupId = routeGroupId(), selectedId = routeSe
   }
 
   syncingQueryFromUi.value = true
-  await router.replace({ path: '/students', query })
+  await router.replace({ path: selectedId ? `/students/${selectedId}` : '/students', query })
   syncingQueryFromUi.value = false
 }
 
@@ -410,7 +402,7 @@ async function exportStudents() {
 }
 
 watch(
-  () => [route.query.group, route.query.selected, route.query.search, route.query.action],
+  () => [route.query.group, route.params.id, route.query.search, route.query.action],
   async () => {
     if (syncingQueryFromUi.value) {
       return
@@ -516,7 +508,6 @@ onMounted(async () => {
       </template>
     </AppToolbar>
 
-
     <q-banner v-if="hasBulkSelection" rounded class="students-import-summary">
       <div class="row items-center justify-between q-gutter-sm">
         <div>
@@ -547,8 +538,8 @@ onMounted(async () => {
       </ul>
     </q-banner>
 
-    <div ref="workspaceRef" class="students-layout" :style="workspaceStyle">
-      <div class="students-main">
+    <div class="students-layout workspace-page" :class="{ 'workspace-page--card': Boolean(route.params.id) }">
+      <div class="students-main workspace-page__list">
         <AppTable
           v-if="store.students.length || store.loading"
           :rows="store.students"
@@ -560,6 +551,7 @@ onMounted(async () => {
           selection="multiple"
           :table-row-class-fn="tableRowClass"
           @update:pagination="updateTablePagination"
+          :row-link="(row) => `/students/${row.id}`"
           @row-click="(_, row) => selectStudent(row)"
         >
           <template #body-cell-full_name="props">
@@ -628,9 +620,8 @@ onMounted(async () => {
         </AppEmptyState>
       </div>
 
-      <WorkspaceSplitter label="Изменить ширину карточки студента" @resize-start="startResize" @reset="resetSplitter" />
-
-      <aside class="students-side">
+      <aside class="students-side workspace-page__card">
+        <WorkspaceBackBar />
         <StudentDetailsPanel
           :student="store.selectedStudent"
           :documents="store.selectedDocuments"
@@ -659,7 +650,6 @@ onMounted(async () => {
         />
       </div>
     </q-dialog>
-
 
     <q-dialog v-model="bulkDialogVisible" persistent>
       <q-card style="min-width: 520px; max-width: 760px;">

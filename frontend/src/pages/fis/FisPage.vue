@@ -21,10 +21,9 @@ import AppEmptyState from "../../components/ui/AppEmptyState.vue";
 import AppLoading from "../../components/ui/AppLoading.vue";
 import AppErrorBanner from "../../components/ui/AppErrorBanner.vue";
 import AppStatusBadge from "../../components/ui/AppStatusBadge.vue";
+import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import WorkspacePanel from "../../components/workspace/WorkspacePanel.vue";
-import WorkspaceSplitter from "../../components/workspace/WorkspaceSplitter.vue";
 import { usePermissions } from "../../composables/usePermissions";
-import { useResizableWorkspace } from "../../composables/useResizableWorkspace";
 import {
   TABLE_ROWS_PER_PAGE_OPTIONS,
   createTablePagination,
@@ -53,7 +52,6 @@ const $q = useQuasar(),
   route = useRoute(),
   router = useRouter();
 const rowsKey = "collegePortal.fis.rowsPerPage";
-const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: "collegePortal.fis.splitter.v1", resizeBodyClass: "fis-splitter-resizing" });
 const syncingQuery = ref(false),
   createVisible = ref(false);
 const tablePagination = ref(
@@ -199,23 +197,21 @@ function payload(record, key) {
 function recordLink(record) {
   return selected.value?.package_type === "admission"
     ? {
-        path: "/admissions",
-        query: { selected: record.applicant_application_id },
+        path: `/admissions/${record.applicant_application_id}`,
       }
-    : { path: "/exams", query: { selected: record.exam_id } };
+    : { path: `/exams/${record.exam_id}`,};
 }
 function updatePagination(p) {
   tablePagination.value = p;
   persistTablePagination(rowsKey, p);
 }
 function routeSelectedId() {
-  return route.query.selected ? String(route.query.selected) : "";
+  return route.params.id ? String(route.params.id) : "";
 }
 async function syncQuery(selectedId = routeSelectedId()) {
   const query = { ...route.query };
-  selectedId ? (query.selected = selectedId) : delete query.selected;
   syncingQuery.value = true;
-  await router.replace({ path: "/fis", query });
+  await router.replace({ path: selectedId ? `/fis/${selectedId}` : "/fis", query });
   syncingQuery.value = false;
 }
 async function selectPackage(pkg) {
@@ -315,7 +311,7 @@ async function resetFilters() {
   await syncQuery("");
 }
 watch(
-  () => route.query.selected,
+  () => route.params.id,
   () => {
     if (!syncingQuery.value) store.selectById(routeSelectedId());
   },
@@ -621,8 +617,8 @@ onMounted(async () => {
         ><q-btn flat @click="resetFilters">Сбросить</q-btn></template
       ></AppFilterBar
     >
-    <div ref="workspaceRef" class="fis-workspace resizable-workspace" :style="workspaceStyle">
-      <div class="fis-main">
+    <div class="fis-workspace workspace-page" :class="{ 'workspace-page--card': Boolean(route.params.id) }">
+      <div class="fis-main workspace-page__list">
         <AppTable
           v-if="store.filteredPackages.length || store.loading"
           :rows="store.filteredPackages"
@@ -632,6 +628,7 @@ onMounted(async () => {
           :rows-per-page-options="TABLE_ROWS_PER_PAGE_OPTIONS"
           :table-row-class-fn="rowClass"
           @update:pagination="updatePagination"
+          :row-link="(row) => `/fis/${row.id}`"
           @row-click="(_, row) => selectPackage(row)"
           ><template #body-cell-name="props"
             ><q-td :props="props"
@@ -687,8 +684,8 @@ onMounted(async () => {
           description="Создайте пакет приема или ГИА."
         />
       </div>
-      <WorkspaceSplitter label="Изменить ширину карточки пакета ФИС" @resize-start="startResize" @reset="resetSplitter" />
-      <aside class="fis-side">
+      <aside class="fis-side workspace-page__card">
+        <WorkspaceBackBar />
         <AppEmptyState
           v-if="!selected"
           title="Пакет не выбран"

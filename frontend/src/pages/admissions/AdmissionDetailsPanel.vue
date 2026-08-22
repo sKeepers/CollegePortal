@@ -90,10 +90,10 @@ const admissionMetrics = computed(() => [
   { label: 'Получение подтверждено', value: documentsProvidedLabel.value },
 ])
 const admissionActions = computed(() => [
-  { label: 'Документы', to: { path: '/admissions', query: { selected: props.application?.id, tab: 'documents' } } },
+  { label: 'Документы', to: { path: `/admissions/${props.application?.id}`, query: { tab: 'documents' } } },
   { label: 'Зачислить', disabled: !canEnroll.value || props.saving },
   { label: 'Студент', to: studentsLink.value },
-  { label: 'История', to: { path: '/admissions', query: { selected: props.application?.id, tab: 'history' } } },
+  { label: 'История', to: { path: `/admissions/${props.application?.id}`, query: { tab: 'history' } } },
 ])
 
 watch(

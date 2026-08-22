@@ -206,6 +206,22 @@ const layoutStyle = computed(() => ({
   ...getEnvironmentCssVars(),
 }))
 
+/**
+ * Пункт меню горит и когда открыта карточка раздела: у неё свой адрес вида
+ * `/students/955` (решение владельца 22.08.2026), а сверка точным равенством
+ * гасила подсветку, стоило выбрать строку.
+ *
+ * Сверяем не по началу строки, а по идентификатору из маршрута: иначе
+ * `/admissions/foundation` подсвечивал бы заодно и «Приёмную комиссию».
+ */
+function isSectionActive(to) {
+  if (route.path === to) {
+    return true
+  }
+
+  return Boolean(route.params.id) && route.path === `${to}/${route.params.id}`
+}
+
 function navGroupKey(group) {
   return String(group.label || '')
     .toLowerCase()
@@ -436,7 +452,7 @@ watch(
                 v-for="item in group.items"
                 :key="item.to"
                 clickable
-                :active="route.path === item.to"
+                :active="isSectionActive(item.to)"
                 active-class="cp-nav-active"
                 :to="item.to"
               >

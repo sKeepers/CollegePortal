@@ -126,7 +126,7 @@ watch(() => route.hash, scrollToSection)
               <!-- `selected` — тот же параметр, которым карточку открывает
                    раздел «Люди»: свой способ ссылаться на человека заводить
                    незачем. -->
-              <RouterLink :to="{ path: '/people', query: { selected: person.id } }">Карточка</RouterLink>
+              <RouterLink :to="{ path: `/people/${person.id}`,}">Карточка</RouterLink>
             </div>
           </li>
         </ul>

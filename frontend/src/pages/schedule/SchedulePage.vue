@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, Download, Plus, RefreshCw } from '@lucide/vue'
+import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -12,10 +13,8 @@ import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import AppTimeField from '../../components/ui/AppTimeField.vue'
 import ScheduleDetailsPanel from './ScheduleDetailsPanel.vue'
 import ScheduleFilters from './ScheduleFilters.vue'
-import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import { usePermissions } from '../../composables/usePermissions'
 import { api } from '../../services/api'
-import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import { useAuthStore } from '../../stores/auth'
 import {
   classroomLabel,
@@ -39,7 +38,6 @@ const previewMode = ref('create')
 const draggedLesson = ref(null)
 const createForm = ref({})
 const templateForm = ref({})
-const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.schedule.splitter.v1', resizeBodyClass: 'schedule-splitter-resizing' })
 
 function defaultView() { return auth.hasRole('student') ? 'day' : 'week' }
 
@@ -397,14 +395,8 @@ async function syncQuery() {
     date: selectedDate.value,
   }
 
-  if (store.selectedId) {
-    query.selected = store.selectedId
-  } else {
-    delete query.selected
-  }
-
   syncingQueryFromUi.value = true
-  await router.replace({ path: '/schedule', query })
+  await router.replace({ path: store.selectedId ? `/schedule/${store.selectedId}` : '/schedule', query })
   syncingQueryFromUi.value = false
 }
 
@@ -585,7 +577,7 @@ watch(selectedDate, async () => {
 })
 
 watch(
-  () => [route.query.view, route.query.date, route.query.selected],
+  () => [route.query.view, route.query.date, route.params.id],
   () => {
     if (syncingQueryFromUi.value) {
       return
@@ -594,12 +586,12 @@ watch(
     const requestedView = route.query.view ? String(route.query.view) : 'week'
     activeView.value = visibleViewOptions.value.some((option) => option.value === requestedView) ? requestedView : defaultView()
     selectedDate.value = route.query.date ? String(route.query.date) : todayString()
-    store.selectLessonById(route.query.selected ? String(route.query.selected) : '')
+    store.selectLessonById(route.params.id ? String(route.params.id) : '')
   },
 )
 
 onMounted(async () => {
-  store.selectLessonById(route.query.selected ? String(route.query.selected) : '')
+  store.selectLessonById(route.params.id ? String(route.params.id) : '')
   await loadCurrentPeriod()
 })
 </script>
@@ -720,8 +712,8 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div ref="workspaceRef" class="schedule-layout" :style="workspaceStyle">
-      <div class="schedule-main">
+    <div class="schedule-layout workspace-page" :class="{ 'workspace-page--card': Boolean(route.params.id) }">
+      <div class="schedule-main workspace-page__list">
         <div v-if="activeView === 'editor'" class="schedule-editor">
           <div class="schedule-editor__scroll">
             <div class="schedule-editor__grid">
@@ -852,9 +844,8 @@ onMounted(async () => {
         />
       </div>
 
-      <WorkspaceSplitter label="Изменить ширину карточки занятия" @resize-start="startResize" @reset="resetSplitter" />
-
-      <aside class="schedule-side">
+      <aside class="schedule-side workspace-page__card">
+        <WorkspaceBackBar />
         <ScheduleDetailsPanel
           :lesson="store.selectedLesson"
           :conflicts="store.selectedLessonConflicts"
@@ -941,7 +932,6 @@ onMounted(async () => {
     </q-dialog>
   </AppPage>
 </template>
-
 
 <style scoped>
 .schedule-layout { gap: 0; }

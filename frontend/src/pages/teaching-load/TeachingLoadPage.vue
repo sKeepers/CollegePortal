@@ -13,10 +13,9 @@ import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
+import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
-import WorkspaceSplitter from '../../components/workspace/WorkspaceSplitter.vue'
 import { usePermissions } from '../../composables/usePermissions'
-import { useResizableWorkspace } from '../../composables/useResizableWorkspace'
 import { useAuthStore } from '../../stores/auth'
 import { TABLE_ROWS_PER_PAGE_OPTIONS, createTablePagination, persistTablePagination } from '../../services/tableSettings'
 import { useReferenceOptionsStore } from '../../stores/referenceOptions'
@@ -41,7 +40,6 @@ const route = useRoute()
 const router = useRouter()
 const rowsKey = 'collegePortal.teachingLoad.rowsPerPage'
 const syncingQuery = ref(false)
-const { resetSplitter, startResize, workspaceRef, workspaceStyle } = useResizableWorkspace({ storageKey: 'collegePortal.teachingLoad.splitter.v1', resizeBodyClass: 'teaching-load-splitter-resizing' })
 const formVisible = ref(false)
 const itemFormVisible = ref(false)
 const generateDialogVisible = ref(false)
@@ -84,7 +82,7 @@ const teachingLoadMetrics = computed(() => [
   { label: 'Превышение', value: store.coverage?.overassigned_hours ?? 0 },
 ])
 const teachingLoadActions = computed(() => [
-  ...(!isOwnView.value ? [{ label: 'Преподаватель', to: { path: '/teachers', query: { selected: store.selectedLoad?.teacher_id } } }] : []),
+  ...(!isOwnView.value ? [{ label: 'Преподаватель', to: { path: `/teachers/${store.selectedLoad?.teacher_id}`,} }] : []),
   { label: 'Расписание', to: { path: '/schedule', query: { group: store.selectedLoad?.group_id, teacher: store.selectedLoad?.teacher_id } } },
   { label: 'Журнал', to: { path: '/journal', query: { group: store.selectedLoad?.group_id, teacher: store.selectedLoad?.teacher_id } } },
 ])
@@ -97,8 +95,8 @@ function loadHours(load) { return (load?.items || []).reduce((sum, item) => sum 
 function notify(message) { $q.notify({ type: 'positive', message, position: 'top-right', timeout: 1800 }) }
 function rowClass(row) { return Number(row.id) === Number(store.selectedId) ? 'teaching-load-row--selected' : '' }
 function updatePagination(p) { tablePagination.value = p; persistTablePagination(rowsKey, p) }
-function routeSelectedId() { return route.query.selected ? String(route.query.selected) : '' }
-async function syncQuery(selectedId = routeSelectedId()) { const query = { ...route.query }; selectedId ? query.selected = selectedId : delete query.selected; syncingQuery.value = true; await router.replace({ path: '/teaching-load', query }); syncingQuery.value = false }
+function routeSelectedId() { return route.params.id ? String(route.params.id) : '' }
+async function syncQuery(selectedId = routeSelectedId()) { const query = { ...route.query }; syncingQuery.value = true; await router.replace({ path: selectedId ? `/teaching-load/${selectedId}` : '/teaching-load', query }); syncingQuery.value = false }
 async function selectLoad(load) { store.select(load, { includeCoverage: !isOwnView.value }); await syncQuery(load?.id || '') }
 function openCreateForm() { if (!canCreate.value) return; editingLoad.value = null; Object.assign(loadForm, { academic_year: '2026/2027', teacher_id: '', status: 'draft', description: '' }); formVisible.value = true }
 function openEditForm(load) { if (!canUpdate.value) return; editingLoad.value = load; Object.assign(loadForm, { academic_year: load.academic_year, teacher_id: load.teacher_id, status: load.status || 'draft', description: load.description || '' }); formVisible.value = true }
@@ -118,7 +116,7 @@ async function applyFilters() { store.setFilters({ ...store.filters }); await sy
 async function resetFilters() { store.resetFilters(); await syncQuery('') }
 async function handleImport(file) { if (!canImport.value || !file) return; await store.importCsv(file); importFile.value = null; notify('Импорт нагрузки завершен') }
 async function exportCsv() { if (!canExport.value) return; await store.exportCsv(); notify('Экспорт нагрузки подготовлен') }
-watch(() => route.query.selected, () => { if (!syncingQuery.value) store.selectById(routeSelectedId(), { includeCoverage: !isOwnView.value }) })
+watch(() => route.params.id, () => { if (!syncingQuery.value) store.selectById(routeSelectedId(), { includeCoverage: !isOwnView.value }) })
 onMounted(async () => { if (profileUnavailable.value) return; if (!isOwnView.value) await referenceOptions.loadCatalog('teaching_load_types'); store.selectById(routeSelectedId(), { includeCoverage: !isOwnView.value }); await store.load({ includeReferenceData: !isOwnView.value }); if (!store.selectedLoad && store.filteredLoads[0]) await selectLoad(store.filteredLoads[0]) })
 </script>
 
@@ -144,9 +142,9 @@ onMounted(async () => { if (profileUnavailable.value) return; if (!isOwnView.val
       <template #actions><q-btn color="primary" @click="applyFilters">Применить</q-btn><q-btn flat @click="resetFilters">Сбросить</q-btn></template>
     </AppFilterBar>
 
-    <div ref="workspaceRef" class="teaching-load-workspace" :style="workspaceStyle">
-      <div class="teaching-load-main">
-        <AppTable v-if="store.filteredLoads.length || store.loading" :rows="store.filteredLoads" :columns="columns" :loading="store.loading" :pagination="tablePagination" :rows-per-page-options="TABLE_ROWS_PER_PAGE_OPTIONS" :table-row-class-fn="rowClass" @update:pagination="updatePagination" @row-click="(_, row) => selectLoad(row)">
+    <div class="teaching-load-workspace workspace-page" :class="{ 'workspace-page--card': Boolean(route.params.id) }">
+      <div class="teaching-load-main workspace-page__list">
+        <AppTable v-if="store.filteredLoads.length || store.loading" :rows="store.filteredLoads" :columns="columns" :loading="store.loading" :pagination="tablePagination" :rows-per-page-options="TABLE_ROWS_PER_PAGE_OPTIONS" :table-row-class-fn="rowClass" @update:pagination="updatePagination":row-link="(row) => `/teaching-load/${row.id}`"  @row-click="(_, row) => selectLoad(row)">
           <template #body-cell-teacher="props"><q-td :props="props"><button class="teaching-load-row-link" type="button" @click.stop="selectLoad(props.row)">{{ loadTitle(props.row) }}</button><div class="teaching-load-secondary-cell">{{ props.row.description || props.row.curriculum?.name || '—' }}</div></q-td></template>
           <template #body-cell-status="props"><q-td :props="props"><AppStatusBadge :label="statusLabel(props.row.status)" :tone="statusTone(props.row.status)" /></q-td></template>
           <template #body-cell-coverage="props"><q-td :props="props">{{ loadCoverage(props.row) }}</q-td></template>
@@ -155,9 +153,8 @@ onMounted(async () => { if (profileUnavailable.value) return; if (!isOwnView.val
         <AppEmptyState v-else :title="profileUnavailable ? 'Профиль преподавателя не настроен' : 'Нагрузка не найдена'" :description="profileUnavailable ? 'Обратитесь к администратору, чтобы связать учетную запись с карточкой преподавателя.' : 'Создайте нагрузку или сформируйте ее из учебного плана.'" />
       </div>
 
-      <WorkspaceSplitter label="Изменить ширину карточки нагрузки" @resize-start="startResize" @reset="resetSplitter" />
-
-      <aside class="teaching-load-side">
+      <aside class="teaching-load-side workspace-page__card">
+        <WorkspaceBackBar />
         <AppEmptyState v-if="!store.selectedLoad" title="Нагрузка не выбрана" description="Выберите строку в таблице, чтобы открыть карточку нагрузки." />
         <WorkspacePanel v-else class="teaching-load-card" :title="loadTitle(store.selectedLoad)" :subtitle="store.selectedLoad.academic_year" :metrics="teachingLoadMetrics" :actions="teachingLoadActions">
           <template #status><AppStatusBadge :label="statusLabel(store.selectedLoad.status)" :tone="statusTone(store.selectedLoad.status)" /></template>

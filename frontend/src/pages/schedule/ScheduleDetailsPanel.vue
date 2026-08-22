@@ -17,16 +17,16 @@ const classroomText = computed(() => classroomLabel(props.lesson?.classroom) || 
 const groupText = computed(() => props.lesson?.group?.name || 'Группа не указана')
 const subjectText = computed(() => props.lesson?.subject?.name || 'Дисциплина не указана')
 const lessonMetrics = computed(() => [
-  { label: 'Группа', value: groupText.value, to: auth.can('groups.view') && props.lesson?.group_id ? { path: '/groups', query: { selected: props.lesson.group_id } } : null },
-  { label: 'Преподаватель', value: teacherText.value, to: auth.can('teachers.view') && props.lesson?.teacher_id ? { path: '/teachers', query: { selected: props.lesson.teacher_id } } : null },
-  { label: 'Аудитория', value: classroomText.value, to: auth.can('classrooms.view') && props.lesson?.classroom_id ? { path: '/classrooms', query: { selected: props.lesson.classroom_id } } : null },
+  { label: 'Группа', value: groupText.value, to: auth.can('groups.view') && props.lesson?.group_id ? { path: `/groups/${props.lesson.group_id}`,} : null },
+  { label: 'Преподаватель', value: teacherText.value, to: auth.can('teachers.view') && props.lesson?.teacher_id ? { path: `/teachers/${props.lesson.teacher_id}`,} : null },
+  { label: 'Аудитория', value: classroomText.value, to: auth.can('classrooms.view') && props.lesson?.classroom_id ? { path: `/classrooms/${props.lesson.classroom_id}`,} : null },
   { label: 'Время', value: `${props.lesson?.starts_at || '—'}–${props.lesson?.ends_at || '—'}` },
 ])
 const lessonActions = computed(() => [
   { label: 'Открыть журнал', to: props.lesson?.schedule_entry_id ? { path: '/journal', query: { lesson: props.lesson.schedule_entry_id } } : { path: '/journal', query: { legacyLesson: props.lesson?.id } }, disabled: props.lesson?.status === 'cancelled' },
-  ...(auth.can('groups.view') ? [{ label: 'Группа', to: { path: '/groups', query: { selected: props.lesson?.group_id } }, disabled: !props.lesson?.group_id }] : []),
-  ...(auth.can('teachers.view') ? [{ label: 'Преподаватель', to: { path: '/teachers', query: { selected: props.lesson?.teacher_id } }, disabled: !props.lesson?.teacher_id }] : []),
-  ...(auth.can('classrooms.view') ? [{ label: 'Аудитория', to: { path: '/classrooms', query: { selected: props.lesson?.classroom_id } }, disabled: !props.lesson?.classroom_id }] : []),
+  ...(auth.can('groups.view') ? [{ label: 'Группа', to: { path: `/groups/${props.lesson?.group_id}`,}, disabled: !props.lesson?.group_id }] : []),
+  ...(auth.can('teachers.view') ? [{ label: 'Преподаватель', to: { path: `/teachers/${props.lesson?.teacher_id}`,}, disabled: !props.lesson?.teacher_id }] : []),
+  ...(auth.can('classrooms.view') ? [{ label: 'Аудитория', to: { path: `/classrooms/${props.lesson?.classroom_id}`,}, disabled: !props.lesson?.classroom_id }] : []),
 ])
 </script>
 
