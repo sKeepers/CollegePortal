@@ -35,6 +35,15 @@ class SettingService
                 'early_leave_threshold_minutes' => ['value' => 10, 'type' => 'integer', 'is_public' => false, 'label' => 'Порог раннего ухода, минут', 'description' => 'Если последний выход раньше планового окончания на это число минут, фиксируется ранний уход.'],
                 'max_open_session_hours' => ['value' => 16, 'type' => 'integer', 'is_public' => false, 'label' => 'Максимум открытой сессии, часов', 'description' => 'Используется для проверки незакрытого входа без выхода.'],
             ],
+            'dorm' => [
+                // Корпус ищем идентификатором, а не названием: названия правят,
+                // и расчёт ночей молча начал бы смотреть не туда. Ноль значит
+                // «не задан» — тогда расчёт честно отказывается считать.
+                'building_id' => ['value' => 0, 'type' => 'integer', 'is_public' => false, 'label' => 'Корпус общежития', 'description' => 'Идентификатор корпуса, чьи проходы считаются возвращением в общежитие. Ноль — не задан.'],
+                'night_return_deadline' => ['value' => '23:00', 'type' => 'string', 'is_public' => false, 'label' => 'Контрольный час возврата', 'description' => 'С этого часа ночь считается ночью. Решение владельца от 22.08.2026.'],
+                'morning_boundary' => ['value' => '08:00', 'type' => 'string', 'is_public' => false, 'label' => 'Утренняя граница', 'description' => 'До этого часа возвращение засчитывается как ночёвка в общежитии.'],
+                'conduct_expires_months' => ['value' => 12, 'type' => 'integer', 'is_public' => false, 'label' => 'Срок действия провинности, месяцев', 'description' => 'Через сколько месяцев запись о провинности перестаёт учитываться. Решение владельца от 22.08.2026 — год.'],
+            ],
             'admissions' => [
                 'current_admission_campaign' => ['value' => 'Прием 2026', 'type' => 'string', 'is_public' => false, 'label' => 'Текущая приемная кампания', 'description' => 'Название активной приемной кампании.'],
                 'max_applications_per_applicant' => ['value' => 3, 'type' => 'integer', 'is_public' => false, 'label' => 'Максимум заявлений на абитуриента', 'description' => 'Ограничение для будущих проверок приема.'],

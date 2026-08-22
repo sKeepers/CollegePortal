@@ -46,6 +46,8 @@ use App\Http\Controllers\Api\CurriculumController;
 use App\Http\Controllers\Api\DeletionRequestController;
 use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\DigitalIdentityController;
+use App\Http\Controllers\Api\DormAbsenceController;
+use App\Http\Controllers\Api\DormLeaveController;
 use App\Http\Controllers\Api\DormPlacementController;
 use App\Http\Controllers\Api\DormRoomController;
 use App\Http\Controllers\Api\RfidCardController;
@@ -566,6 +568,18 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         ->middleware('permission:dorm.placements.manage');
     Route::post('dorm/placements/move-out', [DormPlacementController::class, 'moveOut'])
         ->middleware('permission:dorm.placements.manage');
+    Route::get('dorm/leaves', [DormLeaveController::class, 'index'])
+        ->middleware('permission:dorm.absences.view');
+    Route::post('dorm/leaves', [DormLeaveController::class, 'store'])
+        ->middleware('permission:dorm.leaves.manage');
+    Route::delete('dorm/leaves/{dormLeave}', [DormLeaveController::class, 'destroy'])
+        ->middleware('permission:dorm.leaves.manage');
+    Route::get('dorm/absences', [DormAbsenceController::class, 'index'])
+        ->middleware('permission:dorm.absences.view');
+    // Пересчёт — работа коменданта: он же ведёт отлучки, из-за которых ночь и
+    // приходится пересчитывать. Заместитель список читает, но не пересчитывает.
+    Route::post('dorm/absences/recalculate', [DormAbsenceController::class, 'recalculate'])
+        ->middleware('permission:dorm.leaves.manage');
 
     Route::get('rfid-cards', [RfidCardController::class, 'index'])
         ->middleware('permission:rfid.cards.view');
