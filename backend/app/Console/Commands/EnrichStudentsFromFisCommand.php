@@ -16,6 +16,13 @@ use Illuminate\Console\Command;
  * контингента 22.08.2026 проба на десяти строках нашла три дефекта подряд,
  * каждый из которых на 593 строках прошёл бы незамеченным.
  *
+ * Строку, которую автомат брать отказался — сменилась фамилия, разошлась дата
+ * рождения, — можно назначить руками, разобрав случай:
+ *
+ * ```
+ * php artisan students:fis-enrich /путь/2025.xls --pair=2025.xls:24=762 --apply
+ * ```
+ *
  * Даты приказа в выгрузке нет — она берётся из самого приказа и передаётся
  * `--order-date` по одной на файл, в том же порядке, что и файлы:
  *
@@ -29,6 +36,7 @@ class EnrichStudentsFromFisCommand extends Command
     protected $signature = 'students:fis-enrich
         {file* : Файлы выгрузки ФИС ГИА}
         {--order-date=* : Дата приказа о зачислении, по одной на файл в том же порядке}
+        {--pair=* : Пара «файл:строка=карточка» для случаев, которые автомат не берёт}
         {--limit=0 : Взять только первые N строк каждого файла — проба}
         {--apply : Записать изменения; без флага команда только считает}
         {--report= : Куда положить построчный CSV-отчёт. Внимание: в нём ФИО, файл вне репозитория}';
@@ -61,7 +69,17 @@ class EnrichStudentsFromFisCommand extends Command
             ];
         }
 
-        $summary = $this->enrichment->enrich($files, $apply, $limit > 0 ? $limit : null);
+        $pairs = [];
+        foreach ($this->option('pair') as $pair) {
+            if (! preg_match('/^(?<place>[^=]+:\d+)=(?<student>\d+)$/', trim($pair), $parsed)) {
+                $this->error('Пара записана неверно: '.$pair.'. Ожидается «2025.xls:24=762».');
+
+                return self::FAILURE;
+            }
+            $pairs[$parsed['place']] = (int) $parsed['student'];
+        }
+
+        $summary = $this->enrichment->enrich($files, $apply, $limit > 0 ? $limit : null, $pairs);
 
         $this->renderSummary($summary, $apply, $limit);
 
@@ -94,6 +112,7 @@ class EnrichStudentsFromFisCommand extends Command
         $this->table(['Сопоставление', 'Строк'], [
             ['по ФИО и дате рождения', $summary['matched']],
             ['по фамилии, имени и дате рождения (отчество разошлось)', $summary['matched_without_middle_name']],
+            ['пара назначена человеком', $summary['matched_by_hand']],
             ['по одному ФИО, дата рождения в портале пуста', $summary['matched_by_name_only']],
             ['несколько подходящих студентов', $summary['ambiguous']],
             ['студента в портале нет', $summary['not_found']],

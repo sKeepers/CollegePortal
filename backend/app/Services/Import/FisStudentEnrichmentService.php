@@ -77,9 +77,12 @@ class FisStudentEnrichmentService
 
     /**
      * @param  list<array{path: string, label: string, order_date?: string|null}>  $files
+     * @param  array<string, int>  $pairs  «файл:строка» => номер карточки студента.
+     *                                     Разбирает человек, когда автомат отказался:
+     *                                     фамилия сменилась, в дате рождения опечатка.
      * @return array<string, mixed>
      */
-    public function enrich(array $files, bool $apply, ?int $limit = null): array
+    public function enrich(array $files, bool $apply, ?int $limit = null, array $pairs = []): array
     {
         $this->loadStudents();
 
@@ -99,7 +102,7 @@ class FisStudentEnrichmentService
                 $summary['rows_processed']++;
 
                 $context = ['file' => $file['label'], 'row' => $row['_row'], 'subject' => $row['fio']];
-                $match = $this->match($row);
+                $match = $this->matchByHand($pairs, $file['label'], $row['_row']) ?? $this->match($row);
                 $summary[$match['outcome']]++;
 
                 if ($match['student'] === null) {
@@ -150,6 +153,7 @@ class FisStudentEnrichmentService
             'rows_processed' => 0,
             'matched' => 0,
             'matched_without_middle_name' => 0,
+            'matched_by_hand' => 0,
             'matched_by_name_only' => 0,
             'ambiguous' => 0,
             'not_found' => 0,
@@ -184,6 +188,32 @@ class FisStudentEnrichmentService
                 $this->index['name_bd'][$last.'|'.$first.'|'.$birth][] = $student->id;
                 $this->index['full'][$last.'|'.$first.'|'.$middle][] = $student->id;
             });
+    }
+
+    /**
+     * Пара, назначенная человеком, идёт впереди любого сравнения.
+     *
+     * Автомат отказывается сопоставлять, когда фамилия в портале и в выгрузке
+     * разные или дата рождения расходится, — и правильно делает: угадывание тут
+     * дороже пропуска. Но разобрав случай, человек должен иметь возможность
+     * сказать «это один и тот же», не внося СНИЛС и паспорт руками.
+     *
+     * @param  array<string, int>  $pairs
+     * @return array{outcome: string, student: Student|null, detail: string}|null
+     */
+    private function matchByHand(array $pairs, string $label, int $rowNumber): ?array
+    {
+        $studentId = $pairs[$label.':'.$rowNumber] ?? null;
+
+        if ($studentId === null) {
+            return null;
+        }
+
+        $student = $this->students[$studentId] ?? null;
+
+        return $student
+            ? ['outcome' => 'matched_by_hand', 'student' => $student, 'detail' => 'Пара назначена человеком.']
+            : ['outcome' => 'not_found', 'student' => null, 'detail' => 'Карточки '.$studentId.' нет среди действующих студентов.'];
     }
 
     /**
@@ -406,17 +436,50 @@ class FisStudentEnrichmentService
             return;
         }
 
-        $summary['written']['identity_documents.passport'] = ($summary['written']['identity_documents.passport'] ?? 0) + 1;
+        $payload = [
+            'series' => $series,
+            'number' => $number,
+            'issue_date' => $row['passport_issued_at'],
+            'issued_by' => $row['passport_issuer'] ?: null,
+            'subdivision_code' => $row['passport_department_code'] ?: null,
+        ];
+
+        // Считаем только то, что действительно ляжет. Без этой проверки повторный
+        // проход отчитывался бы о пяти сотнях «заполненных» паспортов, из которых
+        // не менялся ни один, — и отчёт переставал бы что-либо значить.
+        if ($this->passportDiffers($person, $payload)) {
+            $summary['written']['identity_documents.passport'] = ($summary['written']['identity_documents.passport'] ?? 0) + 1;
+        }
 
         if ($apply) {
-            $this->identityDocuments->syncPassportForPerson($person->id, [
-                'series' => $series,
-                'number' => $number,
-                'issue_date' => $row['passport_issued_at'],
-                'issued_by' => $row['passport_issuer'] ?: null,
-                'subdivision_code' => $row['passport_department_code'] ?: null,
-            ]);
+            $this->identityDocuments->syncPassportForPerson($person->id, $payload);
         }
+    }
+
+    /**
+     * @param  array<string, string|null>  $payload
+     */
+    private function passportDiffers(Person $person, array $payload): bool
+    {
+        $current = $this->identityDocuments->listForPerson($person->id)->first();
+
+        if (! $current) {
+            return true;
+        }
+
+        foreach ($payload as $field => $value) {
+            if ($value === null) {
+                continue;
+            }
+
+            $stored = $field === 'issue_date' ? $current->issue_date?->toDateString() : $current->{$field};
+
+            if ((string) $stored !== (string) $value) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

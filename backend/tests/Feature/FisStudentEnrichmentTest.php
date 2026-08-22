@@ -198,6 +198,52 @@ class FisStudentEnrichmentTest extends TestCase
         $this->assertSame('passport_unparsed', $summary['issues'][0]['category']);
     }
 
+    /**
+     * Фамилия сменилась после подачи заявления — автомат такую строку не берёт,
+     * и правильно делает. Разобрав случай, человек назначает пару сам.
+     */
+    public function test_a_pair_named_by_hand_beats_the_matching(): void
+    {
+        $student = $this->makeStudent('Никитина', 'Полина', 'Сергеевна', '2008-03-14');
+
+        $path = $this->makeExport([
+            $this->row('Ковалёва Полина Сергеевна', '14.03.2008', self::SNILS_ONE, ['passport' => '0718 456123']),
+        ]);
+
+        $summary = $this->service()->enrich(
+            [['path' => $path, 'label' => '2023.xls', 'order_date' => null]],
+            apply: true,
+            pairs: ['2023.xls:2' => $student->id],
+        );
+
+        $this->assertSame(1, $summary['matched_by_hand']);
+        $this->assertSame(0, $summary['not_found']);
+        $this->assertSame('112-233-445 95', $student->refresh()->snils);
+        $this->assertSame('0718', $student->passport_series);
+
+        // ФИО из выгрузки не переносится: пару назначили, чтобы дописать СНИЛС и
+        // паспорт, а не чтобы переименовать человека.
+        $this->assertSame('Никитина', $student->last_name);
+    }
+
+    public function test_a_pair_pointing_at_nobody_is_reported_and_writes_nothing(): void
+    {
+        $student = $this->makeStudent('Никитина', 'Полина', 'Сергеевна', '2008-03-14');
+
+        $path = $this->makeExport([
+            $this->row('Ковалёва Полина Сергеевна', '14.03.2008', self::SNILS_ONE),
+        ]);
+
+        $summary = $this->service()->enrich(
+            [['path' => $path, 'label' => '2023.xls', 'order_date' => null]],
+            apply: true,
+            pairs: ['2023.xls:2' => $student->id + 1000],
+        );
+
+        $this->assertSame(1, $summary['not_found']);
+        $this->assertNull($student->refresh()->snils);
+    }
+
     public function test_the_probe_takes_only_the_first_rows(): void
     {
         $first = $this->makeStudent('Ковалёва', 'Полина', 'Сергеевна', '2008-03-14');
