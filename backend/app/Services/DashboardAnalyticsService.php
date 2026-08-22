@@ -20,6 +20,7 @@ use App\Models\TeachingLoadItem;
 use App\Services\ApplicantApplicationDocumentService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
 
 class DashboardAnalyticsService
@@ -127,21 +128,15 @@ class DashboardAnalyticsService
                     ],
                 ],
                 'charts' => [
-                    'applications_7_days' => $lastSevenDays->map(fn (string $date) => [
-                        'date' => $date,
-                        'value' => $this->legacyApplicantApplications()->whereDate('submitted_at', $date)->count(),
-                        'is_demo' => false,
-                    ])->values(),
-                    'access_7_days' => $lastSevenDays->map(fn (string $date) => [
-                        'date' => $date,
-                        'value' => AccessEvent::query()->whereDate('event_time', $date)->where('direction', AccessEvent::DIRECTION_IN)->count(),
-                        'is_demo' => false,
-                    ])->values(),
-                    'lessons_7_days' => $lastSevenDays->map(fn (string $date) => [
-                        'date' => $date,
-                        'value' => ScheduleLesson::query()->whereDate('lesson_date', $date)->count(),
-                        'is_demo' => false,
-                    ])->values(),
+                    'applications_7_days' => $this->dailySeries(
+                        $this->legacyApplicantApplications(), 'submitted_at', $lastSevenDays,
+                    ),
+                    'access_7_days' => $this->dailySeries(
+                        AccessEvent::query()->where('direction', AccessEvent::DIRECTION_IN), 'event_time', $lastSevenDays,
+                    ),
+                    'lessons_7_days' => $this->dailySeries(
+                        ScheduleLesson::query(), 'lesson_date', $lastSevenDays,
+                    ),
                 ],
                 'attention' => $this->attentionItems($frdoErrors, $fisErrors, $attendance),
                 'audit' => AuditLog::query()
@@ -237,6 +232,48 @@ class DashboardAnalyticsService
                 ->whereIn('document_type_id', $requiredIds)
                 ->where('status', ApplicantApplicationDocument::STATUS_VERIFIED), '=', count($requiredIds))
             ->count();
+    }
+
+    /**
+     * Ряд «по дню за последнюю неделю» одним запросом, а не семью.
+     *
+     * Раньше каждый день считался отдельным `count()`, и три ряда стоили
+     * двадцать один запрос из девяноста трёх на открытие рабочего стола
+     * директора (замер 23.08.2026 на 593 студентах). События проходной
+     * копятся каждый день, и дальше было бы хуже.
+     *
+     * `date(...)` выбрано намеренно: оно есть и в PostgreSQL, и в SQLite, а
+     * `CAST(... AS date)` в SQLite молча даёт не дату. Проверено на обеих.
+     *
+     * Дни, за которые записей нет, база не вернёт вовсе — поэтому ряд
+     * собирается по списку дат, а не по ответу: график обязан иметь семь
+     * точек, включая нулевые.
+     *
+     * @param  \Illuminate\Support\Collection<int, string>  $dates
+     * @return \Illuminate\Support\Collection<int, array{date: string, value: int, is_demo: bool}>
+     */
+    private function dailySeries(Builder $query, string $column, Collection $dates): Collection
+    {
+        // Нижняя граница без времени намеренно. В SQLite дата хранится строкой,
+        // и сравнение тоже строковое: '2026-08-17' < '2026-08-17 00:00:00',
+        // поэтому занятия первого дня выпали бы из ряда.
+        $counts = $query
+            ->whereBetween($column, [$dates->first(), $dates->last().' 23:59:59'])
+            ->selectRaw('date('.$query->getQuery()->getGrammar()->wrap($column).') as day, count(*) as total')
+            ->groupBy('day')
+            // `toBase()->get()`, а не `pluck()`: `pluck` на построителе подменяет
+            // список выбираемых полей своими двумя, и `selectRaw` вместе с ним
+            // пропал бы. `toBase()` заодно избавляет от сборки моделей из двух
+            // чужих колонок — нужны строки, а не сущности.
+            ->toBase()
+            ->get()
+            ->pluck('total', 'day');
+
+        return $dates->map(fn (string $date) => [
+            'date' => $date,
+            'value' => (int) ($counts[$date] ?? 0),
+            'is_demo' => false,
+        ])->values();
     }
 
     private function legacyApplicantApplications(): Builder
