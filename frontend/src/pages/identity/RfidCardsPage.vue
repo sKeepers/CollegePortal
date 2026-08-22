@@ -290,9 +290,94 @@ async function exportJournal() {
   notify('Журнал выгружен в Excel')
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+}
+
+/**
+ * Ведомость собирается отдельным документом, целиком со своими стилями.
+ *
+ * Прежде печаталась сама страница: соседей по корню выключала правилом
+ * `body > *:not(.rfid-print)`, а форму выносила в корень через `Teleport`.
+ * Владелец получил пустой лист — и разбираться в чужом каскаде вслепую
+ * бессмысленно. Здесь каскада приложения нет вовсе: ни стилей Quasar, ни
+ * контейнеров разметки, ни порядка узлов в `body`. Что собрано, то и печатается.
+ */
+function buildPrintDocument() {
+  const rows = store.journal.map((row, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${escapeHtml(formatDateTime(row.issued_at))}</td>
+        <td>${escapeHtml(row.person?.full_name || '—')}</td>
+        <td>${escapeHtml(row.person?.unit || '—')}</td>
+        <td>${escapeHtml(row.card?.uid || '')}</td>
+        <td>${escapeHtml(row.issued_by || '—')}</td>
+        <td class="sign"></td>
+      </tr>`).join('')
+
+  return `<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>${escapeHtml(printTitle.value)}</title>
+<style>
+  @page { size: A4 landscape; margin: 12mm; }
+  body { margin: 0; color: #000; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .period { font-size: 12px; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th, td { border: 1px solid #000; padding: 4px 6px; text-align: left; vertical-align: top; }
+  th { background: #eeeeee; }
+  .sign { width: 22%; }
+  .footer { margin-top: 10px; font-size: 11px; }
+</style>
+</head>
+<body>
+<h1>${escapeHtml(printTitle.value)}</h1>
+<div class="period">${escapeHtml(printPeriod.value)}</div>
+<table>
+<thead>
+<tr><th>№</th><th>Дата</th><th>Фамилия, имя, отчество</th><th>Группа / подразделение</th><th>Номер карты</th><th>Выдал</th><th class="sign">Подпись</th></tr>
+</thead>
+<tbody>${rows}
+</tbody>
+</table>
+<div class="footer">Всего записей: ${store.journal.length}. Напечатано ${escapeHtml(printedAt.value)}.</div>
+</body>
+</html>`
+}
+
 function printJournal() {
+  if (!store.journal.length) {
+    notify('Печатать нечего: в журнале нет записей за выбранный период.', 'warning')
+    return
+  }
+
   printedAt.value = new Date().toLocaleString('ru-RU')
-  nextTick(() => window.print())
+
+  // Скрытая рамка, а не новое окно: всплывающие окна блокируются, и человек
+  // видит «ничего не произошло».
+  const frame = document.createElement('iframe')
+  frame.setAttribute('aria-hidden', 'true')
+  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;'
+  frame.srcdoc = buildPrintDocument()
+
+  frame.onload = () => {
+    const win = frame.contentWindow
+    if (!win) return
+
+    win.addEventListener('afterprint', () => frame.remove(), { once: true })
+    win.focus()
+    win.print()
+    // Если браузер не пришлёт `afterprint`, рамка не должна остаться навсегда.
+    window.setTimeout(() => frame.remove(), 60000)
+  }
+
+  document.body.appendChild(frame)
 }
 
 /**
@@ -661,47 +746,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKey))
       </q-tab-panel>
     </q-tab-panels>
 
-    <!--
-      Печатная форма живёт в корне страницы, а не внутри раздела.
-      Скрывать её соседей через `visibility` было ошибкой: спрятанное
-      продолжает занимать место, и на печать уходили пустые листы, а таблица
-      оставалась зажатой в ширину колонки. Теперь соседи по корню просто
-      выключаются, и на бумаге остаётся одна ведомость во всю ширину.
-      Столбец подписи пустой намеренно: подписывают на бумаге.
-    -->
-    <Teleport to="body">
-    <div class="rfid-print">
-      <h1>{{ printTitle }}</h1>
-      <div class="rfid-print__period">{{ printPeriod }}</div>
-      <table>
-        <thead>
-          <tr>
-            <th>№</th>
-            <th>Дата</th>
-            <th>Фамилия, имя, отчество</th>
-            <th>Группа / подразделение</th>
-            <th>Номер карты</th>
-            <th>Выдал</th>
-            <th>Подпись</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(row, index) in store.journal" :key="row.id">
-            <td>{{ index + 1 }}</td>
-            <td>{{ formatDateTime(row.issued_at) }}</td>
-            <td>{{ row.person?.full_name || '—' }}</td>
-            <td>{{ row.person?.unit || '—' }}</td>
-            <td>{{ row.card?.uid }}</td>
-            <td>{{ row.issued_by || '—' }}</td>
-            <td class="rfid-print__sign"></td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="rfid-print__footer">
-        Всего записей: {{ store.journal.length }}. Напечатано {{ printedAt }}.
-      </div>
-    </div>
-    </Teleport>
 
     <q-dialog v-model="createVisible">
       <q-card class="rfid-dialog">
@@ -825,22 +869,3 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKey))
 :deep(.app-toolbar) { padding: 8px 10px; }
 </style>
 
-<style>
-/* Печать: на бумагу уходит только ведомость. */
-.rfid-print { display: none; }
-
-@media print {
-  /* Соседи по корню выключаются целиком: `visibility` оставляла их место на
-     бумаге, и печать выдавала пустые листы. */
-  body > *:not(.rfid-print) { display: none !important; }
-  .rfid-print { display: block !important; width: 100%; padding: 0; }
-  .rfid-print h1 { font-size: 16px; margin: 0 0 4px; }
-  .rfid-print__period { font-size: 12px; margin-bottom: 10px; }
-  .rfid-print table { width: 100%; border-collapse: collapse; font-size: 11px; }
-  .rfid-print th,
-  .rfid-print td { border: 1px solid #000; padding: 4px 6px; text-align: left; }
-  .rfid-print__sign { width: 22%; }
-  .rfid-print__footer { margin-top: 10px; font-size: 11px; }
-  @page { size: landscape; margin: 12mm; }
-}
-</style>
