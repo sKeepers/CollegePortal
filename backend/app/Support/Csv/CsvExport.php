@@ -26,6 +26,25 @@ final class CsvExport
     public const DELIMITER = ';';
 
     /**
+     * Кавычка и **пустое** экранирование, переданные явно.
+     *
+     * С PHP 8.4 умолчание у `$escape` объявлено устаревшим: каждый вызов
+     * `fgetcsv`, `fputcsv` и `SplFileObject::setCsvControl` без него роняет
+     * предупреждение, а в PHP 9 умолчание сменится, и файлы начнут
+     * разбираться иначе без единой правки в нашем коде.
+     *
+     * Выбрана пустая строка, а не исторический обратный слэш. В обычном CSV,
+     * который пишет и читает Excel, экранирования через слэш нет вовсе:
+     * кавычка внутри поля удваивается. Пока слэш считался экранирующим,
+     * значение вида `C:\путь\` съедало следующий символ, и поле приходило
+     * склеенным с соседним. Пустое экранирование — это поведение будущего PHP
+     * и одновременно правильное поведение для наших файлов.
+     */
+    public const ENCLOSURE = '"';
+
+    public const ESCAPE = '';
+
+    /**
      * Маркер порядка байтов. Без него Excel читает UTF-8 как ANSI и показывает
      * кириллицу кракозябрами.
      */
@@ -45,11 +64,11 @@ final class CsvExport
             fwrite($output, self::BOM);
 
             if ($headers !== []) {
-                fputcsv($output, $headers, self::DELIMITER);
+                fputcsv($output, $headers, self::DELIMITER, self::ENCLOSURE, self::ESCAPE);
             }
 
             $rows(static function (array $values) use ($output): void {
-                fputcsv($output, $values, self::DELIMITER);
+                fputcsv($output, $values, self::DELIMITER, self::ENCLOSURE, self::ESCAPE);
             });
 
             fclose($output);
@@ -67,7 +86,7 @@ final class CsvExport
         fwrite($handle, self::BOM);
 
         foreach ($rows as $row) {
-            fputcsv($handle, $row, self::DELIMITER);
+            fputcsv($handle, $row, self::DELIMITER, self::ENCLOSURE, self::ESCAPE);
         }
 
         rewind($handle);

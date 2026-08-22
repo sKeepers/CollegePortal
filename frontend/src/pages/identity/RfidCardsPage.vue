@@ -822,19 +822,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKey))
 
 :deep(.rfid-scan-input) { font-size: 20px; font-family: ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: 1px; }
 
-/*
-  Содержимое панели выкладываем в строку. Поля ввода — блочные, и без этого они
-  встают друг под друга столбиком: фильтры журнала занимали пол-экрана в высоту.
-  Правило местное: общий стиль трогать не стал, его делят другие разделы.
-*/
-:deep(.app-toolbar__content) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-}
-
 :deep(.app-toolbar) { padding: 8px 10px; }
 </style>
 

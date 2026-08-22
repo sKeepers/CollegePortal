@@ -34,6 +34,25 @@ use Generator;
 final class CsvImport
 {
     /**
+     * Кавычка и **пустое** экранирование, переданные явно.
+     *
+     * С PHP 8.4 умолчание у `$escape` объявлено устаревшим: каждый вызов
+     * `fgetcsv`, `fputcsv` и `SplFileObject::setCsvControl` без него роняет
+     * предупреждение, а в PHP 9 умолчание сменится, и файлы начнут
+     * разбираться иначе без единой правки в нашем коде.
+     *
+     * Выбрана пустая строка, а не исторический обратный слэш. В обычном CSV,
+     * который пишет и читает Excel, экранирования через слэш нет вовсе:
+     * кавычка внутри поля удваивается. Пока слэш считался экранирующим,
+     * значение вида `C:\путь\` съедало следующий символ, и поле приходило
+     * склеенным с соседним. Пустое экранирование — это поведение будущего PHP
+     * и одновременно правильное поведение для наших файлов.
+     */
+    public const ENCLOSURE = '"';
+
+    public const ESCAPE = '';
+
+    /**
      * Строки файла, сопоставленные с заголовками.
      *
      * Ключ — номер строки в файле, считая заголовок первой: сообщения об
@@ -53,7 +72,7 @@ final class CsvImport
             $delimiter = self::detectDelimiter($path);
             self::skipByteOrderMark($handle);
 
-            $headers = fgetcsv($handle, 0, $delimiter);
+            $headers = fgetcsv($handle, 0, $delimiter, self::ENCLOSURE, self::ESCAPE);
 
             if (! is_array($headers) || $headers === [null]) {
                 return;
@@ -63,7 +82,7 @@ final class CsvImport
             $width = count($headers);
             $line = 1;
 
-            while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+            while (($row = fgetcsv($handle, 0, $delimiter, self::ENCLOSURE, self::ESCAPE)) !== false) {
                 $line++;
 
                 if ($row === [null]) {
@@ -100,7 +119,7 @@ final class CsvImport
 
         try {
             self::skipByteOrderMark($handle);
-            $headers = fgetcsv($handle, 0, self::detectDelimiter($path));
+            $headers = fgetcsv($handle, 0, self::detectDelimiter($path), self::ENCLOSURE, self::ESCAPE);
 
             return is_array($headers) && $headers !== [null] && array_filter($headers, static fn ($value): bool => trim((string) $value) !== '') !== [];
         } finally {

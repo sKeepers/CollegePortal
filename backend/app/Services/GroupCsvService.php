@@ -55,7 +55,7 @@ class GroupCsvService
     {
         $csv = new SplFileObject($file->getRealPath());
         $csv->setFlags(SplFileObject::READ_CSV | SplFileObject::SKIP_EMPTY);
-        $csv->setCsvControl($this->detectDelimiter($file));
+        $csv->setCsvControl($this->detectDelimiter($file), '"', '');
 
         $headers = null;
         $created = 0;

@@ -201,9 +201,9 @@ class UniversalImportService
         // закавыченным и первый заголовок приезжает вместе с кавычками — а значит
         // не совпадает ни с одним псевдонимом и первая колонка молча теряется.
         if (fread($handle, 3) !== "\xEF\xBB\xBF") { rewind($handle); }
-        $headers = $this->normalizeHeaders(fgetcsv($handle, 0, $delimiter) ?: []);
+        $headers = $this->normalizeHeaders(fgetcsv($handle, 0, $delimiter, '"', '') ?: []);
         $rows = [];
-        while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+        while (($row = fgetcsv($handle, 0, $delimiter, '"', '')) !== false) {
             $assoc = [];
             foreach ($headers as $index => $header) { $assoc[$header] = trim((string) ($row[$index] ?? '')); }
             if (count(array_filter($assoc, fn ($value) => $value !== '')) > 0) { $rows[] = $assoc; }
