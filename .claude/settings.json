@@ -17,7 +17,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "printf '{\"systemMessage\":\"Контекст сжимается. Если состояние изменилось, обновите docs/SESSION_HANDOFF_*.md — новая сессия читает именно его.\"}'",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/pre-compact.sh\"",
+            "timeout": 30,
+            "statusMessage": "Сохраняю состояние перед сжатием контекста"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/post-compact.sh\"",
             "timeout": 10
           }
         ]
