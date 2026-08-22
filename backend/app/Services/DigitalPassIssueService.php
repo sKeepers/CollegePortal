@@ -59,6 +59,22 @@ class DigitalPassIssueService
 
         [$entityType, $entityId] = $owner;
 
+        // Пропуск мог быть выдан карточке раньше, чем к ней привязали человека —
+        // тогда у него пустая ссылка на человека. Это тот же самый пропуск, а не
+        // повод выдать второй: дописываем ссылку и возвращаем его.
+        $issuedBeforeTheLink = DigitalIdentity::query()
+            ->where('entity_type', $entityType)
+            ->where('entity_id', $entityId)
+            ->whereNull('person_id')
+            ->whereIn('status', [DigitalIdentity::STATUS_ACTIVE, DigitalIdentity::STATUS_SUSPENDED])
+            ->first();
+
+        if ($issuedBeforeTheLink !== null) {
+            $issuedBeforeTheLink->forceFill(['person_id' => $personId])->save();
+
+            return $issuedBeforeTheLink;
+        }
+
         $identity = DigitalIdentity::create([
             'person_id' => $personId,
             'entity_type' => $entityType,

@@ -45,6 +45,15 @@ class StudentObserver
         if ($student->wasChanged('status') && $student->status !== 'active') {
             $this->digitalPasses->revokeForStudent($student);
         }
+
+        // Человек может привязаться к карточке позже её создания — так делает
+        // загрузка контингента: сначала пишет строку, потом ищет или заводит
+        // человека. На заведении пропуск выдавать было не к кому, и первые
+        // десять зачисленных 22.08.2026 остались без пропусков. Ловим момент,
+        // когда ссылка появилась.
+        if ($student->wasChanged('person_id')) {
+            $this->issue->ensureForPerson($student->person_id);
+        }
     }
 
     public function deleting(Student $student): void

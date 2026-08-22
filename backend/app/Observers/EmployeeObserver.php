@@ -23,4 +23,12 @@ class EmployeeObserver
     {
         $this->issue->ensureForPerson($employee->person_id);
     }
+
+    /** Человек может привязаться позже создания карточки — см. StudentObserver. */
+    public function updated(Employee $employee): void
+    {
+        if ($employee->wasChanged('person_id')) {
+            $this->issue->ensureForPerson($employee->person_id);
+        }
+    }
 }

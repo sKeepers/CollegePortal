@@ -87,6 +87,33 @@ class PassForEveryPersonTest extends TestCase
         $this->assertSame(1, DigitalIdentity::query()->where('person_id', $person->id)->count());
     }
 
+    public function test_a_pass_appears_when_the_person_is_linked_later(): void
+    {
+        $group = Group::create(['name' => 'М-203', 'specialty' => 'Проверка', 'course' => 1, 'year_start' => 2026]);
+
+        // Так делает загрузка контингента: сначала пишет строку студента, потом
+        // ищет или заводит человека и привязывает его. На заведении пропуск
+        // выдавать было не к кому — первые десять зачисленных 22.08.2026 так и
+        // остались без пропусков.
+        $student = Student::create([
+            'group_id' => $group->id,
+            'last_name' => 'Позднев',
+            'first_name' => 'Проверочный',
+            'status' => 'active',
+        ]);
+
+        $this->assertSame(0, DigitalIdentity::query()->count(), 'Пропуск выдан карточке без человека');
+
+        $person = $this->createPerson('Позднев');
+        $student->forceFill(['person_id' => $person->id])->save();
+
+        $pass = DigitalIdentity::query()->where('person_id', $person->id)->first();
+
+        $this->assertNotNull($pass, 'Пропуск не выдан после привязки человека');
+        $this->assertSame(DigitalIdentity::STATUS_ACTIVE, $pass->status);
+        $this->assertSame(DigitalIdentity::ENTITY_STUDENT, $pass->entity_type);
+    }
+
     public function test_the_command_gives_a_pass_to_those_left_without_one(): void
     {
         $person = $this->createPerson('Забытов');

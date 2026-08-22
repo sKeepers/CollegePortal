@@ -25,6 +25,11 @@ class TeacherObserver
         if ($teacher->wasChanged('is_active') && ! $teacher->is_active) {
             $this->digitalPasses->revokeForTeacher($teacher);
         }
+
+        // Человек может привязаться позже создания карточки — см. StudentObserver.
+        if ($teacher->wasChanged('person_id')) {
+            $this->issue->ensureForPerson($teacher->person_id);
+        }
     }
 
     public function deleting(Teacher $teacher): void
