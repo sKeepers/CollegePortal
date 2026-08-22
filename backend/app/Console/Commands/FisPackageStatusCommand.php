@@ -18,4 +18,3 @@ class FisPackageStatusCommand extends Command
         return self::SUCCESS;
     }
 }
-PHP
