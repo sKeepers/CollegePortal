@@ -72,8 +72,10 @@ class GroupApiTest extends TestCase
             'year_start' => 2026,
         ]);
 
+        // Курс не задаётся, он считается: чтобы группа стала второкурсной,
+        // меняется год набора.
         $response = $this->patchJson("/api/groups/{$group->id}", [
-            'course' => 2,
+            'year_start' => \App\Models\Group::academicYear() - 1,
         ]);
 
         $response

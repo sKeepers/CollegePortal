@@ -37,7 +37,6 @@ function cleanPayload(payload) {
     passport_issued_by: payload.passport_issued_by?.trim() || null,
     passport_department_code: payload.passport_department_code?.trim() || null,
     status: payload.status || 'active',
-    course: payload.course ? Number(payload.course) : null,
     education_form: payload.education_form?.trim() || null,
     funding_form: payload.funding_form?.trim() || null,
     enrollment_date: payload.enrollment_date || null,

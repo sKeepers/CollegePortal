@@ -41,7 +41,6 @@ const form = reactive({
   passport_issued_by: '',
   passport_department_code: '',
   status: 'active',
-  course: '',
   education_form: '',
   enrollment_date: '',
   enrollment_order_number: '',
@@ -70,7 +69,6 @@ watch(
       passport_issued_by: student?.passport_issued_by || '',
       passport_department_code: student?.passport_department_code || '',
       status: student?.status || 'active',
-      course: student?.course || student?.group?.course || '',
       education_form: student?.education_form || '',
       enrollment_date: student?.enrollment_date || '',
       enrollment_order_number: student?.enrollment_order_number || '',
@@ -133,7 +131,6 @@ function submitForm() {
           />
           <q-input v-model="form.enrollment_date" dense outlined type="date" label="Дата зачисления" stack-label />
           <q-input v-model="form.user_id" dense outlined type="number" label="ID пользователя" />
-          <q-input v-model="form.course" dense outlined type="number" min="1" max="6" label="Курс" />
           <q-select v-model="form.education_form" dense outlined clearable emit-value map-options label="Форма обучения" :options="[{ label: 'Очная', value: 'Очная' }, { label: 'Заочная', value: 'Заочная' }]" />
           <q-input v-model="form.enrollment_order_number" dense outlined label="Приказ о зачислении" />
           <q-input v-model="form.enrollment_order_date" dense outlined type="date" label="Дата приказа" stack-label />

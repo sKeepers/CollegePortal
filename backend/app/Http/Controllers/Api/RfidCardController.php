@@ -185,10 +185,13 @@ class RfidCardController extends Controller
      */
     public function groups(): JsonResponse
     {
+        // Курс считается из года набора, поэтому и порядок по нему: свежий
+        // набор — это первый курс.
         $groups = Group::query()
-            ->orderBy('course')
+            ->orderByDesc('year_start')
             ->orderBy('name')
-            ->get(['id', 'name', 'course']);
+            ->get(['id', 'name', 'year_start'])
+            ->map(fn (Group $group): array => ['id' => $group->id, 'name' => $group->name, 'course' => $group->course]);
 
         return response()->json(['data' => $groups]);
     }

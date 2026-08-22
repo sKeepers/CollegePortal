@@ -44,7 +44,8 @@ class GroupController extends Controller
     public function store(StoreGroupRequest $request): JsonResponse
     {
         $data = $request->validated();
-        $data['name'] = $data['name'] ?: $this->autoCodeService->groupName($data['specialty'] ?? null, (int) ($data['year_start'] ?? now()->year), (int) ($data['course'] ?? 1));
+        $yearStart = (int) ($data['year_start'] ?? now()->year);
+        $data['name'] = $data['name'] ?: $this->autoCodeService->groupName($data['specialty'] ?? null, $yearStart, Group::academicYear() - $yearStart + 1);
         $group = Group::create($data);
 
         return (new GroupResource($group->load(['curator', 'educationProgram.specialty'])->loadCount('students')))
@@ -61,7 +62,8 @@ class GroupController extends Controller
     {
         $data = $request->validated();
         if (array_key_exists('name', $data) && ! $data['name']) {
-            $data['name'] = $this->autoCodeService->groupName($data['specialty'] ?? $group->specialty, (int) ($data['year_start'] ?? $group->year_start), (int) ($data['course'] ?? $group->course));
+            $yearStart = (int) ($data['year_start'] ?? $group->year_start);
+            $data['name'] = $this->autoCodeService->groupName($data['specialty'] ?? $group->specialty, $yearStart, Group::academicYear() - $yearStart + 1);
         }
         $group->update($data);
 

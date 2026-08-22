@@ -310,8 +310,10 @@ class DemoDataSeeder extends Seeder
                 [
                     'specialty' => $program->specialty?->name ?? 'Демонстрационная специальность',
                     'education_program_id' => $program->id,
-                    'course' => $course,
-                    'year_start' => 2027 - $course,
+                    // Курс считается из года набора, поэтому задаём год.
+                    // Раньше здесь стояло 2027 — то же обещание править вручную
+                    // каждое лето, только в наборе демонстрационных данных.
+                    'year_start' => Group::academicYear() - $course + 1,
                     'curator_id' => $teachers[($index - 1) % $teachers->count()]->id,
                 ]
             );

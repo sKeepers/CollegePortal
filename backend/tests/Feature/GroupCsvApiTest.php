@@ -90,14 +90,13 @@ class GroupCsvApiTest extends TestCase
 
         $this->assertDatabaseHas('groups', [
             'id' => $existing->id,
-            'course' => 3,
+            'year_start' => 2024,
             'curator_id' => $teacher->id,
         ]);
         $this->assertDatabaseHas('groups', [
             'name' => 'ДИ-01',
             'specialty' => 'Дизайн',
             'education_program_id' => $program->id,
-            'course' => 1,
             'year_start' => 2026,
         ]);
     }

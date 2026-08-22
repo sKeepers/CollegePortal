@@ -129,8 +129,8 @@ class StudentFilterAndReferenceAccessTest extends TestCase
             'name' => $name,
             'specialty' => $specialty->name,
             'education_program_id' => $program->id,
-            'course' => $course,
-            'year_start' => 2026,
+            // Курс считается из года набора — задаём год, отвечающий курсу.
+            'year_start' => Group::academicYear() - $course + 1,
         ]);
     }
 

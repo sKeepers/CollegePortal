@@ -35,7 +35,6 @@ function cleanPayload(payload) {
     name: payload.name?.trim() || '',
     specialty: payload.specialty?.trim() || '',
     education_program_id: payload.education_program_id ? Number(payload.education_program_id) : null,
-    course: payload.course ? Number(payload.course) : null,
     year_start: payload.year_start ? Number(payload.year_start) : null,
     curator_id: payload.curator_id ? Number(payload.curator_id) : null,
   }

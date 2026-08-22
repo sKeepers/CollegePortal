@@ -326,7 +326,7 @@ class UniversalImportApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.updated_count', 1);
 
-        $this->assertDatabaseHas('groups', ['name' => 'ИСП-101', 'course' => 2, 'specialty' => 'Инструментальное исполнительство']);
+        $this->assertDatabaseHas('groups', ['name' => 'ИСП-101', 'year_start' => 2026, 'specialty' => 'Инструментальное исполнительство']);
     }
 
     public function test_it_records_import_history(): void

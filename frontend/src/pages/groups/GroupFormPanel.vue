@@ -30,7 +30,6 @@ const form = reactive({
   name: '',
   specialty: '',
   education_program_id: '',
-  course: '',
   year_start: '',
   curator_id: '',
 })
@@ -42,7 +41,6 @@ watch(
       name: group?.name || '',
       specialty: group?.specialty || '',
       education_program_id: group?.education_program_id || '',
-      course: group?.course || '',
       year_start: group?.year_start || '',
       curator_id: group?.curator_id || '',
     })
@@ -59,15 +57,14 @@ function submitForm() {
 <template>
   <AppCard
     :title="group?.id ? 'Редактирование группы' : 'Новая группа'"
-    subtitle="Учебная группа, программа, курс и куратор."
+    subtitle="Учебная группа, программа, год набора и куратор."
   >
     <form class="group-form" @submit.prevent="submitForm">
       <AppFormSection title="Основные данные">
         <div class="group-form__grid">
           <q-input v-model="form.name" dense outlined label="Название группы" placeholder="Будет создано автоматически" :readonly="!nameEditable"><template #append><q-btn flat round dense title="Разрешить ручное редактирование" @click="nameEditable = true"><Edit3 :size="15" /></q-btn></template></q-input>
           <q-input v-model="form.specialty" dense outlined label="Специальность" required />
-          <q-input v-model="form.course" dense outlined type="number" min="1" max="6" label="Курс" required />
-          <q-input v-model="form.year_start" dense outlined type="number" min="2000" max="2100" label="Год набора" required />
+          <q-input v-model="form.year_start" dense outlined type="number" min="2000" max="2100" label="Год набора" required hint="Курс считается из года набора" />
         </div>
       </AppFormSection>
 

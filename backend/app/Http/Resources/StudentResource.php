@@ -31,7 +31,10 @@ class StudentResource extends JsonResource
             'photo_path' => $this->photo_path,
             'photo_url' => $this->photo_path ? $request->getSchemeAndHttpHost().Storage::disk('public')->url($this->photo_path) : null,
             'status' => $this->status,
-            'course' => $this->course,
+            // Курс — свойство группы: она считает его из года набора и не
+            // устаревает. Собственный курс остаётся только у студента без
+            // группы, которому взять его больше неоткуда.
+            'course' => $this->group?->course ?? $this->course,
             'education_form' => $this->education_form,
             'funding_form' => $this->funding_form,
             'enrollment_date' => $this->enrollment_date?->toDateString(),

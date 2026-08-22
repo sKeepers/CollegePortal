@@ -46,7 +46,7 @@ class StudentController extends Controller
             // тогда пришлось бы разносить по всем её студентам вручную.
             ->when(
                 $request->integer('course'),
-                fn ($query, int $course) => $query->whereHas('group', fn ($group) => $group->where('course', $course)),
+                fn ($query, int $course) => $query->whereHas('group', fn ($group) => $group->onCourse($course)),
             )
             ->when(
                 $request->integer('specialty_id'),

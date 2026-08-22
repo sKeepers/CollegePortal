@@ -186,7 +186,9 @@ class GroupCsvService
             'specialty' => ['required', 'string', 'max:255'],
             'education_program_id' => ['nullable', 'integer', 'exists:education_programs,id'],
             'education_program' => ['nullable', 'string', 'max:255'],
-            'course' => ['required', 'integer', 'min:1', 'max:6'],
+            // Курс считается из года набора. Столбец в файле оставлен, чтобы
+            // прежние выгрузки грузились, но значение из него не берётся.
+            'course' => ['nullable', 'integer', 'min:1', 'max:6'],
             'year_start' => ['required', 'integer', 'min:2000', 'max:2100'],
             'curator_id' => ['nullable', 'integer', 'exists:teachers,id'],
             'curator' => ['nullable', 'string', 'max:255'],
@@ -202,7 +204,6 @@ class GroupCsvService
             'specialty.required' => 'Не указана специальность.',
             'education_program_id.integer' => 'Образовательная программа не найдена.',
             'education_program_id.exists' => 'Образовательная программа не найдена.',
-            'course.required' => 'Не указан курс.',
             'course.integer' => 'Курс должен быть числом от 1 до 6.',
             'course.min' => 'Курс должен быть числом от 1 до 6.',
             'course.max' => 'Курс должен быть числом от 1 до 6.',
