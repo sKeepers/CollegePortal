@@ -138,6 +138,7 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         Route::get('mobile/curator/groups/{group}', [MobileCuratorController::class, 'group']);
         Route::get('mobile/curator/groups/{group}/attendance', [MobileCuratorController::class, 'attendance']);
         Route::get('mobile/curator/groups/{group}/access', [MobileCuratorController::class, 'access']);
+        Route::get('mobile/curator/groups/{group}/performance', [MobileCuratorController::class, 'performance']);
     });
     // Счётчики кабинета администратора. Сами входящие собираются из тех же
     // маршрутов, что и «колокольчик» на десктопе, и каждый из них проверяет

@@ -34,6 +34,7 @@ class MobileCuratorAccessTest extends TestCase
         '/api/mobile/curator/groups/%d',
         '/api/mobile/curator/groups/%d/attendance',
         '/api/mobile/curator/groups/%d/access',
+        '/api/mobile/curator/groups/%d/performance',
     ];
 
     protected function setUp(): void
