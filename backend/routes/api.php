@@ -49,6 +49,7 @@ use App\Http\Controllers\Api\DigitalIdentityController;
 use App\Http\Controllers\Api\DormAbsenceController;
 use App\Http\Controllers\Api\DormLeaveController;
 use App\Http\Controllers\Api\DormConductController;
+use App\Http\Controllers\Api\DormIncidentController;
 use App\Http\Controllers\Api\DormPaymentController;
 use App\Http\Controllers\Api\DormSocialController;
 use App\Http\Controllers\Api\DormPlacementController;
@@ -591,6 +592,15 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         ->middleware('permission:dorm.social.manage');
     Route::patch('dorm/social/{dormSocialRecord}', [DormSocialController::class, 'update'])
         ->middleware('permission:dorm.social.manage');
+
+    // Происшествия — единственная часть общежития, общая для двух контуров:
+    // комендант живёт этим по должности, заместитель разбирает последствия.
+    Route::get('dorm/incidents', [DormIncidentController::class, 'index'])
+        ->middleware('permission:dorm.incidents.view');
+    Route::post('dorm/incidents', [DormIncidentController::class, 'store'])
+        ->middleware('permission:dorm.incidents.manage');
+    Route::patch('dorm/incidents/{dormIncident}', [DormIncidentController::class, 'update'])
+        ->middleware('permission:dorm.incidents.manage');
 
     Route::get('dorm/payments/summary', [DormPaymentController::class, 'summary'])
         ->middleware('permission:dorm.payments.view');

@@ -16,6 +16,7 @@ export const useDormStore = defineStore('dorm', () => {
   const leaves = ref([])
   const absences = ref([])
   const payments = ref([])
+  const incidents = ref([])
   const studentPayments = ref([])
   const students = ref([])
 
@@ -123,6 +124,27 @@ export const useDormStore = defineStore('dorm', () => {
     }
   }
 
+  /**
+   * Происшествия: драка, потоп, кража.
+   *
+   * Общая часть двух контуров — видят и ведут обе роли.
+   */
+  async function loadIncidents() {
+    loading.value = true
+    error.value = ''
+    try {
+      const query = { per_page: 200 }
+      if (nightFilters.value.from) query.from = nightFilters.value.from
+      if (nightFilters.value.to) query.to = nightFilters.value.to
+
+      incidents.value = rows(await api.list('dorm/incidents', query))
+    } catch (err) {
+      fail(err, 'Не удалось загрузить происшествия')
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function loadLeaves() {
     loading.value = true
     error.value = ''
@@ -218,13 +240,15 @@ export const useDormStore = defineStore('dorm', () => {
 
   const recalculate = (night) => act(() => api.create('dorm/absences/recalculate', { night }), loadAbsences)
   const recordPayment = (payload) => act(() => api.create('dorm/payments', payload), loadPayments)
+  const recordIncident = (payload) => act(() => api.create('dorm/incidents', payload), loadIncidents)
+  const updateIncident = (incident, payload) => act(() => api.update('dorm/incidents', incident.id, payload), loadIncidents)
 
   return {
-    rooms, placements, leaves, absences, payments, studentPayments, students,
+    rooms, placements, leaves, absences, payments, studentPayments, incidents, students,
     loading, saving, searching, error,
     roomFilters, placementFilters, nightFilters,
     kindOptions, roomOptions, studentOptions, roomTotals, roomKinds: ROOM_KINDS,
-    loadRooms, loadPlacements, loadLeaves, loadAbsences, loadPayments, loadStudentPayments, searchStudents,
-    createRoom, updateRoom, place, relocate, moveOut, createLeave, removeLeave, recalculate, recordPayment,
+    loadRooms, loadPlacements, loadLeaves, loadAbsences, loadPayments, loadStudentPayments, loadIncidents, searchStudents,
+    createRoom, updateRoom, place, relocate, moveOut, createLeave, removeLeave, recalculate, recordPayment, recordIncident, updateIncident,
   }
 })

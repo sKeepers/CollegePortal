@@ -33,6 +33,8 @@ const canManagePlacements = computed(() => permissions.hasPermission('dorm.place
 const canManageLeaves = computed(() => permissions.hasPermission('dorm.leaves.manage'))
 // Оплата — работа коменданта. Заместителю по воспитательной работе её не дают,
 // и вкладки у него не будет вовсе: это разграничение, а не недоделка.
+const canSeeIncidents = computed(() => permissions.hasPermission('dorm.incidents.view'))
+const canManageIncidents = computed(() => permissions.hasPermission('dorm.incidents.manage'))
 const canSeePayments = computed(() => permissions.hasPermission('dorm.payments.view'))
 const canManagePayments = computed(() => permissions.hasPermission('dorm.payments.manage'))
 
@@ -51,6 +53,9 @@ const leaveDialog = ref(false)
 const leaveForm = reactive({ student_id: null, starts_on: today(), ends_on: today(), reason: '' })
 
 const recalcNight = ref(yesterday())
+
+const incidentDialog = ref(false)
+const incidentForm = reactive({ id: null, happened_at: nowLocal(), summary: '', description: '', measures: '', dorm_room_id: null, participants: [] })
 
 const paymentDialog = ref(false)
 const paymentForm = reactive({ student_id: null, student_name: '', paid_through: today(), amount: null, paid_at: today(), note: '' })
@@ -84,6 +89,16 @@ const leaveColumns = [
   { name: 'actions', label: '', field: 'actions', align: 'right' },
 ]
 
+const incidentColumns = [
+  { name: 'happened_at', label: 'Когда', field: 'happened_at', align: 'left', sortable: true },
+  { name: 'summary', label: 'Что случилось', field: 'summary', align: 'left' },
+  { name: 'room', label: 'Комната', field: 'room', align: 'left' },
+  { name: 'participants', label: 'Участники', field: 'participants', align: 'left' },
+  { name: 'measures', label: 'Меры', field: 'measures', align: 'left' },
+  { name: 'created_by', label: 'Записал', field: 'created_by', align: 'left' },
+  { name: 'actions', label: '', field: 'actions', align: 'right' },
+]
+
 const paymentColumns = [
   { name: 'full_name', label: 'Студент', field: 'full_name', align: 'left', sortable: true },
   { name: 'group', label: 'Группа', field: 'group', align: 'left' },
@@ -103,6 +118,13 @@ const absenceColumns = [
 
 function today() {
   return new Date().toISOString().slice(0, 10)
+}
+
+function nowLocal() {
+  const date = new Date()
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset())
+
+  return date.toISOString().slice(0, 16)
 }
 
 function yesterday() {
@@ -249,6 +271,50 @@ async function recalculate() {
  * С экрана она всегда ручная: строки из 1С приходят обменом, а не отсюда.
  * Иначе ручная отметка смогла бы притвориться победившей в споре источников.
  */
+/**
+ * Происшествие записывается по горячим следам.
+ *
+ * Обязательны только время и одна строка. Подробности, участники и меры
+ * дописываются потом: потребуй их сразу — запись не появится вовсе.
+ */
+function openIncident(incident = null) {
+  Object.assign(incidentForm, {
+    id: incident?.id ?? null,
+    happened_at: incident?.happened_at ? incident.happened_at.slice(0, 16) : nowLocal(),
+    summary: incident?.summary || '',
+    description: incident?.description || '',
+    measures: incident?.measures || '',
+    dorm_room_id: incident?.dorm_room_id ?? null,
+    participants: (incident?.participants || []).map((item) => item.id),
+  })
+
+  if (incident?.participants?.length) {
+    store.students = incident.participants.map((item) => ({ id: item.id, full_name: item.full_name, group: { name: item.group } }))
+  }
+
+  incidentDialog.value = true
+}
+
+async function submitIncident() {
+  const payload = {
+    happened_at: incidentForm.happened_at,
+    summary: incidentForm.summary.trim(),
+    description: incidentForm.description || null,
+    measures: incidentForm.measures || null,
+    dorm_room_id: incidentForm.dorm_room_id,
+    participants: incidentForm.participants,
+  }
+
+  const done = incidentForm.id
+    ? await store.updateIncident({ id: incidentForm.id }, payload)
+    : await store.recordIncident(payload)
+
+  if (done) {
+    incidentDialog.value = false
+    notify(incidentForm.id ? 'Происшествие изменено' : 'Происшествие записано')
+  }
+}
+
 function openPayment(row = null) {
   Object.assign(paymentForm, {
     student_id: row?.student_id ?? null,
@@ -288,6 +354,10 @@ async function openTab(name) {
   if (name === 'leaves') await store.loadLeaves()
   if (name === 'nights') await store.loadAbsences()
   if (name === 'payments') await store.loadPayments()
+  if (name === 'incidents') {
+    await store.loadIncidents()
+    if (!store.rooms.length) await store.loadRooms()
+  }
 }
 
 onMounted(() => store.loadRooms())
@@ -306,6 +376,7 @@ onMounted(() => store.loadRooms())
       <q-tab name="placements" label="Заселение" />
       <q-tab name="leaves" label="Отлучки" />
       <q-tab name="nights" label="Ночные отсутствия" />
+      <q-tab v-if="canSeeIncidents" name="incidents" label="Происшествия" />
       <q-tab v-if="canSeePayments" name="payments" label="Оплата" />
     </q-tabs>
 
@@ -486,6 +557,59 @@ onMounted(() => store.loadRooms())
         </AppTable>
       </q-tab-panel>
 
+      <!-- Происшествия -->
+      <q-tab-panel name="incidents" class="q-pa-none">
+        <AppToolbar>
+          <q-input v-model="store.nightFilters.from" dense outlined type="date" label="С" style="min-width: 150px" />
+          <q-input v-model="store.nightFilters.to" dense outlined type="date" label="По" style="min-width: 150px" />
+          <q-space />
+          <q-btn flat no-caps :disable="store.loading" @click="store.loadIncidents">
+            <RefreshCw :size="16" class="q-mr-xs" /> Показать
+          </q-btn>
+          <q-btn v-if="canManageIncidents" color="primary" unelevated no-caps @click="openIncident()">
+            <Plus :size="16" class="q-mr-xs" /> Записать происшествие
+          </q-btn>
+        </AppToolbar>
+
+        <div class="dorm-hint">
+          Записывайте по горячим следам: обязательны только время и одна строка.
+          Участников, подробности и меры допишете потом — а вот не записанное сразу не записывается никогда.
+        </div>
+
+        <AppLoading v-if="store.loading" />
+        <AppEmptyState v-else-if="!store.incidents.length" title="Происшествий нет" description="За выбранный период происшествий не записано." />
+        <AppTable v-else :rows="store.incidents" :columns="incidentColumns" row-key="id" :pagination="{ rowsPerPage: 50 }">
+          <template #body-cell-happened_at="props">
+            <q-td :props="props">{{ formatDateTime(props.row.happened_at) }}</q-td>
+          </template>
+          <template #body-cell-summary="props">
+            <q-td :props="props">
+              <div>{{ props.row.summary }}</div>
+              <div v-if="props.row.description" class="dorm-secondary">{{ props.row.description }}</div>
+            </q-td>
+          </template>
+          <template #body-cell-room="props">
+            <q-td :props="props">{{ props.row.room ? `№ ${props.row.room}` : '—' }}</q-td>
+          </template>
+          <template #body-cell-participants="props">
+            <q-td :props="props">
+              <span v-if="!props.row.participants?.length">—</span>
+              <div v-for="item in props.row.participants || []" :key="item.id" class="dorm-secondary">
+                {{ item.full_name }}<span v-if="item.group"> · {{ item.group }}</span>
+              </div>
+            </q-td>
+          </template>
+          <template #body-cell-measures="props">
+            <q-td :props="props">{{ props.row.measures || '—' }}</q-td>
+          </template>
+          <template #body-cell-actions="props">
+            <q-td :props="props">
+              <q-btn v-if="canManageIncidents" flat dense no-caps color="primary" @click="openIncident(props.row)">Дописать</q-btn>
+            </q-td>
+          </template>
+        </AppTable>
+      </q-tab-panel>
+
       <!-- Оплата -->
       <q-tab-panel name="payments" class="q-pa-none">
         <AppToolbar>
@@ -590,6 +714,30 @@ onMounted(() => store.loadRooms())
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="incidentDialog">
+      <q-card class="dorm-dialog">
+        <q-card-section class="text-h6">{{ incidentForm.id ? 'Дописать происшествие' : 'Записать происшествие' }}</q-card-section>
+        <q-card-section class="column q-gutter-sm">
+          <q-input v-model="incidentForm.happened_at" dense outlined type="datetime-local" label="Когда" />
+          <q-input v-model="incidentForm.summary" dense outlined autofocus label="В одну строку" hint="Драка, потоп, кража — что случилось" />
+          <q-select v-model="incidentForm.dorm_room_id" dense outlined clearable emit-value map-options label="Комната" :options="store.roomOptions" />
+          <q-select
+            v-model="incidentForm.participants"
+            dense outlined multiple use-chips use-input emit-value map-options
+            input-debounce="350" label="Участники"
+            :options="store.studentOptions" :loading="store.searching"
+            @filter="(value, update) => { store.searchStudents(value); update(() => {}) }"
+          />
+          <q-input v-model="incidentForm.description" dense outlined type="textarea" autogrow label="Подробно" />
+          <q-input v-model="incidentForm.measures" dense outlined type="textarea" autogrow label="Что сделали" />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat no-caps label="Отмена" v-close-popup />
+          <q-btn color="primary" no-caps label="Сохранить" :loading="store.saving" :disable="!incidentForm.summary.trim() || !incidentForm.happened_at" @click="submitIncident" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <q-dialog v-model="paymentDialog">
       <q-card class="dorm-dialog">
         <q-card-section class="text-h6">Отметить оплату</q-card-section>
@@ -648,6 +796,7 @@ onMounted(() => store.loadRooms())
 .dorm-counter__label { font-size: 12px; color: #64748b; }
 .dorm-hint { margin: 12px 0; font-size: 13px; color: #475569; }
 .dorm-actions { white-space: nowrap; }
+.dorm-secondary { font-size: 12px; color: #64748b; }
 .dorm-dialog { min-width: min(520px, 92vw); }
 
 /*
