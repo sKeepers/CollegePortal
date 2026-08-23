@@ -878,6 +878,8 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
 
     Route::middleware('permission:schedule.view')->group(function (): void {
         Route::get('schedule/entries', [ScheduleEngineController::class, 'index']);
+        Route::get('schedule/report/week', [ScheduleEngineController::class, 'weekReport']);
+        Route::get('schedule/export/week.csv', [ScheduleEngineController::class, 'exportWeek']);
         Route::get('schedule/templates', [ScheduleEngineController::class, 'templates'])->middleware('permission:schedule.manage_templates');
         Route::post('schedule/templates', [ScheduleEngineController::class, 'storeTemplate'])->middleware('permission:schedule.manage_templates');
         Route::post('schedule/templates/{scheduleTemplate}/apply-preview', [ScheduleEngineController::class, 'templateApplyPreview'])->middleware('permission:schedule.manage_templates');

@@ -7,11 +7,13 @@ use App\Http\Resources\ScheduleEntryResource;
 use App\Models\ScheduleEntry;
 use App\Models\ScheduleTemplate;
 use App\Services\ScheduleEngineService;
+use App\Support\Csv\CsvExport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ScheduleEngineController extends Controller
 {
@@ -68,6 +70,143 @@ class ScheduleEngineController extends Controller
     public function classroom(int $classroomId, Request $request): AnonymousResourceCollection
     {
         return ScheduleEntryResource::collection($this->scheduleEngineService->query([...$request->query(), 'classroom_id' => $classroomId])->get());
+    }
+
+    /**
+     * Расписание на стену: неделя одной группы или одного преподавателя.
+     *
+     * Дни по столбцам, пары по строкам — так расписание вывешивают и раздают по
+     * кабинетам. Списком его читать нельзя, а учебная часть иначе будет сводить
+     * ту же таблицу в Excel руками, имея её готовой в портале.
+     */
+    private const WEEKDAYS = [1 => 'понедельник', 2 => 'вторник', 3 => 'среда', 4 => 'четверг', 5 => 'пятница', 6 => 'суббота', 7 => 'воскресенье'];
+
+    public function weekReport(Request $request): JsonResponse
+    {
+        return response()->json(['data' => $this->buildWeek($request)]);
+    }
+
+    public function exportWeek(Request $request): StreamedResponse
+    {
+        $week = $this->buildWeek($request);
+
+        $headers = array_merge(['Пара'], array_column($week['days'], 'column'));
+
+        return CsvExport::download('schedule-week.csv', $headers, function (callable $row) use ($week): void {
+            foreach ($week['rows'] as $slot) {
+                $cells = [];
+                foreach ($week['days'] as $day) {
+                    $cell = $slot['cells'][$day['date']] ?? null;
+                    $cells[] = $cell ? implode(', ', array_filter($cell['lines'])) : '';
+                }
+                $row(array_merge([$slot['title']], $cells));
+            }
+        });
+    }
+
+    /** @return array<string, mixed> */
+    private function buildWeek(Request $request): array
+    {
+        $data = $request->validate([
+            'group_id' => ['required_without:teacher_id', 'nullable', 'integer', 'exists:groups,id'],
+            'teacher_id' => ['required_without:group_id', 'nullable', 'integer', 'exists:teachers,id'],
+            'date_from' => ['required', 'date'],
+            'date_to' => ['required', 'date', 'after_or_equal:date_from'],
+        ]);
+
+        $forGroup = ! empty($data['group_id']);
+
+        $entries = $this->scheduleEngineService->query([
+            'group_id' => $data['group_id'] ?? null,
+            'teacher_id' => $data['teacher_id'] ?? null,
+            'date_from' => $data['date_from'],
+            'date_to' => $data['date_to'],
+        ])->get()->filter(fn (ScheduleEntry $entry): bool => $entry->status !== 'canceled' && $entry->date !== null);
+
+        $days = [];
+        foreach ($entries as $entry) {
+            $date = $entry->date->toDateString();
+            $days[$date] = [
+                'date' => $date,
+                'weekday' => self::WEEKDAYS[$entry->date->dayOfWeekIso] ?? '',
+                'column' => self::WEEKDAYS[$entry->date->dayOfWeekIso].', '.$entry->date->format('d.m'),
+            ];
+        }
+        ksort($days);
+
+        // Пары нумерует расписание; если номера нет, строку задаёт время начала —
+        // иначе занятие просто исчезнет из таблицы.
+        $slots = [];
+        foreach ($entries as $entry) {
+            $startsAt = $this->timeOf($entry->starts_at);
+            $endsAt = $this->timeOf($entry->ends_at);
+            $key = $entry->lesson_number ?: (int) str_replace(':', '', $startsAt);
+            $time = trim($startsAt.'–'.$endsAt, '–');
+            $slots[$key] ??= [
+                'key' => $key,
+                'lesson_number' => $entry->lesson_number,
+                'title' => $entry->lesson_number ? $entry->lesson_number.' пара, '.$time : $time,
+                'cells' => [],
+            ];
+
+            $lines = $forGroup
+                ? [$entry->subject?->name, $this->shortName($entry->teacher), $entry->classroom?->number ? 'ауд. '.$entry->classroom->number : null]
+                : [$entry->subject?->name, $entry->group?->name, $entry->classroom?->number ? 'ауд. '.$entry->classroom->number : null];
+
+            $date = $entry->date->toDateString();
+
+            // Две записи в одну клетку — это не норма, но случается при подгруппах
+            // и при замене: показать надо обе, а не потерять одну молча.
+            if (isset($slots[$key]['cells'][$date])) {
+                $slots[$key]['cells'][$date]['lines'][] = '+ '.implode(', ', array_filter($lines));
+                continue;
+            }
+
+            $slots[$key]['cells'][$date] = [
+                'entry_id' => $entry->id,
+                'is_replacement' => (bool) $entry->is_replacement,
+                'lines' => array_values(array_filter($lines)),
+            ];
+        }
+        ksort($slots);
+
+        return [
+            'for' => $forGroup ? 'group' : 'teacher',
+            'title' => $forGroup
+                ? ($entries->first()?->group?->name ?? 'Группа')
+                : ($this->shortName($entries->first()?->teacher) ?: 'Преподаватель'),
+            'date_from' => $data['date_from'],
+            'date_to' => $data['date_to'],
+            'days' => array_values($days),
+            'rows' => array_values($slots),
+        ];
+    }
+
+    /**
+     * Время занятия приходит объектом даты, и «обрезать первые пять знаков» даёт
+     * «2026-». Час с минутами надо брать форматированием.
+     */
+    private function timeOf(mixed $value): string
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('H:i');
+        }
+
+        return substr((string) $value, 0, 5);
+    }
+
+    private function shortName(?object $teacher): string
+    {
+        if ($teacher === null) {
+            return '';
+        }
+
+        $initials = trim(
+            ($teacher->first_name ? mb_substr($teacher->first_name, 0, 1).'.' : '')
+            .($teacher->middle_name ? mb_substr($teacher->middle_name, 0, 1).'.' : '')
+        );
+
+        return trim($teacher->last_name.' '.$initials);
     }
 
     public function replaceTeacher(ScheduleEntry $scheduleEntry, Request $request): ScheduleEntryResource
