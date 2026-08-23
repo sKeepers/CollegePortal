@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\StudentAddressCleanupService;
+use App\Support\People\AddressPhone;
 use Illuminate\Console\Command;
 
 /**
@@ -37,6 +38,7 @@ class CleanStudentAddressPhonesCommand extends Command
             ['телефон найден в адресе', $summary['phone_in_address']],
             ['телефон перенесён в поле', $summary['phone_written']],
             ['адрес подрезан', $summary['address_trimmed']],
+            ['адрес человека подрезан', $summary['person_address_trimmed']],
             ['оставлено человеку', $summary['skipped']],
         ]);
 
@@ -47,7 +49,7 @@ class CleanStudentAddressPhonesCommand extends Command
             }
             $this->warn('Не тронуто, разбирает человек:');
             $this->table(['Причина', 'Карточек'], array_map(
-                fn (string $reason, int $count): array => [$reason, $count],
+                fn (string $reason, int $count): array => [$this->reasonLabel($reason), $count],
                 array_keys($reasons),
                 array_values($reasons),
             ));
@@ -59,5 +61,21 @@ class CleanStudentAddressPhonesCommand extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /** Код причины человеческими словами: этот список читает учебная часть, а не разработчик. */
+    private function reasonLabel(string $reason): string
+    {
+        if ($reason === 'phone_conflict') {
+            return 'в карточке уже стоит другой номер';
+        }
+
+        if (str_starts_with($reason, 'person_address_')) {
+            $inner = substr($reason, strlen('person_address_'));
+
+            return 'адрес человека не подрезан: '.(AddressPhone::PROBLEMS[$inner] ?? $inner);
+        }
+
+        return AddressPhone::PROBLEMS[$reason] ?? $reason;
     }
 }

@@ -11,6 +11,7 @@ use App\Services\Admissions\PersonDocumentService;
 use App\Services\Import\StudentImportHandler;
 use DateTimeImmutable;
 use App\Support\Csv\CsvExport;
+use App\Support\People\AddressPhone;
 use App\Support\Phone;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
@@ -336,10 +337,41 @@ class StudentCsvService
         $payload['passport_issue_date'] = $this->normalizeDate($payload['passport_issue_date'] ?? null);
         $payload['education_document_issue_date'] = $this->normalizeDate($payload['education_document_issue_date'] ?? null);
         $payload['snils'] = isset($payload['snils']) ? preg_replace('/\D+/', '', (string) $payload['snils']) ?: null : null;
+        $payload = $this->takePhoneOutOfAddress($payload);
 
         if (empty($payload['status'])) {
             $payload['status'] = 'active';
         }
+
+        return $payload;
+    }
+
+    /**
+     * Телефон, приехавший внутри адреса, отделяется на входе.
+     *
+     * Так контингент и завели 22.08.2026: в списке учебной части адрес и телефон
+     * стоят в одной ячейке, и 406 строк из 593 попали в портал слипшимися.
+     * Разбирать это потом командой — работа, которой не должно быть: следующий
+     * список принесёт то же самое.
+     *
+     * Ставится только в **пустую** графу телефона и только если строка
+     * разобралась начисто. Неоднозначное остаётся как приехало — правило и его
+     * границы в `AddressPhone`.
+     */
+    private function takePhoneOutOfAddress(array $payload): array
+    {
+        if (filled($payload['phone'] ?? null)) {
+            return $payload;
+        }
+
+        $split = AddressPhone::split($payload['address'] ?? null);
+
+        if ($split === null || ! $split->isClean()) {
+            return $payload;
+        }
+
+        $payload['address'] = $split->address ?: null;
+        $payload['phone'] = $split->phone;
 
         return $payload;
     }

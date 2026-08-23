@@ -3,26 +3,25 @@
 namespace App\Services;
 
 use App\Models\Student;
+use App\Support\People\AddressPhone;
 
 /**
  * Телефон, прилипший к адресу студента.
  *
  * Контингент грузили 22.08.2026 из документа, где адрес, телефон и школа лежат
- * тремя абзацами одной ячейки. Разбор по абзацам починили, но в 178 карточках
- * телефон остался внутри строки адреса — «…, д. 5 тел.8-9XX-XXX-XX-XX», — и при
- * этом собственное поле телефона у этих студентов пустое. То есть телефон в
- * портале есть, а найти его нельзя: ни поиском, ни выгрузкой, ни рассылкой.
+ * тремя абзацами одной ячейки. Разбор по абзацам починили, но в 406 строках из
+ * 593 телефон всё равно приехал внутри адреса, а собственная графа телефона у
+ * этих студентов пустая. То есть телефон в портале есть, а найти его нельзя: ни
+ * поиском, ни выгрузкой, ни рассылкой.
  *
- * Служба переносит его на место и подрезает адрес. Ничего не угадывает:
+ * Первый проход 22.08 разобрал 175 карточек и остановился: правило искало слово
+ * «тел» перед цифрами, а 231 строка написана без него. Правило переехало в
+ * `AddressPhone` и теперь видит номер и без маркера — там же записано, что
+ * именно оно считает телефоном и почему так узко.
  *
- * - режет строку только там, где за «тел» сразу идут цифры. Улица Тельмана — а
- *   такая в карточках есть — под правило не попадает;
- * - если телефон в карточке уже записан, адрес не трогает и сообщает о
- *   расхождении: два разных номера должен разобрать человек;
- * - если в хвосте больше одного номера или адрес после подреза становится
- *   огрызком, оставляет как есть и пишет в отчёт;
- * - строку, в которой нет ни одной буквы, а есть один телефон, целиком
- *   считает телефоном: адреса у такого студента не записано вовсе.
+ * Служба ничего не угадывает: неоднозначное она не трогает и складывает в
+ * отчёт. Если телефон в карточке уже записан и расходится с найденным, адрес
+ * остаётся как был — два разных номера разбирает человек.
  *
  * Телефон пишется в карточку человека и оттуда зеркалится в профили —
  * `PersonService::syncProfiles`. Полный `updateSharedData` здесь звать нельзя: он
@@ -31,9 +30,6 @@ use App\Models\Student;
  */
 class StudentAddressCleanupService
 {
-    /** «тел», за которым сразу начинается номер. Регистр не важен, «Тельмана» не подходит. */
-    private const PHONE_MARKER = '/тел[^\p{L}0-9]{0,4}(?=[+0-9])/iu';
-
     public function __construct(private readonly PersonService $people)
     {
     }
@@ -46,6 +42,7 @@ class StudentAddressCleanupService
             'phone_in_address' => 0,
             'phone_written' => 0,
             'address_trimmed' => 0,
+            'person_address_trimmed' => 0,
             'skipped' => 0,
             'issues' => [],
         ];
@@ -59,7 +56,7 @@ class StudentAddressCleanupService
         foreach ($students as $student) {
             $summary['scanned']++;
 
-            $split = $this->split((string) $student->address);
+            $split = AddressPhone::split($student->address);
             if ($split === null) {
                 continue;
             }
@@ -71,16 +68,18 @@ class StudentAddressCleanupService
                 break;
             }
 
-            [$address, $phone, $problem] = $split;
-
-            if ($problem !== null) {
+            if (! $split->isClean()) {
                 $summary['skipped']++;
-                $summary['issues'][] = ['student_id' => $student->id, 'category' => $problem, 'detail' => ''];
+                $summary['issues'][] = [
+                    'student_id' => $student->id,
+                    'category' => $split->problem,
+                    'detail' => AddressPhone::PROBLEMS[$split->problem] ?? '',
+                ];
 
                 continue;
             }
 
-            if (filled($this->digits($student->phone)) && $this->digits($student->phone) !== $phone) {
+            if (filled($this->digits($student->phone)) && $this->digits($student->phone) !== $split->phone) {
                 $summary['skipped']++;
                 $summary['issues'][] = [
                     'student_id' => $student->id,
@@ -94,80 +93,43 @@ class StudentAddressCleanupService
             $summary['phone_written']++;
             $summary['address_trimmed']++;
 
+            $person = $student->person;
+            // Адрес человека разбирается отдельно от учебного: это две записи, и
+            // совпадать они не обязаны. Подрезаем его только если он разобрался
+            // начисто — иначе там останется прежняя строка, и это видно в отчёте.
+            $personSplit = $person ? AddressPhone::split($person->address) : null;
+
+            if ($personSplit?->isClean()) {
+                $summary['person_address_trimmed']++;
+            } elseif ($personSplit !== null) {
+                $summary['issues'][] = [
+                    'student_id' => $student->id,
+                    'category' => 'person_address_'.$personSplit->problem,
+                    'detail' => 'Адрес человека не подрезан: '.(AddressPhone::PROBLEMS[$personSplit->problem] ?? ''),
+                ];
+            }
+
             if (! $apply) {
                 continue;
             }
 
-            $student->fill(['address' => $address ?: null])->save();
+            $student->fill(['address' => $split->address ?: null])->save();
 
-            if ($person = $student->person) {
-                $changes = ['phone' => $phone];
-                if ($this->split((string) $person->address) !== null) {
-                    $changes['address'] = $address ?: null;
+            if ($person) {
+                $changes = ['phone' => $split->phone];
+                if ($personSplit?->isClean()) {
+                    $changes['address'] = $personSplit->address ?: null;
                 }
                 $person->fill($changes)->save();
                 $this->people->syncProfiles($person, ['phone']);
             } else {
                 // Человека нет — телефон всё равно должен попасть в карточку студента,
                 // иначе он останется только в отрезанном хвосте и пропадёт совсем.
-                $student->fill(['phone' => $phone])->save();
+                $student->fill(['phone' => $split->phone])->save();
             }
         }
 
         return $summary;
-    }
-
-    /**
-     * @return array{0: string, 1: string, 2: string|null}|null адрес, телефон, причина отказа
-     */
-    private function split(string $address): ?array
-    {
-        if ($address === '') {
-            return null;
-        }
-
-        // Адрес, в котором нет ни одной буквы, — это не адрес. У двух карточек в
-        // этом поле лежит один телефон и больше ничего: адреса о человеке просто
-        // не записали, а номер положили в ближайшую графу.
-        if (! preg_match('/\p{L}/u', $address)) {
-            $digits = $this->phoneDigits($this->digits($address));
-
-            return $digits === null ? null : ['', $digits, null];
-        }
-
-        if (! preg_match(self::PHONE_MARKER, $address, $match, PREG_OFFSET_CAPTURE)) {
-            return null;
-        }
-
-        $offset = $match[0][1];
-        $head = rtrim(substr($address, 0, $offset), " \t\r\n,;.:-");
-        $digits = $this->digits(substr($address, $offset));
-
-        if (strlen($digits) > 11) {
-            return [$address, '', 'several_phones'];
-        }
-
-        $phone = $this->phoneDigits($digits);
-
-        if ($phone === null) {
-            return [$address, '', 'phone_too_short'];
-        }
-
-        if (mb_strlen($head) < 10) {
-            return [$address, '', 'address_too_short'];
-        }
-
-        return [$head, $phone, null];
-    }
-
-    /** Одиннадцать цифр или ничего: десятизначный номер дописывается восьмёркой. */
-    private function phoneDigits(string $digits): ?string
-    {
-        if (strlen($digits) === 10) {
-            $digits = '8'.$digits;
-        }
-
-        return strlen($digits) === 11 ? $digits : null;
     }
 
     private function digits(?string $value): string

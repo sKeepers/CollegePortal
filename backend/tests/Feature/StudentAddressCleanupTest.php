@@ -77,6 +77,34 @@ class StudentAddressCleanupTest extends TestCase
         $this->assertSame('89659302901', $student->phone);
     }
 
+    public function test_it_moves_a_number_that_carries_no_marker(): void
+    {
+        // Ради этого случая правило и переписывали: 231 карточка из 233 написана
+        // без слова «тел», и прежний проход их не видел вовсе.
+        $student = $this->makeStudent('СК, г. Михайловск, ул. Гоголя, д.11, кв.15, 89881234567');
+
+        $summary = app(StudentAddressCleanupService::class)->clean(apply: true);
+
+        $this->assertSame(1, $summary['phone_written']);
+        $student->refresh();
+        $this->assertSame('СК, г. Михайловск, ул. Гоголя, д.11, кв.15', $student->address);
+        $this->assertSame('89881234567', $student->phone);
+        $this->assertSame('89881234567', $student->person->refresh()->phone);
+        $this->assertSame('СК, г. Михайловск, ул. Гоголя, д.11, кв.15', $student->person->address);
+    }
+
+    public function test_it_leaves_a_row_where_text_follows_the_number(): void
+    {
+        $address = 'Ставрополь, улица Мира, д. 5, 89881234567, Переведена с ОДиУИ Пр№12 от 01.09.2025г';
+        $student = $this->makeStudent($address);
+
+        $summary = app(StudentAddressCleanupService::class)->clean(apply: true);
+
+        $this->assertSame(1, $summary['skipped']);
+        $this->assertSame('text_after_phone', $summary['issues'][0]['category']);
+        $this->assertSame($address, $student->refresh()->address);
+    }
+
     public function test_a_dry_run_writes_nothing(): void
     {
         $student = $this->makeStudent('Ставрополь, улица Мира, д. 5, кв. 12 тел.8-988-123-45-67');
