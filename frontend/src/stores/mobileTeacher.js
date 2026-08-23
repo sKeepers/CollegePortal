@@ -34,7 +34,17 @@ export const ATTENDANCE_STATUSES = [
   { value: 'excused', short: 'У', label: 'Уважительная причина' },
 ]
 
-export const GRADE_VALUES = ['5', '4', '3', '2']
+// Журнал принимает не только пятибалльную шкалу: у зачётной дисциплины оценка —
+// «зачет» или «незачет», а на телефоне их не было вовсе, только цифры. Преподаватель
+// зачётной дисциплины мог отметить занятие лишь с компьютера.
+export const GRADE_VALUES = [
+  { value: '5', short: '5', label: 'Оценка 5' },
+  { value: '4', short: '4', label: 'Оценка 4' },
+  { value: '3', short: '3', label: 'Оценка 3' },
+  { value: '2', short: '2', label: 'Оценка 2' },
+  { value: 'зачет', short: 'Зач', label: 'Зачет' },
+  { value: 'незачет', short: 'Нез', label: 'Незачет' },
+]
 
 export const useMobileTeacherStore = defineStore('mobileTeacher', () => {
   const teacher = ref(null)
