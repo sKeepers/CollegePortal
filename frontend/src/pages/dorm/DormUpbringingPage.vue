@@ -32,7 +32,7 @@ const canManageConduct = computed(() => permissions.hasPermission('dorm.conduct.
 const canSeeSocial = computed(() => permissions.hasPermission('dorm.social.view'))
 const canManageSocial = computed(() => permissions.hasPermission('dorm.social.manage'))
 
-const tab = ref('conduct')
+const tab = ref('today')
 
 const conductDialog = ref(false)
 const conductForm = reactive({ id: null, mode: 'create', student_id: null, student_name: '', happened_on: today(), summary: '', description: '' })
@@ -150,11 +150,12 @@ async function submitSocial() {
 
 async function openTab(name) {
   tab.value = name
+  if (name === 'today') await store.loadToday()
   if (name === 'conduct') await store.loadConduct()
   if (name === 'social') await store.loadSocial()
 }
 
-onMounted(() => store.loadConduct())
+onMounted(() => store.loadToday())
 </script>
 
 <template>
@@ -166,11 +167,48 @@ onMounted(() => store.loadConduct())
     <AppErrorBanner v-if="store.error" :message="store.error" />
 
     <q-tabs :model-value="tab" dense no-caps align="left" class="upb-tabs" @update:model-value="openTab">
+      <q-tab name="today" label="Сводка" />
       <q-tab name="conduct" label="Провинности" />
       <q-tab v-if="canSeeSocial" name="social" label="Социальный паспорт" />
     </q-tabs>
 
     <q-tab-panels :model-value="tab" animated class="upb-panels">
+      <q-tab-panel name="today" class="q-pa-none">
+        <AppToolbar>
+          <q-btn flat no-caps :disable="store.loading" @click="store.loadToday">
+            <RefreshCw :size="16" class="q-mr-xs" /> Обновить
+          </q-btn>
+        </AppToolbar>
+
+        <AppLoading v-if="store.loading" />
+        <template v-else-if="store.today">
+          <div v-if="store.today.conduct" class="upb-block">
+            <div class="upb-block__title">Провинности</div>
+            <div class="upb-hint">
+              За последние 30 дней записано: <b>{{ store.today.conduct.recent }}</b>.
+              Ниже — действующие: те, что ещё не погасли.
+            </div>
+            <div v-if="!store.today.conduct.rows.length" class="upb-hint">Действующих записей нет.</div>
+            <div v-for="row in store.today.conduct.rows" :key="row.id" class="upb-row">
+              {{ formatDate(row.happened_on) }} — {{ row.full_name }}<span v-if="row.group"> · {{ row.group }}</span>
+              <div class="upb-amendment">{{ row.summary }} · учитывается до {{ formatDate(row.expires_on) }}</div>
+            </div>
+          </div>
+
+          <div v-if="store.today.social" class="upb-block">
+            <div class="upb-block__title">Социальный паспорт</div>
+            <div class="upb-hint">
+              Действующие сведения касаются <b>{{ store.today.social.people }}</b> человек.
+              Здесь только числа: имена — на вкладке, и каждый её просмотр пишется в аудит.
+            </div>
+            <div v-for="row in store.today.social.by_category" :key="row.category" class="upb-row">
+              {{ row.label }} — {{ row.count }}
+            </div>
+          </div>
+        </template>
+        <AppEmptyState v-else title="Сводка не загрузилась" description="Обновите страницу." />
+      </q-tab-panel>
+
       <q-tab-panel name="conduct" class="q-pa-none">
         <AppToolbar>
           <q-toggle v-model="store.conductFilters.active" label="Только действующие" @update:model-value="store.loadConduct" />
@@ -346,6 +384,9 @@ onMounted(() => store.loadConduct())
 .upb-hint { margin: 12px 0; font-size: 13px; color: #475569; }
 .upb-amendment { font-size: 12px; color: #64748b; margin-top: 4px; }
 .upb-actions { white-space: nowrap; }
+.upb-block { border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; background: #fff; }
+.upb-block__title { font-size: 14px; font-weight: 600; color: #0f172a; margin-bottom: 6px; }
+.upb-row { font-size: 13px; padding: 4px 0; border-top: 1px solid #f1f5f9; }
 .upb-dialog { min-width: min(520px, 92vw); }
 
 /* Поля ввода блочные: без этого фильтры встают столбиком. */

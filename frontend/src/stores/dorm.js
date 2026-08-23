@@ -17,6 +17,7 @@ export const useDormStore = defineStore('dorm', () => {
   const absences = ref([])
   const payments = ref([])
   const incidents = ref([])
+  const today = ref(null)
   const studentPayments = ref([])
   const students = ref([])
 
@@ -129,6 +130,20 @@ export const useDormStore = defineStore('dorm', () => {
    *
    * Общая часть двух контуров — видят и ведут обе роли.
    */
+  /** Сводка «что сегодня» — с чего начать день. */
+  async function loadToday() {
+    loading.value = true
+    error.value = ''
+    try {
+      const payload = await api.list('dorm/today')
+      today.value = payload?.data || null
+    } catch (err) {
+      fail(err, 'Не удалось загрузить сводку')
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function loadIncidents() {
     loading.value = true
     error.value = ''
@@ -244,11 +259,11 @@ export const useDormStore = defineStore('dorm', () => {
   const updateIncident = (incident, payload) => act(() => api.update('dorm/incidents', incident.id, payload), loadIncidents)
 
   return {
-    rooms, placements, leaves, absences, payments, studentPayments, incidents, students,
+    rooms, placements, leaves, absences, payments, studentPayments, incidents, today, students,
     loading, saving, searching, error,
     roomFilters, placementFilters, nightFilters,
     kindOptions, roomOptions, studentOptions, roomTotals, roomKinds: ROOM_KINDS,
-    loadRooms, loadPlacements, loadLeaves, loadAbsences, loadPayments, loadStudentPayments, loadIncidents, searchStudents,
+    loadRooms, loadPlacements, loadLeaves, loadAbsences, loadPayments, loadStudentPayments, loadIncidents, loadToday, searchStudents,
     createRoom, updateRoom, place, relocate, moveOut, createLeave, removeLeave, recalculate, recordPayment, recordIncident, updateIncident,
   }
 })

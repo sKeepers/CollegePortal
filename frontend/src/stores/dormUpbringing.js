@@ -13,6 +13,7 @@ export const useDormUpbringingStore = defineStore('dormUpbringing', () => {
   const conduct = ref([])
   const social = ref([])
   const students = ref([])
+  const today = ref(null)
 
   const loading = ref(false)
   const saving = ref(false)
@@ -48,6 +49,20 @@ export const useDormUpbringingStore = defineStore('dormUpbringing', () => {
     error.value = err?.message || fallback
 
     return false
+  }
+
+  /** Сводка заместителя — своя и другая, не комендантская. */
+  async function loadToday() {
+    loading.value = true
+    error.value = ''
+    try {
+      const payload = await api.list('dorm/upbringing/today')
+      today.value = payload?.data || null
+    } catch (err) {
+      fail(err, 'Не удалось загрузить сводку')
+    } finally {
+      loading.value = false
+    }
   }
 
   async function loadConduct() {
@@ -127,11 +142,11 @@ export const useDormUpbringingStore = defineStore('dormUpbringing', () => {
   const updateSocial = (record, payload) => act(() => api.update('dorm/social', record.id, payload), loadSocial)
 
   return {
-    conduct, social, students,
+    conduct, social, students, today,
     loading, saving, searching, error,
     conductFilters, socialFilters,
     categoryOptions, studentOptions, categories: CATEGORIES,
-    loadConduct, loadSocial, searchStudents,
+    loadConduct, loadSocial, loadToday, searchStudents,
     recordConduct, updateConduct, amendConduct, recordSocial, updateSocial,
   }
 })

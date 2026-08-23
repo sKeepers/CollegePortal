@@ -38,7 +38,7 @@ const canManageIncidents = computed(() => permissions.hasPermission('dorm.incide
 const canSeePayments = computed(() => permissions.hasPermission('dorm.payments.view'))
 const canManagePayments = computed(() => permissions.hasPermission('dorm.payments.manage'))
 
-const tab = ref('rooms')
+const tab = ref('today')
 
 const roomDialog = ref(false)
 const roomForm = reactive({ id: null, number: '', floor: null, capacity: 2, kind: 'regular', is_active: true, note: '' })
@@ -346,6 +346,7 @@ async function submitPayment() {
 
 async function openTab(name) {
   tab.value = name
+  if (name === 'today') await store.loadToday()
   if (name === 'rooms') await store.loadRooms()
   if (name === 'placements') {
     await store.loadPlacements()
@@ -360,7 +361,7 @@ async function openTab(name) {
   }
 }
 
-onMounted(() => store.loadRooms())
+onMounted(() => store.loadToday())
 </script>
 
 <template>
@@ -372,6 +373,7 @@ onMounted(() => store.loadRooms())
     <AppErrorBanner v-if="store.error" :message="store.error" />
 
     <q-tabs :model-value="tab" dense no-caps align="left" class="dorm-tabs" @update:model-value="openTab">
+      <q-tab name="today" label="Сегодня" />
       <q-tab name="rooms" label="Места" />
       <q-tab name="placements" label="Заселение" />
       <q-tab name="leaves" label="Отлучки" />
@@ -381,6 +383,69 @@ onMounted(() => store.loadRooms())
     </q-tabs>
 
     <q-tab-panels :model-value="tab" animated class="dorm-panels">
+      <!-- Сводка: с чего начать день -->
+      <q-tab-panel name="today" class="q-pa-none">
+        <AppToolbar>
+          <q-btn flat no-caps :disable="store.loading" @click="store.loadToday">
+            <RefreshCw :size="16" class="q-mr-xs" /> Обновить
+          </q-btn>
+        </AppToolbar>
+
+        <AppLoading v-if="store.loading" />
+        <template v-else-if="store.today">
+          <div class="dorm-counters">
+            <div class="dorm-counter"><span class="dorm-counter__value">{{ store.today.places?.free ?? '—' }}</span><span class="dorm-counter__label">Свободных мест</span></div>
+            <div class="dorm-counter"><span class="dorm-counter__value">{{ store.today.places?.occupied ?? '—' }}</span><span class="dorm-counter__label">Занято</span></div>
+            <div class="dorm-counter"><span class="dorm-counter__value">{{ store.today.places?.rooms ?? '—' }}</span><span class="dorm-counter__label">Комнат</span></div>
+          </div>
+
+          <div v-if="store.today.night" class="dorm-block">
+            <div class="dorm-block__title">Ночь с {{ formatDate(store.today.night.night_of) }}</div>
+            <!--
+              Ноль показывается только тогда, когда он посчитан. Непосчитанная
+              ночь говорит об этом прямо: иначе сводка утверждала бы «все на
+              месте» там, где никто не считал.
+            -->
+            <div v-if="!store.today.night.calculated" class="dorm-hint">
+              Ночь не пересчитывалась. Это <b>не</b> значит, что все на месте — значит, что никто не считал.
+              Пересчитать можно на вкладке «Ночные отсутствия».
+            </div>
+            <div v-else-if="!store.today.night.count" class="dorm-hint">Не вернувшихся нет.</div>
+            <template v-else>
+              <div class="dorm-hint">Не вернулись до утра: <b>{{ store.today.night.count }}</b></div>
+              <div v-for="person in store.today.night.people" :key="person.student_id" class="dorm-row">
+                {{ person.full_name }}<span v-if="person.group"> · {{ person.group }}</span>
+                <span class="dorm-secondary"> — вышел {{ formatDateTime(person.left_at) }}</span>
+              </div>
+            </template>
+          </div>
+
+          <div v-if="store.today.payments" class="dorm-block">
+            <div class="dorm-block__title">Оплата</div>
+            <div class="dorm-hint">
+              Просрочили <b>{{ store.today.payments.overdue }}</b> из {{ store.today.payments.residents }};
+              ни разу не отмечалась у {{ store.today.payments.never_paid }}.
+            </div>
+            <div v-for="row in store.today.payments.worst" :key="row.student_id" class="dorm-row">
+              {{ row.full_name }}<span v-if="row.group"> · {{ row.group }}</span>
+              <span class="dorm-secondary">
+                — {{ row.never_paid ? 'отметок нет' : `просрочка ${row.overdue_days} дн.` }}
+              </span>
+            </div>
+          </div>
+
+          <div v-if="store.today.incidents" class="dorm-block">
+            <div class="dorm-block__title">Происшествия за сутки</div>
+            <div v-if="!store.today.incidents.count" class="dorm-hint">Ничего не записано.</div>
+            <div v-for="row in store.today.incidents.rows" :key="row.id" class="dorm-row">
+              {{ formatDateTime(row.happened_at) }} — {{ row.summary }}
+              <span v-if="row.room" class="dorm-secondary"> · комната {{ row.room }}</span>
+            </div>
+          </div>
+        </template>
+        <AppEmptyState v-else title="Сводка не загрузилась" description="Обновите страницу." />
+      </q-tab-panel>
+
       <!-- Места -->
       <q-tab-panel name="rooms" class="q-pa-none">
         <AppToolbar>
@@ -797,6 +862,9 @@ onMounted(() => store.loadRooms())
 .dorm-hint { margin: 12px 0; font-size: 13px; color: #475569; }
 .dorm-actions { white-space: nowrap; }
 .dorm-secondary { font-size: 12px; color: #64748b; }
+.dorm-block { border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; background: #fff; }
+.dorm-block__title { font-size: 14px; font-weight: 600; color: #0f172a; margin-bottom: 6px; }
+.dorm-row { font-size: 13px; padding: 3px 0; border-top: 1px solid #f1f5f9; }
 .dorm-dialog { min-width: min(520px, 92vw); }
 
 /*

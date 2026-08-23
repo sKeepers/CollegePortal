@@ -6,6 +6,7 @@ use App\Models\AccessEvent;
 use App\Models\DormAbsence;
 use App\Models\DormLeave;
 use App\Models\DormPlacement;
+use App\Models\Setting;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -90,11 +91,47 @@ class DormNightAbsenceService
             }
         });
 
+        $this->rememberCalculated($night);
+
         return [
             'counted' => count($rows),
             'residents' => $residents->count(),
             'skipped_by_leave' => $onLeave->intersect($residents)->count(),
         ];
+    }
+
+    /**
+     * Запомнить, по какую ночь расчёт доведён.
+     *
+     * Без этой отметки посчитанная ночь без отсутствий неотличима от
+     * непосчитанной: в обоих случаях строк ноль. Сводка тогда показывала бы
+     * «никто не отсутствовал» там, где на самом деле никто не считал, — а это
+     * хуже пустого экрана, потому что выглядит уверенно.
+     *
+     * Пишется **вне транзакции расчёта**: `updateOrCreate` внутри неё открыл бы
+     * точку сохранения на каждый вызов, а таблица блокировок в PostgreSQL одна
+     * на весь сервер.
+     */
+    private function rememberCalculated(CarbonInterface $night): void
+    {
+        $known = (string) SettingService::value('dorm', 'absences_calculated_through', '');
+
+        if ($known !== '' && $known >= $night->toDateString()) {
+            return;
+        }
+
+        Setting::query()->updateOrCreate(
+            ['group' => 'dorm', 'key' => 'absences_calculated_through'],
+            ['value' => $night->toDateString(), 'type' => 'string', 'is_public' => false],
+        );
+    }
+
+    /** По какую ночь расчёт доведён. */
+    public function calculatedThrough(): ?Carbon
+    {
+        $value = (string) SettingService::value('dorm', 'absences_calculated_through', '');
+
+        return $value === '' ? null : Carbon::parse($value);
     }
 
     public function dormBuildingId(): ?int
