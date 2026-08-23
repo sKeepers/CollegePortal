@@ -31,6 +31,7 @@ const AdmissionsPage = () => import('../pages/admissions/AdmissionsPage.vue')
 const AdmissionsFoundationPage = () => import('../pages/admissions/FoundationWorkspacePage.vue')
 const DigitalPassesPage = () => import('../pages/identity/DigitalPassesPage.vue')
 const RfidCardsPage = () => import('../pages/identity/RfidCardsPage.vue')
+const DormPage = () => import('../pages/dorm/DormPage.vue')
 const MyDigitalPassPage = () => import('../pages/identity/MyDigitalPassPage.vue')
 const AccessGatePage = () => import('../pages/access/AccessGatePage.vue')
 const MobileScannerPage = () => import('../pages/access/MobileScannerPage.vue')
@@ -432,6 +433,14 @@ export const routes = [
         component: RfidCardsPage,
         // Ролей не перечисляем: раздел открывает право, а не должность.
         meta: { title: 'RFID-карты', permission: 'rfid.cards.view' },
+      },
+      {
+        path: 'dorm',
+        name: 'dorm',
+        component: DormPage,
+        // Право на комнаты — самое общее в модуле: оно есть и у коменданта
+        // общежития, и у заместителя по воспитательной работе.
+        meta: { title: 'Общежитие', permission: 'dorm.rooms.view' },
       },
       {
         path: 'admin/audit',

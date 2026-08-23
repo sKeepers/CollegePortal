@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\DormRoomResource;
 use App\Models\DormRoom;
 use App\Services\AuditLogService;
+use App\Services\SettingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -80,8 +82,27 @@ class DormRoomController extends Controller
         return new DormRoomResource($dormRoom->loadCount('currentPlacements')->load('building'));
     }
 
+    /**
+     * Корпус можно не передавать: комната по определению в общежитии.
+     *
+     * Экран его и не спрашивает — списка корпусов у коменданта нет по правам,
+     * да и выбирать там не из чего. Берём из настройки `dorm.building_id`, а
+     * если она пуста, говорим об этом прямо, а не падаем на внешнем ключе.
+     */
     private function validated(Request $request, ?int $ignoreId = null): array
     {
+        if (! $request->filled('building_id')) {
+            $fromSettings = (int) SettingService::value('dorm', 'building_id', 0);
+
+            if ($fromSettings <= 0) {
+                throw ValidationException::withMessages([
+                    'building_id' => 'Не задан корпус общежития. Укажите его в настройках («Общежитие» → «Корпус общежития»), иначе комнату некуда поселить.',
+                ]);
+            }
+
+            $request->merge(['building_id' => $fromSettings]);
+        }
+
         $unique = Rule::unique('dorm_rooms', 'number')
             ->where(fn ($query) => $query->where('building_id', $request->integer('building_id')));
 
@@ -91,6 +112,7 @@ class DormRoomController extends Controller
 
         return $request->validate([
             'building_id' => ['required', 'integer', 'exists:buildings,id'],
+            // Требуется, но подставляется выше из настройки, если не пришёл.
             'number' => ['required', 'string', 'max:20', $unique],
             'floor' => ['nullable', 'integer', 'min:0', 'max:50'],
             'capacity' => ['required', 'integer', 'min:0', 'max:20'],

@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import {
+  BedDouble,
   BookOpen,
   BriefcaseBusiness,
   Building2,
@@ -137,6 +138,9 @@ const navGroups = [
       // проверка: «показывать человеку его собственное».
       { label: 'Мой QR-пропуск', to: '/identity/my-pass', icon: QrCode, permissionsAny: ['mobile.student.pass', 'view_own_data'] },
       { label: 'RFID-карты', to: '/identity/rfid-cards', icon: CreditCard, permission: 'rfid.cards.view' },
+      // Общежитие стоит здесь, а не отдельной группой: для коменданта это
+      // продолжение той же работы — кто где живёт и кто вошёл в дверь.
+      { label: 'Общежитие', to: '/dorm', icon: BedDouble, permission: 'dorm.rooms.view' },
       { label: 'Проходная', to: '/access/gate', icon: DoorOpen, roles: ['admin', 'security'], permission: 'gate.scan' },
       { label: 'Мобильный сканер', to: '/access/mobile-scanner', icon: QrCode, roles: ['admin', 'security'], permission: 'gate.scan' },
       { label: 'Кто сейчас в здании', to: '/access/muster', icon: UsersRound, roles: ['admin', 'security', 'hr'], permission: 'gate.reports' },
