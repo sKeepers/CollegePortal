@@ -14,6 +14,9 @@ class AccessEvent extends Model
     public const RESULT_DENIED = 'denied';
 
     protected $fillable = [
+        'external_source',
+        'external_id',
+        'card_uid',
         'digital_identity_id',
         'access_point_id',
         'entity_type',

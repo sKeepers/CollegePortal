@@ -72,6 +72,7 @@ class AccessGateController extends Controller
     private function scanCard(array $validated, string $token, AccessCardResolver $cards): AccessEventResource
     {
         $resolved = $cards->resolve($token);
+        $validated['card_uid'] = $resolved['uid'];
         $cacheKey = 'access:card:'.hash('sha256', $resolved['uid'] ?? $token);
         $repeatedId = Cache::get($cacheKey);
 
@@ -106,6 +107,10 @@ class AccessGateController extends Controller
     {
         $event = AccessEvent::create([
             'digital_identity_id' => $identity?->id,
+            // Номер карты остаётся при событии даже когда владелец не найден:
+            // отказ «карта не зарегистрирована» без номера расследовать нечем,
+            // а причина словами — текст, по которому не поискать.
+            'card_uid' => $validated['card_uid'] ?? null,
             'access_point_id' => app(AccessPointResolver::class)->resolve($validated['access_point'] ?? null)?->id,
             'entity_type' => $identity?->entity_type,
             'entity_id' => $identity?->entity_id,
