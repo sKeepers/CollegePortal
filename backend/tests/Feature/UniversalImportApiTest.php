@@ -382,13 +382,15 @@ class UniversalImportApiTest extends TestCase
             ->assertJsonPath('data.created_count', 1)
             ->assertJsonPath('data.error_count', 0);
 
+        // С 23.08.2026 загрузка плана наполняет `curriculum_subjects`, а не
+        // `curriculum_items`: нагрузка строится из первой, и план, загруженный
+        // в `items`, выглядел заполненным, а нагрузка видела пустоту.
         $curriculum = Curriculum::where('code', 'УП-ФО-2026')->firstOrFail();
-        $this->assertDatabaseHas('curriculum_items', [
+        $this->assertDatabaseHas('curriculum_subjects', [
             'curriculum_id' => $curriculum->id,
-            'course' => 1,
             'semester' => 1,
-            'hours_total' => 144,
-            'control_form' => 'Экзамен',
+            'total_hours' => 144,
+            'control_type' => 'Экзамен',
         ]);
     }
 

@@ -89,7 +89,7 @@ class CurriculumApiTest extends TestCase
 
         $response->assertOk()->assertJsonPath('data.created', 1)->assertJsonPath('data.itemsCreated', 1);
         $this->assertDatabaseHas('curricula', ['name' => 'Учебный план ИСП 2027', 'year_start' => 2027]);
-        $this->assertDatabaseHas('curriculum_items', ['subject_id' => $subject->id, 'semester' => 2, 'hours_total' => 108]);
+        $this->assertDatabaseHas('curriculum_subjects', ['subject_id' => $subject->id, 'semester' => 2, 'total_hours' => 108]);
     }
 
     private function createProgram(): EducationProgram

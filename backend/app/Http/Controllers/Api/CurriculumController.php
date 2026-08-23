@@ -230,12 +230,26 @@ class CurriculumController extends Controller
                     else { $curriculum = Curriculum::create($payload); $created++; }
 
                     $subjectId = $this->resolveSubjectId($data);
-                    if ($subjectId && !empty($data['course']) && !empty($data['semester'])) {
-                        $item = $curriculum->items()->updateOrCreate(
-                            ['subject_id' => $subjectId, 'course' => (int) $data['course'], 'semester' => (int) $data['semester']],
-                            ['hours_total' => (int) ($data['hours_total'] ?: 0), 'control_form' => $data['control_form'] ?: null, 'sort_order' => (int) ($data['sort_order'] ?: 0)]
-                        );
-                        if ($item->wasRecentlyCreated) { $itemsCreated++; }
+                    if ($subjectId && !empty($data['semester'])) {
+                        // `curriculum_subjects`, а не `items`: нагрузка строится из
+                        // неё, и план, загруженный в `items`, выглядел заполненным,
+                        // а нагрузка видела пустоту.
+                        //
+                        // `firstOrNew` + `save`, а не `updateOrCreate`: последний
+                        // внутри транзакции открывает точку сохранения на каждую
+                        // строку, а таблица блокировок PostgreSQL одна на сервер —
+                        // на массовой загрузке это упирается в `out of shared memory`.
+                        $subject = $curriculum->subjects()->firstOrNew([
+                            'subject_id' => $subjectId,
+                            'semester' => (int) $data['semester'],
+                        ]);
+                        $isNew = ! $subject->exists;
+                        $subject->fill([
+                            'total_hours' => (int) ($data['hours_total'] ?: 0),
+                            'control_type' => $data['control_form'] ?: null,
+                            'sequence' => (int) ($data['sort_order'] ?: 0),
+                        ])->save();
+                        if ($isNew) { $itemsCreated++; }
                     }
                 });
             } catch (\Throwable $exception) {
