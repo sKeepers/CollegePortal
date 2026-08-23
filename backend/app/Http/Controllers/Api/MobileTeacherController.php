@@ -100,9 +100,22 @@ class MobileTeacherController extends Controller
             return collect();
         }
 
+        // Журнал занятия заводится по записи расписания (`schedule_entry_id`), а в день
+        // преподавателя занятия приходят зеркалом в `schedule_lessons`. Искать только по
+        // старой связи значило показывать «журнал не открыт» на занятии, где журнал открыт
+        // и отметки уже стоят, — и звать открыть его ещё раз.
+        $entryIds = $lessons->pluck('schedule_entry_id')->filter()->values()->all();
+        $byEntry = $lessons->whereNotNull('schedule_entry_id')->keyBy('schedule_entry_id');
+
         return JournalLesson::query()
             ->where('teacher_id', $teacher->id)
-            ->whereIn('legacy_schedule_lesson_id', $lessons->pluck('id')->all())
+            ->where(function (Builder $query) use ($lessons, $entryIds): void {
+                $query->whereIn('legacy_schedule_lesson_id', $lessons->pluck('id')->all());
+
+                if ($entryIds !== []) {
+                    $query->orWhereIn('schedule_entry_id', $entryIds);
+                }
+            })
             ->withCount([
                 'attendance as students_count',
                 // Строки со `source = roster` создаёт сам журнал при открытии
@@ -112,7 +125,12 @@ class MobileTeacherController extends Controller
                 'grades as grades_count' => fn (Builder $query) => $query->whereNotNull('value'),
             ])
             ->get()
-            ->keyBy('legacy_schedule_lesson_id');
+            // Ключ — занятие расписания в том виде, в каком его знает день преподавателя:
+            // журнал, открытый по записи, приводится к своему зеркалу.
+            ->filter(fn (JournalLesson $lesson): bool => $lesson->legacy_schedule_lesson_id !== null
+                || $byEntry->has($lesson->schedule_entry_id))
+            ->keyBy(fn (JournalLesson $lesson): int => $lesson->legacy_schedule_lesson_id
+                ?? $byEntry->get($lesson->schedule_entry_id)->id);
     }
 
     /**

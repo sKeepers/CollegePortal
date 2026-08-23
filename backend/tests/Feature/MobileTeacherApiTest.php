@@ -5,13 +5,16 @@ namespace Tests\Feature;
 use App\Models\Classroom;
 use App\Models\DigitalIdentity;
 use App\Models\Group;
+use App\Models\JournalLesson;
 use App\Models\Permission;
 use App\Models\Role;
+use App\Models\ScheduleEntry;
 use App\Models\ScheduleLesson;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Services\JournalService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -287,4 +290,52 @@ class MobileTeacherApiTest extends TestCase
 
         return $role;
     }
+
+    /**
+     * Занятие нового расписания зеркалится в `schedule_lessons`, а журнал у него
+     * заводится по записи расписания. Кабинет искал журнал только по старой связи:
+     * на телефоне занятие выглядело неоткрытым, и нажатие «Открыть журнал» заводило
+     * второй журнал на то же занятие — отметки уходили в дубль, а учебная часть
+     * видела пустоту.
+     */
+    public function test_journal_opened_from_schedule_entry_is_visible_on_phone_and_not_duplicated(): void
+    {
+        $fixture = $this->fixture();
+        $morning = $fixture['morning'];
+
+        $entry = ScheduleEntry::create([
+            'academic_year' => '2026-2027',
+            'semester' => 1,
+            'lesson_number' => 1,
+            'date' => '2026-07-13',
+            'starts_at' => '09:00',
+            'ends_at' => '10:30',
+            'group_id' => $morning->group_id,
+            'subject_id' => $morning->subject_id,
+            'teacher_id' => $morning->teacher_id,
+            'status' => 'scheduled',
+        ]);
+        $morning->forceFill(['schedule_entry_id' => $entry->id])->save();
+
+        $journal = app(JournalService::class)->openFromSchedule($entry, $fixture['user']);
+        $before = JournalLesson::count();
+
+        $payload = $this->withApiAuth($fixture['user'])
+            ->getJson('/api/mobile/teacher')
+            ->assertOk()
+            ->json('data');
+
+        $lesson = collect($payload['lessons'])->firstWhere('id', $morning->id);
+        $this->assertSame($journal->id, $lesson['journal']['lesson_id'], 'Кабинет не увидел открытый журнал занятия.');
+        $this->assertSame(2, $lesson['journal']['students']);
+        $this->assertFalse($lesson['journal']['can_open'], 'Кабинет зовёт открыть уже открытый журнал.');
+
+        $this->withApiAuth($fixture['user'])
+            ->postJson('/api/journal/from-legacy-schedule/'.$morning->id.'/open')
+            ->assertOk()
+            ->assertJsonPath('data.id', $journal->id);
+
+        $this->assertSame($before, JournalLesson::count(), 'На одно занятие завелся второй журнал.');
+    }
+
 }
