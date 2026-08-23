@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Support\Csv\CsvExport;
 use App\Services\Import\AdmissionImportHandler;
 use App\Services\Import\ClassroomImportHandler;
+use App\Services\Import\LessonTimeImportHandler;
 use App\Services\Import\CurriculumImportHandler;
 use App\Services\Import\EducationProgramImportHandler;
 use App\Services\Import\EmployeeImportHandler;
@@ -58,6 +59,7 @@ class UniversalImportService
             new SpecialtyImportHandler(),
             new EducationProgramImportHandler(),
             new ClassroomImportHandler(),
+            new LessonTimeImportHandler(),
             new AdmissionImportHandler(),
             new CurriculumImportHandler($autoCodeService),
             new TeachingLoadImportHandler(),
