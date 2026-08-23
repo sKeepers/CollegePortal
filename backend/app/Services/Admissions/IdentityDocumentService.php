@@ -70,7 +70,7 @@ class IdentityDocumentService
      *
      * @param array<string, mixed> $passport
      */
-    public function syncPassportForPerson(int $personId, array $passport, ?User $actor = null): ?IdentityDocument
+    public function syncPassportForPerson(int $personId, array $passport, ?User $actor = null, string $typeCode = 'russian_passport'): ?IdentityDocument
     {
         $payload = array_filter([
             'series' => $this->trimmed($passport['series'] ?? null),
@@ -89,7 +89,7 @@ class IdentityDocumentService
         if (! $current) {
             return $this->createForPerson($personId, [
                 ...$payload,
-                'document_type_id' => $this->defaultPassportTypeId(),
+                'document_type_id' => $this->documentTypeId($typeCode),
                 'is_primary' => true,
             ], $actor);
         }
@@ -108,12 +108,21 @@ class IdentityDocumentService
         return $changes === [] ? $current : $this->update($current->id, $changes, $actor);
     }
 
-    private function defaultPassportTypeId(): ?int
+    /**
+     * Вид документа по коду справочника.
+     *
+     * Российский паспорт — не единственное, чем удостоверяют личность: у
+     * иностранного гражданина документ другого вида, и класть его под видом
+     * паспорта РФ нельзя. Коды справочника: `russian_passport`,
+     * `birth_certificate`, `foreign_identity`, `temporary_identity`,
+     * `other_identity`.
+     */
+    private function documentTypeId(string $code): ?int
     {
         $catalogId = ReferenceCatalog::query()->where('code', 'admission_identity_document_types')->value('id');
 
         return $catalogId
-            ? ReferenceItem::query()->where('catalog_id', $catalogId)->where('code', 'russian_passport')->value('id')
+            ? ReferenceItem::query()->where('catalog_id', $catalogId)->where('code', $code)->value('id')
             : null;
     }
 

@@ -244,6 +244,77 @@ class FisStudentEnrichmentTest extends TestCase
         $this->assertNull($student->refresh()->snils);
     }
 
+    /**
+     * Фамилия разошлась на букву, имя и дата рождения совпали. Автомат такое не
+     * берёт, но и молчать о нём нельзя: без отдельной категории строка уходила в
+     * «студента нет» вместе с честно чужими.
+     */
+    public function test_a_near_miss_is_reported_and_writes_nothing(): void
+    {
+        $student = $this->makeStudent('Ковалёв', 'Полина', 'Сергеевна', '2008-03-14');
+
+        $path = $this->makeExport([
+            $this->row('Ковалёва Полина Сергеевна', '14.03.2008', self::SNILS_ONE),
+        ]);
+
+        $summary = $this->service()->enrich(
+            [['path' => $path, 'label' => '2023.xls', 'order_date' => null]],
+            apply: true,
+        );
+
+        $this->assertSame(1, $summary['near_miss']);
+        $this->assertSame(0, $summary['not_found']);
+        $this->assertNull($student->refresh()->snils);
+        $this->assertStringContainsString((string) $student->id, $summary['issues'][0]['detail']);
+    }
+
+    public function test_a_different_person_is_not_called_a_near_miss(): void
+    {
+        $this->makeStudent('Ковалёв', 'Артём', 'Павлович', '2007-06-02');
+
+        $path = $this->makeExport([
+            $this->row('Ковалёва Полина Сергеевна', '14.03.2008', self::SNILS_ONE),
+        ]);
+
+        $summary = $this->service()->enrich(
+            [['path' => $path, 'label' => '2023.xls', 'order_date' => null]],
+            apply: true,
+        );
+
+        $this->assertSame(0, $summary['near_miss']);
+        $this->assertSame(1, $summary['not_found']);
+    }
+
+    public function test_a_foreign_document_becomes_a_document_of_its_own_kind(): void
+    {
+        $this->documentType('foreign_identity', 'Иностранный документ');
+        $student = $this->makeStudent('Саркисян', 'Ани', 'Ашотовна', '2007-11-09');
+
+        $path = $this->makeExport([
+            $this->row('Саркисян Ани Ашотовна', '09.11.2007', self::SNILS_ONE, [
+                'passport' => 'АС 1234567',
+                'passport_issued_at' => '15.05.2021',
+                'citizenship' => 'Армения, Республика',
+            ]),
+        ]);
+
+        $this->service()->enrich(
+            [['path' => $path, 'label' => '2024.xls', 'order_date' => null]],
+            apply: true,
+        );
+
+        $document = IdentityDocument::query()->where('person_id', $student->person_id)->firstOrFail();
+        $this->assertSame('АС', $document->series);
+        $this->assertSame('1234567', $document->number);
+        $this->assertSame(
+            $this->documentType('foreign_identity', 'Иностранный документ')->id,
+            $document->document_type_id,
+        );
+
+        // Поля паспорта РФ остаются пустыми: документ не про них.
+        $this->assertNull($student->refresh()->passport_series);
+    }
+
     public function test_the_probe_takes_only_the_first_rows(): void
     {
         $first = $this->makeStudent('Ковалёва', 'Полина', 'Сергеевна', '2008-03-14');
@@ -355,14 +426,19 @@ class FisStudentEnrichmentTest extends TestCase
 
     private function passportDocumentType(): ReferenceItem
     {
+        return $this->documentType('russian_passport', 'Паспорт гражданина Российской Федерации');
+    }
+
+    private function documentType(string $code, string $name): ReferenceItem
+    {
         $catalog = ReferenceCatalog::firstOrCreate(
             ['code' => 'admission_identity_document_types'],
             ['name' => 'Виды документов, удостоверяющих личность'],
         );
 
         return ReferenceItem::firstOrCreate(
-            ['catalog_id' => $catalog->id, 'code' => 'russian_passport'],
-            ['name' => 'Паспорт гражданина Российской Федерации'],
+            ['catalog_id' => $catalog->id, 'code' => $code],
+            ['name' => $name],
         );
     }
 }

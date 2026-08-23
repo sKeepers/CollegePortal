@@ -154,6 +154,7 @@ class FisStudentEnrichmentService
             'matched' => 0,
             'matched_without_middle_name' => 0,
             'matched_by_hand' => 0,
+            'near_miss' => 0,
             'matched_by_name_only' => 0,
             'ambiguous' => 0,
             'not_found' => 0,
@@ -262,7 +263,78 @@ class FisStudentEnrichmentService
             return $this->ambiguous($candidates);
         }
 
-        return ['outcome' => 'not_found', 'student' => null, 'detail' => 'Студента с такими ФИО и датой рождения в портале нет.'];
+        return $this->nearMiss($last, $first, $birth)
+            ?? ['outcome' => 'not_found', 'student' => null, 'detail' => 'Студента с такими ФИО и датой рождения в портале нет.'];
+    }
+
+    /**
+     * Строка, которая почти сошлась: фамилия разошлась на букву-другую, а имя и
+     * дата рождения совпали точно.
+     *
+     * Такое не сопоставляется автоматически — фамилия слишком дорогая вещь,
+     * чтобы угадывать. Но и терять это молча нельзя: без отдельной категории
+     * строка уходила в «студента в портале нет» вместе с двумя с половиной
+     * сотнями честно чужих, и находили её только вручную. Из четырнадцати
+     * карточек, считавшихся безнадёжными, так нашлись три.
+     *
+     * Применяется решение человека ключом `--pair`.
+     *
+     * @return array{outcome: string, student: Student|null, detail: string}|null
+     */
+    private function nearMiss(string $last, string $first, string $birth): ?array
+    {
+        if ($birth === '') {
+            return null;
+        }
+
+        foreach ($this->students as $student) {
+            if ($this->norm($student->first_name) !== $first) {
+                continue;
+            }
+            if (($student->birth_date?->toDateString() ?? '') !== $birth) {
+                continue;
+            }
+
+            $distance = $this->distance($last, $this->norm($student->last_name));
+            if ($distance > 0 && $distance <= 2) {
+                return [
+                    'outcome' => 'near_miss',
+                    'student' => null,
+                    'detail' => 'Имя и дата рождения совпали, фамилия разошлась на '.$distance
+                        .': похоже на карточку '.$student->id.'. Применяется ключом --pair.',
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    /** Расстояние Левенштейна по символам: встроенный `levenshtein` считает байтами. */
+    private function distance(string $a, string $b): int
+    {
+        $x = preg_split('//u', $a, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $y = preg_split('//u', $b, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $n = count($x);
+        $m = count($y);
+
+        if ($n === 0 || $m === 0) {
+            return max($n, $m);
+        }
+
+        $previous = range(0, $m);
+        for ($i = 1; $i <= $n; $i++) {
+            $current = [$i];
+            for ($j = 1; $j <= $m; $j++) {
+                $current[$j] = min(
+                    $previous[$j] + 1,
+                    $current[$j - 1] + 1,
+                    $previous[$j - 1] + ($x[$i - 1] === $y[$j - 1] ? 0 : 1),
+                );
+            }
+            $previous = $current;
+        }
+
+        return $previous[$m];
     }
 
     /**
@@ -320,6 +392,13 @@ class FisStudentEnrichmentService
         [$series, $number] = $this->splitPassport($row['passport']);
         if ($row['passport'] !== '' && $series === null) {
             $this->issue($summary, $context, 'passport_unparsed', 'Документ не похож на паспорт РФ — вероятно, иностранный. Реквизиты не записаны.');
+        }
+
+        if ($series === null && $row['passport'] !== '') {
+            // Учебная карточка знает только реквизиты паспорта РФ, а документ
+            // человека — любой вид. Иностранный кладём документом и оставляем
+            // поля паспорта пустыми: они не про него.
+            $this->writeForeignDocument($person, $row, $apply, $summary);
         }
 
         if ($series !== null && $number !== null) {
@@ -480,6 +559,42 @@ class FisStudentEnrichmentService
         }
 
         return false;
+    }
+
+    /**
+     * Документ иностранного гражданина: «АС 1234567» и подобное.
+     *
+     * В поля паспорта РФ он не ложится, но человек без документа остаётся
+     * неполным, а пакеты ФИС документ требуют. Кладём его документом вида
+     * «Иностранный документ» — справочник такой вид знает.
+     *
+     * @param  array<string, mixed>  $row
+     * @param  array<string, mixed>  $summary
+     */
+    private function writeForeignDocument(?Person $person, array $row, bool $apply, array &$summary): void
+    {
+        if (! $person) {
+            return;
+        }
+
+        $parts = preg_split('/\s+/u', trim($row['passport'])) ?: [];
+        $number = array_pop($parts);
+        $series = implode(' ', $parts) ?: null;
+
+        if ($number === null || $number === '') {
+            return;
+        }
+
+        $summary['written']['identity_documents.foreign'] = ($summary['written']['identity_documents.foreign'] ?? 0) + 1;
+
+        if ($apply) {
+            $this->identityDocuments->syncPassportForPerson($person->id, [
+                'series' => $series,
+                'number' => $number,
+                'issue_date' => $row['passport_issued_at'],
+                'issued_by' => $row['passport_issuer'] ?: null,
+            ], null, 'foreign_identity');
+        }
     }
 
     /**

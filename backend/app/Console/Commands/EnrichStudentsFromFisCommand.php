@@ -115,6 +115,7 @@ class EnrichStudentsFromFisCommand extends Command
             ['пара назначена человеком', $summary['matched_by_hand']],
             ['по одному ФИО, дата рождения в портале пуста', $summary['matched_by_name_only']],
             ['несколько подходящих студентов', $summary['ambiguous']],
+            ['почти сошлось — решает человек', $summary['near_miss']],
             ['студента в портале нет', $summary['not_found']],
             ['повторная строка того же студента', $summary['repeat_rows']],
         ]);
