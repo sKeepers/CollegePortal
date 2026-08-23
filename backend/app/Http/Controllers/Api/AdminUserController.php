@@ -11,6 +11,7 @@ use App\Models\Teacher;
 use App\Models\User;
 use App\Rules\SelfChosenPassword;
 use App\Services\AuditLogService;
+use App\Support\Auth\TemporaryPassword;
 use App\Services\AccountProvisioningService;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
@@ -125,11 +126,14 @@ class AdminUserController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $password = (string) random_int(10000, 99999);
-        // Выданный пароль временный: после входа портал предложит завести свой.
+        $password = TemporaryPassword::generate();
+        // Выданный пароль временный: после входа портал предложит завести свой,
+        // а через месяц он перестанет работать сам. Пять цифр, которые здесь
+        // были до 23.08.2026, у неиспользованной записи жили годами.
         $user->forceFill([
             'password' => Hash::make($password),
             'must_change_password' => true,
+            'password_expires_at' => TemporaryPassword::expiresAt(),
         ])->save();
 
         AuditLogService::log('users', 'reset_password', $user, null, [

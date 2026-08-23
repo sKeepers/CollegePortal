@@ -73,17 +73,24 @@ class PasswordPolicyTest extends TestCase
     }
 
     /**
-     * Пароль, выданный порталом, под требования не подпадает: он пятизначный и числовой
-     * по решению владельца. Проверять его тем же правилом значило бы запретить выдачу.
+     * Пароль, выданный порталом, под требования к своему паролю не подпадает —
+     * заглавной буквы в нём нет намеренно, его диктуют вслух. Проверять его тем
+     * же правилом значило бы запретить выдачу.
+     *
+     * Но пятизначным числовым он быть перестал (владелец, 23.08.2026, находка
+     * аудита 2.6). Прежнее решение от 11.08 держалось на том, что пароль
+     * временный; у записи, которой никто не пользовался, «временный» не
+     * кончается никогда, а записи заводятся пачкой на весь контингент.
      */
-    public function test_provisioning_still_issues_five_digits_and_asks_for_a_password_of_your_own(): void
+    public function test_provisioning_issues_a_long_password_and_asks_for_a_password_of_your_own(): void
     {
         $student = $this->student();
 
         $account = app(AccountProvisioningService::class)->provision($student);
 
-        $this->assertMatchesRegularExpression('/^\d{5}$/', $account->password);
+        $this->assertMatchesRegularExpression('/^[a-z2-9]{8}$/', $account->password);
         $this->assertTrue($account->user->must_change_password);
+        $this->assertNotNull($account->user->password_expires_at, 'У выданного пароля обязан быть срок.');
     }
 
     public function test_an_administrator_reset_asks_for_a_password_of_your_own(): void

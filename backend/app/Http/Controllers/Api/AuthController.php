@@ -46,6 +46,15 @@ class AuthController extends Controller
             return response()->json(['message' => 'Учетная запись отключена.'], Response::HTTP_FORBIDDEN);
         }
 
+        // Срок стоит только у пароля, выданного порталом: свой, заведённый
+        // человеком, не устаревает никогда. Отказ говорит, что делать дальше —
+        // иначе человек решит, что сломался портал, и пойдёт звонить.
+        if ($user->password_expires_at !== null && $user->password_expires_at->isPast()) {
+            return response()->json([
+                'message' => 'Срок выданного пароля истёк. Попросите новый у того, кто заводил вам учётную запись.',
+            ], Response::HTTP_FORBIDDEN);
+        }
+
         $token = Str::random(80);
         $ttl = (int) config('auth.api_token_ttl_minutes', 720);
 

@@ -206,7 +206,8 @@ class AdminUserApiTest extends TestCase
             ->assertJsonPath('data.role', 'teacher');
 
         $password = $response->json('data.password');
-        $this->assertMatchesRegularExpression('/^\d{5}$/', $password);
+        // Восемь знаков без похожих друг на друга — с 23.08.2026 вместо пяти цифр.
+        $this->assertMatchesRegularExpression('/^[a-z2-9]{8}$/', $password);
 
         $user = User::where('username', '+79990000010')->firstOrFail();
         $this->assertTrue(Hash::check($password, $user->password));

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\Auth\TemporaryPassword;
 use App\DTO\ProvisionedAccount;
 use App\Models\DigitalIdentity;
 use App\Models\Employee;
@@ -55,7 +56,7 @@ class AccountProvisioningService
             $username = $this->username($profile, $person);
             $email = $profile->email ?: $person->email ?: "{$username}@".self::SERVICE_DOMAIN;
             $role = Role::query()->where('code', $roleCode)->firstOrFail();
-            $password = (string) random_int(10000, 99999);
+            $password = TemporaryPassword::generate();
             $name = trim("{$person->last_name} {$person->first_name} {$person->middle_name}");
 
             $user = User::create([
@@ -68,6 +69,7 @@ class AccountProvisioningService
                 // Пароль выдан порталом и напечатан на карточке. После первого входа
                 // человеку будет предложено завести свой — решение владельца 11.08.2026.
                 'must_change_password' => true,
+                'password_expires_at' => TemporaryPassword::expiresAt(),
                 'person_type' => 'person',
                 'person_id' => $person->id,
             ]);

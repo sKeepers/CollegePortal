@@ -88,6 +88,9 @@ class AccountController extends Controller
         $user->forceFill([
             'password' => $request->validated()['password'],
             'must_change_password' => false,
+            // Свой пароль сроку не подлежит: срок был у выданного, и человек
+            // его только что заменил.
+            'password_expires_at' => null,
         ])->save();
 
         // В журнал не попадает ни старый пароль, ни новый — только сам факт смены.
