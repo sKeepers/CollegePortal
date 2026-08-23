@@ -9,6 +9,14 @@ export const router = createRouter({
   routes,
 })
 
+// Кончившийся сеанс уводит на вход сразу, а не на следующем переходе: иначе
+// человек остаётся на экране, где каждая кнопка молча отказывает.
+window.addEventListener('cp:session-expired', () => {
+  if (router.currentRoute.value.name !== 'login') {
+    router.push({ name: 'login' })
+  }
+})
+
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
 

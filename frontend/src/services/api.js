@@ -133,9 +133,21 @@ async function request(path, options = {}) {
 
   const payload = await response.json().catch(() => ({}))
 
+  // Кончившийся сеанс не обрабатывался вовсе: экран показывал английское
+  // «Unauthenticated.» и оставался на месте, а человек читал это как поломку
+  // портала. Кончиться сеанс может буднично — вход на другом устройстве снимает
+  // предыдущий, и преподаватель, вошедший с телефона в аудитории, получает это
+  // на своём компьютере.
+  if (response.status === 401 && !path.startsWith('/auth/')) {
+    document.cookie = `${CSRF_COOKIE}=; Path=/; Max-Age=0; SameSite=Strict`
+    window.dispatchEvent(new CustomEvent('cp:session-expired'))
+  }
+
   if (!response.ok) {
     const messages = validationMessages(payload.errors)
-    const message = messages[0] || humanizeApiMessage(payload.message) || 'Запрос не выполнен'
+    const message = response.status === 401
+      ? 'Сеанс завершён: вход выполнен на другом устройстве или истёк срок. Войдите заново.'
+      : messages[0] || humanizeApiMessage(payload.message) || 'Запрос не выполнен'
     const error = new Error(message)
     error.status = response.status
     error.errors = payload.errors || {}
