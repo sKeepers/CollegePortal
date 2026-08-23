@@ -239,6 +239,9 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     Route::middleware('permission:people.view')->group(function (): void {
         Route::get('people', [PersonController::class, 'index']);
         Route::post('people/duplicates/check', [PersonController::class, 'duplicateCheck']);
+        // Разбор и слияние объявлены до `people/{person}`: иначе слово `merge`
+        // перехватилось бы как идентификатор человека.
+        Route::post('people/merge/preview', [PersonController::class, 'mergePreview'])->middleware('permission:people.update');
         Route::post('people/merge', [PersonController::class, 'merge'])->middleware('permission:people.update');
         Route::get('people/{person}', [PersonController::class, 'show']);
         Route::get('people/{person}/profiles', [PersonController::class, 'profiles']);

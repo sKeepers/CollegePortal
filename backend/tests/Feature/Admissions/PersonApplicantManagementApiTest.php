@@ -226,14 +226,23 @@ class PersonApplicantManagementApiTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_merge_endpoint_is_explicitly_not_supported(): void
+    /**
+     * Слияние заработало 23.08.2026, и заглушка на 501 больше не отвечает.
+     *
+     * Проверка осталась на прежнем месте, но проверяет теперь другое: что
+     * ручка **требует назвать обе карточки явно**. Прежние `source_id` и
+     * `target_id` не приняты намеренно — из них не видно, какая карточка
+     * исчезнет, а ошибка в этом стоит потерянной карточки. Слияние по существу
+     * закрыто отдельно, в `PersonMergeTest`.
+     */
+    public function test_merge_endpoint_needs_both_cards_named_explicitly(): void
     {
         $user = $this->createApiUser(roleCode: 'admission');
 
         $this->withApiAuth($user)
             ->postJson('/api/people/merge', ['source_id' => 1, 'target_id' => 2])
-            ->assertStatus(501)
-            ->assertJsonPath('code', 'merge_not_supported');
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['survivor_id', 'absorbed_id']);
     }
 
     private function createApplicant(Person $person): Applicant

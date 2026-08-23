@@ -4,16 +4,19 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DuplicatePersonCheckRequest;
+use App\Http\Requests\MergePeopleRequest;
 use App\Http\Requests\StorePersonRequest;
 use App\Http\Requests\UpdatePersonRequest;
 use App\Http\Resources\PersonResource;
 use App\Models\Person;
 use App\Services\AuditLogService;
+use App\Services\People\PersonMergeService;
 use App\Services\PersonDuplicateService;
 use App\Services\PersonService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use RuntimeException;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -133,13 +136,57 @@ class PersonController extends Controller
         ];
     }
 
-    public function merge(): JsonResponse
+    /**
+     * Разбор перед слиянием: что переедет, что дозаполнится и что мешает.
+     *
+     * Отдельной ручкой, а не флагом у слияния: показать и выполнить — разные
+     * действия с разной ценой ошибки, и путать их в одном адресе не стоит.
+     */
+    public function mergePreview(MergePeopleRequest $request, PersonMergeService $merge): array
     {
+        [$survivor, $absorbed] = $this->mergePair($request);
+
+        return ['data' => $merge->plan($survivor, $absorbed)];
+    }
+
+    /**
+     * Сливает две карточки. Обратного хода нет, поэтому событие пишется в
+     * журнал аудита целиком: кто, кого, к кому и что при этом переехало.
+     */
+    public function merge(MergePeopleRequest $request, PersonMergeService $merge): JsonResponse
+    {
+        [$survivor, $absorbed] = $this->mergePair($request);
+
+        $before = [
+            'survivor' => ['id' => $survivor->id, 'name' => $survivor->full_name],
+            'absorbed' => ['id' => $absorbed->id, 'name' => $absorbed->full_name],
+        ];
+
+        try {
+            $result = $merge->merge($survivor, $absorbed);
+        } catch (RuntimeException $exception) {
+            // Отказ сервиса — это не поломка, а несогласие сливать: причина
+            // написана по-русски и обязана дойти до человека целиком.
+            return response()->json(['message' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        AuditLogService::log('Identity', 'person_merge', ['type' => 'Person', 'id' => $survivor->id], $before, $result, $request);
+
         return response()->json([
-            'message' => 'merge_not_supported',
-            'code' => 'merge_not_supported',
-            'details' => 'Объединение Person будет реализовано отдельным безопасным этапом.',
-        ], Response::HTTP_NOT_IMPLEMENTED);
+            'message' => 'Карточки объединены.',
+            'data' => [...$result, 'person' => new PersonResource($this->loadPersonCard($survivor->refresh()))],
+        ]);
+    }
+
+    /**
+     * @return array{0: Person, 1: Person}
+     */
+    private function mergePair(MergePeopleRequest $request): array
+    {
+        return [
+            Person::query()->findOrFail($request->integer('survivor_id')),
+            Person::query()->findOrFail($request->integer('absorbed_id')),
+        ];
     }
 
     public function profiles(Person $person, PersonService $personService): array

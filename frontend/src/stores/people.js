@@ -79,6 +79,56 @@ export const usePeopleStore = defineStore('people', () => {
     }
   }
 
+  /**
+   * Кандидаты на слияние: люди, похожие на выбранного.
+   *
+   * Ручка `people/duplicates/check` для этого и сделана, но из портала её не
+   * звали ниоткуда — находка аудита 23.08.2026. Себя из ответа убираем: сам с
+   * собой человек не сливается.
+   */
+  async function mergeCandidates(person) {
+    if (!person?.id) return []
+
+    const payload = await api.create('people/duplicates/check', {
+      last_name: person.last_name || '',
+      first_name: person.first_name || '',
+      middle_name: person.middle_name || '',
+      birth_date: person.birth_date || null,
+      snils: person.snils || '',
+      email: person.email || '',
+      phone: person.phone || '',
+    })
+
+    return (payload?.data?.matches || [])
+      .map((match) => match.person)
+      .filter((candidate) => candidate && Number(candidate.id) !== Number(person.id))
+  }
+
+  /** Разбор перед слиянием: что переедет, что дозаполнится и что мешает. */
+  async function mergePreview(survivorId, absorbedId) {
+    const payload = await api.create('people/merge/preview', { survivor_id: survivorId, absorbed_id: absorbedId })
+
+    return payload?.data || { moves: [], fills: [], blockers: [] }
+  }
+
+  /** Слияние. Обратного хода нет: присоединённая карточка исчезает. */
+  async function mergePeople(survivorId, absorbedId) {
+    saving.value = true
+    error.value = ''
+    try {
+      const payload = await api.create('people/merge', { survivor_id: survivorId, absorbed_id: absorbedId })
+      await load()
+      await loadPerson(survivorId)
+
+      return payload
+    } catch (err) {
+      error.value = err.message || 'Не удалось объединить карточки'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
   function select(id) {
     selectedId.value = id ? Number(id) : null
     selectedPerson.value = null
@@ -90,5 +140,5 @@ export const usePeopleStore = defineStore('people', () => {
     filters.value = { ...initialFilters }
   }
 
-  return { people, filters, pagination, selectedId, selectedPerson, selected, loading, detailsLoading, saving, error, load, loadPerson, savePerson, select, resetFilters }
+  return { people, filters, pagination, selectedId, selectedPerson, selected, loading, detailsLoading, saving, error, load, loadPerson, savePerson, select, resetFilters, mergeCandidates, mergePreview, mergePeople }
 })

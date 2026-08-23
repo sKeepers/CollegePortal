@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
-import { PencilLine, RefreshCw, Search, Trash2, UserRound } from '@lucide/vue'
+import { Combine, PencilLine, RefreshCw, Search, Trash2, UserRound } from '@lucide/vue'
 import DeletionRequestDialog from '../../components/trash/DeletionRequestDialog.vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
@@ -90,6 +90,69 @@ const actions = computed(() => {
 // Карточка человека — единственное место записи общих данных и единственное место,
 // где общее поле можно очистить: профильные карточки видят человека не целиком.
 const canUpdate = computed(() => auth.can('people.update'))
+
+/*
+  Слияние дублей. Дубли в разделе «Люди» появляются законным путём: человека
+  заводит загрузка контингента по ФИО, а потом кадры заводят его же по СНИЛС.
+  До 23.08.2026 свести их можно было только запросом к базе.
+
+  Открытая карточка — всегда та, что **остаётся**: человек смотрит на неё и
+  решает, кого к ней присоединить. Обратный порядок пришлось бы объяснять
+  отдельно, а ошибка в нём стоит потерянной карточки.
+*/
+const mergeDialog = ref(false)
+const mergeCandidates = ref([])
+const mergeChoice = ref(null)
+const mergePlan = ref(null)
+const mergeBusy = ref(false)
+const mergeError = ref('')
+
+const mergeOptions = computed(() => mergeCandidates.value.map((person) => ({
+  label: [person.full_name, person.birth_date, person.phone].filter(Boolean).join(' · '),
+  value: person.id,
+})))
+
+async function openMergeDialog() {
+  if (!canUpdate.value || !store.selected) return
+  mergeChoice.value = null
+  mergePlan.value = null
+  mergeError.value = ''
+  mergeDialog.value = true
+  mergeBusy.value = true
+  try {
+    mergeCandidates.value = await store.mergeCandidates(store.selected)
+  } catch (err) {
+    mergeError.value = err.message || 'Не удалось подобрать похожие карточки'
+    mergeCandidates.value = []
+  } finally {
+    mergeBusy.value = false
+  }
+}
+
+async function loadMergePlan(absorbedId) {
+  mergePlan.value = null
+  mergeError.value = ''
+  if (!absorbedId) return
+  mergeBusy.value = true
+  try {
+    mergePlan.value = await store.mergePreview(store.selected.id, absorbedId)
+  } catch (err) {
+    mergeError.value = err.message || 'Не удалось разобрать слияние'
+  } finally {
+    mergeBusy.value = false
+  }
+}
+
+async function confirmMerge() {
+  if (!mergeChoice.value || mergePlan.value?.blockers?.length) return
+  try {
+    const payload = await store.mergePeople(store.selected.id, mergeChoice.value)
+    mergeDialog.value = false
+    $q.notify({ type: 'positive', message: payload?.message || 'Карточки объединены' })
+  } catch (err) {
+    mergeError.value = err.message || 'Не удалось объединить карточки'
+  }
+}
 const canRequestDeletion = computed(() => auth.can('trash.request'))
 
 const deletionRequestVisible = ref(false)
@@ -285,6 +348,9 @@ onMounted(async () => {
               <q-btn v-if="canUpdate" no-caps unelevated color="primary" :disable="store.saving" @click="openEditDialog">
                 <PencilLine :size="16" class="q-mr-xs" /> Изменить данные
               </q-btn>
+              <q-btn v-if="canUpdate" outline no-caps color="primary" :disable="store.saving" @click="openMergeDialog">
+                <Combine :size="16" class="q-mr-xs" /> Объединить дубль
+              </q-btn>
               <q-btn v-for="action in actions" :key="action.label" no-caps unelevated class="workspace-panel__action" :to="action.to">{{ action.label }}</q-btn>
               <q-btn v-if="canRequestDeletion" outline no-caps color="negative" @click="askDeletionRequest">
                 <Trash2 :size="16" class="q-mr-xs" /> Пометить на удаление
@@ -349,10 +415,82 @@ onMounted(async () => {
       :subject-label="selected?.full_name || ''"
       @requested="onDeletionRequested"
     />
+    <!--
+      Слияние дублей. Показываем разбор до нажатия: обратного хода нет, и
+      человек должен видеть, что именно переедет и чего он лишится.
+    -->
+    <q-dialog v-model="mergeDialog">
+      <q-card style="width: 620px; max-width: 95vw">
+        <q-card-section>
+          <div class="text-h6">Объединить карточки</div>
+          <p class="q-mb-none text-body2">
+            Остаётся <strong>{{ store.selected?.full_name }}</strong>. Выбранная карточка исчезнет, а всё, что за ней стоит, перейдёт на оставшуюся.
+          </p>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <q-select
+            v-model="mergeChoice"
+            dense
+            outlined
+            emit-value
+            map-options
+            :options="mergeOptions"
+            :loading="mergeBusy"
+            label="Какую карточку присоединить"
+            :hint="mergeOptions.length ? 'Похожие карточки подобраны по ФИО, дате рождения, СНИЛС, телефону и почте.' : 'Похожих карточек не нашлось.'"
+            @update:model-value="loadMergePlan"
+          />
+        </q-card-section>
+
+        <q-card-section v-if="mergePlan" class="q-pt-none">
+          <q-banner v-for="blocker in mergePlan.blockers" :key="blocker" dense rounded class="bg-red-1 text-negative q-mb-sm">
+            {{ blocker }}
+          </q-banner>
+
+          <template v-if="!mergePlan.blockers.length">
+            <div v-if="mergePlan.moves.length" class="people-merge-block">
+              <div class="people-merge-block__title">Перейдёт на оставшуюся карточку</div>
+              <ul>
+                <li v-for="move in mergePlan.moves" :key="move.code">{{ move.label }} — {{ move.count }}</li>
+              </ul>
+            </div>
+            <div v-else class="text-body2 text-grey-7">За присоединяемой карточкой ничего не числится — она просто исчезнет.</div>
+
+            <div v-if="mergePlan.fills.length" class="people-merge-block">
+              <div class="people-merge-block__title">Дозаполнится пустое</div>
+              <ul>
+                <li v-for="fill in mergePlan.fills" :key="fill.field">{{ fill.label }}: {{ fill.value }}</li>
+              </ul>
+            </div>
+          </template>
+        </q-card-section>
+
+        <q-card-section v-if="mergeError" class="q-pt-none">
+          <q-banner dense rounded class="bg-red-1 text-negative">{{ mergeError }}</q-banner>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat no-caps label="Отмена" :disable="store.saving" @click="mergeDialog = false" />
+          <q-btn
+            color="negative"
+            no-caps
+            label="Объединить"
+            :loading="store.saving"
+            :disable="!mergeChoice || mergeBusy || Boolean(mergePlan?.blockers?.length)"
+            @click="confirmMerge"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
   </AppPage>
 </template>
 
 <style scoped>
+.people-merge-block { margin-top: 10px; }
+.people-merge-block__title { font-size: 12px; font-weight: 800; color: #475569; }
+.people-merge-block ul { margin: 4px 0 0; padding-left: 18px; font-size: 13px; }
 .people-workspace { display: grid; gap: 0; align-items: start; }
 .people-main, .people-side { min-width: 0; }
 .people-main { padding-right: 10px; }
