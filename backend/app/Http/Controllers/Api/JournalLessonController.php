@@ -538,14 +538,19 @@ class JournalLessonController extends Controller
     private function authorizeLesson(User $user, JournalLesson $lesson, bool $write, bool $curatorMayRead = false): void
     {
         if ($write && ! $user->hasPermission('journal.edit')) {
-            abort(403);
+            abort(403, 'Права на правку журнала нет.');
         }
 
         $allowed = $write
             ? $this->access->canEdit($user, $lesson)
             : $this->access->canRead($user, $lesson, $curatorMayRead);
 
-        abort_unless($allowed, 403);
+        // Отказ обязан назвать причину. Пустой `403` доходит до телефона как
+        // молчание: преподаватель видит занятие, нажимает отметку и не получает
+        // ничего — ни отметки, ни объяснения.
+        abort_unless($allowed, 403, $write
+            ? 'Это занятие ведёт другой преподаватель: отметки ставит тот, за кем занятие закреплено в расписании.'
+            : 'Это занятие не ваше и не вашей группы.');
     }
 
     private function filterStudentPayload(User $user, JournalLesson $lesson): void

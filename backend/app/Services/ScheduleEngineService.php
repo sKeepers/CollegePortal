@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Classroom;
+use App\Models\JournalLesson;
 use App\Models\LessonTime;
 use App\Models\Employee;
 use App\Models\Group;
@@ -77,6 +78,7 @@ class ScheduleEngineService
 
             $entry->update([...$preview['entry'], 'updated_by' => $user?->id]);
             $this->syncLegacyLesson($entry->fresh());
+            $this->syncJournalTeacher($entry->fresh(), $user);
             AuditLogService::log('Schedule', $action, $entry, $old, $entry->getAttributes(), user: $user);
 
             return $entry->fresh($this->relations());
@@ -433,6 +435,33 @@ class ScheduleEngineService
                 'topic' => $entry->comment,
             ],
         );
+    }
+
+    /**
+     * Замена преподавателя должна доходить до журнала.
+     *
+     * Журнал занятия заводится с тем преподавателем, который стоял в расписании
+     * в момент открытия, а правку журнала пускает только он (`JournalLessonAccess`).
+     * Пока замена меняла одно расписание, выходило хуже некуда: занятие уходило из
+     * дня заболевшего, к замещающему приходило, а журнал оставался за первым — и
+     * отметить не мог **никто**. Замещающий получал отказ, а его телефон при этом
+     * показывал «журнал не открыт» и звал открыть заново.
+     *
+     * Подписанный журнал не трогаем: он правится только через переоткрытие, и
+     * менять у него преподавателя задним числом нельзя.
+     */
+    private function syncJournalTeacher(ScheduleEntry $entry, ?User $user = null): void
+    {
+        $lesson = JournalLesson::query()->where('schedule_entry_id', $entry->id)->first();
+
+        if ($lesson === null || (int) $lesson->teacher_id === (int) $entry->teacher_id || $lesson->isSigned()) {
+            return;
+        }
+
+        $old = ['teacher_id' => $lesson->teacher_id];
+        $lesson->forceFill(['teacher_id' => $entry->teacher_id])->save();
+
+        AuditLogService::log('journal', 'journal_teacher_followed_replacement', $lesson, $old, ['teacher_id' => $entry->teacher_id], user: $user);
     }
 
     private function lessonTypeCode(?int $id): string
