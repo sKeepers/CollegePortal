@@ -46,18 +46,20 @@ class ReportController extends Controller
         $validated = $this->validateAttendanceReportRequest($request);
         $report = $this->buildAttendanceByGroupReport($validated);
 
+        // Заголовки по-русски: отчёт открывают в Excel и подшивают, а не разбирают
+        // кодом. Машинные имена колонок читать здесь некому.
         return CsvExport::download('attendance-report.csv', [
-            'student',
-            'group',
-            'total_lessons',
-            'marked_total',
-            'present',
-            'absent',
-            'late',
-            'excused',
-            'sick',
-            'remote',
-            'unmarked',
+            'Студент',
+            'Группа',
+            'Занятий всего',
+            'Отмечено',
+            'Присутствовал',
+            'Отсутствовал',
+            'Опоздал',
+            'По уважительной',
+            'Болел',
+            'Дистанционно',
+            'Без отметки',
         ], function (callable $row) use ($report): void {
             foreach ($report['students'] as $student) {
                 $row([
@@ -92,12 +94,12 @@ class ReportController extends Controller
         $report = $this->buildGradesByGroupReport($validated);
 
         return CsvExport::download('grades-report.csv', [
-            'student',
-            'group',
-            'subject',
-            'grades',
-            'numeric_grades_count',
-            'average_grade',
+            'Студент',
+            'Группа',
+            'Дисциплина',
+            'Оценки',
+            'Числовых оценок',
+            'Средний балл',
         ], function (callable $row) use ($report): void {
             foreach ($report['students'] as $student) {
                 $row([

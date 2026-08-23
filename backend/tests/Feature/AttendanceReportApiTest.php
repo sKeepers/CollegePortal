@@ -83,8 +83,9 @@ class AttendanceReportApiTest extends TestCase
 
         $content = $response->streamedContent();
 
-        $this->assertStringContainsString('student;group;total_lessons', $content);
-        $this->assertStringContainsString('sick;remote;unmarked', $content);
+        // Заголовки по-русски: отчёт подшивают и читают глазами.
+        $this->assertStringContainsString('Студент;Группа;"Занятий всего"', $content);
+        $this->assertStringContainsString('Болел;Дистанционно;"Без отметки"', $content);
         $this->assertStringContainsString('Иванов Дмитрий Сергеевич', $content);
     }
 

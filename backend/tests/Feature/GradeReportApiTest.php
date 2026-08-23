@@ -80,7 +80,7 @@ class GradeReportApiTest extends TestCase
 
         $content = $response->streamedContent();
 
-        $this->assertStringContainsString('student;group;subject;grades', $content);
+        $this->assertStringContainsString('Студент;Группа;Дисциплина;Оценки', $content);
         $this->assertStringContainsString('Иванов Дмитрий Сергеевич', $content);
         $this->assertStringContainsString('Сольфеджио', $content);
     }
