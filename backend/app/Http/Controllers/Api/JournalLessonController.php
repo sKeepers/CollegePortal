@@ -30,6 +30,16 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class JournalLessonController extends Controller
 {
+    /** Отметка человеческими словами: выгрузку открывают в Excel, а не разбирают кодом. */
+    private const ATTENDANCE_WORDS = [
+        'present' => 'Присутствовал',
+        'absent' => 'Отсутствовал',
+        'late' => 'Опоздал',
+        'excused' => 'По уважительной',
+        'sick' => 'Болел',
+        'remote' => 'Дистанционно',
+    ];
+
     public function __construct(
         private readonly JournalService $journalService,
         private readonly CuratorScopeService $curatorScope,
@@ -397,9 +407,173 @@ class JournalLessonController extends Controller
         return $this->streamLessonsCsv($query->orderBy('lesson_date')->orderBy('starts_at')->get(), 'journal-teacher.csv');
     }
 
+    /**
+     * Печатная форма журнала: страница бумажного журнала как она есть — студенты
+     * по строкам, занятия по столбцам, в клетке отметка и оценка.
+     *
+     * Такой формы не было вовсе: выгрузки отдавали «длинный» список, где на
+     * каждого студента каждого занятия приходится своя строка. Читать его на
+     * бумаге нельзя, а учебная часть подшивает журнал именно страницами.
+     *
+     * Пустая клетка значит «был»: так устроен бумажный журнал, и переучивать
+     * человека здесь незачем.
+     */
+    private const GRID_MARKS = [
+        'present' => '',
+        'absent' => 'н',
+        'late' => 'оп',
+        'excused' => 'ув',
+        'sick' => 'б',
+        'remote' => 'д',
+    ];
+
+    public function grid(Request $request): JsonResponse
+    {
+        return response()->json(['data' => $this->buildGrid($request)]);
+    }
+
+    public function exportGrid(Request $request): StreamedResponse
+    {
+        abort_unless($request->user()->hasPermission('journal.export'), 403, 'Права на выгрузку журнала нет.');
+        $grid = $this->buildGrid($request);
+
+        $headers = array_merge(
+            ['Студент'],
+            array_column($grid['lessons'], 'column'),
+            ['Пропусков', 'Опозданий', 'Средний балл'],
+        );
+
+        return CsvExport::download('journal-grid.csv', $headers, function (callable $row) use ($grid): void {
+            foreach ($grid['students'] as $student) {
+                $cells = [];
+                foreach ($grid['lessons'] as $lesson) {
+                    $cells[] = $student['cells'][$lesson['id']] ?? '';
+                }
+                $row(array_merge(
+                    [$student['full_name']],
+                    $cells,
+                    [$student['absences'], $student['lates'], $student['average']],
+                ));
+            }
+        });
+    }
+
+    /** @return array<string, mixed> */
+    private function buildGrid(Request $request): array
+    {
+        $data = $request->validate([
+            'group_id' => ['required', 'integer', 'exists:groups,id'],
+            'subject_id' => ['nullable', 'integer', 'exists:subjects,id'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date'],
+        ]);
+
+        $user = $request->user();
+        abort_unless(
+            $this->access->canReadGroup($user, (int) $data['group_id']),
+            403,
+            'Журнал этой группы вам не показывают: вы её не курируете и в ней не преподаёте.',
+        );
+
+        $lessons = JournalLesson::query()
+            ->with(['subject', 'teacher', 'attendance', 'grades'])
+            ->where('group_id', $data['group_id'])
+            ->when($data['subject_id'] ?? null, fn (Builder $q, int $id) => $q->where('subject_id', $id))
+            ->when($data['date_from'] ?? null, fn (Builder $q, string $d) => $q->whereDate('lesson_date', '>=', $d))
+            ->when($data['date_to'] ?? null, fn (Builder $q, string $d) => $q->whereDate('lesson_date', '<=', $d))
+            ->orderBy('lesson_date')
+            ->orderBy('starts_at')
+            ->orderBy('id')
+            ->get();
+
+        // Отчисленные и переведённые в столбцах не нужны, а вот в архив ушедшие
+        // в середине периода — нужны: их пропуски за этот период настоящие.
+        $students = Student::query()
+            ->where('group_id', $data['group_id'])
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get();
+
+        $seenDates = [];
+        $columns = [];
+        foreach ($lessons as $lesson) {
+            $date = $lesson->lesson_date?->format('d.m') ?? '';
+            $seenDates[$date] = ($seenDates[$date] ?? 0) + 1;
+            $columns[] = [
+                'id' => $lesson->id,
+                'date' => $lesson->lesson_date?->toDateString(),
+                // Две пары в один день дают два одинаковых заголовка, и на бумаге
+                // их не различить. Второй и следующие получают номер.
+                'column' => $seenDates[$date] > 1 ? $date.' ('.$seenDates[$date].')' : $date,
+                'starts_at' => $lesson->starts_at?->format('H:i'),
+                'subject' => $lesson->subject?->name,
+                'teacher' => $this->personName($lesson->teacher),
+                'topic' => $lesson->topic,
+            ];
+        }
+
+        $rows = [];
+        foreach ($students as $student) {
+            $cells = [];
+            $absences = 0;
+            $lates = 0;
+            $marks = [];
+
+            foreach ($lessons as $lesson) {
+                $attendance = $lesson->attendance->firstWhere('student_id', $student->id);
+                $grade = $lesson->grades->firstWhere('student_id', $student->id);
+                $status = $attendance?->status;
+
+                if ($status === 'absent') {
+                    $absences++;
+                } elseif ($status === 'late') {
+                    $lates++;
+                }
+
+                if ($grade && is_numeric($grade->value)) {
+                    $marks[] = (float) $grade->value;
+                }
+
+                $parts = array_filter([
+                    self::GRID_MARKS[$status] ?? '',
+                    (string) ($grade?->value ?? ''),
+                ], fn (string $part): bool => $part !== '');
+
+                $cells[$lesson->id] = implode(' ', $parts);
+            }
+
+            $rows[] = [
+                'student_id' => $student->id,
+                'full_name' => $this->personName($student),
+                'cells' => $cells,
+                'absences' => $absences,
+                'lates' => $lates,
+                'average' => $marks === [] ? '' : round(array_sum($marks) / count($marks), 2),
+            ];
+        }
+
+        return [
+            'group' => ['id' => (int) $data['group_id'], 'name' => $students->first()?->group?->name],
+            'date_from' => $data['date_from'] ?? $lessons->first()?->lesson_date?->toDateString(),
+            'date_to' => $data['date_to'] ?? $lessons->last()?->lesson_date?->toDateString(),
+            'lessons' => $columns,
+            'students' => $rows,
+            'legend' => ['н' => 'не был', 'оп' => 'опоздал', 'ув' => 'по уважительной', 'б' => 'болел', 'д' => 'дистанционно', '' => 'был'],
+        ];
+    }
+
+    private function personName(?object $person): string
+    {
+        if ($person === null) {
+            return '';
+        }
+
+        return trim("{$person->last_name} {$person->first_name} {$person->middle_name}");
+    }
+
     private function streamLessonsCsv($lessons, string $filename): StreamedResponse
     {
-        return CsvExport::download($filename, ['lesson_date', 'starts_at', 'group', 'subject', 'teacher', 'student', 'attendance', 'minutes_late', 'grade', 'comment'], function (callable $row) use ($lessons): void {
+        return CsvExport::download($filename, ['Дата', 'Начало', 'Группа', 'Дисциплина', 'Преподаватель', 'Студент', 'Отметка', 'Опоздание, мин', 'Оценка', 'Комментарий'], function (callable $row) use ($lessons): void {
             foreach ($lessons as $lesson) {
                 foreach ($lesson->attendance as $attendance) {
                     $grade = $lesson->grades->firstWhere('student_id', $attendance->student_id);
@@ -411,7 +585,7 @@ class JournalLessonController extends Controller
                         $lesson->subject?->name,
                         trim("{$lesson->teacher?->last_name} {$lesson->teacher?->first_name} {$lesson->teacher?->middle_name}"),
                         $student ? trim("{$student->last_name} {$student->first_name} {$student->middle_name}") : '',
-                        $attendance->status,
+                        self::ATTENDANCE_WORDS[$attendance->status] ?? $attendance->status,
                         $attendance->minutes_late,
                         $grade?->value,
                         $attendance->comment,
