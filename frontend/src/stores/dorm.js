@@ -18,6 +18,8 @@ export const useDormStore = defineStore('dorm', () => {
   const payments = ref([])
   const incidents = ref([])
   const today = ref(null)
+  const residents = ref(null)
+  const occupancy = ref(null)
   const studentPayments = ref([])
   const students = ref([])
 
@@ -130,6 +132,35 @@ export const useDormStore = defineStore('dorm', () => {
    *
    * Общая часть двух контуров — видят и ведут обе роли.
    */
+  /** Список проживающих по этажам — для стены и для двери. */
+  async function loadResidents() {
+    loading.value = true
+    error.value = ''
+    try {
+      const payload = await api.list('dorm/reports/residents')
+      residents.value = payload?.data || null
+    } catch (err) {
+      fail(err, 'Не удалось загрузить список проживающих')
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /** Заселённость за период. */
+  async function loadOccupancy(from, to) {
+    loading.value = true
+    error.value = ''
+    try {
+      const payload = await api.list('dorm/reports/occupancy', { from, to })
+      occupancy.value = payload?.data || null
+    } catch (err) {
+      fail(err, 'Не удалось построить отчёт')
+      occupancy.value = null
+    } finally {
+      loading.value = false
+    }
+  }
+
   /** Сводка «что сегодня» — с чего начать день. */
   async function loadToday() {
     loading.value = true
@@ -259,11 +290,11 @@ export const useDormStore = defineStore('dorm', () => {
   const updateIncident = (incident, payload) => act(() => api.update('dorm/incidents', incident.id, payload), loadIncidents)
 
   return {
-    rooms, placements, leaves, absences, payments, studentPayments, incidents, today, students,
+    rooms, placements, leaves, absences, payments, studentPayments, incidents, today, residents, occupancy, students,
     loading, saving, searching, error,
     roomFilters, placementFilters, nightFilters,
     kindOptions, roomOptions, studentOptions, roomTotals, roomKinds: ROOM_KINDS,
-    loadRooms, loadPlacements, loadLeaves, loadAbsences, loadPayments, loadStudentPayments, loadIncidents, loadToday, searchStudents,
+    loadRooms, loadPlacements, loadLeaves, loadAbsences, loadPayments, loadStudentPayments, loadIncidents, loadToday, loadResidents, loadOccupancy, searchStudents,
     createRoom, updateRoom, place, relocate, moveOut, createLeave, removeLeave, recalculate, recordPayment, recordIncident, updateIncident,
   }
 })

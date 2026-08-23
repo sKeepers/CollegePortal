@@ -51,6 +51,7 @@ use App\Http\Controllers\Api\DormLeaveController;
 use App\Http\Controllers\Api\DormConductController;
 use App\Http\Controllers\Api\DormIncidentController;
 use App\Http\Controllers\Api\DormPaymentController;
+use App\Http\Controllers\Api\DormReportController;
 use App\Http\Controllers\Api\DormSocialController;
 use App\Http\Controllers\Api\DormTodayController;
 use App\Http\Controllers\Api\DormPlacementController;
@@ -560,6 +561,13 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     // RFID-карты. Ведёт комендант: заводит, выдаёт, принимает, блокирует.
     // Выдача и приём — отдельные действия, а не правка поля: портал записывает,
     // кому и когда, иначе учёт ничем не отличается от списка.
+    // Печатные списки и отчёты: список проживающих по этажам, лист на дверь
+    // и заселённость за период.
+    Route::get('dorm/reports/residents', [DormReportController::class, 'residents'])
+        ->middleware('permission:dorm.placements.view');
+    Route::get('dorm/reports/occupancy', [DormReportController::class, 'occupancy'])
+        ->middleware('permission:dorm.placements.view');
+
     // Сводки «что сегодня». Две и разные: у коменданта места, ночь, оплата и
     // происшествия, у заместителя — провинности и социальный паспорт.
     Route::get('dorm/today', [DormTodayController::class, 'warden'])

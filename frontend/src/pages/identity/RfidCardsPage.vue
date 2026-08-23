@@ -10,6 +10,7 @@ import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
+import { escapeHtml, printHtmlDocument, printPage } from '../../utils/print'
 import { useRfidCardsStore } from '../../stores/rfidCards'
 import { usePermissions } from '../../composables/usePermissions'
 
@@ -290,24 +291,14 @@ async function exportJournal() {
   notify('Журнал выгружен в Excel')
 }
 
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-}
+function printJournal() {
+  if (!store.journal.length) {
+    notify('Печатать нечего: в журнале нет записей за выбранный период.', 'warning')
+    return
+  }
 
-/**
- * Ведомость собирается отдельным документом, целиком со своими стилями.
- *
- * Прежде печаталась сама страница: соседей по корню выключала правилом
- * `body > *:not(.rfid-print)`, а форму выносила в корень через `Teleport`.
- * Владелец получил пустой лист — и разбираться в чужом каскаде вслепую
- * бессмысленно. Здесь каскада приложения нет вовсе: ни стилей Quasar, ни
- * контейнеров разметки, ни порядка узлов в `body`. Что собрано, то и печатается.
- */
-function buildPrintDocument() {
+  printedAt.value = new Date().toLocaleString('ru-RU')
+
   const rows = store.journal.map((row, index) => `
       <tr>
         <td>${index + 1}</td>
@@ -319,65 +310,18 @@ function buildPrintDocument() {
         <td class="sign"></td>
       </tr>`).join('')
 
-  return `<!doctype html>
-<html lang="ru">
-<head>
-<meta charset="utf-8">
-<title>${escapeHtml(printTitle.value)}</title>
-<style>
-  @page { size: A4 landscape; margin: 12mm; }
-  body { margin: 0; color: #000; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; }
-  h1 { font-size: 16px; margin: 0 0 4px; }
-  .period { font-size: 12px; margin-bottom: 10px; }
-  table { width: 100%; border-collapse: collapse; font-size: 11px; }
-  th, td { border: 1px solid #000; padding: 4px 6px; text-align: left; vertical-align: top; }
-  th { background: #eeeeee; }
-  .sign { width: 22%; }
-  .footer { margin-top: 10px; font-size: 11px; }
-</style>
-</head>
-<body>
-<h1>${escapeHtml(printTitle.value)}</h1>
-<div class="period">${escapeHtml(printPeriod.value)}</div>
-<table>
+  printHtmlDocument(printPage({
+    title: printTitle.value,
+    subtitle: printPeriod.value,
+    body: `<table>
 <thead>
 <tr><th>№</th><th>Дата</th><th>Фамилия, имя, отчество</th><th>Группа / подразделение</th><th>Номер карты</th><th>Выдал</th><th class="sign">Подпись</th></tr>
 </thead>
 <tbody>${rows}
 </tbody>
-</table>
-<div class="footer">Всего записей: ${store.journal.length}. Напечатано ${escapeHtml(printedAt.value)}.</div>
-</body>
-</html>`
-}
-
-function printJournal() {
-  if (!store.journal.length) {
-    notify('Печатать нечего: в журнале нет записей за выбранный период.', 'warning')
-    return
-  }
-
-  printedAt.value = new Date().toLocaleString('ru-RU')
-
-  // Скрытая рамка, а не новое окно: всплывающие окна блокируются, и человек
-  // видит «ничего не произошло».
-  const frame = document.createElement('iframe')
-  frame.setAttribute('aria-hidden', 'true')
-  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;'
-  frame.srcdoc = buildPrintDocument()
-
-  frame.onload = () => {
-    const win = frame.contentWindow
-    if (!win) return
-
-    win.addEventListener('afterprint', () => frame.remove(), { once: true })
-    win.focus()
-    win.print()
-    // Если браузер не пришлёт `afterprint`, рамка не должна остаться навсегда.
-    window.setTimeout(() => frame.remove(), 60000)
-  }
-
-  document.body.appendChild(frame)
+</table>`,
+    footer: `Всего записей: ${store.journal.length}. Напечатано ${printedAt.value}.`,
+  }))
 }
 
 /**

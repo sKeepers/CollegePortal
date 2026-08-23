@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { BedDouble, Plus, RefreshCw } from '@lucide/vue'
+import { BedDouble, Plus, Printer, RefreshCw } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -10,6 +10,7 @@ import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
+import { escapeHtml, printHtmlDocument, printPage } from '../../utils/print'
 import { useDormStore } from '../../stores/dorm'
 import { usePermissions } from '../../composables/usePermissions'
 
@@ -53,6 +54,9 @@ const leaveDialog = ref(false)
 const leaveForm = reactive({ student_id: null, starts_on: today(), ends_on: today(), reason: '' })
 
 const recalcNight = ref(yesterday())
+
+const reportFrom = ref(monthAgo())
+const reportTo = ref(today())
 
 const incidentDialog = ref(false)
 const incidentForm = reactive({ id: null, happened_at: nowLocal(), summary: '', description: '', measures: '', dorm_room_id: null, participants: [] })
@@ -125,6 +129,13 @@ function nowLocal() {
   date.setMinutes(date.getMinutes() - date.getTimezoneOffset())
 
   return date.toISOString().slice(0, 16)
+}
+
+function monthAgo() {
+  const date = new Date()
+  date.setDate(date.getDate() - 30)
+
+  return date.toISOString().slice(0, 10)
 }
 
 function yesterday() {
@@ -344,6 +355,108 @@ async function submitPayment() {
   }
 }
 
+/**
+ * Список проживающих на бумагу — тот, что вывешивают по этажам.
+ *
+ * Печатается отдельным документом: каскад приложения до него не достаёт.
+ * Правило оплачено пустым листом ведомости выдачи карт.
+ */
+function printResidents() {
+  const data = store.residents
+  if (!data) return
+
+  const body = data.floors.map((floor) => {
+    const rows = floor.rooms.map((room) => {
+      if (!room.people.length) {
+        return `<tr><td>${escapeHtml(room.number)}</td><td colspan="4">свободна (${room.capacity} мест)</td></tr>`
+      }
+
+      return room.people.map((person, index) => `
+        <tr>
+          <td>${index === 0 ? escapeHtml(room.number) : ''}</td>
+          <td>${escapeHtml(person.full_name)}</td>
+          <td>${escapeHtml(person.course ? person.course + ' курс' : '')}</td>
+          <td>${escapeHtml(person.group || '')}</td>
+          <td>${escapeHtml(person.phone || '')}</td>
+        </tr>`).join('')
+    }).join('')
+
+    return `
+      <h2>${floor.floor ? floor.floor + ' этаж' : 'Без этажа'} — занято ${floor.occupied} из ${floor.capacity}</h2>
+      <table>
+        <thead><tr><th>Комната</th><th>Фамилия, имя, отчество</th><th>Курс</th><th>Группа</th><th>Телефон</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`
+  }).join('')
+
+  printHtmlDocument(printPage({
+    title: 'Список проживающих в общежитии',
+    subtitle: `Занято ${data.occupied} из ${data.capacity} мест. Составлен ${new Date().toLocaleString('ru-RU')}`,
+    body,
+  }))
+}
+
+/** Лист на дверь одной комнаты — книжный, крупным шрифтом. */
+function printRoomSheet(room) {
+  const rows = room.people.length
+    ? room.people.map((person) => `
+        <tr>
+          <td>${escapeHtml(person.full_name)}</td>
+          <td>${escapeHtml(person.course ? person.course + ' курс' : '')}</td>
+          <td>${escapeHtml(person.group || '')}</td>
+        </tr>`).join('')
+    : '<tr><td colspan="3">Комната свободна</td></tr>'
+
+  printHtmlDocument(printPage({
+    title: `Комната № ${room.number}`,
+    subtitle: `Мест ${room.capacity}, занято ${room.occupied}`,
+    landscape: false,
+    body: `<table style="font-size:15px">
+      <thead><tr><th>Фамилия, имя, отчество</th><th>Курс</th><th>Группа</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`,
+  }))
+}
+
+function printOccupancy() {
+  const data = store.occupancy
+  if (!data) return
+
+  const floors = data.floors.map((floor) => `
+    <tr>
+      <td>${escapeHtml(floor.floor ? floor.floor + ' этаж' : 'Без этажа')}</td>
+      <td>${floor.rooms}</td><td>${floor.capacity}</td><td>${floor.occupied}</td><td>${floor.free}</td>
+    </tr>`).join('')
+
+  const movement = data.movement.length
+    ? data.movement.map((row) => `
+        <tr>
+          <td>${escapeHtml(row.date)}</td>
+          <td>${row.kind === 'in' ? 'въехал' : 'выехал'}</td>
+          <td>${escapeHtml(row.full_name)}</td>
+          <td>${escapeHtml(row.group || '')}</td>
+          <td>${escapeHtml(row.room || '')}</td>
+        </tr>`).join('')
+    : '<tr><td colspan="5">За период движения не было</td></tr>'
+
+  printHtmlDocument(printPage({
+    title: 'Заселённость общежития',
+    subtitle: `За период ${data.from} — ${data.to}. Въехали ${data.totals.moved_in}, выехали ${data.totals.moved_out}`,
+    body: `
+      <h2>По этажам</h2>
+      <table>
+        <thead><tr><th>Этаж</th><th>Комнат</th><th>Мест</th><th>Занято</th><th>Свободно</th></tr></thead>
+        <tbody>${floors}</tbody>
+      </table>
+      <h2>Движение за период</h2>
+      <table>
+        <thead><tr><th>Дата</th><th>Что</th><th>Фамилия, имя, отчество</th><th>Группа</th><th>Комната</th></tr></thead>
+        <tbody>${movement}</tbody>
+      </table>`,
+    footer: `Составлен ${new Date().toLocaleString('ru-RU')}`,
+  }))
+}
+
 async function openTab(name) {
   tab.value = name
   if (name === 'today') await store.loadToday()
@@ -355,6 +468,7 @@ async function openTab(name) {
   if (name === 'leaves') await store.loadLeaves()
   if (name === 'nights') await store.loadAbsences()
   if (name === 'payments') await store.loadPayments()
+  if (name === 'reports') await store.loadResidents()
   if (name === 'incidents') {
     await store.loadIncidents()
     if (!store.rooms.length) await store.loadRooms()
@@ -380,6 +494,7 @@ onMounted(() => store.loadToday())
       <q-tab name="nights" label="Ночные отсутствия" />
       <q-tab v-if="canSeeIncidents" name="incidents" label="Происшествия" />
       <q-tab v-if="canSeePayments" name="payments" label="Оплата" />
+      <q-tab name="reports" label="Списки и отчёты" />
     </q-tabs>
 
     <q-tab-panels :model-value="tab" animated class="dorm-panels">
@@ -719,6 +834,68 @@ onMounted(() => store.loadToday())
             </q-td>
           </template>
         </AppTable>
+      </q-tab-panel>
+      <!-- Списки и отчёты -->
+      <q-tab-panel name="reports" class="q-pa-none">
+        <AppToolbar>
+          <q-btn flat no-caps :disable="store.loading" @click="store.loadResidents">
+            <RefreshCw :size="16" class="q-mr-xs" /> Обновить список
+          </q-btn>
+          <q-btn color="primary" unelevated no-caps :disable="!store.residents" @click="printResidents">
+            <Printer :size="16" class="q-mr-xs" /> Печать списка проживающих
+          </q-btn>
+        </AppToolbar>
+
+        <div class="dorm-hint">
+          Список по этажам — тот, что вывешивают и носят с собой. Лист на дверь печатается отдельно, по комнате.
+        </div>
+
+        <AppLoading v-if="store.loading" />
+        <template v-else-if="store.residents">
+          <div v-for="floor in store.residents.floors" :key="floor.floor ?? 0" class="dorm-block">
+            <div class="dorm-block__title">
+              {{ floor.floor ? floor.floor + ' этаж' : 'Без этажа' }} — занято {{ floor.occupied }} из {{ floor.capacity }}
+            </div>
+            <div v-for="room in floor.rooms" :key="room.id" class="dorm-row">
+              <b>№ {{ room.number }}</b>
+              <span class="dorm-secondary"> — {{ room.occupied }} из {{ room.capacity }}</span>
+              <q-btn flat dense no-caps size="sm" color="primary" class="q-ml-sm" @click="printRoomSheet(room)">лист на дверь</q-btn>
+              <div v-for="person in room.people" :key="person.student_id" class="dorm-secondary">
+                {{ person.full_name }}<span v-if="person.course"> · {{ person.course }} курс</span><span v-if="person.group"> · {{ person.group }}</span><span v-if="person.phone"> · {{ person.phone }}</span>
+              </div>
+              <div v-if="!room.people.length" class="dorm-secondary">свободна</div>
+            </div>
+          </div>
+        </template>
+
+        <AppToolbar class="q-mt-md">
+          <q-input v-model="reportFrom" dense outlined type="date" label="С" style="min-width: 150px" />
+          <q-input v-model="reportTo" dense outlined type="date" label="По" style="min-width: 150px" />
+          <q-btn flat no-caps :disable="store.loading" @click="store.loadOccupancy(reportFrom, reportTo)">
+            <RefreshCw :size="16" class="q-mr-xs" /> Построить отчёт
+          </q-btn>
+          <q-space />
+          <q-btn color="primary" unelevated no-caps :disable="!store.occupancy" @click="printOccupancy">
+            <Printer :size="16" class="q-mr-xs" /> Печать отчёта
+          </q-btn>
+        </AppToolbar>
+
+        <div v-if="store.occupancy" class="dorm-block">
+          <div class="dorm-block__title">
+            Заселённость за {{ store.occupancy.from }} — {{ store.occupancy.to }}
+          </div>
+          <div class="dorm-hint">
+            Занято {{ store.occupancy.totals.occupied }} из {{ store.occupancy.totals.capacity }},
+            свободно {{ store.occupancy.totals.free }}.
+            За период въехали {{ store.occupancy.totals.moved_in }}, выехали {{ store.occupancy.totals.moved_out }}.
+          </div>
+          <div v-for="floor in store.occupancy.floors" :key="floor.floor ?? 0" class="dorm-row">
+            {{ floor.floor ? floor.floor + ' этаж' : 'Без этажа' }} — занято {{ floor.occupied }} из {{ floor.capacity }}, свободно {{ floor.free }}
+          </div>
+          <div v-for="day in store.occupancy.by_date" :key="day.date" class="dorm-row">
+            {{ formatDate(day.date) }} — въехали {{ day.in }}, выехали {{ day.out }}
+          </div>
+        </div>
       </q-tab-panel>
     </q-tab-panels>
 
