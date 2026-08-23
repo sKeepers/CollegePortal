@@ -153,6 +153,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [import-templates/curricula.md](import-templates/curricula.md)
 - [import-templates/groups.md](import-templates/groups.md)
 - [import-templates/lesson-times.md](import-templates/lesson-times.md)
+- [ONE_SESSION_PER_ACCOUNT.md](ONE_SESSION_PER_ACCOUNT.md) — один сеанс на учётную запись: разбор к решению
 - [import-templates/README.md](import-templates/README.md)
 - [import-templates/schedule.md](import-templates/schedule.md)
 - [import-templates/students.md](import-templates/students.md)
