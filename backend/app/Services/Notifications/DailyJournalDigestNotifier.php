@@ -6,6 +6,7 @@ use App\Models\JournalAttendance;
 use App\Models\JournalGrade;
 use App\Models\NotificationSubscription;
 use App\Models\User;
+use App\Support\Notifications\MessageBody;
 use App\Support\Notifications\NotificationEvents;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
@@ -98,7 +99,7 @@ class DailyJournalDigestNotifier
             ($grade->journalLesson?->subject?->name ?: 'Дисциплина').': '.$grade->value,
         ));
 
-        return "Оценки за {$date->format('d.m')}:\n".$lines->implode("\n");
+        return MessageBody::list("Оценки за {$date->format('d.m')}:", $lines);
     }
 
     private function composeAttendance(int $studentId, CarbonInterface $date): ?string
@@ -122,7 +123,7 @@ class DailyJournalDigestNotifier
             return null;
         }
 
-        return "Посещаемость за {$date->format('d.m')}:\n".$this->attendanceLines($marks)->implode("\n");
+        return MessageBody::list("Посещаемость за {$date->format('d.m')}:", $this->attendanceLines($marks));
     }
 
     /**
