@@ -60,8 +60,20 @@ class JournalService
         });
     }
 
+    /**
+     * Занятие нового расписания зеркалится в `schedule_lessons`
+     * (`ScheduleEngineService::syncLegacyLesson`), поэтому в журнал одного и того же
+     * занятия ведут две двери: по записи расписания и по зеркалу. Ключи разные —
+     * `schedule_entry_id` и `legacy_schedule_lesson_id`, — и вход через вторую дверь
+     * заводил **второй журнал на то же занятие**: преподаватель отмечал в дубле, а
+     * учебная часть смотрела в первый и видела пустоту. Дверей две, журнал один.
+     */
     public function openFromLegacySchedule(ScheduleLesson $scheduleLesson, User $user): JournalLesson
     {
+        if ($scheduleLesson->schedule_entry_id !== null && ($entry = $scheduleLesson->scheduleEntry) !== null) {
+            return $this->openFromSchedule($entry, $user);
+        }
+
         return DB::transaction(function () use ($scheduleLesson, $user): JournalLesson {
             $lesson = JournalLesson::query()->firstOrCreate(
                 ['legacy_schedule_lesson_id' => $scheduleLesson->id],
