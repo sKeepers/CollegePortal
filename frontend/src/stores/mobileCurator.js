@@ -36,6 +36,13 @@ export const useMobileCuratorStore = defineStore('mobileCurator', () => {
   const attendanceRange = ref({ from: '', to: '' })
   const attendanceLoading = ref(false)
 
+  // Успеваемость считает журнал, а не проходная: соседний экран отвечает на
+  // «был ли проход», этот — на «был ли на занятии и с какой оценкой».
+  const performanceRows = ref([])
+  const performanceSummary = ref(null)
+  const performanceLessons = ref(0)
+  const performanceLoading = ref(false)
+
   const accessEvents = ref([])
   const accessTotal = ref(0)
   const accessTruncated = ref(false)
@@ -101,6 +108,22 @@ export const useMobileCuratorStore = defineStore('mobileCurator', () => {
     }
   }
 
+  async function loadPerformance(groupId, on = date.value) {
+    performanceLoading.value = true
+    try {
+      const payload = extractData(await api.list(`mobile/curator/groups/${groupId}/performance`, { date: on }))
+      performanceRows.value = payload.rows || []
+      performanceSummary.value = payload.summary || null
+      performanceLessons.value = Number(payload.lessons || 0)
+    } catch (err) {
+      performanceRows.value = []
+      performanceSummary.value = null
+      groupError.value = err.status === 403 ? 'Эта группа не закреплена за вами.' : (err.message || 'Не удалось загрузить успеваемость')
+    } finally {
+      performanceLoading.value = false
+    }
+  }
+
   async function loadAccess(groupId, on = date.value) {
     accessLoading.value = true
     try {
@@ -120,7 +143,7 @@ export const useMobileCuratorStore = defineStore('mobileCurator', () => {
   async function openGroup(groupId, on = date.value) {
     await loadGroup(groupId, on)
     if (!group.value) return
-    await Promise.all([loadAttendance(groupId, range.value, on), loadAccess(groupId, on)])
+    await Promise.all([loadAttendance(groupId, range.value, on), loadAccess(groupId, on), loadPerformance(groupId, on)])
   }
 
   async function changeDate(groupId, days) {
@@ -163,6 +186,11 @@ export const useMobileCuratorStore = defineStore('mobileCurator', () => {
     loadGroup,
     loadAttendance,
     loadAccess,
+    loadPerformance,
+    performanceRows,
+    performanceSummary,
+    performanceLessons,
+    performanceLoading,
     openGroup,
     changeDate,
     changeRange,

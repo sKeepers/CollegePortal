@@ -126,6 +126,45 @@ watch(groupId, (id) => store.openGroup(id))
         <p v-else class="mobile-cabinet-empty">За выбранный период данных нет.</p>
       </section>
 
+      <!--
+        Успеваемости в кабинете куратора не было вовсе: были состав, проходная и
+        «посещаемость», которая на самом деле проходная. С куратора же спрашивают
+        учёбу — кто пропускает занятия и кто скатился по оценкам.
+      -->
+      <section class="mobile-cabinet-card">
+        <header>
+          <h2>Успеваемость по журналу</h2>
+          <small v-if="store.performanceLessons">занятий: {{ store.performanceLessons }}</small>
+        </header>
+
+        <div v-if="store.performanceLoading" class="mobile-cabinet-loading"><q-spinner color="primary" size="24px" /></div>
+
+        <template v-else>
+          <p class="mobile-cabinet-empty">Отметки и оценки преподавателя, не проходная</p>
+
+          <div v-if="store.performanceSummary" class="mobile-cabinet-metrics">
+            <article><span>Пропусков</span><strong>{{ store.performanceSummary.absences }}</strong></article>
+            <article><span>Опозданий</span><strong>{{ store.performanceSummary.lates }}</strong></article>
+            <article><span>Без оценок</span><strong>{{ store.performanceSummary.without_grades }}</strong></article>
+          </div>
+
+          <ul v-if="store.performanceRows.length" class="mobile-cabinet-roster">
+            <li v-for="row in store.performanceRows" :key="row.student_id" class="mobile-cabinet-roster-row">
+              <div class="mobile-cabinet-roster-name">
+                <strong>{{ row.full_name }}</strong>
+                <small>{{ row.average === null ? 'оценок нет' : `средний ${row.average}` }}</small>
+              </div>
+              <span class="mobile-cabinet-roster-note">
+                пропусков {{ row.absences }}, опозданий {{ row.lates }}
+                <template v-if="row.grades.length"> · оценки: {{ row.grades.join(', ') }}</template>
+              </span>
+            </li>
+          </ul>
+
+          <p v-else class="mobile-cabinet-empty">За этот период журнал пуст.</p>
+        </template>
+      </section>
+
       <section class="mobile-cabinet-card">
         <header><Users :size="20" /><h2>Студенты</h2><small>{{ store.students.length }}</small></header>
         <ul class="mobile-cabinet-roster">

@@ -6,11 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\TeacherResource;
 use App\Models\AccessEvent;
 use App\Models\Group;
+use App\Models\JournalAttendance;
+use App\Models\JournalGrade;
+use App\Models\JournalLesson;
 use App\Models\Student;
 use App\Models\Teacher;
 use App\Services\AttendanceAnalysisService;
 use App\Services\CuratorScopeService;
 use App\Services\GroupRosterService;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -206,6 +210,84 @@ class MobileCuratorController extends Controller
      * Отсутствие карточки преподавателя даёт пустой кабинет, но не доступ:
      * поэтому здесь `403`, а не «нечего проверять, пропустим».
      */
+    /**
+     * Успеваемость и пропуски по журналу за период.
+     *
+     * В кабинете куратора этого не было вовсе: были состав, проходная и
+     * посещаемость, а посещаемость там — **проходная**, то есть был ли проход
+     * через турникет. С куратора же спрашивают учёбу: кто пропускает занятия и
+     * кто скатился по оценкам. Ответа на это в телефоне не было ни в каком виде.
+     *
+     * Считается по журналу, а не по проходной, и потому расходится с соседним
+     * экраном намеренно: там физическое присутствие, здесь — отметка
+     * преподавателя. Заготовки, которые журнал создаёт при открытии занятия
+     * (`source = roster`), отметками не считаются: преподаватель их не ставил.
+     */
+    public function performance(Request $request, Group $group): array
+    {
+        $this->authorizeGroup($request, $group);
+
+        $to = $this->date($request);
+        $from = $request->query('date_from')
+            ? CarbonImmutable::parse($request->query('date_from'))
+            : $to->copy()->subDays(30);
+
+        $students = $this->studentsOf($group);
+        $studentIds = $students->pluck('id')->all();
+
+        $lessons = JournalLesson::query()
+            ->where('group_id', $group->id)
+            ->whereDate('lesson_date', '>=', $from->toDateString())
+            ->whereDate('lesson_date', '<=', $to->toDateString())
+            ->pluck('id');
+
+        $attendance = JournalAttendance::query()
+            ->whereIn('journal_lesson_id', $lessons)
+            ->whereIn('student_id', $studentIds)
+            ->where('source', '!=', 'roster')
+            ->get()
+            ->groupBy('student_id');
+
+        $grades = JournalGrade::query()
+            ->whereIn('journal_lesson_id', $lessons)
+            ->whereIn('student_id', $studentIds)
+            ->whereNotNull('value')
+            ->get()
+            ->groupBy('student_id');
+
+        $rows = $students->map(function (Student $student) use ($attendance, $grades): array {
+            $marks = $attendance->get($student->id, collect());
+            $values = $grades->get($student->id, collect())->pluck('value');
+            $numeric = $values->filter(fn ($value): bool => is_numeric($value))->map(fn ($value): float => (float) $value);
+
+            return [
+                'student_id' => $student->id,
+                'full_name' => $this->fullName($student),
+                'marked' => $marks->count(),
+                'absences' => $marks->where('status', 'absent')->count(),
+                'lates' => $marks->where('status', 'late')->count(),
+                'excused' => $marks->whereIn('status', ['excused', 'sick'])->count(),
+                'grades' => $values->values()->all(),
+                'average' => $numeric->isEmpty() ? null : round($numeric->avg(), 2),
+            ];
+        })->values();
+
+        return ['data' => [
+            'group' => ['id' => $group->id, 'name' => $group->name],
+            'date_from' => $from->toDateString(),
+            'date_to' => $to->toDateString(),
+            'lessons' => $lessons->count(),
+            'summary' => [
+                'students' => $rows->count(),
+                'absences' => $rows->sum('absences'),
+                'lates' => $rows->sum('lates'),
+                'without_grades' => $rows->where('average', null)->count(),
+            ],
+            'source' => 'Журнал: отметки и оценки преподавателя, а не проходная.',
+            'rows' => $rows->all(),
+        ]];
+    }
+
     private function authorizeGroup(Request $request, Group $group): void
     {
         if (! $this->scope->curates($request->user(), $group)) {
