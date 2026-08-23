@@ -8,6 +8,7 @@ use App\Models\ScheduleEntry;
 use App\Models\ScheduleTemplate;
 use App\Services\ScheduleEngineService;
 use App\Support\Csv\CsvExport;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -123,16 +124,34 @@ class ScheduleEngineController extends Controller
             'date_to' => $data['date_to'],
         ])->get()->filter(fn (ScheduleEntry $entry): bool => $entry->status !== 'canceled' && $entry->date !== null);
 
-        $days = [];
+        // Столбцы строятся по запрошенному промежутку, а не по дням, где что-то
+        // есть. День без занятий обязан остаться пустым столбцом: на стене неделя
+        // должна быть целой, иначе читающий решит, что лист напечатан не весь.
+        // Воскресенье показывается, только если в нём есть занятие.
+        $from = CarbonImmutable::parse($data['date_from'])->startOfDay();
+        $to = CarbonImmutable::parse($data['date_to'])->startOfDay();
+
+        abort_if($from->diffInDays($to) > 31, 422, 'Форма рассчитана на неделю или месяц, но не больше 31 дня.');
+
+        $busy = [];
         foreach ($entries as $entry) {
-            $date = $entry->date->toDateString();
+            $busy[$entry->date->toDateString()] = true;
+        }
+
+        $days = [];
+        for ($day = $from; $day->lte($to); $day = $day->addDay()) {
+            $date = $day->toDateString();
+
+            if ($day->dayOfWeekIso === 7 && ! isset($busy[$date])) {
+                continue;
+            }
+
             $days[$date] = [
                 'date' => $date,
-                'weekday' => self::WEEKDAYS[$entry->date->dayOfWeekIso] ?? '',
-                'column' => self::WEEKDAYS[$entry->date->dayOfWeekIso].', '.$entry->date->format('d.m'),
+                'weekday' => self::WEEKDAYS[$day->dayOfWeekIso] ?? '',
+                'column' => self::WEEKDAYS[$day->dayOfWeekIso].', '.$day->format('d.m'),
             ];
         }
-        ksort($days);
 
         // Пары нумерует расписание; если номера нет, строку задаёт время начала —
         // иначе занятие просто исчезнет из таблицы.

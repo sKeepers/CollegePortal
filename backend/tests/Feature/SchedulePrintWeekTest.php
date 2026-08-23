@@ -34,7 +34,12 @@ class SchedulePrintWeekTest extends TestCase
 
         $this->assertSame('group', $data['for']);
         $this->assertSame('ИСП-101', $data['title']);
-        $this->assertSame(['вторник, 01.09', 'среда, 02.09'], array_column($data['days'], 'column'));
+        // Промежуток запрошен по субботу: дни без занятий остаются пустыми
+        // столбцами, иначе на стене неделя выглядит обрезанной.
+        $this->assertSame(
+            ['вторник, 01.09', 'среда, 02.09', 'четверг, 03.09', 'пятница, 04.09', 'суббота, 05.09'],
+            array_column($data['days'], 'column'),
+        );
         $this->assertSame(['1 пара, 08:30–10:05', '2 пара, 10:15–11:50'], array_column($data['rows'], 'title'));
 
         $first = $data['rows'][0]['cells']['2026-09-01'];
@@ -54,6 +59,7 @@ class SchedulePrintWeekTest extends TestCase
         $this->assertSame('teacher', $data['for']);
         $this->assertSame('Смирнова Е.П.', $data['title']);
         $this->assertSame(['Сольфеджио', 'ИСП-101', 'ауд. 201'], $data['rows'][0]['cells']['2026-09-01']['lines']);
+        $this->assertArrayNotHasKey('2026-09-04', $data['rows'][0]['cells'], 'В пятницу занятий нет, клетка пустая.');
     }
 
     public function test_week_exports_with_russian_headers(): void
@@ -68,6 +74,16 @@ class SchedulePrintWeekTest extends TestCase
         $this->assertStringContainsString('Пара', $csv);
         $this->assertStringContainsString('вторник, 01.09', $csv);
         $this->assertStringContainsString('Сольфеджио', $csv);
+    }
+
+    public function test_a_range_longer_than_a_month_is_refused(): void
+    {
+        $f = $this->fixture();
+
+        $this->withApiAuth($f['user'])
+            ->getJson('/api/schedule/report/week?group_id='.$f['group']->id.'&date_from=2026-09-01&date_to=2026-12-31')
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Форма рассчитана на неделю или месяц, но не больше 31 дня.');
     }
 
     public function test_one_of_group_or_teacher_is_required(): void
