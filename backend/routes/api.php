@@ -48,6 +48,7 @@ use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\DigitalIdentityController;
 use App\Http\Controllers\Api\DormAbsenceController;
 use App\Http\Controllers\Api\DormLeaveController;
+use App\Http\Controllers\Api\DormPaymentController;
 use App\Http\Controllers\Api\DormPlacementController;
 use App\Http\Controllers\Api\DormRoomController;
 use App\Http\Controllers\Api\RfidCardController;
@@ -571,6 +572,12 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         ->middleware('permission:dorm.placements.manage');
     Route::post('dorm/placements/move-out', [DormPlacementController::class, 'moveOut'])
         ->middleware('permission:dorm.placements.manage');
+    Route::get('dorm/payments/summary', [DormPaymentController::class, 'summary'])
+        ->middleware('permission:dorm.payments.view');
+    Route::get('dorm/payments', [DormPaymentController::class, 'index'])
+        ->middleware('permission:dorm.payments.view');
+    Route::post('dorm/payments', [DormPaymentController::class, 'store'])
+        ->middleware('permission:dorm.payments.manage');
     Route::get('dorm/leaves', [DormLeaveController::class, 'index'])
         ->middleware('permission:dorm.absences.view');
     Route::post('dorm/leaves', [DormLeaveController::class, 'store'])

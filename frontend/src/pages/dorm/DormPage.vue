@@ -31,6 +31,10 @@ const $q = useQuasar()
 const canManageRooms = computed(() => permissions.hasPermission('dorm.rooms.manage'))
 const canManagePlacements = computed(() => permissions.hasPermission('dorm.placements.manage'))
 const canManageLeaves = computed(() => permissions.hasPermission('dorm.leaves.manage'))
+// Оплата — работа коменданта. Заместителю по воспитательной работе её не дают,
+// и вкладки у него не будет вовсе: это разграничение, а не недоделка.
+const canSeePayments = computed(() => permissions.hasPermission('dorm.payments.view'))
+const canManagePayments = computed(() => permissions.hasPermission('dorm.payments.manage'))
 
 const tab = ref('rooms')
 
@@ -47,6 +51,9 @@ const leaveDialog = ref(false)
 const leaveForm = reactive({ student_id: null, starts_on: today(), ends_on: today(), reason: '' })
 
 const recalcNight = ref(yesterday())
+
+const paymentDialog = ref(false)
+const paymentForm = reactive({ student_id: null, student_name: '', paid_through: today(), amount: null, paid_at: today(), note: '' })
 
 const roomColumns = [
   { name: 'number', label: 'Комната', field: 'number', align: 'left', sortable: true },
@@ -74,6 +81,15 @@ const leaveColumns = [
   { name: 'starts_on', label: 'С', field: 'starts_on', align: 'left', sortable: true },
   { name: 'ends_on', label: 'По', field: 'ends_on', align: 'left' },
   { name: 'reason', label: 'Причина', field: 'reason', align: 'left' },
+  { name: 'actions', label: '', field: 'actions', align: 'right' },
+]
+
+const paymentColumns = [
+  { name: 'full_name', label: 'Студент', field: 'full_name', align: 'left', sortable: true },
+  { name: 'group', label: 'Группа', field: 'group', align: 'left' },
+  { name: 'room', label: 'Комната', field: 'room', align: 'left' },
+  { name: 'paid_through', label: 'Оплачено по', field: 'paid_through', align: 'left', sortable: true },
+  { name: 'overdue_days', label: 'Состояние', field: 'overdue_days', align: 'left', sortable: true },
   { name: 'actions', label: '', field: 'actions', align: 'right' },
 ]
 
@@ -227,6 +243,41 @@ async function recalculate() {
   }
 }
 
+/**
+ * Отметка об оплате.
+ *
+ * С экрана она всегда ручная: строки из 1С приходят обменом, а не отсюда.
+ * Иначе ручная отметка смогла бы притвориться победившей в споре источников.
+ */
+function openPayment(row = null) {
+  Object.assign(paymentForm, {
+    student_id: row?.student_id ?? null,
+    student_name: row?.full_name ?? '',
+    paid_through: row?.paid_through || today(),
+    amount: null,
+    paid_at: today(),
+    note: '',
+  })
+
+  if (row) store.students = [{ id: row.student_id, full_name: row.full_name, group: { name: row.group } }]
+  paymentDialog.value = true
+}
+
+async function submitPayment() {
+  const done = await store.recordPayment({
+    student_id: paymentForm.student_id,
+    paid_through: paymentForm.paid_through,
+    amount: paymentForm.amount,
+    paid_at: paymentForm.paid_at || null,
+    note: paymentForm.note || null,
+  })
+
+  if (done) {
+    paymentDialog.value = false
+    notify('Оплата отмечена')
+  }
+}
+
 async function openTab(name) {
   tab.value = name
   if (name === 'rooms') await store.loadRooms()
@@ -236,6 +287,7 @@ async function openTab(name) {
   }
   if (name === 'leaves') await store.loadLeaves()
   if (name === 'nights') await store.loadAbsences()
+  if (name === 'payments') await store.loadPayments()
 }
 
 onMounted(() => store.loadRooms())
@@ -254,6 +306,7 @@ onMounted(() => store.loadRooms())
       <q-tab name="placements" label="Заселение" />
       <q-tab name="leaves" label="Отлучки" />
       <q-tab name="nights" label="Ночные отсутствия" />
+      <q-tab v-if="canSeePayments" name="payments" label="Оплата" />
     </q-tabs>
 
     <q-tab-panels :model-value="tab" animated class="dorm-panels">
@@ -432,6 +485,52 @@ onMounted(() => store.loadRooms())
           </template>
         </AppTable>
       </q-tab-panel>
+
+      <!-- Оплата -->
+      <q-tab-panel name="payments" class="q-pa-none">
+        <AppToolbar>
+          <q-btn flat no-caps :disable="store.loading" @click="store.loadPayments">
+            <RefreshCw :size="16" class="q-mr-xs" /> Обновить
+          </q-btn>
+          <q-space />
+          <q-btn v-if="canManagePayments" color="primary" unelevated no-caps @click="openPayment()">
+            <Plus :size="16" class="q-mr-xs" /> Отметить оплату
+          </q-btn>
+        </AppToolbar>
+
+        <div class="dorm-hint">
+          Оплата считается «оплачено по такое-то число», а не помесячно.
+          Когда появится обмен с 1С, его строка перекроет ручную отметку за тот же срок:
+          отметка коменданта не пропадёт, а будет помечена замещённой.
+        </div>
+
+        <AppLoading v-if="store.loading" />
+        <AppEmptyState v-else-if="!store.payments.length" title="Проживающих нет" description="Сводка по оплате строится по действующим заселениям." />
+        <AppTable v-else :rows="store.payments" :columns="paymentColumns" row-key="student_id" :pagination="{ rowsPerPage: 50 }">
+          <template #body-cell-paid_through="props">
+            <q-td :props="props">
+              <span v-if="props.row.never_paid">не отмечалась</span>
+              <span v-else>{{ formatDate(props.row.paid_through) }}</span>
+            </q-td>
+          </template>
+          <template #body-cell-overdue_days="props">
+            <q-td :props="props">
+              <AppStatusBadge
+                v-if="props.row.overdue_days > 0"
+                :label="`просрочка ${props.row.overdue_days} дн.`"
+                :tone="props.row.overdue_days > 30 ? 'danger' : 'warning'"
+              />
+              <span v-else-if="props.row.never_paid">—</span>
+              <AppStatusBadge v-else label="закрыт" tone="success" />
+            </q-td>
+          </template>
+          <template #body-cell-actions="props">
+            <q-td :props="props">
+              <q-btn v-if="canManagePayments" flat dense no-caps color="primary" @click="openPayment(props.row)">Отметить</q-btn>
+            </q-td>
+          </template>
+        </AppTable>
+      </q-tab-panel>
     </q-tab-panels>
 
     <q-dialog v-model="roomDialog">
@@ -487,6 +586,31 @@ onMounted(() => store.loadRooms())
         <q-card-actions align="right">
           <q-btn flat no-caps label="Отмена" v-close-popup />
           <q-btn color="primary" no-caps label="Выселить" :loading="store.saving" @click="submitMoveOut" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <q-dialog v-model="paymentDialog">
+      <q-card class="dorm-dialog">
+        <q-card-section class="text-h6">Отметить оплату</q-card-section>
+        <q-card-section class="column q-gutter-sm">
+          <div v-if="paymentForm.student_name">{{ paymentForm.student_name }}</div>
+          <q-select
+            v-else
+            v-model="paymentForm.student_id"
+            dense outlined use-input emit-value map-options
+            input-debounce="350" label="Студент"
+            :options="store.studentOptions" :loading="store.searching"
+            @filter="(value, update) => { store.searchStudents(value); update(() => {}) }"
+          />
+          <q-input v-model="paymentForm.paid_through" dense outlined type="date" label="Оплачено по" hint="До какого числа человек закрыт" />
+          <q-input v-model.number="paymentForm.amount" dense outlined type="number" label="Сумма" />
+          <q-input v-model="paymentForm.paid_at" dense outlined type="date" label="Дата платежа" />
+          <q-input v-model="paymentForm.note" dense outlined type="textarea" autogrow label="Примечание" />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat no-caps label="Отмена" v-close-popup />
+          <q-btn color="primary" no-caps label="Отметить" :loading="store.saving" :disable="!paymentForm.student_id || !paymentForm.paid_through" @click="submitPayment" />
         </q-card-actions>
       </q-card>
     </q-dialog>

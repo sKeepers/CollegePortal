@@ -15,6 +15,8 @@ export const useDormStore = defineStore('dorm', () => {
   const placements = ref([])
   const leaves = ref([])
   const absences = ref([])
+  const payments = ref([])
+  const studentPayments = ref([])
   const students = ref([])
 
   const loading = ref(false)
@@ -91,6 +93,33 @@ export const useDormStore = defineStore('dorm', () => {
       fail(err, 'Не удалось загрузить заселения')
     } finally {
       loading.value = false
+    }
+  }
+
+  /**
+   * Сводка по оплате: кто по какое число закрыт и на сколько просрочил.
+   *
+   * Экран показывает именно её, а не список отметок: коменданту важно «кто
+   * должен», а отметки смотрят потом, по конкретному человеку.
+   */
+  async function loadPayments() {
+    loading.value = true
+    error.value = ''
+    try {
+      const payload = await api.list('dorm/payments/summary')
+      payments.value = Array.isArray(payload?.data) ? payload.data : []
+    } catch (err) {
+      fail(err, 'Не удалось загрузить сводку по оплате')
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function loadStudentPayments(studentId) {
+    try {
+      studentPayments.value = rows(await api.list('dorm/payments', { student_id: studentId, per_page: 100 }))
+    } catch (err) {
+      fail(err, 'Не удалось загрузить отметки об оплате')
     }
   }
 
@@ -188,13 +217,14 @@ export const useDormStore = defineStore('dorm', () => {
   const removeLeave = (leave) => act(() => api.delete('dorm/leaves', leave.id), loadLeaves)
 
   const recalculate = (night) => act(() => api.create('dorm/absences/recalculate', { night }), loadAbsences)
+  const recordPayment = (payload) => act(() => api.create('dorm/payments', payload), loadPayments)
 
   return {
-    rooms, placements, leaves, absences, students,
+    rooms, placements, leaves, absences, payments, studentPayments, students,
     loading, saving, searching, error,
     roomFilters, placementFilters, nightFilters,
     kindOptions, roomOptions, studentOptions, roomTotals, roomKinds: ROOM_KINDS,
-    loadRooms, loadPlacements, loadLeaves, loadAbsences, searchStudents,
-    createRoom, updateRoom, place, relocate, moveOut, createLeave, removeLeave, recalculate,
+    loadRooms, loadPlacements, loadLeaves, loadAbsences, loadPayments, loadStudentPayments, searchStudents,
+    createRoom, updateRoom, place, relocate, moveOut, createLeave, removeLeave, recalculate, recordPayment,
   }
 })
