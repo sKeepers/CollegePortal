@@ -5,6 +5,7 @@ namespace App\Services\Notifications;
 use App\Models\JournalLesson;
 use App\Models\NotificationSubscription;
 use App\Models\User;
+use App\Support\Notifications\MessageBody;
 use App\Support\Notifications\NotificationEvents;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
@@ -90,6 +91,6 @@ class UnclosedJournalNotifier
             ])));
         });
 
-        return "Журнал за {$date->format('d.m')} не закрыт:\n".$lines->implode("\n");
+        return MessageBody::list("Журнал за {$date->format('d.m')} не закрыт:", $lines);
     }
 }

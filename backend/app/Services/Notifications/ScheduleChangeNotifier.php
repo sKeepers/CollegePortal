@@ -5,6 +5,7 @@ namespace App\Services\Notifications;
 use App\Models\NotificationSubscription;
 use App\Models\ScheduleLesson;
 use App\Models\User;
+use App\Support\Notifications\MessageBody;
 use App\Support\Notifications\NotificationEvents;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
@@ -124,6 +125,8 @@ class ScheduleChangeNotifier
                 ])));
             });
 
-        return "Расписание изменилось:\n".$lines->implode("\n");
+        // Заголовок называет число сразу: при подрезанном списке человек должен
+        // видеть, сколько занятий тронули, а не только первые десять.
+        return MessageBody::list('Расписание изменилось, занятий: '.$lessons->count(), $lines);
     }
 }

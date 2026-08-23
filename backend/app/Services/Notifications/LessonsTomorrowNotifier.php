@@ -5,6 +5,7 @@ namespace App\Services\Notifications;
 use App\Models\NotificationSubscription;
 use App\Models\ScheduleLesson;
 use App\Models\User;
+use App\Support\Notifications\MessageBody;
 use App\Support\Notifications\NotificationEvents;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
@@ -101,6 +102,6 @@ class LessonsTomorrowNotifier
             ])));
         });
 
-        return "Занятия на {$date->format('d.m')}:\n".$lines->implode("\n");
+        return MessageBody::list("Занятия на {$date->format('d.m')}:", $lines);
     }
 }
