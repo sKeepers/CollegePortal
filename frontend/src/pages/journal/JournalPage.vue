@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute } from 'vue-router'
-import { Download, RefreshCw, Save, UserCheck, UserX, Wand2 } from '@lucide/vue'
+import { Download, Printer, RefreshCw, Save, UserCheck, UserX, Wand2 } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import AppToolbar from '../../components/ui/AppToolbar.vue'
@@ -29,12 +29,46 @@ const signDialogVisible = ref(false)
 const historyFilters = reactive({ status: '' })
 const exporting = ref(false)
 const canExport = computed(() => hasPermission('journal.export'))
+const printing = ref(false)
 
 /**
  * Выгрузка берёт период и группу прямо из фильтров журнала: человек уже свёл
  * экран к тому, что ему нужно, и просить его повторить тот же отбор в другом
  * месте незачем. Без выбранной группы уходит выгрузка по преподавателям.
  */
+/**
+ * Страница бумажного журнала: студенты по строкам, занятия по столбцам. Нужна
+ * группа — без неё страницы не бывает, поэтому кнопка появляется только с
+ * выбранной группой.
+ */
+async function exportPrintableGrid() {
+  printing.value = true
+  try {
+    const filters = store.filters
+    const params = new URLSearchParams(Object.fromEntries(
+      Object.entries({
+        group_id: filters.group_id,
+        subject_id: filters.subject_id,
+        date_from: filters.date_from || filters.date,
+        date_to: filters.date_to || filters.date,
+      }).filter(([, value]) => value !== '' && value !== null && value !== undefined),
+    ))
+    const blob = await api.download(`/journal/export/grid.csv?${params.toString()}`)
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `journal-page-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  } catch (err) {
+    store.error = err.message
+  } finally {
+    printing.value = false
+  }
+}
+
 async function exportJournal() {
   exporting.value = true
   try {
@@ -282,6 +316,10 @@ onMounted(async () => {
         <q-btn v-if="canExport" flat :loading="exporting" :disable="store.loading" @click="exportJournal">
           <Download :size="16" /><span>Выгрузить CSV</span>
           <q-tooltip>Занятия за выбранный период. Группа берётся из фильтра, без неё выгружаются все.</q-tooltip>
+        </q-btn>
+        <q-btn v-if="canExport && store.filters.group_id" flat :loading="printing" :disable="store.loading" @click="exportPrintableGrid">
+          <Printer :size="16" /><span>Журнал на печать</span>
+          <q-tooltip>Страница бумажного журнала за выбранный период: студенты по строкам, занятия по столбцам.</q-tooltip>
         </q-btn>
         <q-btn flat :disable="store.loading" @click="refresh"><RefreshCw :size="16" /><span>Обновить</span></q-btn>
       </template>
