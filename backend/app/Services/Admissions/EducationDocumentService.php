@@ -77,6 +77,10 @@ class EducationDocumentService
             'issue_date' => $this->trimmed($source['issue_date'] ?? null),
             'document_organization' => $this->trimmed($source['document_organization'] ?? null),
             'graduation_year' => $this->trimmed($source['graduation_year'] ?? null),
+            // Средний балл и приложение приходят тем же аттестатом. Столбцы под
+            // них были всегда, а переносить их было нечему.
+            'average_score' => $source['average_score'] ?? null,
+            'has_attachment' => $source['has_attachment'] ?? null,
         ], fn ($value): bool => $value !== null);
 
         if (! isset($payload['series']) && ! isset($payload['number'])) {

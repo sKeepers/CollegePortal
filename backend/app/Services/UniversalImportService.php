@@ -12,6 +12,7 @@ use App\Services\Import\CurriculumImportHandler;
 use App\Services\Import\EducationProgramImportHandler;
 use App\Services\Import\EmployeeImportHandler;
 use App\Services\Import\RfidCardIssueImportHandler;
+use App\Services\Import\EducationDocumentImportHandler;
 use App\Services\Import\GroupImportHandler;
 use App\Services\Import\ImportHandlerInterface;
 use App\Services\Import\ScheduleImportHandler;
@@ -53,6 +54,7 @@ class UniversalImportService
     ) {
         foreach ([
             new StudentImportHandler($snils, $studentPeople, $identityDocuments, $educationDocuments, $accounts),
+            new EducationDocumentImportHandler($educationDocuments, $studentPeople),
             new GroupImportHandler(),
             new TeacherImportHandler($accounts, $people, $snils),
             new SubjectImportHandler($autoCodeService),
