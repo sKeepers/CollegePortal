@@ -901,6 +901,8 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         Route::get('journal/lessons', [JournalLessonController::class, 'index']);
         Route::get('journal/export/group.csv', [JournalLessonController::class, 'exportGroup'])->middleware('permission:journal.export');
         Route::get('journal/export/teacher.csv', [JournalLessonController::class, 'exportTeacher'])->middleware('permission:journal.export');
+        Route::get('journal/report/grid', [JournalLessonController::class, 'grid']);
+        Route::get('journal/export/grid.csv', [JournalLessonController::class, 'exportGrid'])->middleware('permission:journal.export');
         Route::get('journal/lessons/{lesson}', [JournalLessonController::class, 'show']);
         Route::get('journal/edit-requests/pending', [JournalLessonController::class, 'pendingEditRequests'])->middleware('permission:journal.reopen');
         Route::get('journal/edit-requests/history', [JournalLessonController::class, 'editRequestHistory'])->middleware('permission:journal.reopen');
