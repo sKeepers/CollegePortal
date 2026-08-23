@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Classroom;
+use App\Models\LessonTime;
 use App\Models\Employee;
 use App\Models\Group;
 use App\Models\ReferenceItem;
@@ -296,15 +297,31 @@ class ScheduleEngineService
             $dayOfWeek = CarbonImmutable::parse($date)->dayOfWeekIso;
         }
 
+        $lessonNumber = (int) ($payload['lesson_number'] ?? 1);
+        $startsAt = substr((string) ($payload['starts_at'] ?? ''), 0, 5);
+        $endsAt = substr((string) ($payload['ends_at'] ?? ''), 0, 5);
+
+        // Время пары набирать в каждой строке не нужно: если номер пары задан, а
+        // время пустое, оно берётся из сетки звонков. Заданное руками время сетка
+        // не трогает — перенос и замена остаются возможными.
+        if ($startsAt === '' || $endsAt === '') {
+            $bell = LessonTime::query()->where('lesson_number', $lessonNumber)->where('is_active', true)->first();
+
+            if ($bell !== null) {
+                $startsAt = $startsAt !== '' ? $startsAt : $bell->startsAtShort();
+                $endsAt = $endsAt !== '' ? $endsAt : $bell->endsAtShort();
+            }
+        }
+
         return [
             'academic_year' => (string) ($payload['academic_year'] ?? $this->academicYearForDate($date)),
             'semester' => (int) ($payload['semester'] ?? $this->semesterForDate($date)),
             'date' => $date,
             'day_of_week' => $dayOfWeek ? (int) $dayOfWeek : null,
             'week_type' => $payload['week_type'] ?? null,
-            'lesson_number' => (int) ($payload['lesson_number'] ?? 1),
-            'starts_at' => substr((string) ($payload['starts_at'] ?? ''), 0, 5),
-            'ends_at' => substr((string) ($payload['ends_at'] ?? ''), 0, 5),
+            'lesson_number' => $lessonNumber,
+            'starts_at' => $startsAt,
+            'ends_at' => $endsAt,
             'group_id' => (int) ($payload['group_id'] ?? 0),
             'subject_id' => (int) ($payload['subject_id'] ?? 0),
             'teacher_id' => (int) ($payload['teacher_id'] ?? 0),

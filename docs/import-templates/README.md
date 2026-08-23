@@ -9,6 +9,7 @@
 - `teachers.md`
 - `subjects.md`
 - `classrooms.md`
+- `lesson-times.md`
 - `admissions.md`
 - `curricula.md`
 - `teaching-load.md`
