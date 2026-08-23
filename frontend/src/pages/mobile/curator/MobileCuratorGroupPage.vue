@@ -90,12 +90,25 @@ watch(groupId, (id) => store.openGroup(id))
           >Неделя</button>
         </div>
 
+        <!--
+          Эти четыре числа считает проходная, а не журнал: «не пришли» значит «нет
+          прохода через турникет», и с отметкой преподавателя оно не совпадает. Пока
+          подписи молчали об этом, куратор читал их как посещаемость занятий — а в дни,
+          когда проходная молчит, вся группа выглядела не пришедшей.
+        -->
+        <p v-if="summary" class="mobile-cabinet-empty mobile-cabinet-metrics-source">По данным проходной, не по журналу</p>
+
         <div v-if="summary" class="mobile-cabinet-metrics">
           <article><span>Вовремя</span><strong>{{ summary.on_time }}</strong></article>
           <article><span>Опоздали</span><strong>{{ summary.late }}</strong></article>
-          <article><span>Не пришли</span><strong>{{ summary.absent }}</strong></article>
+          <article><span>Нет прохода</span><strong>{{ summary.absent }}</strong></article>
           <article><span>Сейчас в здании</span><strong>{{ summary.inside_now }}</strong></article>
         </div>
+
+        <q-banner v-if="summary && !summary.with_events" class="mobile-cabinet-banner">
+          За этот день проходная не отметила никого из группы. Числа выше говорят об
+          отсутствии прохода, а не о том, был ли студент на занятии, — это видно в журнале.
+        </q-banner>
 
         <div v-if="store.attendanceLoading" class="mobile-cabinet-loading"><q-spinner color="primary" size="24px" /></div>
         <ul v-else-if="store.attendanceRows.length" class="mobile-cabinet-roster">
