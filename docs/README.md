@@ -65,6 +65,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [Документы абитуриента](ДОКУМЕНТЫ_АБИТУРИЕНТА.md)
 - [Admissions FIS Import](FIS_ADMISSIONS_IMPORT.md)
 - [Дополнение карточек студентов из выгрузок ФИС ГИА](CONTINGENT_FIS_RECONCILIATION_2026-08.md) — что сошлось, что нет и что осталось владельцу после захода 23.08.2026
+- [Перенос контингента на боевой сервер](CONTINGENT_TO_PROD.md) — чем и в каком порядке грузить 593 студента, 68 групп и 38 программ; отрепетировано на копии боевой базы
 - [Person Model](PERSON_MODEL.md)
 - [Identity Domain](IDENTITY_DOMAIN.md)
 - [Digital Passes](DIGITAL_PASSES.md)
