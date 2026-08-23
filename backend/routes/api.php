@@ -48,7 +48,9 @@ use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\DigitalIdentityController;
 use App\Http\Controllers\Api\DormAbsenceController;
 use App\Http\Controllers\Api\DormLeaveController;
+use App\Http\Controllers\Api\DormConductController;
 use App\Http\Controllers\Api\DormPaymentController;
+use App\Http\Controllers\Api\DormSocialController;
 use App\Http\Controllers\Api\DormPlacementController;
 use App\Http\Controllers\Api\DormRoomController;
 use App\Http\Controllers\Api\RfidCardController;
@@ -572,6 +574,24 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         ->middleware('permission:dorm.placements.manage');
     Route::post('dorm/placements/move-out', [DormPlacementController::class, 'moveOut'])
         ->middleware('permission:dorm.placements.manage');
+    // Второй контур общежития: провинности и социальный паспорт. Своё право,
+    // выданное ровно одной роли — заместителю по воспитательной работе.
+    // Коменданту эти маршруты закрыты, и это разграничение, а не недоделка.
+    Route::get('dorm/conduct', [DormConductController::class, 'index'])
+        ->middleware('permission:dorm.conduct.view');
+    Route::post('dorm/conduct', [DormConductController::class, 'store'])
+        ->middleware('permission:dorm.conduct.manage');
+    Route::patch('dorm/conduct/{dormConductRecord}', [DormConductController::class, 'update'])
+        ->middleware('permission:dorm.conduct.manage');
+    Route::post('dorm/conduct/{dormConductRecord}/amend', [DormConductController::class, 'amend'])
+        ->middleware('permission:dorm.conduct.manage');
+    Route::get('dorm/social', [DormSocialController::class, 'index'])
+        ->middleware('permission:dorm.social.view');
+    Route::post('dorm/social', [DormSocialController::class, 'store'])
+        ->middleware('permission:dorm.social.manage');
+    Route::patch('dorm/social/{dormSocialRecord}', [DormSocialController::class, 'update'])
+        ->middleware('permission:dorm.social.manage');
+
     Route::get('dorm/payments/summary', [DormPaymentController::class, 'summary'])
         ->middleware('permission:dorm.payments.view');
     Route::get('dorm/payments', [DormPaymentController::class, 'index'])

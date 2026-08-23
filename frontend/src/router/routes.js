@@ -32,6 +32,7 @@ const AdmissionsFoundationPage = () => import('../pages/admissions/FoundationWor
 const DigitalPassesPage = () => import('../pages/identity/DigitalPassesPage.vue')
 const RfidCardsPage = () => import('../pages/identity/RfidCardsPage.vue')
 const DormPage = () => import('../pages/dorm/DormPage.vue')
+const DormUpbringingPage = () => import('../pages/dorm/DormUpbringingPage.vue')
 const MyDigitalPassPage = () => import('../pages/identity/MyDigitalPassPage.vue')
 const AccessGatePage = () => import('../pages/access/AccessGatePage.vue')
 const MobileScannerPage = () => import('../pages/access/MobileScannerPage.vue')
@@ -441,6 +442,13 @@ export const routes = [
         // Право на комнаты — самое общее в модуле: оно есть и у коменданта
         // общежития, и у заместителя по воспитательной работе.
         meta: { title: 'Общежитие', permission: 'dorm.rooms.view' },
+      },
+      {
+        path: 'dorm/upbringing',
+        name: 'dorm-upbringing',
+        component: DormUpbringingPage,
+        // Отдельный раздел с отдельным правом: комендант сюда не попадает.
+        meta: { title: 'Воспитательная работа', permission: 'dorm.conduct.view' },
       },
       {
         path: 'admin/audit',

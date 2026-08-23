@@ -19,6 +19,7 @@ import {
   FileText,
   Gauge,
   GraduationCap,
+  HeartHandshake,
   KeyRound,
   LogOut,
   Menu,
@@ -141,6 +142,9 @@ const navGroups = [
       // Общежитие стоит здесь, а не отдельной группой: для коменданта это
       // продолжение той же работы — кто где живёт и кто вошёл в дверь.
       { label: 'Общежитие', to: '/dorm', icon: BedDouble, permission: 'dorm.rooms.view' },
+      // Второй контур общежития отдельным пунктом: у него своё право, и
+      // коменданту он не показывается вовсе.
+      { label: 'Воспитательная работа', to: '/dorm/upbringing', icon: HeartHandshake, permission: 'dorm.conduct.view' },
       { label: 'Проходная', to: '/access/gate', icon: DoorOpen, roles: ['admin', 'security'], permission: 'gate.scan' },
       { label: 'Мобильный сканер', to: '/access/mobile-scanner', icon: QrCode, roles: ['admin', 'security'], permission: 'gate.scan' },
       { label: 'Кто сейчас в здании', to: '/access/muster', icon: UsersRound, roles: ['admin', 'security', 'hr'], permission: 'gate.reports' },
