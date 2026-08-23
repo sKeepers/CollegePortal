@@ -104,14 +104,14 @@ watch(lessonId, reload)
 
             <div v-if="store.canSetGrades" class="mobile-cabinet-choice mobile-cabinet-choice--grades" role="group" aria-label="Оценка">
               <button
-                v-for="value in GRADE_VALUES"
-                :key="value"
+                v-for="grade in GRADE_VALUES"
+                :key="grade.value"
                 type="button"
-                :class="['mobile-cabinet-choice-item', { 'mobile-cabinet-choice-item--on': store.gradeFor(row.student_id) === value }]"
-                :aria-label="`Оценка ${value}`"
-                :aria-pressed="store.gradeFor(row.student_id) === value"
-                @click="store.setGrade(row.student_id, value)"
-              >{{ value }}</button>
+                :class="['mobile-cabinet-choice-item', { 'mobile-cabinet-choice-item--on': store.gradeFor(row.student_id) === grade.value }]"
+                :aria-label="grade.label"
+                :aria-pressed="store.gradeFor(row.student_id) === grade.value"
+                @click="store.setGrade(row.student_id, grade.value)"
+              >{{ grade.short }}</button>
               <button
                 type="button"
                 class="mobile-cabinet-choice-item mobile-cabinet-choice-item--clear"
