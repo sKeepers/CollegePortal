@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
-import { BadgeCheck, BriefcaseBusiness, Building2, CalendarDays, FileText, History, IdCard, UserRound } from '@lucide/vue'
+import { BadgeCheck, BriefcaseBusiness, Building2, CalendarDays, FileText, History, IdCard, Trash2, UserRound } from '@lucide/vue'
 import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
 import AppCard from '../../components/ui/AppCard.vue'
@@ -385,6 +385,39 @@ function openAssignmentDialog() {
 async function saveAssignment() {
   await store.addAssignment(selected.value.id, assignmentForm)
   assignmentDialog.value = false
+
+/*
+  Назначение и период статуса заводились и оставались навсегда: опечатку в них
+  нельзя было исправить ничем (находка аудита 2.9). Ручки на бэкенде были, а
+  кнопок не было.
+
+  У назначения — удаление: другого способа исправить его нет. У периода —
+  **отмена**, а не удаление: применённый период уже передвинул занятия, и
+  удаление стёрло бы запись, оставив расписание переставленным без объяснения.
+  Отмена возвращает занятия и оставляет след.
+*/
+function removeAssignment(item) {
+  if (!canManageAssignments.value) return
+  const name = [item.position?.name, item.department?.name].filter(Boolean).join(' · ') || 'Назначение'
+  $q.dialog({ title: 'Убрать назначение?', message: name, cancel: true, ok: { label: 'Убрать', color: 'negative' } }).onOk(async () => {
+    await store.removeAssignment(item.id)
+    $q.notify({ type: 'positive', message: 'Назначение убрано' })
+  })
+}
+
+function cancelStatusPeriod(item) {
+  if (!canManageStatuses.value) return
+  $q.dialog({
+    title: 'Отменить период?',
+    message: `${statusLabel(item.status)}: ${formatDate(item.date_from)} — ${formatDate(item.date_to)}. Занятия, перенесённые этим периодом, вернутся на место.`,
+    prompt: { model: '', type: 'text', label: 'Причина', isValid: () => true },
+    cancel: true,
+    ok: { label: 'Отменить период', color: 'negative' },
+  }).onOk(async (reason) => {
+    await store.cancelStatusPeriodFromCard(item.id, reason)
+    $q.notify({ type: 'positive', message: 'Период отменён' })
+  })
+}
 }
 
 function openStatusDialog(status = 'active') {
@@ -535,7 +568,13 @@ watch(() => route.path, (path) => {
                     <q-item-label>{{ item.position?.name || 'Должность' }} · {{ item.department?.name || 'Подразделение' }}</q-item-label>
                     <q-item-label caption>{{ formatDate(item.started_at) }} — {{ formatDate(item.ended_at) }} · {{ item.rate }} ставки</q-item-label>
                   </q-item-section>
-                  <q-item-section side><q-chip v-if="item.is_primary" dense color="primary" text-color="white">Основное</q-chip></q-item-section>
+                  <q-item-section side class="row items-center no-wrap q-gutter-xs">
+                    <q-chip v-if="item.is_primary" dense color="primary" text-color="white">Основное</q-chip>
+                    <q-btn v-if="canManageAssignments" flat dense round color="negative" @click="removeAssignment(item)">
+                      <Trash2 :size="16" />
+                      <q-tooltip>Убрать назначение</q-tooltip>
+                    </q-btn>
+                  </q-item-section>
                 </q-item>
                 <q-item v-if="!(selected.assignments || []).length"><q-item-section class="text-grey-7">Назначений пока нет</q-item-section></q-item>
               </q-list>
@@ -547,6 +586,19 @@ watch(() => route.path, (path) => {
                   <q-item-section>
                     <q-item-label>{{ statusLabel(item.status) }} · {{ item.period_status || 'planned' }}</q-item-label>
                     <q-item-label caption>{{ formatDate(item.date_from) }} — {{ formatDate(item.date_to) }} · {{ item.reason || 'Без причины' }}</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-btn
+                      v-if="canManageStatuses && item.period_status !== 'cancelled'"
+                      flat
+                      dense
+                      no-caps
+                      color="negative"
+                      @click="cancelStatusPeriod(item)"
+                    >
+                      Отменить
+                      <q-tooltip>Занятия, перенесённые периодом, вернутся на место</q-tooltip>
+                    </q-btn>
                   </q-item-section>
                 </q-item>
                 <q-item v-if="!(selected.status_periods || []).length"><q-item-section class="text-grey-7">История статусов пока пуста</q-item-section></q-item>

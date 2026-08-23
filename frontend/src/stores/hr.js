@@ -233,6 +233,28 @@ export const useHrStore = defineStore('hr', () => {
     await loadEmployees()
   }
 
+  /**
+   * Убрать назначение. Другого способа исправить опечатку нет: назначение
+   * заводится и остаётся навсегда, править его портал не умеет.
+   */
+  async function removeAssignment(assignmentId) {
+    await api.delete('employee-assignments', assignmentId)
+    await loadEmployees()
+  }
+
+  /**
+   * Отменить период статуса.
+   *
+   * Именно отменить, а не удалить. Применённый период уже передвинул занятия;
+   * удаление стёрло бы запись, а расписание осталось бы переставленным и без
+   * объяснения. Отмена возвращает занятия и оставляет след — та же операция,
+   * которой пользуется кадровый календарь.
+   */
+  async function cancelStatusPeriodFromCard(periodId, reason) {
+    await api.create(`hr/status-periods/${periodId}/cancel`, { reason: reason || null })
+    await loadEmployees()
+  }
+
   async function addStatusPeriod(employeeId, payload) {
     await api.create(`employees/${employeeId}/status-periods`, payload)
     await loadEmployees()
@@ -265,6 +287,8 @@ export const useHrStore = defineStore('hr', () => {
     removePosition,
     addAssignment,
     addStatusPeriod,
+    removeAssignment,
+    cancelStatusPeriodFromCard,
     calendar,
     affectedLessons,
     candidates,
