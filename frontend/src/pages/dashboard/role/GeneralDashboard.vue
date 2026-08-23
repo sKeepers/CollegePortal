@@ -76,9 +76,18 @@ const dashboardSubtitle = computed(() => `Рабочая сводка ${settings
 const isStudent = computed(() => props.primaryRole === 'student')
 const isAdmission = computed(() => props.primaryRole === 'admission')
 const isHr = computed(() => props.primaryRole === 'hr')
+/*
+  Блок показывается, только когда в нём что-то есть.
+
+  Плитки и ссылки разбираются по правам, а сами блоки выводились всегда — и у
+  коменданта «Ключевые показатели» отрисовывались пустой рамкой с заголовком:
+  студентов, групп, преподавателей и расписания он не видит по должности.
+  Пустая рамка читается как поломка, хотя это ровно то, что ему положено.
+  Замечено при обходе стенда ролями 23.08.2026.
+*/
 const dashboardWidgets = computed(() => [
-  { id: 'stats', title: isAdmission.value ? 'Приёмная комиссия' : 'Ключевые показатели', defaultSize: 'full' },
-  { id: 'actions', title: 'Быстрые действия', defaultSize: 'medium' },
+  statItems.value.length ? { id: 'stats', title: isAdmission.value ? 'Приёмная комиссия' : 'Ключевые показатели', defaultSize: 'full' } : null,
+  quickActions.value.length ? { id: 'actions', title: 'Быстрые действия', defaultSize: 'medium' } : null,
   notifications.value.length ? { id: 'notifications', title: isStudent.value ? 'Учебные уведомления' : isHr.value ? 'Кадровая сводка' : 'Рабочие уведомления', defaultSize: 'medium' } : null,
 ].filter(Boolean))
 const statItems = computed(() => [
