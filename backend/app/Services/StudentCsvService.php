@@ -114,6 +114,16 @@ class StudentCsvService
                     foreach ($students as $student) {
                         $personId = $student->person_id !== null ? (int) $student->person_id : null;
                         $identity = $personId !== null ? $identities->get($personId) : null;
+
+                        // Колонки называются «Серия паспорта» и «Номер паспорта», и это
+                        // паспорт РФ. Иностранный документ в них ехать не должен: при
+                        // обратной загрузке он лёг бы в карточку студента российским, а
+                        // выгрузка со стенда — это то, чем контингент переносят на боевой
+                        // сервер. Документ без вида пропускаем как прежде: на установках,
+                        // где справочник не заполнен, вид неизвестен у всех.
+                        if ($identity?->documentType && $identity->documentType->code !== 'russian_passport') {
+                            $identity = null;
+                        }
                         $education = $personId !== null ? $educations->get($personId) : null;
 
                         // Порядок обязан совпадать с templateHeaders() обработчика импорта.
