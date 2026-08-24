@@ -25,11 +25,15 @@ export function statusTone(options, value) { return options.find((item) => item.
 export function formatRuDate(value) { if (!value) return '—'; const date = new Date(`${value}T00:00:00`); return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('ru-RU') }
 function cleanGraduate(payload) { return { student_id: Number(payload.student_id), group_id: payload.group_id ? Number(payload.group_id) : null, education_program_id: payload.education_program_id ? Number(payload.education_program_id) : null, specialty_id: payload.specialty_id ? Number(payload.specialty_id) : null, graduation_year: Number(payload.graduation_year), qualification: payload.qualification?.trim() || '', status: payload.status || 'draft', note: payload.note?.trim() || '' } }
 function cleanDiploma(payload) { return { series: payload.series?.trim() || '', number: payload.number?.trim() || '', registration_number: payload.registration_number?.trim() || '', issue_date: payload.issue_date || null, qualification: payload.qualification?.trim() || '', gia_decision: payload.gia_decision?.trim() || '', status: payload.status || 'draft', note: payload.note?.trim() || '' } }
-function cleanSupplement(payload) { return { series: payload.series?.trim() || '', number: payload.number?.trim() || '', issue_date: payload.issue_date || null, status: payload.status || 'draft', note: payload.note?.trim() || '' } }
+// `subjects` — перечень дисциплин приложения. До 24.08.2026 он не доходил до сервера
+// вовсе: форма его не собирала, а чистка выбрасывала. Приложение из-за этого
+// оставалось пустым при любом наполнении портала.
+function cleanSupplement(payload) { return { series: payload.series?.trim() || '', number: payload.number?.trim() || '', issue_date: payload.issue_date || null, status: payload.status || 'draft', note: payload.note?.trim() || '', subjects: Array.isArray(payload.subjects) ? payload.subjects : [] } }
 export const useGraduationStore = defineStore('graduation', () => {
   const graduates = ref([]), students = ref([]), groups = ref([]), programs = ref([]), specialties = ref([])
   const filters = ref({ ...initialFilters })
   const selectedId = ref(null), loading = ref(false), saving = ref(false), error = ref(''), importSummary = ref(null)
+  const assembling = ref(false), assemblyError = ref(''), assemblyProblems = ref([])
   const selectedGraduate = computed(() => graduates.value.find((item) => Number(item.id) === Number(selectedId.value)) || null)
   const filteredGraduates = computed(() => graduates.value.filter((item) => (!filters.value.graduation_year || Number(item.graduation_year) === Number(filters.value.graduation_year)) && (!filters.value.group_id || Number(item.group_id) === Number(filters.value.group_id)) && (!filters.value.education_program_id || Number(item.education_program_id) === Number(filters.value.education_program_id)) && (!filters.value.diploma_status || item.diploma?.status === filters.value.diploma_status)))
   const graduationYearOptions = computed(() => [...new Set(graduates.value.map((item) => item.graduation_year).filter(Boolean))].sort((a, b) => b - a).map((year) => ({ label: String(year), value: year })))
@@ -44,6 +48,26 @@ export const useGraduationStore = defineStore('graduation', () => {
   async function save(payload, id = null) { saving.value = true; error.value = ''; try { const response = id ? await api.update('graduates', id, cleanGraduate(payload)) : await api.create('graduates', cleanGraduate(payload)); await load(); selectedId.value = response?.data?.id || id || selectedId.value; return response?.data || null } catch (err) { error.value = err.message || 'Не удалось сохранить выпускника'; throw err } finally { saving.value = false } }
   async function remove(graduate) { if (!graduate?.id) return; loading.value = true; error.value = ''; try { await api.delete('graduates', graduate.id); selectedId.value = null; await load() } catch (err) { error.value = err.message || 'Не удалось удалить выпускника'; throw err } finally { loading.value = false } }
   async function saveDiploma(payload) { if (!selectedId.value) return null; saving.value = true; error.value = ''; try { const response = await api.create(`graduates/${selectedId.value}/diploma`, cleanDiploma(payload)); await load(); return response?.data || null } catch (err) { error.value = err.message || 'Не удалось сохранить диплом'; throw err } finally { saving.value = false } }
+  /**
+   * Собрать приложение из учебного плана и итоговых оценок.
+   *
+   * Ничего не сохраняет: возвращает строки и перечень того, чего не хватает. Отказ
+   * сервера показывается как есть — он называет причину («у группы выпускника не выбран
+   * учебный план»), и своими словами её не перескажешь лучше.
+   */
+  async function assembleSupplement() {
+    if (!selectedId.value) return []
+    assembling.value = true; assemblyError.value = ''; assemblyProblems.value = []
+    try {
+      const payload = await api.get(`graduates/${selectedId.value}/supplement/assembled`)
+      const data = payload?.data || {}
+      assemblyProblems.value = data.problems || []
+      return data.rows || []
+    } catch (err) {
+      assemblyError.value = err.message || 'Не удалось собрать приложение'
+      return []
+    } finally { assembling.value = false }
+  }
   async function saveSupplement(payload) { if (!selectedId.value) return null; saving.value = true; error.value = ''; try { const response = await api.create(`graduates/${selectedId.value}/supplement`, cleanSupplement(payload)); await load(); return response?.data || null } catch (err) { error.value = err.message || 'Не удалось сохранить приложение'; throw err } finally { saving.value = false } }
   async function importCsv(file) { if (!file) return null; loading.value = true; error.value = ''; importSummary.value = null; try { const formData = new FormData(); formData.append('file', file); const payload = await api.upload('/graduates/import', formData); importSummary.value = payload?.data || null; await load(); return importSummary.value } catch (err) { error.value = err.message || 'Не удалось импортировать CSV'; throw err } finally { loading.value = false } }
   async function exportCsv() { const blob = await api.download('/graduates/export'); const url = window.URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'graduates.csv'; link.click(); window.URL.revokeObjectURL(url) }
@@ -51,5 +75,5 @@ export const useGraduationStore = defineStore('graduation', () => {
   function resetFilters() { filters.value = { ...initialFilters } }
   function select(graduate) { selectedId.value = graduate?.id || null }
   function selectById(id) { selectedId.value = id || null }
-  return { graduates, filteredGraduates, students, groups, programs, specialties, filters, selectedId, selectedGraduate, loading, saving, error, importSummary, graduationYearOptions, studentOptions, groupOptions, programOptions, specialtyOptions, load, save, remove, saveDiploma, saveSupplement, importCsv, exportCsv, setFilters, resetFilters, select, selectById }
+  return { graduates, filteredGraduates, students, groups, programs, specialties, filters, selectedId, selectedGraduate, loading, saving, error, importSummary, graduationYearOptions, studentOptions, groupOptions, programOptions, specialtyOptions, load, save, remove, saveDiploma, saveSupplement, assembleSupplement, assembling, assemblyError, assemblyProblems, importCsv, exportCsv, setFilters, resetFilters, select, selectById }
 })

@@ -83,6 +83,7 @@ const diplomaForm = reactive({
   note: "",
 });
 const supplementForm = reactive({
+  subjects: [],
   series: "",
   number: "",
   issue_date: "",
@@ -283,6 +284,7 @@ async function saveDiploma() {
 function openSupplementForm() {
   if (!canUpdate.value) return;
   Object.assign(supplementForm, {
+    subjects: Array.isArray(supplement.value?.subjects) ? supplement.value.subjects : [],
     series: supplement.value?.series || "",
     number: supplement.value?.number || "",
     issue_date: supplement.value?.issue_date || "",
@@ -293,6 +295,13 @@ function openSupplementForm() {
 }
 async function saveSupplement() {
   if (!canUpdate.value) return;
+// Сборка ничего не сохраняет: она наполняет форму, а решение выдавать остаётся за
+// человеком. Поэтому кнопка отдельно от «Сохранить», а не вместо неё.
+async function assembleSupplement() {
+  const rows = await store.assembleSupplement();
+  if (rows.length) supplementForm.subjects = rows;
+}
+
   if (!canUpdate.value) return;
   await store.saveSupplement(supplementForm);
   supplementVisible.value = false;
@@ -832,7 +841,33 @@ onMounted(async () => {
             outlined
             dense
             type="textarea"
-            label="Комментарий" /></q-card-section
+            label="Комментарий" />
+          <div class="graduation-supplement">
+            <q-btn
+              outline
+              color="primary"
+              :loading="store.assembling"
+              @click="assembleSupplement"
+              >Собрать из плана и оценок</q-btn
+            >
+            <p v-if="store.assemblyError" class="graduation-supplement__error">
+              {{ store.assemblyError }}
+            </p>
+            <template v-else-if="supplementForm.subjects.length">
+              <p class="graduation-supplement__summary">
+                Дисциплин: {{ supplementForm.subjects.length }} · без итоговой оценки:
+                {{ store.assemblyProblems.length }}
+              </p>
+              <ul
+                v-if="store.assemblyProblems.length"
+                class="graduation-supplement__problems"
+              >
+                <li v-for="problem in store.assemblyProblems" :key="problem">
+                  {{ problem }}
+                </li>
+              </ul>
+            </template>
+          </div></q-card-section
         ><q-card-actions align="right"
           ><q-btn
             flat
@@ -861,3 +896,28 @@ onMounted(async () => {
     />
   </AppPage>
 </template>
+
+<style scoped>
+.graduation-supplement {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.graduation-supplement__error {
+  margin: 0;
+  color: var(--negative, #c10015);
+}
+
+.graduation-supplement__summary {
+  margin: 0;
+  font-weight: 600;
+}
+
+.graduation-supplement__problems {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--text-secondary, #5f6368);
+}
+</style>

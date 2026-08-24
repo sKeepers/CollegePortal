@@ -16,6 +16,7 @@ use App\Models\Group;
 use App\Models\Specialty;
 use App\Models\Student;
 use App\Services\Admissions\AdmissionDocumentReadinessService;
+use App\Services\DiplomaSupplementAssembler;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -29,8 +30,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class GraduateController extends Controller
 {
-    public function __construct(private readonly AdmissionDocumentReadinessService $readiness)
-    {
+    public function __construct(
+        private readonly AdmissionDocumentReadinessService $readiness,
+        private readonly DiplomaSupplementAssembler $assembler,
+    ) {
     }
 
     public function index(Request $request): AnonymousResourceCollection
@@ -85,6 +88,21 @@ class GraduateController extends Controller
         return (new DiplomaResource($diploma->load('supplement')))
             ->response()
             ->setStatusCode($diploma->wasRecentlyCreated ? Response::HTTP_CREATED : Response::HTTP_OK);
+    }
+
+    /**
+     * Собрать приложение к диплому из учебного плана и итоговых оценок.
+     *
+     * Ничего не сохраняет: отдаёт строки и перечень того, чего не хватает. Решение
+     * выдавать остаётся за человеком, а ручной ввод — за `storeSupplement`, потому что
+     * переводы, перезачёты и академические разницы иначе некуда девать.
+     *
+     * Собирать не из чего — это отказ с названной причиной. Пустое приложение,
+     * напечатанное на бланке, — испорченный бланк строгой отчётности.
+     */
+    public function assembleSupplement(Graduate $graduate): JsonResponse
+    {
+        return response()->json(['data' => $this->assembler->assemble($graduate)]);
     }
 
     public function storeSupplement(StoreDiplomaSupplementRequest $request, Graduate $graduate): JsonResponse

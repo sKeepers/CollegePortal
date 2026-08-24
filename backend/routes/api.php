@@ -769,6 +769,9 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     Route::get('graduates/export', [GraduateController::class, 'export'])->middleware('permission:graduation.view');
     Route::post('graduates/import', [GraduateController::class, 'import'])->middleware('permission:graduation.edit');
     Route::post('graduates/{graduate}/diploma', [GraduateController::class, 'storeDiploma'])->middleware('permission:graduation.edit');
+    // Сборка приложения ничего не записывает, поэтому право на просмотр: она
+    // показывает, что получится, и чего для этого не хватает.
+    Route::get('graduates/{graduate}/supplement/assembled', [GraduateController::class, 'assembleSupplement'])->middleware('permission:graduation.view');
     Route::post('graduates/{graduate}/supplement', [GraduateController::class, 'storeSupplement'])->middleware('permission:graduation.edit');
     Route::apiResource('graduates', GraduateController::class)
         ->middlewareFor(['index', 'show'], 'permission:graduation.view')
