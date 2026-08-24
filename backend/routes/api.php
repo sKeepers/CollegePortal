@@ -75,6 +75,7 @@ use App\Http\Controllers\Api\SemesterGradeController;
 use App\Http\Controllers\Api\DiplomaBlankController;
 use App\Http\Controllers\Api\DiplomaRegistryController;
 use App\Http\Controllers\Api\GraduateController;
+use App\Http\Controllers\Api\GiaProtocolController;
 use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\StudentBulkController;
 use App\Http\Controllers\Api\StudentDocumentController;
@@ -766,6 +767,15 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
         ->middlewareFor('destroy', 'permission:trash.manage');
 
     // Выпуск и дипломы.
+    // Протоколы ГИА: смотреть — с правом на выпуск, вести — со своим правом. Ведомость
+    // решений отделена от самого протокола: её правят на заседании, а шапку — до него.
+    Route::get('gia-protocols', [GiaProtocolController::class, 'index'])->middleware('permission:graduation.view');
+    Route::post('gia-protocols', [GiaProtocolController::class, 'store'])->middleware('permission:graduation.gia_protocols');
+    Route::get('gia-protocols/{giaProtocol}', [GiaProtocolController::class, 'show'])->middleware('permission:graduation.view');
+    Route::put('gia-protocols/{giaProtocol}', [GiaProtocolController::class, 'update'])->middleware('permission:graduation.gia_protocols');
+    Route::delete('gia-protocols/{giaProtocol}', [GiaProtocolController::class, 'destroy'])->middleware('permission:graduation.gia_protocols');
+    Route::get('gia-protocols/{giaProtocol}/decisions', [GiaProtocolController::class, 'decisions'])->middleware('permission:graduation.view');
+    Route::post('gia-protocols/{giaProtocol}/decisions', [GiaProtocolController::class, 'storeDecisions'])->middleware('permission:graduation.gia_protocols');
     Route::get('graduates/export', [GraduateController::class, 'export'])->middleware('permission:graduation.view');
     Route::post('graduates/import', [GraduateController::class, 'import'])->middleware('permission:graduation.edit');
     Route::post('graduates/{graduate}/diploma', [GraduateController::class, 'storeDiploma'])->middleware('permission:graduation.edit');

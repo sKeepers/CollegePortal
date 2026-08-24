@@ -59,6 +59,7 @@ final class GroupDependencies
         'graduates' => 'group_id',
         'teaching_loads' => 'group_id',
         'semester_grades' => 'group_id',
+        'gia_protocols' => 'group_id',
     ];
 
     /**
@@ -80,7 +81,7 @@ final class GroupDependencies
      *
      * @var list<string>
      */
-    public const NULLIFIED = ['graduates', 'teaching_loads', 'semester_grades'];
+    public const NULLIFIED = ['graduates', 'teaching_loads', 'semester_grades', 'gia_protocols'];
 
     /**
      * Что осталось висеть на группе.
