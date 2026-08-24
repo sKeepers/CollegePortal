@@ -145,6 +145,13 @@ class EmployeeImportHandler extends AbstractImportHandler
     public function businessValidationErrors(array $data): array
     {
         $errors = [];
+
+        // Колонка «Создать учётную запись» отказывает, а не создаёт молча:
+        // почему именно так — в `AccountProvisioningService::ACCOUNTS_ARE_ISSUED_SEPARATELY`.
+        // Отказ приходит на предпросмотре, до единой записи.
+        if ($data['auto_account'] ?? false) {
+            $errors['auto_account'] = [AccountProvisioningService::ACCOUNTS_ARE_ISSUED_SEPARATELY];
+        }
         if ($error = $this->referenceError(Department::class, $data['department'] ?? null, 'Подразделение')) { $errors['department'] = [$error]; }
         if ($error = $this->referenceError(Position::class, $data['position'] ?? null, 'Должность')) { $errors['position'] = [$error]; }
         return $errors;

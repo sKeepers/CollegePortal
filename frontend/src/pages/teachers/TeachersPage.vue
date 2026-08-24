@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { formatPhone } from '../../utils/phone'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
-import { Download, Edit3, Plus, RefreshCw, Trash2, Upload } from '@lucide/vue'
+import { Download, Edit3, KeyRound, Plus, RefreshCw, Trash2, Upload } from '@lucide/vue'
 import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
@@ -40,6 +40,13 @@ const canDelete = computed(() => permissions.hasPermission('trash.manage'))
 const canRequestDeletion = computed(() => !canDelete.value && permissions.hasPermission('trash.request'))
 const canImport = computed(() => canUpdate.value)
 const canExport = computed(() => permissions.hasPermission('teachers.update') || permissions.hasPermission('teachers.edit') || permissions.hasPermission('teachers.view'))
+
+const canIssueAccounts = computed(() => permissions.hasPermission('teachers.bulk_accounts'))
+
+const accountsPreview = ref(null)
+const accountsDialogVisible = ref(false)
+const issuedCredentials = ref([])
+const credentialsDialogVisible = ref(false)
 
 const importFile = ref(null)
 const formVisible = ref(false)
@@ -212,6 +219,61 @@ async function handleImport(file) {
   notifySuccess('Импорт преподавателей завершен')
 }
 
+/**
+ * Выдача учётных записей преподавателям разом.
+ *
+ * Сперва предпросмотр: он ничего не пишет и говорит, скольким запись достанется.
+ * Потом подтверждение — и **логины с паролями показываются один раз**. Второго
+ * раза не будет: в базе лежит хеш, а не пароль.
+ */
+async function openAccounts() {
+  if (!canIssueAccounts.value) return
+
+  try {
+    accountsPreview.value = await store.previewAccounts()
+    accountsDialogVisible.value = true
+  } catch {
+    $q.notify({ type: 'negative', message: store.error })
+  }
+}
+
+async function confirmAccounts() {
+  try {
+    const result = await store.applyAccounts()
+    accountsDialogVisible.value = false
+
+    if (result?.credentials?.length) {
+      issuedCredentials.value = result.credentials
+      credentialsDialogVisible.value = true
+    } else {
+      notifySuccess('Выдавать было нечего: у всех уже есть учётные записи')
+    }
+  } catch {
+    $q.notify({ type: 'negative', message: store.error })
+  }
+}
+
+/**
+ * Список выдачи файлом.
+ *
+ * Пароли показываются один раз, и человеку нужно успеть их сохранить. BOM в
+ * начале — иначе Excel открывает кириллицу набором символов.
+ */
+function credentialsCsv() {
+  const rows = [['ФИО', 'Логин', 'Пароль']]
+  issuedCredentials.value.forEach((row) => rows.push([row.name, row.login, row.password]))
+  const csv = '\ufeff' + rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(';')).join('\r\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `teacher-accounts-${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
 async function exportTeachers() {
   if (!canExport.value) return
   await store.exportCsv()
@@ -308,6 +370,13 @@ onMounted(async () => {
             <Download :size="16" />
             <span>Экспорт</span>
             <q-tooltip>Скачать CSV</q-tooltip>
+          </template>
+        </q-btn>
+        <q-btn v-if="canIssueAccounts" color="primary" :disable="store.loading" @click="openAccounts">
+          <template #default>
+            <KeyRound :size="16" />
+            <span>Выдать учётные записи</span>
+            <q-tooltip>Всем преподавателям без учётной записи. Пароли покажутся один раз.</q-tooltip>
           </template>
         </q-btn>
       </template>
@@ -413,6 +482,62 @@ onMounted(async () => {
         />
       </aside>
     </div>
+
+    <q-dialog v-model="accountsDialogVisible">
+      <q-card style="min-width: 420px">
+        <q-card-section class="text-h6">Выдать учётные записи</q-card-section>
+        <q-card-section>
+          <div v-if="accountsPreview">
+            Преподавателей всего: <b>{{ accountsPreview.selected }}</b>.<br/>
+            Учётная запись будет выдана: <b>{{ accountsPreview.will_change }}</b>.<br/>
+            Уже есть у: {{ accountsPreview.skipped }}.
+          </div>
+          <div class="text-caption text-orange-9 q-mt-sm">
+            Логины и пароли покажутся <b>один раз</b>. Сохраните список сразу — второй раз
+            портал их не покажет, в базе хранится не пароль.
+          </div>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Отмена" v-close-popup />
+          <q-btn
+            color="primary"
+            label="Выдать"
+            :loading="store.saving"
+            :disable="!accountsPreview?.will_change"
+            @click="confirmAccounts"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!--
+      Окно нельзя закрыть мимо кнопки: пароли показываются один раз, и случайный
+      щелчок по подложке стоил бы человеку всей выдачи.
+    -->
+    <q-dialog v-model="credentialsDialogVisible" persistent>
+      <q-card style="min-width: 520px">
+        <q-card-section class="text-h6">Учётные записи выданы</q-card-section>
+        <q-card-section class="text-caption text-orange-9">
+          Пароли показываются <b>один раз</b>. Скачайте список или перепишите его сейчас.
+        </q-card-section>
+        <q-card-section style="max-height: 50vh; overflow: auto">
+          <q-markup-table flat bordered dense>
+            <thead><tr><th class="text-left">ФИО</th><th class="text-left">Логин</th><th class="text-left">Пароль</th></tr></thead>
+            <tbody>
+              <tr v-for="row in issuedCredentials" :key="row.id">
+                <td>{{ row.name }}</td>
+                <td>{{ row.login }}</td>
+                <td class="text-weight-medium">{{ row.password }}</td>
+              </tr>
+            </tbody>
+          </q-markup-table>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn color="secondary" icon="download" label="Скачать список" @click="credentialsCsv" />
+          <q-btn flat label="Я сохранил" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
 
     <q-dialog v-model="formVisible" persistent>
       <div class="teachers-form-dialog">

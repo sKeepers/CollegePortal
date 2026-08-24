@@ -5,6 +5,7 @@ namespace App\Services\Bulk;
 use App\Models\ApplicantApplication;
 use App\Models\ApplicantApplicationDocument;
 use App\Models\Student;
+use App\Models\Teacher;
 use App\Services\ApplicantApplicationDocumentService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -21,6 +22,34 @@ class BulkSelectionResolver
     public function students(array $selection): Collection
     {
         return $this->applyStudentSelection(Student::query()->with('group'), $selection)->get();
+    }
+
+    /** @return Collection<int, Teacher> */
+    public function teachers(array $selection): Collection
+    {
+        return $this->applyTeacherSelection(Teacher::query(), $selection)->get();
+    }
+
+    public function applyTeacherSelection(Builder $query, array $selection): Builder
+    {
+        $ids = collect($selection['ids'] ?? [])->filter()->map(fn ($id) => (int) $id)->unique()->values();
+
+        if ($ids->isNotEmpty()) {
+            return $query->whereIn('id', $ids);
+        }
+
+        $filter = $selection['filter'] ?? [];
+        $operator = $query->getModel()->getConnection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
+
+        return $query
+            ->when($filter['search'] ?? null, function (Builder $query, string $search) use ($operator): void {
+                $query->where(function (Builder $query) use ($operator, $search): void {
+                    $query->where('last_name', $operator, "%{$search}%")
+                        ->orWhere('first_name', $operator, "%{$search}%")
+                        ->orWhere('middle_name', $operator, "%{$search}%");
+                });
+            })
+            ->when($filter['status'] ?? null, fn (Builder $query, string $status) => $query->where('status', $status));
     }
 
     public function applyAdmissionSelection(Builder $query, array $selection): Builder

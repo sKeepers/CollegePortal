@@ -109,14 +109,27 @@ class UniversalImportApiTest extends TestCase
         $this->assertDatabaseHas('teachers', ['person_id' => $employee->person_id, 'is_active' => true]);
     }
 
-    public function test_it_imports_employee_work_schedule_and_provisions_requested_account(): void
+    /**
+     * Рабочий график сотрудника приезжает загрузкой.
+     *
+     * **Тест назывался `..._and_provisions_requested_account` и проверял заодно,
+     * что колонка «Создать учётную запись» заводит запись.** С 24.08.2026 она
+     * этого не делает — отказывает, потому что пароль этим путём человеку не
+     * показать; отказ вынесен в отдельный тест ниже. Здесь колонка стоит в
+     * «Нет», и предмет теста остаётся прежним: график.
+     *
+     * Проверка «пароля нет в ответе» — правило от 11.08.2026 — сохранена и
+     * здесь: она не про учётные записи, а про то, что ответ загрузки паролей не
+     * содержит вообще.
+     */
+    public function test_it_imports_employee_work_schedule(): void
     {
         Role::firstOrCreate(['code' => 'employee'], ['name' => 'Сотрудник']);
         Department::create(['code' => 'study', 'name' => 'Учебная часть']);
         Position::create(['code' => 'methodist', 'name' => 'Методист']);
         $file = $this->xlsxFile('employees-schedule.xlsx', [
             ['Табельный номер', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон', 'Подразделение', 'Должность', 'Дата приема', 'Статус', 'Занятость', 'Ставка', 'Преподаватель', 'Рабочий график', 'Создать учетную запись'],
-            ['', 'Графикова', 'Мария', 'Петровна', 'schedule-import@example.test', '+70000000002', 'study', 'methodist', '01.09.2026', 'Активен', 'Полная занятость', '1', 'Нет', 'Пн–Пт, 09:00–18:00', 'Да'],
+            ['', 'Графикова', 'Мария', 'Петровна', 'schedule-import@example.test', '+70000000002', 'study', 'methodist', '01.09.2026', 'Активен', 'Полная занятость', '1', 'Нет', 'Пн–Пт, 09:00–18:00', 'Нет'],
         ]);
 
         $mapping = $this->employeeTemplateMapping() + [
@@ -138,12 +151,35 @@ class UniversalImportApiTest extends TestCase
         $employee = Employee::where('employee_number', 'EMP-000001')->firstOrFail();
         $this->assertSame('weekday_0900_1800', $employee->work_schedule_code);
 
-        $user = User::where('person_id', $employee->person_id)->firstOrFail();
-        $this->assertSame('+70000000002', $user->username);
-        $this->assertTrue($user->is_active);
         // Ищем ключ, а не подстроку: с 11.08.2026 в ответе есть `must_change_password`,
         // и проверка на подстроку срабатывала на нём, хотя самого пароля в ответе нет.
         $this->assertStringNotContainsString('"password"', json_encode($response->json(), JSON_THROW_ON_ERROR));
+    }
+
+    /** Один текст и одно поведение на все три загрузчика: студентов, преподавателей, сотрудников. */
+    public function test_the_employee_import_refuses_to_create_an_account_too(): void
+    {
+        Role::firstOrCreate(['code' => 'employee'], ['name' => 'Сотрудник']);
+        Department::create(['code' => 'study', 'name' => 'Учебная часть']);
+        Position::create(['code' => 'methodist', 'name' => 'Методист']);
+        $file = $this->xlsxFile('employees-account.xlsx', [
+            ['Табельный номер', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон', 'Подразделение', 'Должность', 'Дата приема', 'Статус', 'Занятость', 'Ставка', 'Преподаватель', 'Создать учетную запись'],
+            ['', 'Графикова', 'Мария', 'Петровна', 'account-import@example.test', '+70000000003', 'study', 'methodist', '01.09.2026', 'Активен', 'Полная занятость', '1', 'Нет', 'Да'],
+        ]);
+
+        $mapping = $this->employeeTemplateMapping() + ['auto_account' => 'Создать учетную запись'];
+
+        $jobId = $this->post('/api/admin/import/preview', ['data_type' => 'employees', 'file' => $file])
+            ->assertCreated()
+            ->json('data.id');
+
+        $response = $this->postJson("/api/admin/import/{$jobId}/confirm", [
+            'mode' => 'skip_duplicates',
+            'mapping' => $mapping,
+        ])->assertOk()->assertJsonPath('data.created_count', 0)->assertJsonPath('data.error_count', 1);
+
+        $this->assertStringContainsString('массовым действием', $response->json('data.validation_errors.0.reason'));
+        $this->assertSame(0, User::where('username', '+70000000003')->count());
     }
 
     public function test_it_rejects_unknown_employee_work_schedule(): void
@@ -261,7 +297,28 @@ class UniversalImportApiTest extends TestCase
             ->assertJsonPath('data.validation_errors.0.value', null);
     }
 
-    public function test_it_provisions_requested_student_account_without_password_in_job_result(): void
+    /**
+     * Пароль не оседает ни в результате загрузки, ни в ответе — и учётная
+     * запись загрузкой не заводится вовсе.
+     *
+     * **Первая половина — правило от 11.08.2026, и оно не отменено.** Тест
+     * назывался `test_it_provisions_requested_student_account_without_password_in_job_result`
+     * и охранял ровно её: результат загрузки целиком уходит в
+     * `import_jobs.result`, поэтому пароля не должно быть ни там, ни в ответе.
+     * Проверка на ключ `"password"`, а не на подстроку, — тоже оттуда: подстрока
+     * срабатывала на `must_change_password`. Всё это осталось.
+     *
+     * **Изменилась вторая половина, которую то решение не рассматривало.**
+     * Раньше строка с «да» молча заводила учётную запись с паролем, которого
+     * никто не видел; репетиция первого сентября 24.08.2026 получила так 25
+     * записей, в которые никто не может войти, при нуле ошибок на экране.
+     * Теперь строка отклоняется на предпросмотре, с названным следующим шагом.
+     *
+     * **Отказ стал возможен только 24.08.2026**: до этого дня массовой выдачи
+     * преподавателям не было, и отказ отсылал бы человека в никуда. Сегодня она
+     * есть и у студентов, и у преподавателей.
+     */
+    public function test_it_refuses_to_create_an_account_from_import_and_keeps_the_password_out_of_the_result(): void
     {
         Role::firstOrCreate(['code' => 'student'], ['name' => 'Студент']);
         $group = Group::create(['name' => 'ИСП-101', 'specialty' => 'Инструментальное исполнительство', 'course' => 1, 'year_start' => 2026]);
@@ -274,15 +331,17 @@ class UniversalImportApiTest extends TestCase
         $response = $this->postJson("/api/admin/import/{$jobId}/confirm", [
             'mode' => 'create',
             'mapping' => ['last_name' => 'Фамилия', 'first_name' => 'Имя', 'group_name' => 'Группа', 'phone' => 'Телефон', 'auto_account' => 'Создать учетную запись'],
-        ])->assertOk()->assertJsonPath('data.created_count', 1);
+        ])->assertOk()->assertJsonPath('data.created_count', 0)->assertJsonPath('data.error_count', 1);
 
-        $student = \App\Models\Student::where('phone', '+79990000002')->firstOrFail();
-        $user = User::where('username', '+79990000002')->firstOrFail();
-        $this->assertSame($user->id, $student->user_id);
-        $this->assertNotNull($user->person_id);
-        $this->assertNotNull($user->password);
-        // Ищем ключ, а не подстроку: с 11.08.2026 в ответе есть `must_change_password`,
-        // и проверка на подстроку срабатывала на нём, хотя самого пароля в ответе нет.
+        // Отказ называет следующий шаг, а не запрет: человек читает его посреди работы.
+        $this->assertStringContainsString('массовым действием', $response->json('data.validation_errors.0.reason'));
+
+        // Ни студента, ни учётной записи: строка отклонена целиком.
+        $this->assertDatabaseMissing('students', ['phone' => '+79990000002']);
+        $this->assertSame(0, User::where('username', '+79990000002')->count());
+
+        // Правило 11.08.2026 остаётся в силе. Ищем ключ, а не подстроку: в ответе
+        // есть `must_change_password`, и проверка на подстроку срабатывала на нём.
         $this->assertStringNotContainsString('"password"', json_encode($response->json(), JSON_THROW_ON_ERROR));
     }
 

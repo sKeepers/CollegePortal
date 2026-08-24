@@ -78,6 +78,7 @@ use App\Http\Controllers\Api\GraduateController;
 use App\Http\Controllers\Api\GiaProtocolController;
 use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\StudentBulkController;
+use App\Http\Controllers\Api\TeacherBulkController;
 use App\Http\Controllers\Api\StudentDocumentController;
 use App\Http\Controllers\Api\SubjectController;
 use App\Http\Controllers\Api\ScheduleLessonController;
@@ -884,6 +885,11 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     // владельца 10.08.2026; до него на входе стояло право на создание.
     Route::post('students/bulk/preview', [StudentBulkController::class, 'preview'])->middleware('permission:students.view');
     Route::post('students/bulk/apply', [StudentBulkController::class, 'apply'])->middleware('permission:students.view');
+    // Массовая выдача учётных записей преподавателям. Право проверяется дважды:
+    // маршрут пускает того, кто вообще видит преподавателей, а само действие
+    // требует `teachers.bulk_accounts` — так же устроено у студентов.
+    Route::post('teachers/bulk/preview', [TeacherBulkController::class, 'preview'])->middleware('permission:teachers.view');
+    Route::post('teachers/bulk/apply', [TeacherBulkController::class, 'apply'])->middleware('permission:teachers.view');
     Route::get('students/export', [StudentController::class, 'export'])->middleware('permission:students.view');
     Route::post('students/import', [StudentController::class, 'import'])->middleware('permission:students.update');
     Route::apiResource('students', StudentController::class)

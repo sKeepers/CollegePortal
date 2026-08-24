@@ -90,10 +90,6 @@ class StudentImportHandler extends AbstractImportHandler
         $student = Student::create($this->payload($data));
         $this->syncDocuments($student, $data);
 
-        if ($data['auto_account'] && $this->accounts) {
-            $this->accounts->provision($student);
-        }
-
         return 'created';
     }
 
@@ -108,6 +104,13 @@ class StudentImportHandler extends AbstractImportHandler
     public function businessValidationErrors(array $data): array
     {
         $errors = [];
+
+        // Колонка «Создать учётную запись» отказывает, а не создаёт молча:
+        // почему именно так — в `AccountProvisioningService::ACCOUNTS_ARE_ISSUED_SEPARATELY`.
+        // Отказ приходит на предпросмотре, до единой записи.
+        if ($data['auto_account'] ?? false) {
+            $errors['auto_account'] = [AccountProvisioningService::ACCOUNTS_ARE_ISSUED_SEPARATELY];
+        }
 
         if (filled($data['snils'] ?? null)) {
             try {

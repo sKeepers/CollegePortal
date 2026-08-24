@@ -250,8 +250,51 @@ export const useTeachersStore = defineStore('teachers', () => {
     selectedId.value = id || null
   }
 
+  /**
+   * Выдача учётных записей преподавателям разом.
+   *
+   * Репетиция первого сентября насчитала 60 одинаковых шагов — по одному сбросу
+   * пароля на преподавателя. Предпросмотр считает и ничего не пишет; применение
+   * возвращает логины и пароли **один раз**: второго раза не будет, в базе лежит
+   * хеш.
+   *
+   * Выбор идёт фильтром, а не списком отмеченных строк: учётной записи нет у
+   * всех сразу, а не у выбранных троих, и отмечать сорок человек мышью — та же
+   * ручная работа, от которой уходим.
+   */
+  async function previewAccounts() {
+    saving.value = true
+    error.value = ''
+    try {
+      const payload = await api.create('teachers/bulk/preview', { action: 'issue_accounts', filter: {} })
+      return payload?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось подготовить выдачу учётных записей'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function applyAccounts() {
+    saving.value = true
+    error.value = ''
+    try {
+      const payload = await api.create('teachers/bulk/apply', { action: 'issue_accounts', filter: {} })
+      await load()
+      return payload?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось выдать учётные записи'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
   return {
     teachers,
+    previewAccounts,
+    applyAccounts,
     filteredTeachers,
     subjects,
     scheduleLessons,
