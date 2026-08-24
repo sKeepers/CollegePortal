@@ -35,7 +35,7 @@ class StudentCsvService
     private const HEADERS = [
         'id', 'group_id', 'group', 'last_name', 'first_name', 'middle_name', 'birth_date',
         'phone', 'email', 'snils', 'address', 'passport_series', 'passport_number',
-        'passport_issue_date', 'passport_issued_by', 'status', 'course', 'education_form',
+        'passport_issue_date', 'passport_issued_by', 'status', 'course', 'education_form', 'funding_form',
         'enrollment_date', 'enrollment_order_number', 'enrollment_order_date', 'personal_file_number', 'personal_file_letter',
         'education_document_type', 'education_document_series', 'education_document_number',
         'education_document_issue_date', 'education_document_organization', 'education_graduation_year',
@@ -65,6 +65,12 @@ class StudentCsvService
         'дата зачисления' => 'enrollment_date',
         'курс' => 'course',
         'форма обучения' => 'education_form',
+        // Колонка появилась 24.08.2026. До неё источник оплаты жил только в
+        // букве названия группы — «А» бюджетная, «Б» платная, — и в выгрузку
+        // не попадал вовсе: на боевой сервер различие не уехало бы.
+        'форма финансирования' => 'funding_form',
+        'финансирование' => 'funding_form',
+        'основа обучения' => 'funding_form',
         'адрес' => 'address',
         'приказ о зачислении' => 'enrollment_order_number',
         'дата приказа о зачислении' => 'enrollment_order_date',
@@ -144,6 +150,7 @@ class StudentCsvService
                             $student->course,
                             $student->group?->specialty,
                             $student->education_form,
+                            $student->funding_form,
                             $student->address,
                             $student->enrollment_order_number,
                             $student->enrollment_order_date?->toDateString(),
@@ -407,6 +414,7 @@ class StudentCsvService
             'email' => ['nullable', 'email', 'max:255'],
             'snils' => ['nullable', 'string', 'max:32'],
             'address' => ['nullable', 'string', 'max:2000'],
+            'funding_form' => ['nullable', 'string', 'max:80'],
             'passport_series' => ['nullable', 'string', 'max:20'],
             'passport_number' => ['nullable', 'string', 'max:100'],
             'passport_issue_date' => ['nullable', 'date'],

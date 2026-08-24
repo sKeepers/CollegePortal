@@ -42,6 +42,7 @@ const form = reactive({
   passport_department_code: '',
   status: 'active',
   education_form: '',
+  funding_form: '',
   enrollment_date: '',
   enrollment_order_number: '',
   enrollment_order_date: '',
@@ -70,6 +71,7 @@ watch(
       passport_department_code: student?.passport_department_code || '',
       status: student?.status || 'active',
       education_form: student?.education_form || '',
+      funding_form: student?.funding_form || '',
       enrollment_date: student?.enrollment_date || '',
       enrollment_order_number: student?.enrollment_order_number || '',
       enrollment_order_date: student?.enrollment_order_date || '',
@@ -132,6 +134,13 @@ function submitForm() {
           <q-input v-model="form.enrollment_date" dense outlined type="date" label="Дата зачисления" stack-label />
           <q-input v-model="form.user_id" dense outlined type="number" label="ID пользователя" />
           <q-select v-model="form.education_form" dense outlined clearable emit-value map-options label="Форма обучения" :options="[{ label: 'Очная', value: 'Очная' }, { label: 'Заочная', value: 'Заочная' }]" />
+          <!--
+            Источник оплаты до 24.08.2026 жил только в букве названия группы:
+            «А» бюджетная, «Б» платная. В карточке поля не было, и человек не
+            видел различия там, где его правят. Значения — из справочника
+            «Формы финансирования», чтобы в базе не завелось три написания одного.
+          -->
+          <q-select v-model="form.funding_form" dense outlined clearable emit-value map-options label="Форма финансирования" :options="[{ label: 'Бюджет', value: 'Бюджет' }, { label: 'Договор', value: 'Договор' }, { label: 'Целевое обучение', value: 'Целевое обучение' }]" />
           <q-input v-model="form.enrollment_order_number" dense outlined label="Приказ о зачислении" />
           <q-input v-model="form.enrollment_order_date" dense outlined type="date" label="Дата приказа" stack-label />
           <q-input
