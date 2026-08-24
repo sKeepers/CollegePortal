@@ -60,7 +60,7 @@ export const useDiplomaBlanksStore = defineStore('diplomaBlanks', () => {
       const query = Object.fromEntries(Object.entries(filters.value).filter(([, value]) => value !== '' && value !== null))
       const [list, balancePayload, batchPayload] = await Promise.all([
         api.list('diploma-blanks', query),
-        api.get('/diploma-blanks/balance'),
+        api.get('diploma-blanks/balance'),
         api.list('diploma-blanks/batches'),
       ])
       blanks.value = extractRows(list)
@@ -77,7 +77,7 @@ export const useDiplomaBlanksStore = defineStore('diplomaBlanks', () => {
     loading.value = true
     error.value = ''
     try {
-      const payload = await api.get('/diploma-registry', year ? { graduation_year: year } : {})
+      const payload = await api.get('diploma-registry', year ? { graduation_year: year } : {})
       registry.value = extractRows(payload)
       registryYears.value = payload?.meta?.years || []
     } catch (err) {

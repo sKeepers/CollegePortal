@@ -115,6 +115,18 @@ function validationMessages(errors) {
       .map((message) => humanizeApiMessage(message, field)))
 }
 
+/**
+ * Раздел пишут то `'students'`, то `'/students'` — и второе давало путь
+ * `/api//students`. За `nginx` этого не видно: он схлопывает двойной слэш, и
+ * запрос доходит. Видно там, где нормализации нет, — на сервере разработки
+ * запрос отвечал 404, то есть вкладка не загружалась вовсе. Дефект, который
+ * прячется именно в бою и вылезает на стенде, найти труднее всего, поэтому
+ * слэш снимается здесь, а не в каждом вызове.
+ */
+function trimLeadingSlash(resource) {
+  return String(resource).replace(/^\/+/, '')
+}
+
 async function request(path, options = {}) {
   const isFormData = options.body instanceof FormData
 
@@ -241,13 +253,15 @@ export const api = {
   },
 
   async post(resource, data = {}) {
-    return request(`/${resource}`, {
+    return request(`/${trimLeadingSlash(resource)}`, {
       method: 'POST',
       body: JSON.stringify(data),
     })
   },
 
   async list(resource, params = {}) {
+    resource = trimLeadingSlash(resource)
+
     const query = new URLSearchParams()
 
     Object.entries(params).forEach(([key, value]) => {
@@ -261,7 +275,7 @@ export const api = {
   },
 
   async create(resource, data) {
-    return request(`/${resource}`, {
+    return request(`/${trimLeadingSlash(resource)}`, {
       method: 'POST',
       body: JSON.stringify(data),
     })
