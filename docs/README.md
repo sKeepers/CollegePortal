@@ -80,6 +80,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [Teaching Load Engine](TEACHING_LOAD_ENGINE.md)
 - [Schedule Engine](SCHEDULE_ENGINE.md)
 - [Journal Engine](JOURNAL_ENGINE.md)
+- [Экзамены, ГИА и приложение к диплому](EXAMS_AND_GIA_REVIEW_2026-08-24.md) — три разрыва контура: приложение не собирается ниоткуда, итоговой оценки нет нигде, ГИА — строка экзамена
 - [HR Domain](HR_DOMAIN.md)
 
 ## Full Documentation Inventory
