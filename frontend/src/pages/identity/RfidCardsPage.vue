@@ -11,6 +11,7 @@ import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import { escapeHtml, printHtmlDocument, printPage } from '../../utils/print'
+import { findGroupOption } from '../../utils/groupOptions'
 import { useRfidCardsStore } from '../../stores/rfidCards'
 import { usePermissions } from '../../composables/usePermissions'
 
@@ -71,18 +72,14 @@ const openOptions = [
 
 /** Заголовок печатной формы: ведомость на группу или журнал за период. */
 const printTitle = computed(() => {
-  const groupId = store.journalFilters.group_id
-
-  // Отбора нет — нет и хвоста у заголовка. Приписать сюда что-нибудь «по умолчанию»
-  // значит соврать на бумаге, которую подписывают: без отбора это журнал за период, а
-  // не ведомость на группу, и называться он должен своим именем.
-  if (!groupId) return 'Журнал выдачи RFID-карт'
-
-  // Заголовок специальности отбором не является, даже если совпал по значению.
-  const group = store.groupOptions.find((option) => option.value === groupId && !option.isSpecialtyHeader)
+  const group = findGroupOption(store.groupOptions, store.journalFilters.group_id)
 
   // Шапка печатной ведомости: здесь нужно полное имя группы, а не строка списка —
   // «2 курс» на бумаге не говорит ни о чём.
+  //
+  // Отбора нет — нет и хвоста: без группы это журнал за период, а не ведомость на
+  // группу, и подписывать его как ведомость нельзя. Всё, чем этот поиск отличается от
+  // обычного `find`, живёт в `findGroupOption` и объяснено там.
   return group ? `Ведомость выдачи RFID-карт — ${group.fullLabel || group.label}` : 'Журнал выдачи RFID-карт'
 })
 
