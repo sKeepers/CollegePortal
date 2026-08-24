@@ -71,6 +71,7 @@ use App\Http\Controllers\Api\FisAdmissionsImportController;
 use App\Http\Controllers\Api\EducationProgramController;
 use App\Http\Controllers\Api\GradeController;
 use App\Http\Controllers\Api\JournalLessonController;
+use App\Http\Controllers\Api\SemesterGradeController;
 use App\Http\Controllers\Api\GraduateController;
 use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\StudentBulkController;
@@ -918,6 +919,11 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
 
     Route::middleware('permission:journal.view')->group(function (): void {
         Route::get('journal/lessons', [JournalLessonController::class, 'index']);
+        // Ведомость итоговых оценок: смотреть — с правом на журнал, ставить — со своим
+        // правом. Разделено потому, что куратору ведомость нужна, а ставить оценку по
+        // чужой дисциплине он не должен.
+        Route::get('semester-grades', [SemesterGradeController::class, 'index'])->middleware('permission:journal.view');
+        Route::post('semester-grades', [SemesterGradeController::class, 'store'])->middleware('permission:journal.semester_grades');
         Route::get('journal/export/group.csv', [JournalLessonController::class, 'exportGroup'])->middleware('permission:journal.export');
         Route::get('journal/export/teacher.csv', [JournalLessonController::class, 'exportTeacher'])->middleware('permission:journal.export');
         Route::get('journal/report/grid', [JournalLessonController::class, 'grid']);

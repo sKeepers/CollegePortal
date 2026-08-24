@@ -48,6 +48,7 @@ class MenuMatchesPermissionsTest extends TestCase
         'Расписание' => ['schedule-lessons', 'schedule/entries'],
         'Успеваемость' => ['mobile/student'],
         'Журнал' => ['journal/lessons'],
+        'Итоговые оценки' => ['semester-grades'],
         'Моя группа' => ['curator/groups'],
         'Посещаемость' => ['attendance/teachers/today', 'attendance/students/today'],
         'Учебные планы' => ['curricula'],

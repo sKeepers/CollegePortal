@@ -117,6 +117,7 @@ class RoleSeeder extends Seeder
             ['module' => 'Journal', 'code' => 'journal.reopen', 'name' => 'Журнал: исправление подписанного', 'description' => 'Исправление подписанных занятий.'],
             ['module' => 'Journal', 'code' => 'journal.view_all', 'name' => 'Журнал: просмотр всех занятий', 'description' => 'Просмотр журналов всех преподавателей и групп.'],
             ['module' => 'Journal', 'code' => 'journal.export', 'name' => 'Журнал: экспорт', 'description' => 'Экспорт отчетов журнала.'],
+            ['module' => 'Journal', 'code' => 'journal.semester_grades', 'name' => 'Журнал: итоговая оценка за семестр', 'description' => 'Выставление итоговой оценки по дисциплине за семестр.'],
             ['module' => 'Attendance', 'code' => 'attendance.view', 'name' => 'Посещаемость: просмотр', 'description' => 'Просмотр аналитики посещаемости.'],
             ['module' => 'Attendance', 'code' => 'attendance.reports', 'name' => 'Посещаемость: отчеты', 'description' => 'Исторические отчеты посещаемости.'],
             ['module' => 'Admissions', 'code' => 'admissions.view', 'name' => 'Приемная комиссия: просмотр', 'description' => 'Просмотр заявлений.'],
@@ -352,7 +353,7 @@ class RoleSeeder extends Seeder
             'students.view', 'students.create', 'students.update',
             'students.bulk_group', 'students.bulk_status', 'students.bulk_course', 'students.bulk_education', 'students.bulk_passes', 'students.bulk_accounts', 'students.bulk_archive', 'students.bulk_export',
             'groups.view', 'groups.create', 'groups.update',
-            'journal.view', 'journal.view_all', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files',
+            'journal.view', 'journal.view_all', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.semester_grades', 'journal.files',
             'journal.complete', 'journal.sign', 'journal.reopen', 'journal.export',
             'attendance.view', 'attendance.reports',
             'graduation.view', 'graduation.edit', 'frdo.view',
@@ -394,7 +395,7 @@ class RoleSeeder extends Seeder
             'teachers.view', 'teachers.create', 'teachers.update',
             'subjects.view', 'subjects.create', 'subjects.update', 'subjects.delete',
             'classrooms.view', 'classrooms.create', 'classrooms.update', 'classrooms.delete',
-            'schedule.view', 'schedule.create', 'schedule.update', 'schedule.delete', 'schedule.validate', 'schedule.manage_templates', 'schedule.manage_replacements', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.reopen', 'journal.view_all', 'journal.export',
+            'schedule.view', 'schedule.create', 'schedule.update', 'schedule.delete', 'schedule.validate', 'schedule.manage_templates', 'schedule.manage_replacements', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.semester_grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.reopen', 'journal.view_all', 'journal.export',
             'attendance.view', 'attendance.reports', 'admissions.applicant.view', 'admissions.application.view', 'admissions.choice.view', 'admissions.document.view', 'admissions.documents.view', 'admissions.reference.view', 'curricula.view', 'curricula.edit', 'curricula.subjects.view', 'curricula.subjects.create', 'curricula.subjects.update', 'curricula.subjects.delete',
             'teachingload.view', 'teachingload.edit', 'teaching_load.generate', 'teaching_load.assign', 'teaching_load.bulk_assign', 'teaching_load.view_coverage', 'exams.view', 'exams.edit',
             'graduation.view', 'graduation.edit', 'people.update', 'people.link', 'frdo.view', 'fis.view', 'fis.outbound.view', 'fis.outbound.create', 'fis.outbound.generate', 'fis.outbound.validate', 'fis.outbound.send_test', 'fis.outbound.status', 'reference.manage', 'import.manage',
@@ -464,7 +465,7 @@ class RoleSeeder extends Seeder
 
     private function teacherPermissions(): array
     {
-        return ['dashboard.view', 'hr.calendar.view', 'schedule.view', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.export', 'attendance.view', 'exams.view', 'view_own_data', 'teachingload.view_own', 'mobile.teacher.view'];
+        return ['dashboard.view', 'hr.calendar.view', 'schedule.view', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.semester_grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.export', 'attendance.view', 'exams.view', 'view_own_data', 'teachingload.view_own', 'mobile.teacher.view'];
     }
 
     private function studentPermissions(): array

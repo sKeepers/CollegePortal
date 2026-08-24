@@ -19,6 +19,7 @@ const EducationProgramsPage = () => import('../pages/education-programs/Educatio
 const CurriculaPage = () => import('../pages/curricula/CurriculaPage.vue')
 const SchedulePage = () => import('../pages/schedule/SchedulePage.vue')
 const JournalPage = () => import('../pages/journal/JournalPage.vue')
+const SemesterGradesPage = () => import('../pages/journal/SemesterGradesPage.vue')
 const TeachingLoadPage = () => import('../pages/teaching-load/TeachingLoadPage.vue')
 const ExamsPage = () => import('../pages/exams/ExamsPage.vue')
 const GraduationPage = () => import('../pages/graduation/GraduationPage.vue')
@@ -291,6 +292,14 @@ export const routes = [
         name: 'journal',
         component: JournalPage,
         meta: { title: 'Журнал', permission: 'journal.view' },
+      },
+      {
+        // Ведомость закрыта правом на итоговую оценку, а не общим правом на журнал:
+        // журнал видят и те, кому итог дисциплины ставить не положено.
+        path: 'semester-grades',
+        name: 'semester-grades',
+        component: SemesterGradesPage,
+        meta: { title: 'Итоговые оценки', permission: 'journal.semester_grades' },
       },
       {
         // Раздел куратора закрыт тем же правом, что и журнал: ничего сверх

@@ -34,6 +34,7 @@ import {
   MessageSquareWarning,
   Bell,
   Trash2,
+  ClipboardCheck,
 } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import { useWorkspaceStore } from '../stores/workspace'
@@ -83,6 +84,7 @@ const navGroups = [
       { label: 'Расписание', to: '/schedule', icon: CalendarDays, permission: 'schedule.view' },
       { label: 'Успеваемость', to: '/student', icon: ClipboardList, roles: ['student'], permission: 'mobile.student.view' },
       { label: 'Журнал', to: '/journal', icon: ClipboardList, permission: 'journal.view' },
+      { label: 'Итоговые оценки', to: '/semester-grades', icon: ClipboardCheck, permission: 'journal.semester_grades' },
       // Раздел куратора: успеваемость и состав своей группы. Роль здесь не
       // спрашивается намеренно — куратором назначают карточку преподавателя, а
       // учётная запись при этом может быть с ролью `teacher`, и по роли пункт
