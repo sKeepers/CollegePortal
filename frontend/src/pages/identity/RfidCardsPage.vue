@@ -298,6 +298,18 @@ async function exportJournal() {
   notify('Журнал выгружен в Excel')
 }
 
+/**
+ * Ведомость выдачи на бумагу.
+ *
+ * Колонка «Возвращена» здесь не для полноты. Лист перечисляет **события
+ * выдачи**, а не то, что на руках сейчас: карту выдали, приняли и выдали
+ * снова — и человек стоит в ведомости дважды с одним и тем же номером. Пока
+ * возврат не показан, это читается как «у него две карты», а по такому листу
+ * сверяют фактическое наличие, и разбираться потом будут с человеком.
+ *
+ * Замечено 24.08.2026, когда ведомость впервые посмотрели глазами — до этого
+ * форма проверялась запросами, и данные в ней сходились.
+ */
 function printJournal() {
   if (!store.journal.length) {
     notify('Печатать нечего: в журнале нет записей за выбранный период.', 'warning')
@@ -314,6 +326,7 @@ function printJournal() {
         <td>${escapeHtml(row.person?.unit || '—')}</td>
         <td>${escapeHtml(row.card?.uid || '')}</td>
         <td>${escapeHtml(row.issued_by || '—')}</td>
+        <td>${row.returned_at ? escapeHtml(formatDateTime(row.returned_at)) : 'на руках'}</td>
         <td class="sign"></td>
       </tr>`).join('')
 
@@ -322,7 +335,7 @@ function printJournal() {
     subtitle: printPeriod.value,
     body: `<table>
 <thead>
-<tr><th>№</th><th>Дата</th><th>Фамилия, имя, отчество</th><th>Группа / подразделение</th><th>Номер карты</th><th>Выдал</th><th class="sign">Подпись</th></tr>
+<tr><th>№</th><th>Выдана</th><th>Фамилия, имя, отчество</th><th>Группа / подразделение</th><th>Номер карты</th><th>Выдал</th><th>Возвращена</th><th class="sign">Подпись</th></tr>
 </thead>
 <tbody>${rows}
 </tbody>

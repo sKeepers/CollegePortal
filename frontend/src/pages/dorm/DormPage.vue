@@ -11,6 +11,8 @@ import AppLoading from '../../components/ui/AppLoading.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import { escapeHtml, printHtmlDocument, printPage } from '../../utils/print'
+import { formatPhone } from '../../utils/phone'
+import { plural, PLACES } from '../../utils/plural'
 import { useDormStore } from '../../stores/dorm'
 import { usePermissions } from '../../composables/usePermissions'
 
@@ -368,17 +370,31 @@ function printResidents() {
   const body = data.floors.map((floor) => {
     const rows = floor.rooms.map((room) => {
       if (!room.people.length) {
-        return `<tr><td>${escapeHtml(room.number)}</td><td colspan="4">свободна (${room.capacity} мест)</td></tr>`
+        return `<tr><td>${escapeHtml(room.number)}</td><td colspan="4">свободна (${plural(room.capacity, PLACES)})</td></tr>`
       }
 
-      return room.people.map((person, index) => `
+      // Номер комнаты стоит в **каждой** строке, а не только у первого жильца.
+      // Раньше у соседей ячейка была пустой ради вида — и это беда с отложенным
+      // сроком: пока список влезает на страницу, никто не замечает, а разрыв
+      // страницы между жильцами одной комнаты уносит человека на следующий лист
+      // без комнаты. Лист вешают на дверь, разбираться с ним будут без нас.
+      const people = room.people.map((person) => `
         <tr>
-          <td>${index === 0 ? escapeHtml(room.number) : ''}</td>
+          <td>${escapeHtml(room.number)}</td>
           <td>${escapeHtml(person.full_name)}</td>
           <td>${escapeHtml(person.course ? person.course + ' курс' : '')}</td>
           <td>${escapeHtml(person.group || '')}</td>
-          <td>${escapeHtml(person.phone || '')}</td>
+          <td>${escapeHtml(formatPhone(person.phone, ''))}</td>
         </tr>`).join('')
+
+      // Сколько в комнате осталось мест — единственный вопрос, ради которого
+      // этот список печатают: по нему заселяют. Пустая комната о своих местах
+      // говорила, а полузанятая молчала, хотя именно она и нужна.
+      const free = Math.max(0, Number(room.capacity ?? 0) - (Number(room.occupied ?? room.people.length) || 0))
+
+      return people + (free > 0
+        ? `<tr><td>${escapeHtml(room.number)}</td><td colspan="4">свободно ещё ${plural(free, PLACES)}</td></tr>`
+        : '')
     }).join('')
 
     return `
@@ -391,7 +407,7 @@ function printResidents() {
 
   printHtmlDocument(printPage({
     title: 'Список проживающих в общежитии',
-    subtitle: `Занято ${data.occupied} из ${data.capacity} мест. Составлен ${new Date().toLocaleString('ru-RU')}`,
+    subtitle: `Занято ${data.occupied} из ${plural(data.capacity, PLACES)}. Составлен ${new Date().toLocaleString('ru-RU')}`,
     body,
   }))
 }
