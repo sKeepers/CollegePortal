@@ -103,9 +103,25 @@ export function buildGroupOptions(groups, { suffix = null, extra = null, lead = 
 
     if (specialty !== currentSpecialty) {
       currentSpecialty = specialty
-      // Заголовок — тоже вариант списка, но невыбираемый: у него нет `value`, поэтому
-      // `emit-value map-options` его никогда не подставит, а `find` по значению не найдёт.
-      options.push({ label: specialty, value: null, disable: true, isSpecialtyHeader: true })
+      // Заголовок — тоже вариант списка, но невыбираемый. Значение у него **строковое и
+      // заведомо непохожее на идентификатор группы**, и это не украшение.
+      //
+      // Стоял `value: null` с пояснением «`find` по значению его не найдёт». Пояснение
+      // было неверным, и цена ошибки — печатная ведомость выдачи карт: её шапка ищет
+      // группу как `find((o) => o.value === filters.group_id)`, а без выбранной группы
+      // `group_id` равен `null`. `null === null` — истина, находился **первый заголовок**,
+      // и на лист с пятью живыми людьми становилось «Ведомость выдачи — 51.02.01 Народное
+      // художественное творчество» вместо «Журнал выдачи RFID-карт». Проверено 24.08.2026.
+      //
+      // Строка `specialty:<название>` не равна ни `null`, ни пустой строке, ни числу — и
+      // не станет равной ни при `===`, ни при `String()`, ни при `Number()` (там `NaN`).
+      // Поэтому чинится здесь, а не в каждом месте, которое ищет группу по значению.
+      options.push({
+        label: specialty,
+        value: `specialty:${specialty}`,
+        disable: true,
+        isSpecialtyHeader: true,
+      })
     }
 
     const tail = suffix ? suffix(group) : null
