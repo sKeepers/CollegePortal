@@ -47,6 +47,12 @@ V2="/home/andale/CollegePortal/backend/vendor:/var/www/html/vendor:ro"
 docker run --rm -v "$V1" -v "$V2" -w /var/www/html collegeportal-backend php artisan test
 ```
 
+**Так смонтирован только `backend/`, и проверки, которым нужен фронтенд, молча пропускаются.** `MenuMatchesPermissionsTest` ищет рядом `../frontend/src/layouts/AppLayout.vue`, не находит и честно пишет «пропущен». CI берёт дерево целиком, поэтому там он выполняется — и 23-24.08.2026 ствол простоял красным **90 прогонов подряд**, пока все четыре области читали «3 skipped» как «всё в порядке». **«Пропущено» — это вопрос, а не норма: прогон, часть которого не выполнялась, зелёным не является.** Перед вливанием правки, задевающей меню, роли или экраны, монтируйте дерево целиком:
+
+```bash
+docker run --rm -v "/tmp/work:/tree" -v "$V2" -w /tree/backend collegeportal-backend php artisan test
+```
+
 Образ бэкенда называется `collegeportal-backend`. Зависимости `vendor` монтируются из основного checkout — в worktree их нет.
 
 Прогон на PostgreSQL, который ближе к бою, чем SQLite по умолчанию:
