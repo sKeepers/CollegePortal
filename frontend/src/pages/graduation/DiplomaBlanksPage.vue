@@ -19,6 +19,8 @@ import {
   useDiplomaBlanksStore,
 } from '../../stores/diplomaBlanks'
 import { useGraduationStore } from '../../stores/graduation'
+import AppEmptyState from '../../components/ui/AppEmptyState.vue'
+import PageHeader from '../../components/ui/PageHeader.vue'
 import { escapeHtml, printHtmlDocument, printPage } from '../../utils/print'
 
 const store = useDiplomaBlanksStore()
@@ -150,13 +152,22 @@ function printRegistry() {
 
 <template>
   <q-page padding>
-    <div class="row items-center q-gutter-sm q-mb-md">
-      <div class="text-h6">Бланки строгой отчётности</div>
-      <q-space />
-      <q-chip outline color="grey-8">В наличии: {{ store.inStock }}</q-chip>
-      <q-chip v-if="store.spoiled" outline color="orange-8">Испорчено: {{ store.spoiled }}</q-chip>
-      <q-btn color="primary" icon="add" label="Принять партию" @click="receiveOpen = true" />
-    </div>
+<!--
+      Заголовок — общей опорой `PageHeader`, как во всех прочих разделах.
+      Раньше здесь стоял свой `text-h6`: на экране он выглядел заголовком, но
+      был не тем же самым, и раздел отличался от соседних. Увидели это только
+      глазами, когда на DEV появился браузер: счётчик проверок такого не ловит.
+    -->
+    <PageHeader
+      title="Бланки строгой отчётности"
+      subtitle="Приход партии, закрепление за выпускником, выдача, порча и списание. Ничего из этого не удаляется."
+    >
+      <template #actions>
+        <q-chip outline color="grey-8">В наличии: {{ store.inStock }}</q-chip>
+        <q-chip v-if="store.spoiled" outline color="orange-8">Испорчено: {{ store.spoiled }}</q-chip>
+        <q-btn color="primary" icon="add" label="Принять партию" @click="receiveOpen = true" />
+      </template>
+    </PageHeader>
 
     <q-banner v-if="store.error" class="bg-red-1 text-red-9 q-mb-md" rounded>{{ store.error }}</q-banner>
 
@@ -225,7 +236,17 @@ function printRegistry() {
       </q-tab-panel>
 
       <q-tab-panel name="balance">
-        <q-markup-table flat bordered dense>
+        <!--
+          Пустое место обязано сказать, что оно пустое. `q-markup-table` своего
+          пустого состояния не имеет, и без этой ветки человек видел голую шапку
+          таблицы и читал её как сломанный экран.
+        -->
+        <AppEmptyState
+          v-if="!store.balance.length && !store.loading"
+          title="Остатка пока нет"
+          description="Остаток считается по принятым бланкам. Примите партию — и он появится сам."
+        />
+        <q-markup-table v-else flat bordered dense>
           <thead>
             <tr>
               <th class="text-left">Вид</th>
@@ -246,7 +267,12 @@ function printRegistry() {
       </q-tab-panel>
 
       <q-tab-panel name="batches">
-        <q-markup-table flat bordered dense>
+        <AppEmptyState
+          v-if="!store.batches.length && !store.loading"
+          title="Партий пока не принимали"
+          description="Приход партии — первое действие в учёте: бланки заводятся диапазоном номеров."
+        />
+        <q-markup-table v-else flat bordered dense>
           <thead>
             <tr>
               <th class="text-left">Принята</th>
