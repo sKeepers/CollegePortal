@@ -32,7 +32,10 @@ class SubjectImportHandler extends AbstractImportHandler
     public function fields(): array
     {
         return [
-            'name' => ['label' => 'Название', 'required' => true, 'aliases' => ['дисциплина', 'название', 'name']],
+            // Ярлык — «Дисциплина», как в шапке шаблона: под двумя именами одна колонка
+            // останавливает того, кто сверяет файл со справкой. «Название» осталось
+            // синонимом — файлы, заполненные раньше, читаются по-прежнему.
+            'name' => ['label' => 'Дисциплина', 'required' => true, 'aliases' => ['дисциплина', 'название', 'name']],
             'code' => ['label' => 'Код', 'required' => false, 'aliases' => ['код', 'code']],
             'department' => ['label' => 'Отделение', 'required' => false, 'aliases' => ['отделение', 'кафедра', 'department']],
             'description' => ['label' => 'Описание', 'required' => false, 'aliases' => ['описание', 'description']],
