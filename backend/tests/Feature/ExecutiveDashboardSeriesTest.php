@@ -75,7 +75,11 @@ class ExecutiveDashboardSeriesTest extends TestCase
         $log = collect(DB::getQueryLog())->pluck('query');
         DB::disableQueryLog();
 
-        $grouped = $log->filter(fn (string $sql) => str_contains($sql, 'count(*) as total'))->count();
+        // Признак ряда — группировка по дню, а не слова `count(*) as total`:
+        // по ним сторож опознавал заодно и любую другую группировку на рабочем
+        // столе. Свёртка счётчиков кадров такую же строку и написала, и сторож
+        // покраснел на правке, которая ничего не сломала.
+        $grouped = $log->filter(fn (string $sql) => str_contains($sql, 'group by "day"'))->count();
 
         $this->assertSame(
             3,

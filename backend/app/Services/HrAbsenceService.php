@@ -11,6 +11,7 @@ use App\Models\TeachingLoadItem;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -167,14 +168,14 @@ class HrAbsenceService
     public function dashboardKpi(): array
     {
         $today = now()->toDateString();
-        $todayPeriods = EmployeeStatusPeriod::query()->where('period_status', '!=', 'cancelled')->whereDate('date_from', '<=', $today)->where(fn ($q) => $q->whereNull('date_to')->orWhereDate('date_to', '>=', $today));
+        $todayByStatus = $this->countByStatus($this->periodsTouching($today, $today));
         $endingSoon = EmployeeStatusPeriod::query()->where('period_status', 'active')->whereNotNull('date_to')->whereBetween('date_to', [$today, now()->addDays(7)->toDateString()])->count();
         $lessonsWithoutReplacement = collect($this->calendar(['date_from' => $today, 'date_to' => $today])['periods'])->sum('affected_lessons_count');
         return [
-            'absent_today' => (clone $todayPeriods)->count(),
-            'sick_leave_today' => (clone $todayPeriods)->where('status', 'sick_leave')->count(),
-            'vacation_today' => (clone $todayPeriods)->where('status', 'vacation')->count(),
-            'business_trip_today' => (clone $todayPeriods)->where('status', 'business_trip')->count(),
+            'absent_today' => (int) $todayByStatus->sum(),
+            'sick_leave_today' => (int) ($todayByStatus['sick_leave'] ?? 0),
+            'vacation_today' => (int) ($todayByStatus['vacation'] ?? 0),
+            'business_trip_today' => (int) ($todayByStatus['business_trip'] ?? 0),
             'lessons_without_replacement' => $lessonsWithoutReplacement,
             'replacements_pending' => HrEvent::query()->where('event_type', 'replacement_required')->whereNull('read_at')->count(),
             'periods_ending_soon' => $endingSoon,
@@ -313,14 +314,48 @@ class HrAbsenceService
 
     private function summary(string $dateFrom, string $dateTo): array
     {
-        $query = EmployeeStatusPeriod::query()->where('period_status', '!=', 'cancelled')->whereDate('date_from', '<=', $dateTo)->where(fn ($q) => $q->whereNull('date_to')->orWhereDate('date_to', '>=', $dateFrom));
+        $byStatus = $this->countByStatus($this->periodsTouching($dateFrom, $dateTo));
+
         return [
-            'total' => (clone $query)->count(),
-            'vacation' => (clone $query)->where('status', 'vacation')->count(),
-            'sick_leave' => (clone $query)->where('status', 'sick_leave')->count(),
-            'business_trip' => (clone $query)->where('status', 'business_trip')->count(),
-            'dismissed' => (clone $query)->where('status', 'dismissed')->count(),
+            'total' => (int) $byStatus->sum(),
+            'vacation' => (int) ($byStatus['vacation'] ?? 0),
+            'sick_leave' => (int) ($byStatus['sick_leave'] ?? 0),
+            'business_trip' => (int) ($byStatus['business_trip'] ?? 0),
+            'dismissed' => (int) ($byStatus['dismissed'] ?? 0),
         ];
+    }
+
+    /**
+     * Периоды, задевающие отрезок: не отменённые и пересекающиеся с ним хотя бы
+     * одним днём. Открытый период (без даты окончания) задевает любой отрезок,
+     * который начинается не раньше его начала.
+     */
+    private function periodsTouching(string $dateFrom, string $dateTo): Builder
+    {
+        return EmployeeStatusPeriod::query()
+            ->where('period_status', '!=', 'cancelled')
+            ->whereDate('date_from', '<=', $dateTo)
+            ->where(fn (Builder $query) => $query->whereNull('date_to')->orWhereDate('date_to', '>=', $dateFrom));
+    }
+
+    /**
+     * Один запрос с группировкой вместо счётчика на каждый статус. Сводка
+     * директора и календарь кадров спрашивали одну и ту же выборку по четыре и
+     * по пять раз, и рабочий стол директора получал их все на каждом открытии.
+     *
+     * @return Collection<string, int>
+     */
+    private function countByStatus(Builder $query): Collection
+    {
+        return $query
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            // `toBase()->get()`, а не `pluck()`: `pluck` на построителе подменяет
+            // список выбираемых полей своими двумя, и `selectRaw` пропал бы
+            // вместе с группировкой.
+            ->toBase()
+            ->get()
+            ->pluck('total', 'status');
     }
 
     private function event(string $type, EmployeeStatusPeriod $period, User $user, array $payload = [], string $severity = 'info'): void

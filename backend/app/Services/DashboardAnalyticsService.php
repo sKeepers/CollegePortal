@@ -63,6 +63,20 @@ class DashboardAnalyticsService
             ->count();
         $applicationsDocumentsConfirmed = $this->legacyApplicantApplications()->where('documents_provided', true)->count();
         $verifiedCompleteDocuments = $this->verifiedCompleteApplicantCount();
+        // Те же семь чисел нужны и сводке, и блоку «Требует внимания». Считаем
+        // их здесь один раз: пока блок считал их заново, одно открытие
+        // рабочего стола спрашивало `applicant_applications` восемнадцать раз
+        // вместо тринадцати, а самый тяжёлый из счётчиков — с двумя
+        // подзапросами по документам — выполнялся дважды.
+        $applicationDocuments = [
+            'no_documents' => $applicationsNoDocuments,
+            'incomplete_documents' => $applicationsIncompleteDocuments,
+            'complete_documents' => $applicationsCompleteDocuments,
+            'documents_confirmed' => $applicationsDocumentsConfirmed,
+            'verified_complete_documents' => $verifiedCompleteDocuments,
+            'documents_under_review' => ApplicantApplicationDocument::query()->where('status', ApplicantApplicationDocument::STATUS_UNDER_REVIEW)->count(),
+            'documents_rejected' => ApplicantApplicationDocument::query()->where('status', ApplicantApplicationDocument::STATUS_REJECTED)->count(),
+        ];
 
         return [
             'data' => [
@@ -108,8 +122,8 @@ class DashboardAnalyticsService
                         'without_passport' => $this->missingApplicantDocumentType('passport'),
                         'without_education_document' => $this->missingApplicantDocumentType('education_document'),
                         'without_personal_data_consent' => $this->missingApplicantDocumentType('personal_data_consent'),
-                        'documents_under_review' => ApplicantApplicationDocument::query()->where('status', ApplicantApplicationDocument::STATUS_UNDER_REVIEW)->count(),
-                        'documents_rejected' => ApplicantApplicationDocument::query()->where('status', ApplicantApplicationDocument::STATUS_REJECTED)->count(),
+                        'documents_under_review' => $applicationDocuments['documents_under_review'],
+                        'documents_rejected' => $applicationDocuments['documents_rejected'],
                         'verified_complete_documents' => $verifiedCompleteDocuments,
                     ],
                     'frdo' => [
@@ -138,7 +152,7 @@ class DashboardAnalyticsService
                         ScheduleLesson::query(), 'lesson_date', $lastSevenDays,
                     ),
                 ],
-                'attention' => $this->attentionItems($frdoErrors, $fisErrors, $attendance),
+                'attention' => $this->attentionItems($frdoErrors, $fisErrors, $attendance, $applicationDocuments),
                 'audit' => AuditLog::query()
                     ->with('user')
                     ->latest('created_at')
@@ -162,22 +176,20 @@ class DashboardAnalyticsService
         return max(0, Classroom::query()->count() - $busy);
     }
 
-    private function attentionItems($frdoErrors, $fisErrors, array $attendance = []): array
+    /**
+     * Счётчики документов заявлений приходят готовыми из `executive()` — те же
+     * числа уже посчитаны для сводки, и второй раз их спрашивать незачем.
+     *
+     * @param  array<string, int>  $applications
+     */
+    private function attentionItems($frdoErrors, $fisErrors, array $attendance, array $applications): array
     {
         $studentsWithoutPhoto = Student::query()->whereNull('photo_path')->count();
-        $requiredDocumentsCount = ApplicantApplicationDocumentService::REQUIRED_DOCUMENTS_COUNT;
-        $applicationsWithoutDocuments = $this->legacyApplicantApplications()
-            ->whereDoesntHave('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES))
-            ->count();
-        $applicationsIncompleteDocuments = $this->legacyApplicantApplications()
-            ->whereHas('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '>=', 1)
-            ->whereHas('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '<', $requiredDocumentsCount)
-            ->count();
-        $applicationsCompleteDocuments = $this->legacyApplicantApplications()
-            ->whereHas('documents', fn ($query) => $query->whereIn('status', ApplicantApplicationDocument::COMPLETE_STATUSES), '>=', $requiredDocumentsCount)
-            ->count();
-        $applicationsDocumentsConfirmed = $this->legacyApplicantApplications()->where('documents_provided', true)->count();
-        $applicationsVerifiedCompleteDocuments = $this->verifiedCompleteApplicantCount();
+        $applicationsWithoutDocuments = $applications['no_documents'];
+        $applicationsIncompleteDocuments = $applications['incomplete_documents'];
+        $applicationsCompleteDocuments = $applications['complete_documents'];
+        $applicationsDocumentsConfirmed = $applications['documents_confirmed'];
+        $applicationsVerifiedCompleteDocuments = $applications['verified_complete_documents'];
         $frdoErrorCount = $frdoErrors->sum('validation_errors_count');
         $fisErrorCount = $fisErrors->sum('validation_errors_count');
 
@@ -193,8 +205,8 @@ class DashboardAnalyticsService
             ['title' => 'Заявления с неполным комплектом', 'value' => $applicationsIncompleteDocuments, 'tone' => $applicationsIncompleteDocuments > 0 ? 'warning' : 'success', 'to' => '/admissions?documents=incomplete'],
             ['title' => 'Заявления с полным комплектом', 'value' => $applicationsCompleteDocuments, 'tone' => 'success', 'to' => '/admissions?documents=complete'],
             ['title' => 'Получение документов подтверждено', 'value' => $applicationsDocumentsConfirmed, 'tone' => 'neutral', 'to' => '/admissions'],
-            ['title' => 'Документы ожидают проверки', 'value' => ApplicantApplicationDocument::query()->where('status', ApplicantApplicationDocument::STATUS_UNDER_REVIEW)->count(), 'tone' => 'warning', 'to' => '/admissions'],
-            ['title' => 'Отклоненные документы', 'value' => ApplicantApplicationDocument::query()->where('status', ApplicantApplicationDocument::STATUS_REJECTED)->count(), 'tone' => 'danger', 'to' => '/admissions'],
+            ['title' => 'Документы ожидают проверки', 'value' => $applications['documents_under_review'], 'tone' => 'warning', 'to' => '/admissions'],
+            ['title' => 'Отклоненные документы', 'value' => $applications['documents_rejected'], 'tone' => 'danger', 'to' => '/admissions'],
             ['title' => 'Полностью подтвержденные комплекты', 'value' => $applicationsVerifiedCompleteDocuments, 'tone' => 'success', 'to' => '/admissions'],
             ['title' => 'Ошибки ФРДО', 'value' => $frdoErrorCount, 'tone' => $frdoErrorCount > 0 ? 'danger' : 'success', 'to' => '/frdo'],
             ['title' => 'Ошибки ФИС', 'value' => $fisErrorCount, 'tone' => $fisErrorCount > 0 ? 'danger' : 'success', 'to' => '/fis'],
