@@ -16,6 +16,7 @@ import GroupDetailsPanel from './GroupDetailsPanel.vue'
 import GroupFilters from './GroupFilters.vue'
 import GroupFormPanel from './GroupFormPanel.vue'
 import { useGroupsStore } from '../../stores/groups'
+import { groupKind } from '../../utils/groupOptions'
 import { usePermissions } from '../../composables/usePermissions'
 import {
   TABLE_ROWS_PER_PAGE_OPTIONS,
@@ -53,7 +54,16 @@ const columns = [
   {
     name: 'name',
     label: 'Группа',
-    field: 'name',
+    // В списке имя без хвоста «, набор 2023»: решение владельца 24.08.2026 —
+    // год переезжает в карточку группы, а в таблице рядом стоит курс, и пара
+    // «имя + курс» строки различает. Четыре «Инструменты народного оркестра»
+    // становятся строками 1, 2, 3 и 4 курса.
+    //
+    // **Имя в базе при этом не меняется.** Оно уходит в приказы, отчёты, ФИС и
+    // в выгрузку, по которой контингент переносят на боевой: там сопоставление
+    // идёт по имени группы, и обрезанное имя сломало бы перенос. Обрезается
+    // только показ, тем же `groupKind`, что и в выпадающих списках.
+    field: (row) => groupKind(row),
     align: 'left',
     sortable: true,
   },
@@ -61,13 +71,6 @@ const columns = [
     name: 'course',
     label: 'Курс',
     field: 'course',
-    align: 'left',
-    sortable: true,
-  },
-  {
-    name: 'year_start',
-    label: 'Год набора',
-    field: 'year_start',
     align: 'left',
     sortable: true,
   },
@@ -333,7 +336,7 @@ onMounted(async () => {
           <template #body-cell-name="props">
             <q-td :props="props">
               <button class="groups-row-link" type="button" @click.stop="selectGroup(props.row)">
-                {{ props.row.name }}
+                {{ groupKind(props.row) }}
               </button>
             </q-td>
           </template>
