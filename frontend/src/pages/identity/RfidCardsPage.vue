@@ -71,7 +71,15 @@ const openOptions = [
 
 /** Заголовок печатной формы: ведомость на группу или журнал за период. */
 const printTitle = computed(() => {
-  const group = store.groupOptions.find((option) => option.value === store.journalFilters.group_id)
+  const groupId = store.journalFilters.group_id
+
+  // Отбора нет — нет и хвоста у заголовка. Приписать сюда что-нибудь «по умолчанию»
+  // значит соврать на бумаге, которую подписывают: без отбора это журнал за период, а
+  // не ведомость на группу, и называться он должен своим именем.
+  if (!groupId) return 'Журнал выдачи RFID-карт'
+
+  // Заголовок специальности отбором не является, даже если совпал по значению.
+  const group = store.groupOptions.find((option) => option.value === groupId && !option.isSpecialtyHeader)
 
   // Шапка печатной ведомости: здесь нужно полное имя группы, а не строка списка —
   // «2 курс» на бумаге не говорит ни о чём.
