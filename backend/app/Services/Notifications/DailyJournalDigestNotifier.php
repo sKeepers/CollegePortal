@@ -8,8 +8,11 @@ use App\Models\NotificationSubscription;
 use App\Models\User;
 use App\Support\Notifications\MessageBody;
 use App\Support\Notifications\NotificationEvents;
+use App\Support\Notifications\RebuildsNotification;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 /**
  * Сводки за день: новые оценки и пропуски.
@@ -23,7 +26,7 @@ use Illuminate\Support\Collection;
  * день, свернуть в текст, отдать диспетчеру, — и разведённые по двум классам разъехались
  * бы на первой же правке формата.
  */
-class DailyJournalDigestNotifier
+class DailyJournalDigestNotifier implements RebuildsNotification
 {
     public function __construct(private readonly NotificationDispatcher $dispatcher)
     {
@@ -80,6 +83,37 @@ class DailyJournalDigestNotifier
         }
 
         return $sent;
+    }
+
+    /**
+     * Собрать ту же сводку заново — для повтора неудачной доставки.
+     *
+     * Какую из двух, видно по ключу: оба события живут в одном классе, и ключ — то
+     * единственное, что их различает после отправки. Пустая сводка возвращает `null`,
+     * и это верно: оценку успели снять, отметку исправили — повторять больше нечего.
+     */
+    public function rebuild(User $user, string $dedupeKey): ?string
+    {
+        $studentId = $user->student?->id;
+        $date = $this->dateFromKey($dedupeKey);
+
+        if ($studentId === null || $date === null) {
+            return null;
+        }
+
+        return str_starts_with($dedupeKey, NotificationEvents::GRADES_DAILY.':')
+            ? $this->composeGrades($studentId, $date)
+            : $this->composeAttendance($studentId, $date);
+    }
+
+    /** Дата из ключа повтора: `grades.daily:2026-09-01`. */
+    private function dateFromKey(string $dedupeKey): ?CarbonImmutable
+    {
+        try {
+            return CarbonImmutable::parse(Str::after($dedupeKey, ':'))->startOfDay();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     private function composeGrades(int $studentId, CarbonInterface $date): ?string

@@ -28,6 +28,16 @@ class NotificationDispatcher
     /** Больше трёх попыток бессмысленно: заблокированный бот не разблокируется сам. */
     public const MAX_ATTEMPTS = 3;
 
+    /**
+     * Доставка старше суток не повторяется ни при каких условиях.
+     *
+     * Три попытки с задержками 5/30/180 минут укладываются в четыре часа, так что в
+     * обычной жизни этот предел не срабатывает. Он нужен на случай, когда планировщик
+     * простоял: без него портал, вернувшись через неделю, начал бы разгребать очередь
+     * недельной давности — и это выглядело бы как рассылка, сошедшая с ума.
+     */
+    public const MAX_AGE_HOURS = 24;
+
     /** Пять минут, полчаса, три часа — задержка перед второй, третьей и далее попыткой. */
     private const RETRY_DELAYS_MINUTES = [5, 30, 180];
 
@@ -101,6 +111,7 @@ class NotificationDispatcher
             ->where('attempts', '<', self::MAX_ATTEMPTS)
             ->whereNotNull('next_attempt_at')
             ->where('next_attempt_at', '<=', now())
+            ->where('created_at', '>=', now()->subHours(self::MAX_AGE_HOURS))
             ->orderBy('next_attempt_at')
             ->limit($limit)
             ->get();

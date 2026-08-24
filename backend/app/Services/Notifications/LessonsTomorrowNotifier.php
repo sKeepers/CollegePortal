@@ -7,8 +7,11 @@ use App\Models\ScheduleLesson;
 use App\Models\User;
 use App\Support\Notifications\MessageBody;
 use App\Support\Notifications\NotificationEvents;
+use App\Support\Notifications\RebuildsNotification;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 /**
  * «Занятия на завтра» — первое событие уведомлений.
@@ -20,7 +23,7 @@ use Illuminate\Support\Collection;
  * Одно сообщение на человека в день, а не по сообщению на занятие: расписание — это
  * список, и присылать его строками значит гарантированно получить отписку.
  */
-class LessonsTomorrowNotifier
+class LessonsTomorrowNotifier implements RebuildsNotification
 {
     public function __construct(private readonly NotificationDispatcher $dispatcher)
     {
@@ -64,6 +67,36 @@ class LessonsTomorrowNotifier
         }
 
         return ['considered' => $users->count(), 'sent' => $sent];
+    }
+
+    /**
+     * Собрать то же расписание заново — для повтора неудачной доставки.
+     *
+     * **День прошёл — новость мертва.** Расписание на вчера человеку уже не пригодится,
+     * и прислать его через три часа после звонка хуже, чем не прислать вовсе: он решит,
+     * что портал зовёт его на занятие, которого нет.
+     */
+    public function rebuild(User $user, string $dedupeKey): ?string
+    {
+        $date = $this->dateFromKey($dedupeKey);
+
+        if ($date === null || $date->lt(now()->startOfDay())) {
+            return null;
+        }
+
+        $lessons = $this->lessonsFor($user, $date);
+
+        return $lessons->isEmpty() ? null : $this->compose($lessons, $date);
+    }
+
+    /** Дата из ключа повтора: `lessons.tomorrow:2026-09-01`. */
+    private function dateFromKey(string $dedupeKey): ?CarbonImmutable
+    {
+        try {
+            return CarbonImmutable::parse(Str::after($dedupeKey, ':'))->startOfDay();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /** @return Collection<int, ScheduleLesson> */

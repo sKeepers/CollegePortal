@@ -73,4 +73,9 @@ Schedule::command('notifications:schedule-changes')->everyFifteenMinutes()->with
 
 // Утром, а не вечером того же дня: занятие может закончиться поздно, и напоминание
 // через полчаса после звонка читается как придирка.
+// Повтор неудачных доставок. Чаще всех остальных: первая задержка — пять минут, и
+// при более редком запуске обещанный повтор превращается в отложенный на полчаса.
+// Раньше не запускался ниоткуда, и первая же неудача теряла уведомление навсегда.
+Schedule::command('notifications:retry')->everyFiveMinutes()->withoutOverlapping();
+
 Schedule::command('notifications:unclosed-journal')->dailyAt('09:00');
