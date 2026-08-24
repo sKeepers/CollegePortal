@@ -7,19 +7,10 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use RuntimeException;
+use Tests\Support\TestDatabaseGuard;
 
 abstract class TestCase extends BaseTestCase
 {
-    /**
-     * Базы, на которых прогон запускать нельзя ни при каких обстоятельствах.
-     *
-     * `college_portal` — это рабочая база стенда DEV и она же боевая на PROD.
-     * `RefreshDatabase` начинает с `migrate:fresh`, поэтому один прогон,
-     * направленный туда, стирает всё: роли, учётные записи, людей, проходы.
-     */
-    private const FORBIDDEN_DATABASES = ['college_portal'];
-
     /**
      * Отказаться от прогона, если он направлен на живую базу.
      *
@@ -32,22 +23,20 @@ abstract class TestCase extends BaseTestCase
      * моменту уже поднято, значит настройки подключения известны, но
      * `setUpTraits` ещё не выполнялся — то есть `RefreshDatabase` до базы не
      * добрался. Позже было бы поздно.
+     *
+     * Само правило вынесено в `TestDatabaseGuard`: там его видно целиком и там
+     * его можно проверить на дефекте, не пуская прогон по живой базе ради
+     * проверки сторожа.
      */
     protected function refreshApplication(): void
     {
         parent::refreshApplication();
 
         $connection = config('database.default');
-        $database = config("database.connections.{$connection}.database");
 
-        if (! is_string($database) || ! in_array($database, self::FORBIDDEN_DATABASES, true)) {
-            return;
-        }
-
-        throw new RuntimeException(
-            "Прогон направлен на базу «{$database}» — это рабочая база стенда, а не тестовая. ".
-            'RefreshDatabase пересоздаёт схему и стёр бы её целиком. '.
-            'Поправьте DB_DATABASE в backend/.env своего worktree: заведите свою базу вида college_portal_<метка>.'
+        TestDatabaseGuard::assertSafe(
+            config("database.connections.{$connection}.driver"),
+            config("database.connections.{$connection}.database"),
         );
     }
 
