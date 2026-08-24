@@ -436,6 +436,59 @@ class UniversalImportApiTest extends TestCase
         ]);
     }
 
+    /**
+     * Опечатка в номере аудитории обязана быть отказом, а не тишиной.
+     *
+     * До 24.08.2026 строка с несуществующей аудиторией **загружалась**: номер не
+     * находился, поле оставалось пустым, правило стояло `nullable`, ошибок ноль — и
+     * занятие появлялось в расписании **без кабинета**. Опечатка ничем не отличалась от
+     * намеренно пустой клетки, а первого сентября это группа в коридоре.
+     *
+     * Замерено на репетиции первого сентября: файл с аудиторией «999» дал «создано 1,
+     * ошибок 0» и занятие с пустым `classroom_id`.
+     */
+    public function test_a_classroom_that_does_not_exist_stops_the_row(): void
+    {
+        Teacher::create(['last_name' => 'Петрова', 'first_name' => 'Анна', 'middle_name' => 'Викторовна', 'is_active' => true]);
+        Subject::create(['name' => 'Специальность', 'code' => 'SPEC-001']);
+        Group::create(['name' => 'ИСП-101', 'specialty' => 'Инструментальное исполнительство', 'course' => 1, 'year_start' => 2026]);
+        Classroom::create(['number' => '201', 'building' => 'Главный корпус']);
+        $file = $this->csvFile('schedule.csv', "Дата;Время начала;Время окончания;Группа;Преподаватель;Дисциплина;Код дисциплины;Аудитория;Корпус;Тип занятия;Тема
+01.09.2026;09:00;10:30;ИСП-101;Петрова Анна Викторовна;Специальность;SPEC-001;999;Главный корпус;Практическое;
+");
+
+        $jobId = $this->post('/api/admin/import/preview', [
+            'data_type' => 'schedule',
+            'file' => $file,
+        ])->assertCreated()->json('data.id');
+
+        $response = $this->postJson("/api/admin/import/{$jobId}/confirm", [
+            'mode' => 'skip_duplicates',
+            'mapping' => [
+                'lesson_date' => 'Дата',
+                'starts_at' => 'Время начала',
+                'ends_at' => 'Время окончания',
+                'group_name' => 'Группа',
+                'teacher_name' => 'Преподаватель',
+                'subject_name' => 'Дисциплина',
+                'subject_code' => 'Код дисциплины',
+                'classroom_number' => 'Аудитория',
+                'classroom_building' => 'Корпус',
+                'lesson_type' => 'Тип занятия',
+                'topic' => 'Тема',
+            ],
+        ])->assertOk();
+
+        $this->assertSame(0, $response->json('data.created_count'), 'Строка с несуществующей аудиторией загружаться не должна.');
+        $this->assertSame(1, $response->json('data.error_count'));
+        $this->assertDatabaseCount('schedule_lessons', 0);
+
+        // Отказ обязан говорить по-русски: каталога переводов в проекте нет, и обычное
+        // правило ответило бы ключом `validation.exists`.
+        $errors = json_encode($response->json('data.validation_errors'), JSON_UNESCAPED_UNICODE);
+        $this->assertStringContainsString('Аудитория из файла в портале не найдена', (string) $errors);
+    }
+
     public function test_it_imports_schedule_rows_through_universal_import(): void
     {
         $teacher = Teacher::create(['last_name' => 'Петрова', 'first_name' => 'Анна', 'middle_name' => 'Викторовна', 'is_active' => true]);
