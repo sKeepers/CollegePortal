@@ -180,8 +180,12 @@ const metrics = computed(() => selected.value ? [
   { label: 'Назначений', value: selected.value.assignments?.length || 0 },
 ] : [])
 const quickActions = computed(() => selected.value ? [
-  selected.value.person?.id ? { label: 'Личная карточка', to: `/people?selected=${selected.value.person.id}` } : null,
-  selected.value.teacher?.id ? { label: 'Преподаватель', to: `/teachers?teacher=${selected.value.teacher.id}` } : null,
+  // Обе ссылки вели параметром запроса, которого получатель не читает: «Люди» и
+  // «Преподаватели» берут идентификатор из пути, а `?selected=` и `?teacher=`
+  // молча отбрасывают — человек попадал в список вместо карточки и видел это
+  // как сломанную кнопку.
+  selected.value.person?.id ? { label: 'Личная карточка', to: `/people/${selected.value.person.id}` } : null,
+  selected.value.teacher?.id ? { label: 'Преподаватель', to: `/teachers/${selected.value.teacher.id}` } : null,
   selected.value.teacher?.id ? { label: 'Расписание', to: `/schedule?teacher_id=${selected.value.teacher.id}` } : null,
   selected.value.teacher?.id ? { label: 'Нагрузка', to: `/teaching-load?teacher_id=${selected.value.teacher.id}` } : null,
   { label: 'История проходов', to: `/access/reports?type=employee&person_id=${selected.value.person_id}` },

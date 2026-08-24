@@ -80,7 +80,11 @@ const selected = computed(() => store.selectedRow)
 const selectedSubtitle = computed(() => selected.value ? [selected.value.entity_type === 'teacher' ? 'Преподаватель' : 'Студент', selected.value.group || selected.value.department].filter(Boolean) : [])
 const selectedActions = computed(() => {
   if (!selected.value) return []
-  const personRoute = selected.value.entity_type === 'teacher' ? `/teachers?selected=${selected.value.entity_id}` : `/students?selected=${selected.value.entity_id}`
+  // Идентификатор в пути, а не в `?selected=`: разделы читают его из пути и
+  // параметр запроса игнорируют, поэтому такая ссылка молча открывала список
+  // вместо карточки. `entity_id` здесь — идентификатор профиля и в режиме
+  // «сегодня», и в истории: проверено по обоим местам, где строка собирается.
+  const personRoute = selected.value.entity_type === 'teacher' ? `/teachers/${selected.value.entity_id}` : `/students/${selected.value.entity_id}`
   const scheduleRoute = selected.value.entity_type === 'teacher' ? `/schedule?teacher=${selected.value.entity_id}` : `/schedule?group=${selected.value.group_id || ''}`
   const historyRoute = `/access/reports?entity_type=${selected.value.entity_type}&search=${encodeURIComponent(selected.value.full_name)}`
   return [

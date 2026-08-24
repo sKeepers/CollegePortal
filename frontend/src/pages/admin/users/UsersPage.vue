@@ -372,9 +372,25 @@ function rowClass(row) {
   return Number(row.id) === Number(store.selectedId) ? 'cp-selected-row' : ''
 }
 
+/**
+ * Адрес карточки, связанной с учётной записью.
+ *
+ * Здесь две поправки разом. Первая: идентификатор идёт в пути, а не в
+ * `?selected=`, который получатель не читает, — раньше кнопка открывала список.
+ *
+ * Вторая важнее и незаметнее. `person_id` у записи — это идентификатор
+ * **человека**, а разделы адресуют карточку идентификатором **профиля**: у
+ * одного и того же человека это разные числа, и ссылка открыла бы чужую
+ * карточку с уверенным видом. Правильный источник — `person.id`, он уже
+ * разрешён в профиль на стороне ответа. Признак того, что разрешён: заполнено
+ * `person.name`; без профиля ответ подставляет туда идентификатор человека, и
+ * такую ссылку строить нельзя.
+ */
 function openPerson(user) {
-  if (user?.person_type === 'student' && user.person_id) return `/students?selected=${user.person_id}`
-  if (user?.person_type === 'teacher' && user.person_id) return `/teachers?selected=${user.person_id}`
+  const profile = user?.person
+  if (!profile?.id || !profile?.name) return null
+  if (profile.type === 'student') return `/students/${profile.id}`
+  if (profile.type === 'teacher') return `/teachers/${profile.id}`
   return null
 }
 

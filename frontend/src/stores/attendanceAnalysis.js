@@ -96,7 +96,13 @@ export const useAttendanceAnalysisStore = defineStore('attendanceAnalysis', () =
   const todayRows = computed(() => (mode.value === 'teachers' ? teachers.value : students.value))
   const rows = computed(() => (reportMode.value === 'today' ? todayRows.value : historyRows.value))
   const summary = computed(() => (reportMode.value === 'today' ? (mode.value === 'teachers' ? teacherSummary.value : studentSummary.value) : historySummary.value))
-  const selectedRow = computed(() => rows.value.find((row) => row.id === selectedId.value) || rows.value[0] || null)
+  // Без запасного `rows[0]`: у экрана обязано быть состояние «никто не
+  // выбран», и оно начальное. Пока запасной вариант стоял здесь, вход в раздел
+  // сразу открывал карточку первого по алфавиту, будто её выбрали, а кнопка
+  // «Назад к списку» выглядела сломанной: она обнуляла выбор, вычисление тут же
+  // подставляло первую строку, и экран не менялся. Нажатие проходило, состояние
+  // менялось, картинка — нет; человек жмёт снова и решает, что портал завис.
+  const selectedRow = computed(() => rows.value.find((row) => row.id === selectedId.value) || null)
   const groupOptions = computed(() => buildGroupOptions(groups.value, {
     lead: [{ label: 'Все группы', value: '' }],
   }))
@@ -166,8 +172,11 @@ export const useAttendanceAnalysisStore = defineStore('attendanceAnalysis', () =
       } else {
         await loadHistory()
       }
+      // Выбор переживает загрузку, если строка ещё в списке, и сбрасывается
+      // в пусто, если её не стало. На первую попавшуюся он не переезжает: это
+      // и был бы «портал выбрал за меня».
       if (!rows.value.some((row) => row.id === selectedId.value)) {
-        selectedId.value = rows.value[0]?.id || null
+        selectedId.value = null
       }
       if (reportMode.value !== 'today') {
         await loadPersonDays()
@@ -183,7 +192,7 @@ export const useAttendanceAnalysisStore = defineStore('attendanceAnalysis', () =
     mode.value = value
     filters.person_id = ''
     if (!rows.value.some((row) => row.id === selectedId.value)) {
-      selectedId.value = rows.value[0]?.id || null
+      selectedId.value = null
     }
   }
 
