@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Group;
 use App\Models\JournalLesson;
 use App\Models\NotificationSubscription;
+use App\Models\ScheduleEntry;
 use App\Models\ScheduleLesson;
 use App\Models\Student;
 use App\Models\Subject;
@@ -12,6 +13,7 @@ use App\Models\Teacher;
 use App\Models\User;
 use App\Models\UserIdentity;
 use App\Services\Notifications\NotificationDispatcher;
+use App\Services\ScheduleEngineService;
 use App\Services\Notifications\ScheduleChangeNotifier;
 use App\Services\Notifications\UnclosedJournalNotifier;
 use App\Support\Notifications\MaxNotificationChannel;
@@ -200,6 +202,132 @@ class ScheduleAndJournalNotificationTest extends TestCase
 
         $this->assertSame(1, $result['sent'], 'Новому подписчику сообщение уходит, старому — нет.');
         $this->assertSame(1, $result['held']);
+    }
+
+    /**
+     * Отмена — самая дорогая новость, и до 24.08.2026 она не доходила вовсе.
+     *
+     * `ScheduleEngineService::cancel()` **удаляет** зеркальную строку `schedule_lessons`,
+     * мягкого удаления у модели нет, а рассылка изменений смотрела только туда — найти
+     * удалённую строку она не могла в принципе. Выходило наоборот тому, что нужно: о
+     * переносе аудитории человек узнавал, а о том, что занятия не будет, — нет, и
+     * приходил в колледж зря.
+     */
+    public function test_a_cancelled_lesson_reaches_the_group(): void
+    {
+        [, $group, $teacher] = $this->subscribedStudent(NotificationEvents::SCHEDULE_CHANGED);
+        $entry = $this->entry($group, $teacher, now()->addDay());
+
+        app(ScheduleEngineService::class)->cancel($entry);
+
+        $result = $this->scheduleNotifier()->run(now()->subMinutes(15), MaxNotificationChannel::CODE);
+
+        $this->assertSame(1, $result['sent']);
+        $this->assertStringContainsString('отменено', $this->channel->sent[0][1]);
+        $this->assertStringContainsString(now()->addDay()->format('d.m'), $this->channel->sent[0][1]);
+    }
+
+    /**
+     * Отменили весь день — это тридцать занятий разом, и тридцать сообщений было бы той
+     * же лавиной с другой стороны. Свёртка обязана держать и здесь.
+     */
+    public function test_a_whole_day_of_cancellations_is_one_message(): void
+    {
+        [, $group, $teacher] = $this->subscribedStudent(NotificationEvents::SCHEDULE_CHANGED);
+        $engine = app(ScheduleEngineService::class);
+
+        for ($i = 0; $i < 30; $i++) {
+            $engine->cancel($this->entry($group, $teacher, now()->addDay(), $i + 1));
+        }
+
+        $result = $this->scheduleNotifier()->run(now()->subMinutes(15), MaxNotificationChannel::CODE);
+
+        $this->assertSame(30, $result['changed']);
+        $this->assertSame(1, $result['sent']);
+        $this->assertCount(1, $this->channel->sent);
+        $this->assertStringContainsString('занятий: 30', $this->channel->sent[0][1]);
+        // Десять строк и «и ещё 20» — длинное сообщение мессенджер не обрезает, он его
+        // не доставляет вовсе.
+        $this->assertStringContainsString('и ещё 20', $this->channel->sent[0][1]);
+    }
+
+    /**
+     * Отмена стоит первой строкой, даже если правок больше.
+     *
+     * Список подрезается десятью строками: вытесни отмену переносами — и человек
+     * прочитает про аудиторию, а придёт на занятие, которого нет.
+     */
+    public function test_a_cancellation_is_not_pushed_out_by_ordinary_changes(): void
+    {
+        [, $group, $teacher] = $this->subscribedStudent(NotificationEvents::SCHEDULE_CHANGED);
+
+        for ($i = 0; $i < 12; $i++) {
+            $this->markEdited($this->lesson($group, $teacher, now()->addDays(2)));
+        }
+
+        app(ScheduleEngineService::class)->cancel($this->entry($group, $teacher, now()->addDay()));
+
+        $this->scheduleNotifier()->run(now()->subMinutes(15), MaxNotificationChannel::CODE);
+
+        $lines = explode("\n", $this->channel->sent[0][1]);
+        $this->assertStringContainsString('отменено', $lines[1], 'Отмена обязана стоять первой строкой списка.');
+    }
+
+    /**
+     * Занятие, заведённое и отменённое в одну минуту, новостью не является: о нём никто
+     * не успел узнать. Тот же порог, что и у правок.
+     */
+    public function test_a_lesson_cancelled_at_once_is_not_news(): void
+    {
+        [, $group, $teacher] = $this->subscribedStudent(NotificationEvents::SCHEDULE_CHANGED);
+        $entry = $this->entry($group, $teacher, now()->addDay());
+        $entry->forceFill(['created_at' => now()])->saveQuietly();
+
+        app(ScheduleEngineService::class)->cancel($entry);
+
+        $this->assertSame(0, $this->scheduleNotifier()->run(now()->subMinutes(15), MaxNotificationChannel::CODE)['sent']);
+    }
+
+    /** Запись движка с зеркальной строкой, заведённая заметно раньше — как настоящая. */
+    private function entry(Group $group, Teacher $teacher, $date, int $lessonNumber = 1): ScheduleEntry
+    {
+        $subject = Subject::create(['name' => 'Сольфеджио', 'code' => 'SOLF'.random_int(1000, 9999)]);
+
+        // Пары идут с восьми утра с шагом в четверть часа: тридцать штук укладываются
+        // в сутки, а без этого тридцатая получала бы «37:00» и роняла разбор времени.
+        $startMinute = 8 * 60 + ($lessonNumber - 1) * 15;
+        $start = sprintf('%02d:%02d', intdiv($startMinute, 60), $startMinute % 60);
+        $end = sprintf('%02d:%02d', intdiv($startMinute + 10, 60), ($startMinute + 10) % 60);
+
+        $entry = ScheduleEntry::create([
+            'academic_year' => '2026/2027',
+            'semester' => 1,
+            'date' => $date->toDateString(),
+            'day_of_week' => $date->dayOfWeekIso,
+            'lesson_number' => $lessonNumber,
+            'starts_at' => $start,
+            'ends_at' => $end,
+            'group_id' => $group->id,
+            'subject_id' => $subject->id,
+            'teacher_id' => $teacher->id,
+            'status' => 'scheduled',
+            'source' => 'schedule_engine',
+        ]);
+
+        $entry->forceFill(['created_at' => now()->subDays(30)])->saveQuietly();
+
+        ScheduleLesson::create([
+            'schedule_entry_id' => $entry->id,
+            'group_id' => $group->id,
+            'teacher_id' => $teacher->id,
+            'subject_id' => $subject->id,
+            'lesson_date' => $date->toDateString(),
+            'starts_at' => $start,
+            'ends_at' => $end,
+            'lesson_type' => 'lecture',
+        ]);
+
+        return $entry->fresh();
     }
 
     private function scheduleNotifier(): ScheduleChangeNotifier
