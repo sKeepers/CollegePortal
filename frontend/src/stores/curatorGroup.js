@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
+import { buildGroupOptions } from '../utils/groupOptions'
 
 /**
  * Своя группа глазами куратора: состав и успеваемость.
@@ -46,10 +47,11 @@ export const useCuratorGroupStore = defineStore('curatorGroup', () => {
   const rows = computed(() => performance.value?.students || [])
   // Кому куратору звонить в первую очередь: двойки и полное отсутствие оценок.
   const needsAttention = computed(() => rows.value.filter((row) => row.failing_count > 0 || !row.has_grades))
-  const groupOptions = computed(() => groups.value.map((group) => ({
-    label: `${group.name} · ${group.students_count} чел.`,
-    value: group.id,
-  })))
+  const groupOptions = computed(() => buildGroupOptions(groups.value, {
+    suffix: (group) => (group.students_count === null || group.students_count === undefined
+      ? null
+      : `${group.students_count} чел.`),
+  }))
 
   async function loadGroups() {
     groupsLoading.value = true

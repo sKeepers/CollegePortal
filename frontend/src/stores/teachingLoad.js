@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
+import { buildGroupOptions } from '../utils/groupOptions'
 
 const initialFilters = { academic_year: '', teacher_id: '', group_id: '', subject_id: '', semester: '', assignment_teacher_id: '', assignment_status: '' }
 export const LOAD_STATUS_OPTIONS = [
@@ -52,7 +53,10 @@ export const useTeachingLoadStore = defineStore('teachingLoad', () => {
   const academicYearOptions = computed(() => [...new Set(loads.value.map((load) => load.academic_year).filter(Boolean))].sort().reverse().map((year) => ({ label: year, value: year })))
   const semesterOptions = computed(() => [...new Set(loads.value.flatMap((load) => (load.items || []).map((item) => item.semester)).filter(Boolean))].sort((a, b) => a - b).map((semester) => ({ label: `${semester} семестр`, value: semester })))
   const teacherOptions = computed(() => teachers.value.map((teacher) => ({ label: teacherName(teacher), value: teacher.id })))
-  const groupOptions = computed(() => groups.value.map((group) => ({ label: group.curriculum_id ? `${group.name} · учебный план` : group.name, value: group.id, curriculum_id: group.curriculum_id })))
+  const groupOptions = computed(() => buildGroupOptions(groups.value, {
+    suffix: (group) => (group.curriculum_id ? 'учебный план' : null),
+    extra: (group) => ({ curriculum_id: group.curriculum_id }),
+  }))
   const subjectOptions = computed(() => subjects.value.map((subject) => ({ label: [subject.code, subject.name].filter(Boolean).join(' · '), value: subject.id })))
 
   async function load({ includeReferenceData = true } = {}) {

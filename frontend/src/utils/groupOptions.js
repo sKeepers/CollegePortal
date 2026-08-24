@@ -1,0 +1,124 @@
+/**
+ * Список групп для выпадающих полей: заголовок специальности и строки курсов под ним.
+ *
+ * Групп в колледже под семьдесят, и плоским списком они нечитаемы: подряд идут четыре
+ * «Хореографическое творчество», различающиеся только годом набора в конце строки.
+ * Владелец 23.08.2026 попросил показывать «только название», но буквально это невозможно —
+ * четыре строки стали бы неотличимы. Решение: группировать по специальности, а строкой
+ * писать курс, которым учебная часть оперирует каждый день.
+ *
+ * **Одна поправка к решению, и она вынужденная.** В решении сказано «а где есть параллели —
+ * „1 курс А“, „1 курс Б“». Буквенных параллелей больше нет, и это тоже решение владельца:
+ * буква в имени означала не параллель, а источник оплаты («Группа А (бюджетная)»), 24.08.2026
+ * оплата уехала в карточку студента, десять пар групп слились в одну и буквы сняли. Платники
+ * и бюджетники учатся вместе; подгруппы, когда дойдут до портала, станут отдельной сущностью,
+ * а не буквой в имени.
+ *
+ * Различаются же группы внутри специальности **специализацией**: под «51.02.01 Народное
+ * художественное творчество» лежат и «Театральное творчество», и «Хореографическое
+ * творчество». Напиши обеим «4 курс» — и получишь две неотличимые строки, то есть ровно ту
+ * беду, от которой уходили. Поэтому специализация приписывается к курсу, и только там, где
+ * она в специальности не одна.
+ *
+ * Специализация берётся из имени группы отсечением хвоста «, набор 2026»: на 24.08.2026 им
+ * кончаются **все** 58 групп стенда, исключений нет. Имя группы в базе при этом не меняется —
+ * оно уходит в приказы, отчёты и ФИС; меняется только вид списка.
+ */
+
+/** Хвост «, набор 2026» — им кончается имя каждой группы. */
+const ENROLMENT_TAIL = /,\s*набор\s+\d{4}\s*$/u
+
+const NO_SPECIALTY = 'Без специальности'
+
+/** Имя группы без года набора — то, чем специализации различаются между собой. */
+export function groupKind(group) {
+  const name = String(group?.name ?? '').trim()
+
+  return name.replace(ENROLMENT_TAIL, '').trim() || name
+}
+
+function specialtyOf(group) {
+  return String(group?.specialty ?? '').trim() || NO_SPECIALTY
+}
+
+function courseOf(group) {
+  const course = Number(group?.course)
+
+  return Number.isFinite(course) && course > 0 ? course : null
+}
+
+/**
+ * Строка группы: «2 курс» или «2 курс — Театральное творчество».
+ *
+ * Курса может не быть — у заочников и у групп, чей год набора не заполнен. Тогда пишем год
+ * набора: он есть всегда и человеку понятнее пустоты.
+ */
+function rowLabel(group, withKind) {
+  const course = courseOf(group)
+  const head = course ? `${course} курс` : `набор ${group?.year_start ?? '—'}`
+
+  return withKind ? `${head} — ${groupKind(group)}` : head
+}
+
+function compare(a, b) {
+  const bySpecialty = specialtyOf(a).localeCompare(specialtyOf(b), 'ru')
+  if (bySpecialty !== 0) return bySpecialty
+
+  // Группы без курса — в конец: это заочники и незаполненные, им не место между курсами.
+  const courseA = courseOf(a) ?? Number.MAX_SAFE_INTEGER
+  const courseB = courseOf(b) ?? Number.MAX_SAFE_INTEGER
+  if (courseA !== courseB) return courseA - courseB
+
+  return groupKind(a).localeCompare(groupKind(b), 'ru')
+}
+
+/**
+ * @param {Array} groups список групп как их отдаёт API
+ * @param {object} [options]
+ * @param {(group: object) => (string|null|undefined)} [options.suffix] что дописать к строке через « · »
+ * @param {(group: object) => object} [options.extra] дополнительные поля варианта
+ * @param {Array} [options.lead] что поставить в самое начало, например «Все группы»
+ * @returns {Array} варианты для `q-select`; заголовки помечены `disable`, выбрать их нельзя,
+ * а у строк рядом с коротким `label` лежит полное имя группы в `fullLabel`
+ */
+export function buildGroupOptions(groups, { suffix = null, extra = null, lead = [] } = {}) {
+  const rows = (Array.isArray(groups) ? groups : []).filter(Boolean)
+
+  // Сколько разных специализаций внутри каждой специальности: там, где одна, приписывать
+  // её к курсу незачем — строка станет длиннее, а различать нечего.
+  const kinds = new Map()
+  rows.forEach((group) => {
+    const specialty = specialtyOf(group)
+    if (!kinds.has(specialty)) kinds.set(specialty, new Set())
+    kinds.get(specialty).add(groupKind(group))
+  })
+
+  const options = [...lead]
+  let currentSpecialty = null
+
+  ;[...rows].sort(compare).forEach((group) => {
+    const specialty = specialtyOf(group)
+
+    if (specialty !== currentSpecialty) {
+      currentSpecialty = specialty
+      // Заголовок — тоже вариант списка, но невыбираемый: у него нет `value`, поэтому
+      // `emit-value map-options` его никогда не подставит, а `find` по значению не найдёт.
+      options.push({ label: specialty, value: null, disable: true, isSpecialtyHeader: true })
+    }
+
+    const tail = suffix ? suffix(group) : null
+
+    options.push({
+      label: [rowLabel(group, kinds.get(specialty).size > 1), tail].filter(Boolean).join(' · '),
+      // Полное имя обязано остаться рядом: в списке под заголовком специальности хватает
+      // «2 курс», а в фишке фильтра и в шапке печатной ведомости — нет, там заголовка нет
+      // и «2 курс» не говорит ни о чём. Кто показывает группу вне списка, берёт `fullLabel`.
+      fullLabel: group.name,
+      value: group.id,
+      group,
+      ...(extra ? extra(group) : {}),
+    })
+  })
+
+  return options
+}

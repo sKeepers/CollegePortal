@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
+import { buildGroupOptions } from '../utils/groupOptions'
 
 /**
  * RFID-карты: рабочее место коменданта и отдела кадров.
@@ -45,10 +46,7 @@ export const useRfidCardsStore = defineStore('rfidCards', () => {
   const statusOptions = computed(() => Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label })))
   const reasonOptions = computed(() => Object.entries(REASON_LABELS).map(([value, label]) => ({ value, label })))
 
-  const groupOptions = computed(() => groups.value.map((group) => ({
-    value: group.id,
-    label: group.course ? `${group.name} (${group.course} курс)` : group.name,
-  })))
+  const groupOptions = computed(() => buildGroupOptions(groups.value))
 
   const counts = computed(() => cards.value.reduce((totals, card) => {
     totals[card.status] = (totals[card.status] || 0) + 1

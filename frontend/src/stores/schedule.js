@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
 import { useAuthStore } from './auth'
+import { buildGroupOptions } from '../utils/groupOptions'
 
 const initialFilters = {
   academic_year: '',
@@ -116,11 +117,7 @@ export const useScheduleStore = defineStore('schedule', () => {
     lessons.value.find((lesson) => Number(lesson.id) === Number(selectedId.value)) || null
   ))
 
-  const groupOptions = computed(() => groups.value.map((group) => ({
-    label: group.name,
-    value: group.id,
-    group,
-  })))
+  const groupOptions = computed(() => buildGroupOptions(groups.value))
 
   const teacherOptions = computed(() => teachers.value.map((teacher) => ({
     label: teacherName(teacher),

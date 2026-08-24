@@ -67,7 +67,9 @@ function chipForOption(key, label, options) {
 
   return {
     key,
-    label: `${label}: ${option?.label || value}`,
+    // Вне списка короткой строки мало: под заголовком специальности «2 курс» понятно,
+  // а в фишке фильтра заголовка нет. Полное имя группы лежит рядом, в `fullLabel`.
+    label: `${label}: ${option?.fullLabel || option?.label || value}`,
   }
 }
 

@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
+import { buildGroupOptions } from '../utils/groupOptions'
 
 const initialFilters = {
   search: '',
@@ -214,10 +215,9 @@ export const useAdmissionsStore = defineStore('admissions', () => {
     return [...specialties.values()].sort((a, b) => a.label.localeCompare(b.label, 'ru'))
   })
 
-  const groupOptions = computed(() => groups.value.map((group) => ({
-    label: [group.name, group.course ? `${group.course} курс` : '', group.education_program?.study_form].filter(Boolean).join(' · '),
-    value: group.id,
-  })))
+  const groupOptions = computed(() => buildGroupOptions(groups.value, {
+    suffix: (group) => group.education_program?.study_form || null,
+  }))
 
   const selectedApplicationDocuments = computed(() => (
     Array.isArray(selectedApplication.value?.documents) ? selectedApplication.value.documents : []

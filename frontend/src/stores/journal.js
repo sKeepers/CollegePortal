@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
 import { teacherName } from './schedule'
+import { buildGroupOptions } from '../utils/groupOptions'
 
 const JOURNAL_FILTERS_KEY = 'collegePortal.journal.filters'
 
@@ -139,7 +140,7 @@ export const useJournalStore = defineStore('journal', () => {
     signed: lessons.value.filter((lesson) => lesson.status === 'signed').length,
   }))
 
-  const groupOptions = computed(() => groups.value.map((group) => ({ label: group.name, value: group.id })))
+  const groupOptions = computed(() => buildGroupOptions(groups.value))
   const teacherOptions = computed(() => teachers.value.map((teacher) => ({ label: teacherName(teacher), value: teacher.id })))
   const subjectOptions = computed(() => subjects.value.map((subject) => ({ label: subject.name, value: subject.id })))
 

@@ -73,7 +73,9 @@ const openOptions = [
 const printTitle = computed(() => {
   const group = store.groupOptions.find((option) => option.value === store.journalFilters.group_id)
 
-  return group ? `Ведомость выдачи RFID-карт — ${group.label}` : 'Журнал выдачи RFID-карт'
+  // Шапка печатной ведомости: здесь нужно полное имя группы, а не строка списка —
+  // «2 курс» на бумаге не говорит ни о чём.
+  return group ? `Ведомость выдачи RFID-карт — ${group.fullLabel || group.label}` : 'Журнал выдачи RFID-карт'
 })
 
 const printPeriod = computed(() => {

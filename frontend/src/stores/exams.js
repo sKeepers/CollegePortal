@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
 import { loadReferences } from '../services/referenceLoader'
+import { buildGroupOptions } from '../utils/groupOptions'
 
 const initialFilters = { academic_year: '', group_id: '', subject_id: '', teacher_id: '', exam_type: '' }
 export const EXAM_TYPE_OPTIONS = [
@@ -73,7 +74,7 @@ export const useExamsStore = defineStore('exams', () => {
     && (!filters.value.teacher_id || Number(exam.teacher_id) === Number(filters.value.teacher_id))
     && (!filters.value.exam_type || exam.exam_type === filters.value.exam_type)))
   const academicYearOptions = computed(() => [...new Set(exams.value.map((exam) => exam.academic_year).filter(Boolean))].sort().reverse().map((year) => ({ label: year, value: year })))
-  const groupOptions = computed(() => groups.value.map((group) => ({ label: group.name, value: group.id })))
+  const groupOptions = computed(() => buildGroupOptions(groups.value))
   const subjectOptions = computed(() => subjects.value.map((subject) => ({ label: subjectName(subject), value: subject.id })))
   const teacherOptions = computed(() => teachers.value.map((teacher) => ({ label: teacherName(teacher), value: teacher.id })))
   const classroomOptions = computed(() => classrooms.value.map((classroom) => ({ label: classroomName(classroom), value: classroom.id })))

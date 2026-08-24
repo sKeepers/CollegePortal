@@ -62,7 +62,8 @@ const activeChips = computed(() => {
   }
 
   if (localFilters.group_id) {
-    chips.push({ key: 'group_id', label: `Группа: ${selectedGroup?.label || localFilters.group_id}` })
+    // Полное имя, а не строка списка: у фишки нет заголовка специальности над ней.
+    chips.push({ key: 'group_id', label: `Группа: ${selectedGroup?.fullLabel || selectedGroup?.label || localFilters.group_id}` })
   }
 
   if (localFilters.course) {

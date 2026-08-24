@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
+import { buildGroupOptions } from '../utils/groupOptions'
 
 const initialFilters = {
   search: '',
@@ -80,11 +81,7 @@ export const useStudentsStore = defineStore('students', () => {
     students.value.find((student) => Number(student.id) === Number(selectedId.value)) || null
   ))
 
-  const groupOptions = computed(() => groups.value.map((group) => ({
-    label: group.name,
-    value: group.id,
-    group,
-  })))
+  const groupOptions = computed(() => buildGroupOptions(groups.value))
 
   // Курс и специальность берём из уже загруженных групп, а не из справочника
   // специальностей: `api/specialties` закрыт правом на управление справочниками,

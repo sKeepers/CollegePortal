@@ -85,7 +85,9 @@ function chipForOption(key, label, options) {
   const option = options.find((item) => String(item.value) === String(value))
   return {
     key,
-    label: `${label}: ${option?.label || value}`,
+    // Вне списка короткой строки мало: под заголовком специальности «2 курс» понятно,
+  // а в фишке фильтра заголовка нет. Полное имя группы лежит рядом, в `fullLabel`.
+    label: `${label}: ${option?.fullLabel || option?.label || value}`,
   }
 }
 

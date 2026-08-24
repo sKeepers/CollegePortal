@@ -2,6 +2,7 @@ import { computed, reactive, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
 import { useAuthStore } from './auth'
+import { buildGroupOptions } from '../utils/groupOptions'
 
 function rows(payload) { return Array.isArray(payload?.data) ? payload.data : [] }
 function isoDate(date) { return date.toISOString().slice(0, 10) }
@@ -41,7 +42,7 @@ export const useReportsStore = defineStore('reports', () => {
   const journalFilters = reactive({ group_id: '', teacher_id: '', ...defaultPeriod() })
   const absenceFilters = reactive({ ...defaultPeriod() })
 
-  const groupOptions = computed(() => groups.value.map((group) => ({ label: group.name, value: group.id })))
+  const groupOptions = computed(() => buildGroupOptions(groups.value))
   const subjectOptions = computed(() => subjects.value.map((subject) => ({ label: subject.name, value: subject.id })))
   const teacherOptions = computed(() => teachers.value.map((teacher) => ({
     label: [teacher.last_name, teacher.first_name, teacher.middle_name].filter(Boolean).join(' '),

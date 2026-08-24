@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
 import { loadReferences } from '../services/referenceLoader'
+import { buildGroupOptions } from '../utils/groupOptions'
 
 const initialFilters = { graduation_year: '', group_id: '', education_program_id: '', diploma_status: '' }
 export const GRADUATE_STATUS_OPTIONS = [
@@ -33,7 +34,9 @@ export const useGraduationStore = defineStore('graduation', () => {
   const filteredGraduates = computed(() => graduates.value.filter((item) => (!filters.value.graduation_year || Number(item.graduation_year) === Number(filters.value.graduation_year)) && (!filters.value.group_id || Number(item.group_id) === Number(filters.value.group_id)) && (!filters.value.education_program_id || Number(item.education_program_id) === Number(filters.value.education_program_id)) && (!filters.value.diploma_status || item.diploma?.status === filters.value.diploma_status)))
   const graduationYearOptions = computed(() => [...new Set(graduates.value.map((item) => item.graduation_year).filter(Boolean))].sort((a, b) => b - a).map((year) => ({ label: String(year), value: year })))
   const studentOptions = computed(() => students.value.filter((student) => !graduates.value.some((graduate) => Number(graduate.student_id) === Number(student.id)) || Number(selectedGraduate.value?.student_id) === Number(student.id)).map((student) => ({ label: studentName(student), value: student.id, group_id: student.group_id })))
-  const groupOptions = computed(() => groups.value.map((group) => ({ label: group.name, value: group.id, education_program_id: group.education_program_id })))
+  const groupOptions = computed(() => buildGroupOptions(groups.value, {
+    extra: (group) => ({ education_program_id: group.education_program_id }),
+  }))
   const programOptions = computed(() => programs.value.map((program) => ({ label: program.name, value: program.id, specialty_id: program.specialty_id })))
   const specialtyOptions = computed(() => specialties.value.map((specialty) => ({ label: [specialty.code, specialty.name].filter(Boolean).join(' · '), value: specialty.id, qualification: specialty.qualification })))
   // Выпускники — сам экран, остальное — справочники его форм и фильтров.

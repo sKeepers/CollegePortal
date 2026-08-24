@@ -2,6 +2,7 @@ import { computed, reactive, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
 import { loadReferences } from '../services/referenceLoader'
+import { buildGroupOptions } from '../utils/groupOptions'
 
 function extractRows(payload) {
   return Array.isArray(payload?.data) ? payload.data : []
@@ -96,10 +97,9 @@ export const useAttendanceAnalysisStore = defineStore('attendanceAnalysis', () =
   const rows = computed(() => (reportMode.value === 'today' ? todayRows.value : historyRows.value))
   const summary = computed(() => (reportMode.value === 'today' ? (mode.value === 'teachers' ? teacherSummary.value : studentSummary.value) : historySummary.value))
   const selectedRow = computed(() => rows.value.find((row) => row.id === selectedId.value) || rows.value[0] || null)
-  const groupOptions = computed(() => [
-    { label: 'Все группы', value: '' },
-    ...groups.value.map((group) => ({ label: group.name, value: group.id })),
-  ])
+  const groupOptions = computed(() => buildGroupOptions(groups.value, {
+    lead: [{ label: 'Все группы', value: '' }],
+  }))
   const teacherOptions = computed(() => [
     { label: 'Все преподаватели', value: '' },
     ...teacherOptionsSource.value.map((teacher) => ({ label: teacherName(teacher), value: teacher.id })),
