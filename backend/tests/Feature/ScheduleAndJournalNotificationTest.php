@@ -114,6 +114,94 @@ class ScheduleAndJournalNotificationTest extends TestCase
         $this->assertSame(0, $this->journalNotifier()->run(now()->subDay(), MaxNotificationChannel::CODE)['sent']);
     }
 
+    /**
+     * Свёртка окном ограничивает сообщение, но не их число.
+     *
+     * Замер на стенде 24.08.2026: восемь окон подряд при непрерывной правке расписания —
+     * 4960 сообщений на 620 человек, ровно по восемь каждому. За рабочий день первого
+     * сентября это тридцать два сообщения, и отписываются от такого разом.
+     */
+    public function test_a_second_window_within_the_quiet_hour_holds_the_message(): void
+    {
+        [$user, $group, $teacher] = $this->subscribedStudent(NotificationEvents::SCHEDULE_CHANGED);
+        $lesson = $this->lesson($group, $teacher, now()->addDay());
+        $this->markEdited($lesson);
+
+        $first = $this->scheduleNotifier()->run(now()->subMinutes(15), MaxNotificationChannel::CODE);
+        $this->assertSame(1, $first['sent']);
+
+        $this->travel(1)->minutes();
+        $lesson->forceFill(['updated_at' => now()])->saveQuietly();
+
+        $second = $this->scheduleNotifier()->run(now()->subMinutes(15), MaxNotificationChannel::CODE);
+
+        $this->assertSame(0, $second['sent'], 'Второе сообщение за час уходить не должно.');
+        $this->assertSame(1, $second['held']);
+        $this->assertCount(1, $this->channel->sent);
+    }
+
+    /**
+     * Тишина не значит потерю: то, что случилось за час молчания, приходит следующим
+     * сообщением. Иначе лекарство от бури оказалось бы хуже самой бури — человек
+     * перестал бы узнавать о переносе занятия вовсе.
+     */
+    public function test_changes_made_during_the_quiet_hour_arrive_afterwards(): void
+    {
+        [$user, $group, $teacher] = $this->subscribedStudent(NotificationEvents::SCHEDULE_CHANGED);
+        $first = $this->lesson($group, $teacher, now()->addDay());
+        $this->markEdited($first);
+
+        $this->assertSame(1, $this->scheduleNotifier()->run(now()->subMinutes(15), MaxNotificationChannel::CODE)['sent']);
+
+        // Правка внутри часа тишины: сообщения о ней сейчас не будет.
+        $this->travel(10)->minutes();
+        $held = $this->lesson($group, $teacher, now()->addDays(2));
+        $held->forceFill(['created_at' => now()->subDays(30), 'updated_at' => now()])->saveQuietly();
+
+        $this->assertSame(0, $this->scheduleNotifier()->run(now()->subMinutes(15), MaxNotificationChannel::CODE)['sent']);
+
+        // Час вышел — приходит то, что накопилось.
+        $this->travel(55)->minutes();
+        $after = $this->scheduleNotifier()->run(now()->subMinutes(15), MaxNotificationChannel::CODE);
+
+        $this->assertSame(1, $after['sent']);
+        $this->assertCount(2, $this->channel->sent);
+        $this->assertStringContainsString(
+            now()->addDays(2)->subMinutes(65)->format('d.m'),
+            $this->channel->sent[1][1],
+            'Занятие, изменённое во время тишины, обязано попасть в следующее сообщение.',
+        );
+    }
+
+    /** Час тишины считается по каждому человеку отдельно, а не по рассылке целиком. */
+    public function test_the_quiet_hour_is_counted_per_person(): void
+    {
+        [, $group, $teacher] = $this->subscribedStudent(NotificationEvents::SCHEDULE_CHANGED);
+        $lesson = $this->lesson($group, $teacher, now()->addDay());
+        $this->markEdited($lesson);
+
+        $this->assertSame(1, $this->scheduleNotifier()->run(now()->subMinutes(15), MaxNotificationChannel::CODE)['sent']);
+
+        // Второй студент той же группы подписался только что: молчать ему не за что.
+        $second = $this->createApiUser();
+        Student::create([
+            'user_id' => $second->id,
+            'group_id' => $group->id,
+            'last_name' => 'Рябцев',
+            'first_name' => 'Сергей',
+            'status' => 'active',
+        ]);
+        $this->subscribe($second, NotificationEvents::SCHEDULE_CHANGED);
+
+        $this->travel(1)->minutes();
+        $lesson->forceFill(['updated_at' => now()])->saveQuietly();
+
+        $result = $this->scheduleNotifier()->run(now()->subMinutes(15), MaxNotificationChannel::CODE);
+
+        $this->assertSame(1, $result['sent'], 'Новому подписчику сообщение уходит, старому — нет.');
+        $this->assertSame(1, $result['held']);
+    }
+
     private function scheduleNotifier(): ScheduleChangeNotifier
     {
         return new ScheduleChangeNotifier(new NotificationDispatcher(app(NotificationChannels::class)));
