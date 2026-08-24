@@ -23,6 +23,7 @@ const SemesterGradesPage = () => import('../pages/journal/SemesterGradesPage.vue
 const TeachingLoadPage = () => import('../pages/teaching-load/TeachingLoadPage.vue')
 const ExamsPage = () => import('../pages/exams/ExamsPage.vue')
 const GraduationPage = () => import('../pages/graduation/GraduationPage.vue')
+const DiplomaBlanksPage = () => import('../pages/graduation/DiplomaBlanksPage.vue')
 const FrdoPage = () => import('../pages/frdo/FrdoPage.vue')
 const FisPage = () => import('../pages/fis/FisPage.vue')
 const ReportsPage = () => import('../pages/reports/ReportsPage.vue')
@@ -326,6 +327,12 @@ export const routes = [
         name: 'graduation',
         component: GraduationPage,
         meta: { title: 'Выпускники и дипломы', permission: 'graduation.view' },
+      },
+      {
+        path: 'diploma-blanks',
+        name: 'diploma-blanks',
+        component: DiplomaBlanksPage,
+        meta: { title: 'Бланки дипломов', permission: 'diploma.blanks.view' },
       },
       {
         path: 'frdo/:id?',

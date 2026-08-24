@@ -98,6 +98,7 @@ const navGroups = [
       { label: 'Нагрузка', to: '/teaching-load', icon: ClipboardList, permissionsAny: ['teachingload.view', 'teachingload.view_own'] },
       { label: 'Экзамены и ГИА', to: '/exams', icon: ClipboardList, permission: 'exams.view' },
       { label: 'Выпускники и дипломы', to: '/graduation', icon: GraduationCap, permission: 'graduation.view' },
+      { label: 'Бланки дипломов', to: '/diploma-blanks', icon: GraduationCap, permission: 'diploma.blanks.view' },
       { label: 'ФРДО', to: '/frdo', icon: FileText, permission: 'frdo.view' },
       { label: 'ФИС', to: '/fis', icon: FileText, permission: 'fis.view' },
     ],

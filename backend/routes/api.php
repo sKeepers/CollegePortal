@@ -72,6 +72,8 @@ use App\Http\Controllers\Api\EducationProgramController;
 use App\Http\Controllers\Api\GradeController;
 use App\Http\Controllers\Api\JournalLessonController;
 use App\Http\Controllers\Api\SemesterGradeController;
+use App\Http\Controllers\Api\DiplomaBlankController;
+use App\Http\Controllers\Api\DiplomaRegistryController;
 use App\Http\Controllers\Api\GraduateController;
 use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\StudentBulkController;
@@ -771,6 +773,37 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     Route::apiResource('graduates', GraduateController::class)
         ->middlewareFor(['index', 'show'], 'permission:graduation.view')
         ->middlewareFor(['store', 'update', 'destroy'], 'permission:graduation.edit');
+
+    // Бланки строгой отчётности. Маршрута на удаление здесь нет и не будет:
+    // испорченный бланк отмечается испорченным и списывается актом, а не
+    // стирается. Модели запрещают удаление и со своей стороны.
+    Route::get('diploma-blanks/balance', [DiplomaBlankController::class, 'balance'])
+        ->middleware('permission:diploma.blanks.view');
+    Route::get('diploma-blanks/batches', [DiplomaBlankController::class, 'batches'])
+        ->middleware('permission:diploma.blanks.view');
+    Route::post('diploma-blanks/batches', [DiplomaBlankController::class, 'receive'])
+        ->middleware('permission:diploma.blanks.manage');
+    Route::get('diploma-blanks', [DiplomaBlankController::class, 'index'])
+        ->middleware('permission:diploma.blanks.view');
+    // Объявлен после «balance» и «batches»: иначе они ушли бы в {diplomaBlank}.
+    Route::get('diploma-blanks/{diplomaBlank}', [DiplomaBlankController::class, 'show'])
+        ->middleware('permission:diploma.blanks.view');
+    Route::post('diploma-blanks/{diplomaBlank}/assign', [DiplomaBlankController::class, 'assign'])
+        ->middleware('permission:diploma.blanks.manage');
+    Route::post('diploma-blanks/{diplomaBlank}/release', [DiplomaBlankController::class, 'release'])
+        ->middleware('permission:diploma.blanks.manage');
+    Route::post('diploma-blanks/{diplomaBlank}/issue', [DiplomaBlankController::class, 'issue'])
+        ->middleware('permission:diploma.blanks.manage');
+    Route::post('diploma-blanks/{diplomaBlank}/spoil', [DiplomaBlankController::class, 'spoil'])
+        ->middleware('permission:diploma.blanks.manage');
+    Route::post('diploma-blanks/{diplomaBlank}/write-off', [DiplomaBlankController::class, 'writeOff'])
+        ->middleware('permission:diploma.blanks.manage');
+
+    // Книга регистрации выданных дипломов: её ведут по закону и по ней отвечают
+    // на запросы о подлинности. Право на просмотр выпуска, а не на бланки:
+    // книгу читают шире, чем ведут склад.
+    Route::get('diploma-registry', [DiplomaRegistryController::class, 'index'])
+        ->middleware('permission:graduation.view');
 
     // ФРДО и ФИС: у выгрузки здесь своё право, и оно так и задумано —
     // `frdo.export` и `fis.export` открывают подготовку, проверку и выгрузку.

@@ -173,6 +173,8 @@ class RoleSeeder extends Seeder
             ['module' => 'Exams', 'code' => 'exams.edit', 'name' => 'Экзамены: ведение', 'description' => 'Создание, изменение и импорт экзаменов.'],
             ['module' => 'Graduation', 'code' => 'graduation.view', 'name' => 'Выпуск: просмотр', 'description' => 'Просмотр выпускников и дипломов.'],
             ['module' => 'Graduation', 'code' => 'graduation.edit', 'name' => 'Выпуск: ведение', 'description' => 'Создание и изменение выпускников, дипломов и приложений.'],
+            ['module' => 'Graduation', 'code' => 'diploma.blanks.view', 'name' => 'Бланки дипломов: просмотр', 'description' => 'Просмотр остатка бланков, их состояний и движения.'],
+            ['module' => 'Graduation', 'code' => 'diploma.blanks.manage', 'name' => 'Бланки дипломов: ведение', 'description' => 'Приход партии, закрепление за выпускником, выдача, отметка о порче и списание.'],
             ['module' => 'FRDO', 'code' => 'frdo.view', 'name' => 'ФРДО: просмотр', 'description' => 'Просмотр пакетов ФРДО.'],
             ['module' => 'FRDO', 'code' => 'frdo.export', 'name' => 'ФРДО: экспорт', 'description' => 'Подготовка, проверка и экспорт пакетов ФРДО.'],
             ['module' => 'FIS', 'code' => 'fis.view', 'name' => 'ФИС: просмотр', 'description' => 'Просмотр пакетов ФИС.'],
@@ -283,7 +285,7 @@ class RoleSeeder extends Seeder
         return [
             'dashboard.view', 'people.view', 'students.view', 'groups.view', 'teachers.view', 'subjects.view', 'classrooms.view',
             'schedule.view', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.view_all', 'journal.export', 'attendance.view', 'attendance.reports',
-            'admissions.view', 'admissions.applicant.view', 'admissions.application.view', 'admissions.choice.view', 'admissions.document.view', 'admissions.document.download_sensitive', 'admissions.documents.view', 'admissions.documents.download', 'admissions.bulk_export', 'admissions.reference.view', 'curricula.view', 'curricula.subjects.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'graduation.view',
+            'admissions.view', 'admissions.applicant.view', 'admissions.application.view', 'admissions.choice.view', 'admissions.document.view', 'admissions.document.download_sensitive', 'admissions.documents.view', 'admissions.documents.download', 'admissions.bulk_export', 'admissions.reference.view', 'curricula.view', 'curricula.subjects.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'graduation.view', 'diploma.blanks.view',
             'frdo.view', 'fis.view', 'fis.outbound.view', 'fis.outbound.status', 'gate.reports', 'audit.view', 'reference.manage', 'uat.manage', 'hr.employees.view', 'hr.calendar.view', 'hr.replacements.view', 'hr.reports.view',
             // Своё собственное: без этого права директор не видел даже свой QR-пропуск.
             'view_own_data',
@@ -325,7 +327,7 @@ class RoleSeeder extends Seeder
             'students.create', 'students.update',
             'teachers.create', 'teachers.update',
             'groups.create', 'groups.update',
-            'graduation.view', 'graduation.edit',
+            'graduation.view', 'graduation.edit', 'diploma.blanks.view',
             'frdo.view', 'frdo.export', 'fis.view', 'fis.export',
             'attendance.reports',
             'gate.scan', 'gate.reports', 'gate.points.manage', 'digitalpasses.manage',
@@ -356,7 +358,7 @@ class RoleSeeder extends Seeder
             'journal.view', 'journal.view_all', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.semester_grades', 'journal.files',
             'journal.complete', 'journal.sign', 'journal.reopen', 'journal.export',
             'attendance.view', 'attendance.reports',
-            'graduation.view', 'graduation.edit', 'frdo.view',
+            'graduation.view', 'graduation.edit', 'diploma.blanks.view', 'diploma.blanks.manage', 'frdo.view',
             'exams.view', 'curricula.view', 'schedule.view', 'teachingload.view',
             'teachers.view', 'subjects.view', 'classrooms.view',
             'trash.request',
@@ -398,7 +400,7 @@ class RoleSeeder extends Seeder
             'schedule.view', 'schedule.create', 'schedule.update', 'schedule.delete', 'schedule.validate', 'schedule.manage_templates', 'schedule.manage_replacements', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.semester_grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.reopen', 'journal.view_all', 'journal.export',
             'attendance.view', 'attendance.reports', 'admissions.applicant.view', 'admissions.application.view', 'admissions.choice.view', 'admissions.document.view', 'admissions.documents.view', 'admissions.reference.view', 'curricula.view', 'curricula.edit', 'curricula.subjects.view', 'curricula.subjects.create', 'curricula.subjects.update', 'curricula.subjects.delete',
             'teachingload.view', 'teachingload.edit', 'teaching_load.generate', 'teaching_load.assign', 'teaching_load.bulk_assign', 'teaching_load.view_coverage', 'exams.view', 'exams.edit',
-            'graduation.view', 'graduation.edit', 'people.update', 'people.link', 'frdo.view', 'fis.view', 'fis.outbound.view', 'fis.outbound.create', 'fis.outbound.generate', 'fis.outbound.validate', 'fis.outbound.send_test', 'fis.outbound.status', 'reference.manage', 'import.manage',
+            'graduation.view', 'graduation.edit', 'diploma.blanks.view', 'diploma.blanks.manage', 'people.update', 'people.link', 'frdo.view', 'fis.view', 'fis.outbound.view', 'fis.outbound.create', 'fis.outbound.generate', 'fis.outbound.validate', 'fis.outbound.send_test', 'fis.outbound.status', 'reference.manage', 'import.manage',
             'uat.manage', 'hr.employees.view', 'hr.calendar.view', 'hr.statuses.manage', 'hr.replacements.view', 'hr.replacements.manage', 'hr.reports.view',
             // `ARCH-001`, шаг 2: названо своими правами то, до чего заместитель
             // и учебная часть дотягивались только через право-зонтик.
