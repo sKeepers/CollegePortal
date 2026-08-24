@@ -125,15 +125,46 @@ class MergeGroupsByFundingLetterTest extends TestCase
         $this->assertSame(
             $known,
             $found,
-            'Список таблиц в GroupDependencies разошёлся со схемой: удаление группы снесёт каскадом то, чего никто не проверил.',
+            'Список таблиц в GroupDependencies разошёлся со схемой: удаление группы снесёт каскадом то, '
+            .'чего никто не проверил.'.$this->whatToDo(array_keys($found), array_keys($known), 'TABLES'),
         );
 
         $this->assertSame(
             $nullified,
             $this->sorted(GroupDependencies::NULLIFIED),
             'Список NULLIFIED разошёлся со схемой. Ссылка, сменившая правило удаления, опаснее новой: '
-            .'`SET NULL` не уносит строку, а оставляет её без смысла, и снаружи это выглядит исправным.',
+            .'`SET NULL` не уносит строку, а оставляет её без смысла, и снаружи это выглядит исправным.'
+            .$this->whatToDo($nullified, GroupDependencies::NULLIFIED, 'NULLIFIED'),
         );
+
+    }
+
+    /**
+     * Что именно дописать, а не только что разошлось.
+     *
+     * Дважды за 24.08.2026 тест ловил новую таблицу со ссылкой на группу — и оба раза
+     * сообщение называло расхождение, но не говорило, что делать. Разница в минутах для
+     * того, кто класс знает, и в получасе для того, кто видит его впервые.
+     *
+     * @param array<int, string> $inSchema
+     * @param array<int, string> $inList
+     */
+    private function whatToDo(array $inSchema, array $inList, string $constant): string
+    {
+        $missing = array_values(array_diff($inSchema, $inList));
+        $extra = array_values(array_diff($inList, $inSchema));
+        $hints = [];
+
+        foreach ($missing as $table) {
+            $hints[] = "допишите «{$table}» в App\Support\Groups\GroupDependencies::{$constant}";
+        }
+
+        foreach ($extra as $table) {
+            $hints[] = "уберите «{$table}» из GroupDependencies::{$constant}: в схеме такой ссылки больше нет";
+        }
+
+        return $hints === [] ? '' : "
+Что сделать: ".implode('; ', $hints).'.';
     }
 
     /**
