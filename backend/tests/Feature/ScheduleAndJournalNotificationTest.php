@@ -38,6 +38,17 @@ class ScheduleAndJournalNotificationTest extends TestCase
 
     private CollectingChannel $channel;
 
+    /**
+     * Счётчик дисциплин.
+     *
+     * Код брался случайным числом из девятисот, и пока помощник звали по разу за тест,
+     * это сходило с рук. Тест про отмену зовёт его двенадцать раз подряд — совпадение
+     * выпадает примерно раз в четырнадцать полных прогонов, и выглядит это не как
+     * совпадение, а как «отмена вдруг перестала работать». Счётчик убирает случайность
+     * совсем.
+     */
+    private int $subjectNumber = 0;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -344,7 +355,7 @@ class ScheduleAndJournalNotificationTest extends TestCase
     /** Запись движка с зеркальной строкой, заведённая заметно раньше — как настоящая. */
     private function entry(Group $group, Teacher $teacher, $date, int $lessonNumber = 1): ScheduleEntry
     {
-        $subject = Subject::create(['name' => 'Сольфеджио', 'code' => 'SOLF'.random_int(1000, 9999)]);
+        $subject = Subject::create(['name' => 'Сольфеджио', 'code' => 'SOLF'.(++$this->subjectNumber)]);
 
         // Пары идут с восьми утра с шагом в четверть часа: тридцать штук укладываются
         // в сутки, а без этого тридцатая получала бы «37:00» и роняла разбор времени.
@@ -454,7 +465,7 @@ class ScheduleAndJournalNotificationTest extends TestCase
 
     private function lesson(Group $group, Teacher $teacher, $date): ScheduleLesson
     {
-        $subject = Subject::create(['name' => 'Сольфеджио', 'code' => 'SOLF'.random_int(100, 999)]);
+        $subject = Subject::create(['name' => 'Сольфеджио', 'code' => 'SOLF'.(++$this->subjectNumber)]);
 
         return ScheduleLesson::create([
             'group_id' => $group->id,
@@ -469,7 +480,7 @@ class ScheduleAndJournalNotificationTest extends TestCase
 
     private function journalLesson(Group $group, Teacher $teacher, string $status): JournalLesson
     {
-        $subject = Subject::create(['name' => 'Гармония', 'code' => 'HARM'.random_int(100, 999)]);
+        $subject = Subject::create(['name' => 'Гармония', 'code' => 'HARM'.(++$this->subjectNumber)]);
 
         return JournalLesson::create([
             'group_id' => $group->id,

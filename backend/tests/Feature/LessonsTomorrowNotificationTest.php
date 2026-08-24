@@ -34,6 +34,16 @@ class LessonsTomorrowNotificationTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * Счётчик дисциплин: код собирается из него, а не из случайного числа.
+     *
+     * Случайное трёхзначное при нескольких вызовах в одном тесте даёт совпадение
+     * заметно чаще, чем кажется — двенадцать вызовов это около 7 % на прогон. Падает
+     * при этом не генератор, а то, что рядом, и ищут беду не там.
+     */
+    private int $subjectNumber = 0;
+
+
     private RecordingChannel $channel;
 
     private ?Teacher $teacher = null;
@@ -203,7 +213,7 @@ class LessonsTomorrowNotificationTest extends TestCase
 
     private function lesson(Group $group, string $startsAt, string $subjectName): ScheduleLesson
     {
-        $subject = Subject::create(['name' => $subjectName, 'code' => mb_substr($subjectName, 0, 4).random_int(100, 999)]);
+        $subject = Subject::create(['name' => $subjectName, 'code' => mb_substr($subjectName, 0, 4).(++$this->subjectNumber)]);
 
         // Преподаватель у занятия обязателен на уровне схемы: без него вставка падает
         // на NOT NULL, а не на проверке приложения.

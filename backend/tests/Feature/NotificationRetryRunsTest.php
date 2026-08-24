@@ -39,6 +39,16 @@ class NotificationRetryRunsTest extends TestCase
 
     private RefusingChannel $channel;
 
+    /**
+     * Счётчик дисциплин: код собирается из него, а не из случайного числа.
+     *
+     * Случайное трёхзначное при нескольких вызовах в одном тесте даёт совпадение
+     * заметно чаще, чем кажется — двенадцать вызовов это около 7 % на прогон. Падает
+     * при этом не генератор, а то, что рядом, и ищут беду не там.
+     */
+    private int $subjectNumber = 0;
+
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -196,7 +206,7 @@ class NotificationRetryRunsTest extends TestCase
 
     private function lesson(Group $group, Teacher $teacher, $date): ScheduleLesson
     {
-        $subject = Subject::create(['name' => 'Сольфеджио', 'code' => 'SOLF'.random_int(100, 999)]);
+        $subject = Subject::create(['name' => 'Сольфеджио', 'code' => 'SOLF'.(++$this->subjectNumber)]);
 
         return ScheduleLesson::create([
             'group_id' => $group->id,
