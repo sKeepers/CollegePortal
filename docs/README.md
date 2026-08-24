@@ -34,6 +34,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [Domain Model](DOMAIN_MODEL.md)
 - [RBAC](RBAC.md)
 - [Audit Log](AUDIT_LOG.md)
+- [Выгрузки: чему они доверяют](EXPORT_TRUST_AUDIT_2026-08-24.md) — что проверяет каждая выгрузка портала, что не проверяет и какие оставляют след
 - [Path Policy](PATH_POLICY.md)
 - [GitHub Repository](GITHUB_REPOSITORY.md)
 - [GitHub Issue Review 2026-08-01](GITHUB_ISSUE_REVIEW_2026-08-01.md)
@@ -126,6 +127,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [DOMAIN_MODEL.md](DOMAIN_MODEL.md)
 - [ENVIRONMENTS.md](ENVIRONMENTS.md)
 - [EXECUTIVE_DASHBOARD.md](EXECUTIVE_DASHBOARD.md)
+- [EXPORT_TRUST_AUDIT_2026-08-24.md](EXPORT_TRUST_AUDIT_2026-08-24.md)
 - [FIS_ADMISSIONS_IMPORT.md](FIS_ADMISSIONS_IMPORT.md)
 - [FIS_API_OFFICIAL_SOURCES.md](FIS_API_OFFICIAL_SOURCES.md)
 - [FIS_API_PROTOCOL_ANALYSIS.md](FIS_API_PROTOCOL_ANALYSIS.md)
