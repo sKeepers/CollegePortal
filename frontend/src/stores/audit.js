@@ -84,6 +84,9 @@ export function moduleLabel(value) {
     demo_data: 'Демо-данные',
     settings: 'Настройки',
     reference_data: 'Справочники',
+    Exports: 'Выгрузки',
+    FIS: 'ФИС ГИА',
+    FRDO: 'ФРДО',
   }
   return labels[value] || value || '—'
 }
@@ -115,6 +118,8 @@ export function actionLabel(value) {
     create_catalog: 'Создание справочника',
     import: 'Импорт',
     export: 'Экспорт',
+    csv_exported: 'Выгрузка файла',
+    package_exported_json: 'Выгрузка пакета (JSON)',
   }
   return labels[value] || value || '—'
 }
