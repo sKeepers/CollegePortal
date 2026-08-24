@@ -9,6 +9,7 @@ use App\Models\FrdoPackage;
 use App\Models\Graduate;
 use App\Models\Student;
 use App\Services\Admissions\AdmissionDocumentReadinessService;
+use App\Services\AuditLogService;
 use App\Support\Csv\CsvExport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -142,6 +143,9 @@ class FrdoPackageController extends Controller
     public function exportJson(FrdoPackage $frdoPackage): JsonResponse
     {
         $package = $this->freshPackage($frdoPackage);
+        // Выгрузка JSON идёт мимо `CsvExport`, где стоит общий след.
+        AuditLogService::log('FRDO', 'package_exported_json', $package, null, ['rows' => $package->records->count(), 'package_status' => $package->status]);
+
         return response()->json([
             'package' => ['id' => $package->id, 'name' => $package->name, 'graduation_year' => $package->graduation_year, 'status' => $package->status],
             'records' => $package->records->map(fn ($record) => ['id' => $record->id, 'status' => $record->status, 'payload' => $record->payload])->values(),

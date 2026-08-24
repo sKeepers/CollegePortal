@@ -13,6 +13,7 @@ use App\Models\Graduate;
 use App\Models\Student;
 use App\Services\Admissions\AdmissionDocumentReadinessService;
 use App\Services\Admissions\DocumentMaskingService;
+use App\Services\AuditLogService;
 use App\Support\Csv\CsvExport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -121,6 +122,11 @@ class FisPackageController extends Controller
     public function exportJson(FisPackage $fisPackage): JsonResponse
     {
         $package = $this->freshPackage($fisPackage);
+        // Выгрузка JSON идёт мимо `CsvExport`, где стоит общий след, поэтому
+        // запись здесь своя. Пакет уносит записи о людях, и без неё портал не
+        // ответит, кто их унёс.
+        AuditLogService::log('FIS', 'package_exported_json', $package, null, ['rows' => $package->records->count(), 'package_status' => $package->status]);
+
         return response()->json(['package' => ['id' => $package->id, 'type' => $package->package_type, 'year' => $package->year, 'status' => $package->status], 'records' => $package->records->map(fn ($record) => ['id' => $record->id, 'status' => $record->status, 'payload' => $record->payload])->values()]);
     }
 
