@@ -536,6 +536,20 @@ onMounted(async () => {
           Строка {{ errorRow.line }}: {{ errorRow.messages?.join('; ') || 'ошибка импорта' }}
         </li>
       </ul>
+      <!--
+        Не ошибка: студент загружен, не хватает только документа об образовании.
+        Строка стоит здесь потому, что до 24.08.2026 её не было вовсе: 580
+        названий школ ушли в загрузку и исчезли молча, а ноль документов об
+        образовании полтора месяца объясняли тем, что данных нет.
+      -->
+      <div v-if="store.importSummary.education_documents_skipped?.length" class="students-import-summary__notice">
+        Документ об образовании не создан у
+        {{ store.importSummary.education_documents_skipped.length }} строк: указано
+        только учебное заведение, без серии и номера аттестата. Студенты загружены,
+        школы — нет.
+        <small>Строки: {{ store.importSummary.education_documents_skipped.slice(0, 20).join(', ')
+          }}{{ store.importSummary.education_documents_skipped.length > 20 ? ' и другие' : '' }}.</small>
+      </div>
     </q-banner>
 
     <div class="students-layout workspace-page" :class="{ 'workspace-page--card': Boolean(route.params.id) }">

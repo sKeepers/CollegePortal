@@ -2996,6 +2996,22 @@ body {
   font-weight: 600;
 }
 
+/* Не ошибка, а недогруз: строка загрузилась, документа об образовании нет.
+   Поэтому цвет предупреждения, а не красный: красным человек читает «сломалось»
+   и идёт искать поломку, которой нет. */
+.students-import-summary__notice {
+  margin: 8px 0 0;
+  color: #92400e;
+  font-weight: 600;
+}
+
+.students-import-summary__notice small {
+  display: block;
+  margin-top: 2px;
+  color: #78350f;
+  font-weight: 500;
+}
+
 .students-form-dialog {
   width: min(860px, calc(100vw - 32px));
 }

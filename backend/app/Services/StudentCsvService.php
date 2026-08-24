@@ -183,6 +183,11 @@ class StudentCsvService
         $created = 0;
         $updated = 0;
         $errors = [];
+        // Строки, где названа школа, но нет ни серии, ни номера аттестата:
+        // документ об образовании по ним не создаётся. Это не ошибка строки —
+        // студент загружается, — но и молчать нельзя. Так 22.08.2026 исчезли
+        // 580 названий школ, и полтора месяца это считали отсутствием данных.
+        $educationSkipped = [];
 
         foreach ($csv as $index => $row) {
             if ($row === [null] || $row === false) {
@@ -247,6 +252,10 @@ class StudentCsvService
                 $created++;
             }
 
+            if (EducationDocumentService::isOrganisationOnly($this->educationSource($educationDocument))) {
+                $educationSkipped[] = $line;
+            }
+
             $this->syncDocuments($student, $validated, $educationDocument);
         }
 
@@ -258,6 +267,29 @@ class StudentCsvService
             'created' => $created,
             'updated' => $updated,
             'errors' => $errors,
+            'education_documents_skipped' => $educationSkipped,
+        ];
+    }
+
+    /**
+     * Колонки документа об образовании под теми именами, которых ждёт служба.
+     *
+     * Одно место на оба вызова — на проверку «названа только школа» и на саму
+     * запись. Разъедутся — проверка начнёт считать не то, что записывается, и
+     * отчёт станет врать убедительнее, чем молчал.
+     *
+     * @param  array<string, mixed>  $educationDocument
+     * @return array<string, mixed>
+     */
+    private function educationSource(array $educationDocument): array
+    {
+        return [
+            'document_type' => $educationDocument['education_document_type'] ?? null,
+            'series' => $educationDocument['education_document_series'] ?? null,
+            'number' => $educationDocument['education_document_number'] ?? null,
+            'issue_date' => $educationDocument['education_document_issue_date'] ?? null,
+            'document_organization' => $educationDocument['education_document_organization'] ?? null,
+            'graduation_year' => $educationDocument['education_graduation_year'] ?? null,
         ];
     }
 
@@ -281,14 +313,7 @@ class StudentCsvService
             'issued_by' => $student['passport_issued_by'] ?? null,
         ]);
 
-        $this->educationDocuments->syncForPerson($person->id, [
-            'document_type' => $educationDocument['education_document_type'] ?? null,
-            'series' => $educationDocument['education_document_series'] ?? null,
-            'number' => $educationDocument['education_document_number'] ?? null,
-            'issue_date' => $educationDocument['education_document_issue_date'] ?? null,
-            'document_organization' => $educationDocument['education_document_organization'] ?? null,
-            'graduation_year' => $educationDocument['education_graduation_year'] ?? null,
-        ]);
+        $this->educationDocuments->syncForPerson($person->id, $this->educationSource($educationDocument));
     }
 
     private function detectDelimiter(UploadedFile $file): string
