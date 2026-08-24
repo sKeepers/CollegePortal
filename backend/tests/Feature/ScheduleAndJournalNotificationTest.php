@@ -288,6 +288,59 @@ class ScheduleAndJournalNotificationTest extends TestCase
         $this->assertSame(0, $this->scheduleNotifier()->run(now()->subMinutes(15), MaxNotificationChannel::CODE)['sent']);
     }
 
+    /**
+     * Отменённое занятие могут вернуть — и человек, которому сказали «отменено», обязан
+     * узнать об этом. Иначе починка отмены выходит половинчатой: он не придёт на занятие,
+     * которое состоится.
+     *
+     * Возврат заводит зеркальную строку заново, поэтому правкой он не выглядит и отменой
+     * уже не является: ищется третьим способом — новая строка при старой записи движка.
+     */
+    public function test_a_restored_lesson_is_announced_too(): void
+    {
+        [, $group, $teacher] = $this->subscribedStudent(NotificationEvents::SCHEDULE_CHANGED);
+        $engine = app(ScheduleEngineService::class);
+        $entry = $this->entry($group, $teacher, now()->addDay());
+
+        $engine->cancel($entry);
+        $engine->restore($entry->fresh());
+
+        $result = $this->scheduleNotifier()->run(now()->subMinutes(15), MaxNotificationChannel::CODE);
+
+        $this->assertSame(1, $result['sent']);
+        $this->assertStringContainsString('снова в расписании', $this->channel->sent[0][1]);
+        $this->assertStringNotContainsString('отменено', $this->channel->sent[0][1]);
+    }
+
+    /**
+     * Загрузка расписания на семестр возвратом не считается.
+     *
+     * У созданного занятия строка расписания и запись движка появляются в одной
+     * транзакции, разница между ними — микросекунды. Порог в минуту разводит это с
+     * настоящим возвратом, где занятие простояло отменённым заметное время. Без порога
+     * первая же загрузка семестра разослала бы «снова в расписании» всему колледжу.
+     */
+    public function test_a_freshly_created_lesson_is_not_a_restoration(): void
+    {
+        [, $group, $teacher] = $this->subscribedStudent(NotificationEvents::SCHEDULE_CHANGED);
+        $subject = Subject::create(['name' => 'Гармония', 'code' => 'HARM1']);
+
+        $entry = ScheduleEntry::create([
+            'academic_year' => '2026/2027', 'semester' => 1,
+            'date' => now()->addDay()->toDateString(), 'day_of_week' => now()->addDay()->dayOfWeekIso,
+            'lesson_number' => 1, 'starts_at' => '09:00', 'ends_at' => '10:30',
+            'group_id' => $group->id, 'subject_id' => $subject->id, 'teacher_id' => $teacher->id,
+            'status' => 'scheduled', 'source' => 'schedule_template',
+        ]);
+        ScheduleLesson::create([
+            'schedule_entry_id' => $entry->id, 'group_id' => $group->id, 'teacher_id' => $teacher->id,
+            'subject_id' => $subject->id, 'lesson_date' => now()->addDay()->toDateString(),
+            'starts_at' => '09:00', 'ends_at' => '10:30', 'lesson_type' => 'lecture',
+        ]);
+
+        $this->assertSame(0, $this->scheduleNotifier()->run(now()->subMinutes(15), MaxNotificationChannel::CODE)['sent']);
+    }
+
     /** Запись движка с зеркальной строкой, заведённая заметно раньше — как настоящая. */
     private function entry(Group $group, Teacher $teacher, $date, int $lessonNumber = 1): ScheduleEntry
     {

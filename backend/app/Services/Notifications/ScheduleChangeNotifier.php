@@ -12,7 +12,9 @@ use App\Support\Notifications\NotificationEvents;
 use App\Support\Notifications\RebuildsNotification;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
-use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection as BaseCollection;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
 
 /**
@@ -39,6 +41,11 @@ use Illuminate\Support\Str;
  * узнавал, а о том, что занятия не будет, — нет, и приходил в колледж зря. Поэтому отмены
  * берутся из `schedule_entries` и ставятся **в начало списка**: список подрезается десятью
  * строками, и вытеснить отмену переносом было бы худшим из возможных порядков.
+ *
+ * **Возврат ищется третьим способом.** Отменённое занятие могут вернуть, и тогда строка
+ * расписания заводится заново — новая при старой записи движка. Правкой это не выглядит
+ * (`updated_at` равен `created_at`), отменой больше не является, и без отдельного поиска
+ * получалось половинчато: человеку сказали «отменено» и не сказали, что занятие вернулось.
  *
  * **И не чаще раза в час одному человеку.** Свёртка окном ограничивает сообщение, но не
  * их число: окон в сутках девяносто шесть, и пока учебная часть правит расписание, в
@@ -75,8 +82,9 @@ class ScheduleChangeNotifier implements RebuildsNotification
         $lookback = $since->copy()->subMinutes($cooldown);
         $lessons = $this->changedSince($lookback);
         $cancelled = $this->cancelledSince($lookback);
+        $restored = $this->restoredSince($lookback);
 
-        if ($lessons->isEmpty() && $cancelled->isEmpty()) {
+        if ($lessons->isEmpty() && $cancelled->isEmpty() && $restored->isEmpty()) {
             return ['changed' => 0, 'sent' => 0, 'held' => 0];
         }
 
@@ -108,8 +116,9 @@ class ScheduleChangeNotifier implements RebuildsNotification
 
             $mine = $this->sinceMoment($this->forUser($lessons, $user), $from);
             $mineCancelled = $this->sinceMoment($this->forUser($cancelled, $user), $from);
+            $mineRestored = $this->sinceMoment($this->forUser($restored, $user), $from);
 
-            if ($mine->isEmpty() && $mineCancelled->isEmpty()) {
+            if ($mine->isEmpty() && $mineCancelled->isEmpty() && $mineRestored->isEmpty()) {
                 continue;
             }
 
@@ -119,7 +128,7 @@ class ScheduleChangeNotifier implements RebuildsNotification
                 // Ключ включает окно: расписание могут поправить дважды за день, и это
                 // две разные новости, а не повтор одной.
                 NotificationEvents::SCHEDULE_CHANGED.':'.$since->format('Y-m-d-H-i'),
-                $this->compose($mine, $mineCancelled),
+                $this->compose($mine, $mineCancelled, $mineRestored),
                 $channel,
             );
 
@@ -128,7 +137,7 @@ class ScheduleChangeNotifier implements RebuildsNotification
             }
         }
 
-        return ['changed' => $lessons->count() + $cancelled->count(), 'sent' => $sent, 'held' => $held];
+        return ['changed' => $lessons->count() + $cancelled->count() + $restored->count(), 'sent' => $sent, 'held' => $held];
     }
 
     /**
@@ -148,9 +157,12 @@ class ScheduleChangeNotifier implements RebuildsNotification
 
         $mine = $this->forUser($this->changedSince($since), $user);
         $mineCancelled = $this->forUser($this->cancelledSince($since), $user);
+        $mineRestored = $this->forUser($this->restoredSince($since), $user);
 
-        // Ни правок, ни отмен: новость умерла, повторять нечего.
-        return $mine->isEmpty() && $mineCancelled->isEmpty() ? null : $this->compose($mine, $mineCancelled);
+        // Ни правок, ни отмен, ни возвратов: новость умерла, повторять нечего.
+        return $mine->isEmpty() && $mineCancelled->isEmpty() && $mineRestored->isEmpty()
+            ? null
+            : $this->compose($mine, $mineCancelled, $mineRestored);
     }
 
     /**
@@ -209,6 +221,32 @@ class ScheduleChangeNotifier implements RebuildsNotification
         return $items->filter(fn ($item): bool => $item->updated_at->getTimestamp() > $from->getTimestamp());
     }
 
+    /**
+     * Занятия, вернувшиеся в расписание.
+     *
+     * Отмена **удаляет** зеркальную строку, возврат заводит её заново. Поэтому у
+     * вернувшегося занятия строка расписания новая, а запись движка старая, — и этим
+     * возврат отличается от загрузки семестра, где новы обе. Там между ними микросекунды,
+     * здесь — всё время, что занятие простояло отменённым; порог в минуту разводит эти
+     * два случая надёжно.
+     *
+     * Без этого выходило половинчато: человеку сказали «отменено» и не сказали, что
+     * занятие вернулось, — он не пришёл на то, которое состоялось.
+     *
+     * @return Collection<int, ScheduleLesson>
+     */
+    private function restoredSince(CarbonInterface $from): Collection
+    {
+        return ScheduleLesson::query()
+            ->with(['subject', 'classroom', 'scheduleEntry'])
+            ->where('created_at', '>=', $from)
+            ->whereDate('lesson_date', '>=', now()->toDateString())
+            ->whereHas('scheduleEntry', fn (Builder $query) => $query->where('status', 'scheduled'))
+            ->get()
+            ->filter(fn (ScheduleLesson $lesson): bool => $lesson->scheduleEntry?->created_at !== null
+                && $lesson->created_at->getTimestamp() - $lesson->scheduleEntry->created_at->getTimestamp() >= self::EDIT_THRESHOLD_SECONDS);
+    }
+
     /** Начало окна из ключа повтора: `schedule.changed:2026-09-01-08-15`. */
     private function windowFromKey(string $dedupeKey): ?CarbonImmutable
     {
@@ -265,58 +303,62 @@ class ScheduleChangeNotifier implements RebuildsNotification
     }
 
     /**
-     * Тело сообщения: сначала отмены, потом правки.
+     * Тело сообщения: сначала отмены, затем вернувшиеся, затем правки.
      *
-     * Порядок не косметический. Список подрезается десятью строками, и если отмену
-     * вытеснит перенос аудитории, человек прочитает про аудиторию и придёт на занятие,
-     * которого нет. Отмена — самая дорогая новость из всех, ей и первое место.
+     * Порядок не косметика. Список подрезается десятью строками, и если отмену вытеснит
+     * перенос аудитории, человек прочитает про аудиторию и придёт на занятие, которого
+     * нет. Отмена — самая дорогая новость из всех, ей и первое место; возврат следом,
+     * потому что его цена такая же, только с обратным знаком.
      *
      * @param Collection<int, ScheduleLesson> $changed
      * @param Collection<int, ScheduleEntry> $cancelled
+     * @param Collection<int, ScheduleLesson> $restored
      */
-    private function compose(Collection $changed, Collection $cancelled): string
+    private function compose(Collection $changed, Collection $cancelled, Collection $restored): string
     {
-        $lines = $cancelled
-            ->sortBy(fn (ScheduleEntry $entry): string => $this->sortKey($entry->date, $entry->starts_at))
-            ->map(fn (ScheduleEntry $entry): string => $this->line(
-                $entry->date, $entry->starts_at, $entry->subject?->name, $entry->classroom?->number, cancelled: true,
-            ))
-            ->values()
-            // `toBase()` обязателен: `merge()` у коллекции моделей ждёт модели, а здесь
-            // уже строки, и она падает на `getKey()`.
-            ->toBase()
-            ->merge(
-                $changed
-                    ->sortBy(fn (ScheduleLesson $lesson): string => $this->sortKey($lesson->lesson_date, $lesson->starts_at))
-                    ->map(fn (ScheduleLesson $lesson): string => $this->line(
-                        $lesson->lesson_date, $lesson->starts_at, $lesson->subject?->name, $lesson->classroom?->number,
-                    ))
-                    ->values()
-                    ->toBase(),
-            );
+        $lines = $this->linesOf($cancelled, 'отменено')
+            ->merge($this->linesOf($restored, 'снова в расписании'))
+            ->merge($this->linesOf($changed, null));
 
         // Заголовок называет число сразу: при подрезанном списке человек должен
         // видеть, сколько занятий тронули, а не только первые десять.
         return MessageBody::list('Расписание изменилось, занятий: '.$lines->count(), $lines);
     }
 
-    private function sortKey(mixed $date, mixed $startsAt): string
+    /**
+     * @param Collection<int, ScheduleLesson|ScheduleEntry> $items
+     * @param string|null $mark пометка вместо аудитории; `null` — обычная правка
+     * @return BaseCollection<int, string>
+     */
+    private function linesOf(Collection $items, ?string $mark): BaseCollection
     {
-        $day = $date instanceof CarbonInterface ? $date->format('Y-m-d') : (string) $date;
+        return $items
+            ->sortBy(fn (ScheduleLesson|ScheduleEntry $item): string => $this->sortKey($item))
+            ->map(function (ScheduleLesson|ScheduleEntry $item) use ($mark): string {
+                $room = $item->classroom?->number;
 
-        return $day.' '.substr((string) $startsAt, 0, 5);
+                return trim(implode(' ', array_filter([
+                    $this->dateOf($item)?->format('d.m') ?: '',
+                    $item->starts_at ? substr((string) $item->starts_at, 0, 5) : '',
+                    $item->subject?->name ?: 'Занятие',
+                    $mark === null && $room ? "ауд. {$room}" : null,
+                    $mark === null ? null : "— {$mark}",
+                ])));
+            })
+            ->values()
+            // `toBase()` обязателен: `merge()` у коллекции моделей ждёт модели, а здесь
+            // уже строки, и она падает на `getKey()`.
+            ->toBase();
     }
 
-    private function line(mixed $date, mixed $startsAt, ?string $subject, ?string $room, bool $cancelled = false): string
+    /** У записи движка дата зовётся `date`, у строки расписания — `lesson_date`. */
+    private function dateOf(ScheduleLesson|ScheduleEntry $item): ?CarbonInterface
     {
-        $day = $date instanceof CarbonInterface ? $date->format('d.m') : '';
+        return $item instanceof ScheduleEntry ? $item->date : $item->lesson_date;
+    }
 
-        return trim(implode(' ', array_filter([
-            $day,
-            $startsAt ? substr((string) $startsAt, 0, 5) : '',
-            $subject ?: 'Занятие',
-            $room && ! $cancelled ? "ауд. {$room}" : null,
-            $cancelled ? '— отменено' : null,
-        ])));
+    private function sortKey(ScheduleLesson|ScheduleEntry $item): string
+    {
+        return ($this->dateOf($item)?->format('Y-m-d') ?: '').' '.substr((string) $item->starts_at, 0, 5);
     }
 }
