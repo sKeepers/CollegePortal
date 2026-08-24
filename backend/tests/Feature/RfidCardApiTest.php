@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Group;
 use App\Models\Permission;
 use App\Models\Person;
 use App\Models\RfidCard;
@@ -362,6 +363,37 @@ class RfidCardApiTest extends TestCase
         foreach (['phone', 'birth_date', 'snils', 'email'] as $field) {
             $this->assertArrayNotHasKey($field, $rows[0]);
         }
+    }
+
+    /**
+     * Список групп несёт специальность, иначе группировка молча не случается.
+     *
+     * Выпадающий список групп разбит заголовками по специальности — решение
+     * владельца от 23.08.2026: групп 69, и без заголовков в них не найтись.
+     * Заголовки строит `buildGroupOptions` по полю `specialty`; нет поля — у всех
+     * групп специальность считается пустой, все они ложатся под один заголовок
+     * «Без специальности», и группировки не происходит вовсе.
+     *
+     * Ловится это только глазами и только если знать, чего ждать: список
+     * рисуется, ищется и работает. На экране карт решение владельца так и не
+     * исполнялось ни дня — замечено 24.08.2026 по печатной ведомости, в шапку
+     * которой попал тот самый единственный заголовок.
+     */
+    public function test_the_group_list_carries_the_specialty_it_is_grouped_by(): void
+    {
+        $this->withApiAuth($this->commandant());
+
+        Group::create([
+            'name' => 'Хореографическое творчество, набор 2026',
+            'specialty' => '51.02.01 Народное художественное творчество',
+            'course' => 1,
+            'year_start' => 2026,
+        ]);
+
+        $row = $this->getJson('/api/rfid-cards/groups')->assertOk()->json('data.0');
+
+        $this->assertArrayHasKey('specialty', $row, 'Без специальности список групп не сгруппировать');
+        $this->assertSame('51.02.01 Народное художественное творчество', $row['specialty']);
     }
 
     private function createCard(string $uid): RfidCard

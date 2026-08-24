@@ -188,11 +188,22 @@ class RfidCardController extends Controller
     {
         // Курс считается из года набора, поэтому и порядок по нему: свежий
         // набор — это первый курс.
+        // Специальность отдаётся не для красоты: выпадающий список группируется по
+        // ней заголовками — решение владельца от 23.08.2026. Без этого поля
+        // `buildGroupOptions` считает специальность пустой у **всех** групп, все 58
+        // ложатся под один заголовок «Без специальности», и группировки не
+        // происходит вовсе — молча, потому что список при этом рисуется и работает.
+        // Замечено 24.08.2026: на экране карт она так и не исполнялась ни дня.
         $groups = Group::query()
             ->orderByDesc('year_start')
             ->orderBy('name')
-            ->get(['id', 'name', 'year_start'])
-            ->map(fn (Group $group): array => ['id' => $group->id, 'name' => $group->name, 'course' => $group->course]);
+            ->get(['id', 'name', 'year_start', 'specialty'])
+            ->map(fn (Group $group): array => [
+                'id' => $group->id,
+                'name' => $group->name,
+                'course' => $group->course,
+                'specialty' => $group->specialty,
+            ]);
 
         return response()->json(['data' => $groups]);
     }
