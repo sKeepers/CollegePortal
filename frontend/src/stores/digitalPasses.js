@@ -19,7 +19,43 @@ export const STATUS_OPTIONS = [
 function extractRows(payload) { return Array.isArray(payload?.data) ? payload.data : [] }
 function fullName(person) { return [person?.last_name, person?.first_name, person?.middle_name].filter(Boolean).join(' ') }
 export function entityTypeLabel(type) { return ENTITY_OPTIONS.find((option) => option.value === type)?.label || type || '—' }
-export function ownerName(identity) { return fullName(identity?.owner) || `${entityTypeLabel(identity?.entity_type)} #${identity?.entity_id}` }
+/**
+ * Подпись владельца пропуска.
+ *
+ * Случаев три, и до 24.08.2026 они были смешаны в один. Имя есть — пишем имя.
+ * Сервер ответил `owner: null` — владельца НЕТ, и место имени занимает прямая
+ * надпись: «Преподаватель #77» читается как преподаватель с номером, ровно так
+ * же, как «0» на экране коменданта читается как «все на месте». А если ключа
+ * `owner` в ответе нет вовсе, связь просто не запрашивали — там «Вид #номер»
+ * уместен: это техническая заглушка, и номер в ней настоящий.
+ *
+ * Различить их можно только потому, что `DigitalIdentityResource` отдаёт ключ
+ * `owner` всегда. Уберут ключ ради экономии ответа — отсутствие снова станет
+ * неотличимо от умолчания.
+ */
+export function ownerName(identity) {
+  if (!identity) return '—'
+  const name = fullName(identity.owner)
+  if (name) return name
+  if (ownerMissing(identity)) return `${entityTypeLabel(identity.entity_type)}: владелец удалён`
+  return `${entityTypeLabel(identity.entity_type)} #${identity.entity_id}`
+}
+
+/** Сервер сказал, что владельца нет, — а не промолчал о нём. */
+export function ownerMissing(identity) {
+  return Boolean(identity) && 'owner' in identity && !identity.owner
+}
+
+/**
+ * Значение для поиска по журналу проходов.
+ *
+ * У пропуска без владельца его нет: журнал ищет по ФИО, а искать нечего.
+ * Подставить сюда номер значило бы снова выдать отсутствие за данные, поэтому
+ * возвращается `null`, а вызывающий убирает переход.
+ */
+export function ownerSearchQuery(identity) {
+  return fullName(identity?.owner) || null
+}
 export function statusLabel(status) { return STATUS_OPTIONS.find((option) => option.value === status)?.label || status || '—' }
 export function statusTone(status) { return STATUS_OPTIONS.find((option) => option.value === status)?.tone || 'neutral' }
 export function formatDateTime(value) {

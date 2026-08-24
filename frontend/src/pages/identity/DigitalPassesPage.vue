@@ -13,7 +13,7 @@ import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import AppConfirmDialog from '../../components/ui/AppConfirmDialog.vue'
 import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
-import { useDigitalPassesStore, ENTITY_OPTIONS, entityTypeLabel, formatDateTime, ownerName, statusLabel, statusTone } from '../../stores/digitalPasses'
+import { useDigitalPassesStore, ENTITY_OPTIONS, entityTypeLabel, formatDateTime, ownerMissing, ownerName, ownerSearchQuery, statusLabel, statusTone } from '../../stores/digitalPasses'
 import { useAuthStore } from '../../stores/auth'
 import { usePermissions } from '../../composables/usePermissions'
 import { TABLE_ROWS_PER_PAGE_OPTIONS, createTablePagination, persistTablePagination } from '../../services/tableSettings'
@@ -47,16 +47,20 @@ const passMetrics = computed(() => [
   { label: 'Выдан', value: formatDateTime(store.selectedIdentity?.issued_at) },
   { label: 'Срок действия', value: formatDateTime(store.selectedIdentity?.expires_at) },
 ])
-const accessHistoryRoute = computed(() => ({
-  path: '/access/reports',
-  query: {
-    type: store.selectedIdentity?.entity_type,
-    q: ownerName(store.selectedIdentity),
-  },
-}))
+// Владельца у пропуска нет. Дальше это гасит три перехода, каждый из которых
+// вёл в никуда: карточка человека, поиск по журналу проходов и повторная
+// выдача. Пропуск при этом остаётся в списке — он улика, а не мусор.
+const ownerGone = computed(() => ownerMissing(store.selectedIdentity))
+const accessHistoryRoute = computed(() => {
+  const query = ownerSearchQuery(store.selectedIdentity)
+  // Журнал проходов ищет по ФИО. Искать нечего — перехода не предлагаем:
+  // фильтр по одному виду пропуска показал бы чужие проходы как свои.
+  if (!query) return null
+  return { path: '/access/reports', query: { type: store.selectedIdentity?.entity_type, q: query } }
+})
 const ownerRoute = computed(() => {
   const identity = store.selectedIdentity
-  if (!identity) return null
+  if (!identity || ownerGone.value) return null
   if (identity.entity_type === 'student') return { path: `/students/${identity.entity_id}`,}
   if (identity.entity_type === 'teacher') return { path: `/teachers/${identity.entity_id}`,}
   return { path: `/hr/employees/${identity.entity_id}`,}
@@ -126,13 +130,14 @@ onMounted(async () => { await store.load(); if (store.identities[0]) await store
         >
           <template #status>
             <AppStatusBadge :label="statusLabel(store.selectedIdentity.status)" :tone="statusTone(store.selectedIdentity.status)" />
+            <AppStatusBadge v-if="ownerGone" label="Владелец удалён" tone="danger" />
           </template>
           <template #actions>
             <div class="workspace-panel__actions">
               <q-btn v-if="ownerRoute" no-caps unelevated class="workspace-panel__action" :to="ownerRoute"><ExternalLink :size="15" class="q-mr-xs" /> Открыть человека</q-btn>
               <q-btn v-if="canManage" no-caps unelevated class="workspace-panel__action" :disable="store.selectedIdentity.status === 'revoked' || store.saving" @click="requestRevoke(store.selectedIdentity)"><ShieldX :size="16" class="q-mr-xs" /> Отозвать</q-btn>
-              <q-btn v-if="canManage" no-caps unelevated class="workspace-panel__action" @click="openIssueDialog(store.selectedIdentity.entity_type)">Выпустить заново</q-btn>
-              <q-btn no-caps unelevated class="workspace-panel__action" :to="accessHistoryRoute">История проходов</q-btn>
+              <q-btn v-if="canManage && !ownerGone" no-caps unelevated class="workspace-panel__action" @click="openIssueDialog(store.selectedIdentity.entity_type)">Выпустить заново</q-btn>
+              <q-btn v-if="accessHistoryRoute" no-caps unelevated class="workspace-panel__action" :to="accessHistoryRoute">История проходов</q-btn>
             </div>
           </template>
           <div class="digital-pass-details">

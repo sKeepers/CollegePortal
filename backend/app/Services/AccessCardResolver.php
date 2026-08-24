@@ -66,6 +66,13 @@ class AccessCardResolver
             return $this->deny($uid, "У владельца карты {$uid} нет действующего пропуска.");
         }
 
+        // Проход по карте идёт своим путём и мимо `scanResult`, поэтому
+        // проверка владельца нужна и здесь: иначе карта человека, стёртого из
+        // системы, продолжала бы открывать турникет.
+        if (! $identity->ownerExists()) {
+            return $this->deny($uid, "Владелец карты {$uid} удалён из системы.");
+        }
+
         return ['uid' => $uid, 'identity' => $identity, 'reason' => null];
     }
 

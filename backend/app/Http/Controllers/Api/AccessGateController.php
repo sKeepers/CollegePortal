@@ -198,6 +198,13 @@ class AccessGateController extends Controller
             return [AccessEvent::RESULT_DENIED, 'Статус пропуска не разрешает проход.'];
         }
 
+        // Владельца снесли, а пропуск остался действующим: связи между ними нет,
+        // каскаду сработать не по чему. Проверка стоит последней, чтобы более
+        // точная причина — отозван, приостановлен, истёк — называлась первой.
+        if (! $identity->ownerExists()) {
+            return [AccessEvent::RESULT_DENIED, 'Владелец пропуска удалён из системы.'];
+        }
+
         return [AccessEvent::RESULT_ALLOWED, null];
     }
 }
