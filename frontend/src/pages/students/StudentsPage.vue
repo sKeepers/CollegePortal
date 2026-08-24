@@ -71,7 +71,7 @@ const bulkActions = computed(() => [
   { label: 'Изменить форму обучения', value: 'change_education_form', permission: 'students.bulk_education' },
   { label: 'Изменить финансирование', value: 'change_funding_form', permission: 'students.bulk_education' },
   { label: 'Выпустить QR', value: 'issue_digital_passes', permission: 'students.bulk_passes' },
-  { label: 'Создать учетные записи', value: 'issue_accounts', permission: 'students.bulk_accounts' },
+  { label: 'Создать учётные записи', value: 'issue_accounts', permission: 'students.bulk_accounts' },
   { label: 'Архивировать', value: 'archive_selected', permission: 'students.bulk_archive' },
   { label: 'Экспортировать', value: 'export_selected', permission: 'students.bulk_export' },
 ].filter((action) => permissions.hasPermission(action.permission)))
@@ -681,7 +681,7 @@ onMounted(async () => {
           <q-banner v-if="bulkAction === 'issue_digital_passes'" rounded class="bg-blue-1 text-blue-10">Активные QR-пропуска не дублируются: такие студенты будут пропущены.</q-banner>
           <q-banner v-if="bulkAction === 'issue_accounts'" rounded class="bg-orange-1 text-orange-10">
             Пароль показывается один раз, сразу после создания. Восстановить его нельзя — только сбросить и выдать новый.
-            Распечатайте карточки или выгрузите CSV, не закрывая окно с результатом. Студенты, у которых учетная запись уже есть, будут пропущены.
+            Распечатайте карточки или выгрузите CSV, не закрывая окно с результатом. Студенты, у которых учётная запись уже есть, будут пропущены.
           </q-banner>
           <q-banner v-if="bulkAction === 'archive_selected'" rounded class="bg-orange-1 text-orange-10">Архивирование не удаляет студентов и не затрагивает legacy.</q-banner>
           <q-card v-if="bulkPreview" flat bordered>
@@ -711,7 +711,7 @@ onMounted(async () => {
     <q-dialog v-model="credentialsDialogVisible" persistent maximized>
       <q-card class="issued-accounts">
         <q-card-section class="issued-accounts__head">
-          <div class="text-h6">Учетные записи созданы: {{ issuedCredentials.length }}</div>
+          <div class="text-h6">Учётные записи созданы: {{ issuedCredentials.length }}</div>
           <q-banner rounded class="bg-orange-1 text-orange-10 q-mt-sm">
             Пароль показан один раз. Он нигде не сохранен и восстановить его нельзя — если карточка потеряна,
             остается только сбросить пароль и выдать новый. Распечатайте карточки или выгрузите CSV прямо сейчас.

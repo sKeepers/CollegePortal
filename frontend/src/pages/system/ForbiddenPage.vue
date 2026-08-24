@@ -12,7 +12,7 @@ const router = useRouter()
       <div class="forbidden-content">
         <strong>403</strong>
         <h1>Недостаточно прав</h1>
-        <p>У вашей учетной записи нет разрешения на открытие этого раздела или выполнение действия.</p>
+        <p>У вашей учётной записи нет разрешения на открытие этого раздела или выполнение действия.</p>
         <div class="forbidden-actions">
           <q-btn flat label="Вернуться" @click="router.back()" />
           <q-btn color="primary" label="На главную" to="/dashboard" />

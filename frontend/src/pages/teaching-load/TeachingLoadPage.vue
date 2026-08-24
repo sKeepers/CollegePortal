@@ -150,7 +150,7 @@ onMounted(async () => { if (profileUnavailable.value) return; if (!isOwnView.val
           <template #body-cell-coverage="props"><q-td :props="props">{{ loadCoverage(props.row) }}</q-td></template>
           <template #body-cell-actions="props"><q-td :props="props"><q-btn v-if="canUpdate" flat round dense title="Редактировать" @click.stop="openEditForm(props.row)"><Edit3 :size="16" /></q-btn><q-btn v-if="canDelete" flat round dense color="negative" title="Удалить" @click.stop="requestDelete(props.row)"><Trash2 :size="16" /></q-btn></q-td></template>
         </AppTable>
-        <AppEmptyState v-else :title="profileUnavailable ? 'Профиль преподавателя не настроен' : 'Нагрузка не найдена'" :description="profileUnavailable ? 'Обратитесь к администратору, чтобы связать учетную запись с карточкой преподавателя.' : 'Создайте нагрузку или сформируйте ее из учебного плана.'" />
+        <AppEmptyState v-else :title="profileUnavailable ? 'Профиль преподавателя не настроен' : 'Нагрузка не найдена'" :description="profileUnavailable ? 'Обратитесь к администратору, чтобы связать учётную запись с карточкой преподавателя.' : 'Создайте нагрузку или сформируйте ее из учебного плана.'" />
       </div>
 
       <aside class="teaching-load-side workspace-page__card">

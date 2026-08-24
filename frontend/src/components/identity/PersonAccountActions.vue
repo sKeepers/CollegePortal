@@ -4,7 +4,7 @@ import { KeyRound, UserPlus } from '@lucide/vue'
 import { api } from '../../services/api'
 
 /**
- * Создание и сброс учетной записи прямо в карточке человека. Раньше за этим
+ * Создание и сброс учётной записи прямо в карточке человека. Раньше за этим
  * надо было идти в раздел «Пользователи» и искать человека второй раз.
  *
  * Пароль приходит один раз и здесь же показывается: восстановить его нельзя,
@@ -21,7 +21,7 @@ const busy = ref(false)
 const error = ref('')
 const confirmReset = ref(false)
 const credentials = ref(null)
-// Учетную запись только что создали в этой же карточке: кнопка должна сразу
+// Учётную запись только что создали в этой же карточке: кнопка должна сразу
 // стать «Сбросить пароль», не дожидаясь перезагрузки списка.
 const justCreated = ref(false)
 
@@ -35,7 +35,7 @@ async function call(path) {
     const payload = await api.post(path, { profile_type: props.profileType, profile_id: props.profileId })
     credentials.value = payload?.data || null
   } catch (err) {
-    error.value = err.message || 'Не удалось выполнить действие с учетной записью'
+    error.value = err.message || 'Не удалось выполнить действие с учётной записью'
   } finally {
     busy.value = false
   }
@@ -63,7 +63,7 @@ function resetPassword() {
       :loading="busy"
       @click="createAccount"
     >
-      <UserPlus :size="16" class="q-mr-xs" />Создать учетную запись
+      <UserPlus :size="16" class="q-mr-xs" />Создать учётную запись
     </q-btn>
 
     <q-btn
@@ -95,7 +95,7 @@ function resetPassword() {
 
     <q-dialog :model-value="Boolean(credentials)" persistent>
       <q-card class="person-account__dialog">
-        <q-card-section class="text-h6">Учетная запись: {{ credentials?.name }}</q-card-section>
+        <q-card-section class="text-h6">Учётная запись: {{ credentials?.name }}</q-card-section>
         <q-card-section>
           <dl class="person-account__creds">
             <dt>Логин</dt>

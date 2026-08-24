@@ -168,7 +168,7 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
         await loadApplication(selectedId.value)
       }
     } catch (err) {
-      error.value = err.message || 'Не удалось загрузить заявления приемной комиссии'
+      error.value = err.message || 'Не удалось загрузить заявления приёмной комиссии'
       applications.value = []
     } finally {
       loading.value = false

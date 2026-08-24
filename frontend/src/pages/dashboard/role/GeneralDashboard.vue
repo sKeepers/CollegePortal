@@ -178,7 +178,7 @@ onMounted(() => {
 <template>
   <AppPage>
     <PageHeader title="Панель" :subtitle="dashboardSubtitle"><template #actions><q-btn flat :loading="loading" @click="loadDashboard">Обновить</q-btn></template></PageHeader>
-    <section class="dashboard-hero"><div><span>{{ currentDate }}</span><h2>Добро пожаловать, {{ userName }}</h2><p>{{ isStudent ? 'Личный учебный кабинет: расписание, ближайшие занятия и QR-пропуск.' : isAdmission ? 'Рабочая панель приемной комиссии: заявления, документы и комплектность.' : isHr ? 'Кадровая сводка сотрудников, преподавателей и проходной.' : 'Здесь собраны основные показатели, быстрые действия и рабочие уведомления.' }}</p></div></section>
+    <section class="dashboard-hero"><div><span>{{ currentDate }}</span><h2>Добро пожаловать, {{ userName }}</h2><p>{{ isStudent ? 'Личный учебный кабинет: расписание, ближайшие занятия и QR-пропуск.' : isAdmission ? 'Рабочая панель приёмной комиссии: заявления, документы и комплектность.' : isHr ? 'Кадровая сводка сотрудников, преподавателей и проходной.' : 'Здесь собраны основные показатели, быстрые действия и рабочие уведомления.' }}</p></div></section>
     <AppErrorBanner :message="error" />
     <PersonalDashboardLayout :dashboard-type="`general-${primaryRole}`" :widgets="dashboardWidgets">
       <template #stats>

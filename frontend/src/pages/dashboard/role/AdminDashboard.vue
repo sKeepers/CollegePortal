@@ -48,7 +48,7 @@ const dashboardWidgets = [
   { id: 'attendance', title: 'Посещаемость сегодня', defaultSize: 'medium' },
   { id: 'attention', title: 'Что требует внимания', defaultSize: 'medium' },
   { id: 'charts', title: 'Мини-графики', defaultSize: 'medium' },
-  { id: 'admissions', title: 'Приемная комиссия', defaultSize: 'small' },
+  { id: 'admissions', title: 'Приёмная комиссия', defaultSize: 'small' },
   { id: 'integrations', title: 'ФРДО / ФИС', defaultSize: 'medium' },
   { id: 'system', title: 'Система', defaultSize: 'medium' },
   { id: 'audit', title: 'Последние действия', defaultSize: 'medium' },
@@ -96,7 +96,7 @@ const statItems = computed(() => [
 
 const quickActionsSource = [
   { label: 'Студенты', description: 'Контингент и карточки', icon: GraduationCap, to: '/students' },
-  { label: 'Приемная комиссия', description: 'Заявления абитуриентов', icon: FileCheck2, to: '/admissions/foundation' },
+  { label: 'Приёмная комиссия', description: 'Заявления абитуриентов', icon: FileCheck2, to: '/admissions/foundation' },
   { label: 'Расписание', description: 'Занятия и аудитории', icon: CalendarDays, to: '/schedule' },
   { label: 'Проходная', description: 'Сканирование QR', icon: DoorOpen, to: '/access/gate' },
   { label: 'Посещаемость', description: 'Опоздания и отсутствия', icon: ClipboardList, to: '/attendance' },
@@ -205,7 +205,7 @@ onMounted(() => {
       <div>
         <span>{{ currentDate }}</span>
         <h2>Добро пожаловать, {{ userName }}</h2>
-        <p>Исполнительная аналитика: контингент, учебный процесс, проходная, приемная кампания, интеграции и аудит.</p>
+        <p>Исполнительная аналитика: контингент, учебный процесс, проходная, приёмная кампания, интеграции и аудит.</p>
       </div>
     </section>
 
@@ -282,7 +282,7 @@ onMounted(() => {
       </template>
 
       <template #admissions>
-        <AppCard title="Приемная комиссия" subtitle="Состояние заявлений">
+        <AppCard title="Приёмная комиссия" subtitle="Состояние заявлений">
           <div class="dashboard-role-list dashboard-role-list--compact">
             <div><span>Новые</span><strong>{{ admissions.new_applications || 0 }}</strong></div>
             <div><span>Без документов</span><strong>{{ admissions.no_documents || 0 }}</strong></div>

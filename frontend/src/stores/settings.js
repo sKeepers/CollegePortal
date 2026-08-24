@@ -6,7 +6,7 @@ const groupLabels = {
   general: 'Общие',
   academic: 'Учебный процесс',
   attendance: 'Посещаемость',
-  admissions: 'Приемная комиссия',
+  admissions: 'Приёмная комиссия',
   graduation: 'Выпуск',
   identity: 'Идентификация',
   hr: 'Отдел кадров',

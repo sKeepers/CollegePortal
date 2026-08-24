@@ -231,7 +231,7 @@ async function searchApplicantApplications(query) {
     .map((application) => ({
       id: application.id,
       type: 'applicant',
-      group: 'Приемная комиссия',
+      group: 'Приёмная комиссия',
       title: fullName(application) || `Заявление #${application.id}`,
       subtitle: [
         application.education_program?.specialty?.name,
@@ -313,7 +313,7 @@ const providers = [
   },
   {
     type: 'applicant',
-    label: 'Приемная комиссия',
+    label: 'Приёмная комиссия',
     search: searchApplicantApplications,
   },
 ]

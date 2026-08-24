@@ -77,7 +77,7 @@ const createTypeLabel = computed(() =>
   form.package_type === "gia" ? "gia" : "admission",
 );
 const createSourceLabel = computed(() =>
-  form.package_type === "gia" ? "ГИА" : "Приемная комиссия",
+  form.package_type === "gia" ? "ГИА" : "Приёмная комиссия",
 );
 const columns = [
   {

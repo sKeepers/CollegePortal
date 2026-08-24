@@ -455,7 +455,7 @@ onMounted(async () => {
 <template>
   <AppPage>
     <PageHeader
-      title="Приемная комиссия"
+      title="Приёмная комиссия"
       subtitle="Реестр заявлений, документы, статусы, CSV-обмен и зачисление абитуриентов."
     >
       <template #actions>
@@ -690,7 +690,7 @@ onMounted(async () => {
     <q-dialog v-model="bulkDialogVisible" persistent>
       <q-card style="min-width: 520px; max-width: 760px;">
         <q-card-section>
-          <div class="text-h6">Групповые действия приемной комиссии</div>
+          <div class="text-h6">Групповые действия приёмной комиссии</div>
           <div class="text-caption text-grey-7">Выбрано заявлений: {{ selectedCount }}</div>
         </q-card-section>
         <q-card-section class="q-gutter-md">

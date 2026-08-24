@@ -6,6 +6,7 @@ import { BadgeCheck, BriefcaseBusiness, Building2, CalendarDays, FileText, Histo
 import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
 import AppCard from '../../components/ui/AppCard.vue'
+import PageHeader from '../../components/ui/PageHeader.vue'
 import PersonAccountActions from '../../components/identity/PersonAccountActions.vue'
 import DeletionRequestDialog from '../../components/trash/DeletionRequestDialog.vue'
 import { api } from '../../services/api'
@@ -451,19 +452,24 @@ watch(() => route.path, (path) => {
 
 <template>
   <div class="hr-page">
-    <div class="hr-page__header">
-      <div>
-        <p class="text-overline text-primary q-mb-xs">Отдел кадров</p>
-        <h1>Кадровый контур сотрудников</h1>
-        <p>Единая карточка сотрудника связана с личной карточкой и может быть связана с преподавателем без изменения API преподавателей.</p>
-      </div>
-      <div class="hr-page__actions">
+<!--
+      Заголовок — общей опорой `PageHeader`, как в прочих разделах. Раньше здесь
+      стояла своя шапка: на экране она выглядела заголовком, но набиралась не
+      тем же, чем у соседей, и раздел выбивался из общего вида. Подзаголовок
+      переписан для человека: прежний объяснял устройство API, а не то, что
+      человек здесь делает.
+    -->
+    <PageHeader
+      title="Сотрудники"
+      subtitle="Сотрудники, подразделения и должности. Карточка сотрудника связана с личной карточкой человека."
+    >
+      <template #actions>
         <q-btn v-if="activeTab === 'employees'" outline no-caps :loading="exporting" @click="exportEmployees">Экспорт CSV</q-btn>
         <q-btn v-if="activeTab === 'employees' && canCreate" color="primary" no-caps @click="openEmployeeDialog()">Новый сотрудник</q-btn>
         <q-btn v-if="activeTab === 'departments' && canManageDepartments" color="primary" no-caps @click="openDictionaryDialog()">Новое подразделение</q-btn>
         <q-btn v-if="activeTab === 'positions' && canManagePositions" color="primary" no-caps @click="openDictionaryDialog()">Новая должность</q-btn>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <q-tabs v-model="activeTab" align="left" class="text-primary hr-tabs" dense>
       <q-tab name="employees" label="Сотрудники" />
@@ -753,16 +759,13 @@ watch(() => route.path, (path) => {
 /* Тот же потолок ширины, что и у страниц на общем контейнере: без него раздел
    упирался в край окна, а соседние разделы — нет. */
 .hr-page { display: flex; flex-direction: column; gap: 16px; max-width: var(--cp-page-max-width); }
-.hr-page__header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
-.hr-page__header h1 { margin: 0; font-size: 28px; line-height: 1.2; font-weight: 700; }
-.hr-page__header p { margin: 6px 0 0; color: #64748b; }
-.hr-page__actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .hr-tabs { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
 /* Без выбранного сотрудника список занимает всю ширину; ширину карточки задаёт
    разделитель, поэтому вторая колонка приходит из inline-стиля, а не отсюда. */
 .hr-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
 .hr-layout.resizable-workspace { gap: 0; }
-.hr-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.hr-main { min-width: 0; }
+.hr-main > * + * { margin-top: 16px; }
 .hr-filters { display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)) auto; gap: 10px; align-items: end; }
 .hr-table { max-height: 620px; }
 /* Карточка не должна ездить вбок: по горизонтали содержимое сжимается само,
@@ -780,5 +783,5 @@ watch(() => route.path, (path) => {
 .hr-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .hr-form-wide { grid-column: 1 / -1; }
 @media (max-width: 1360px) { .hr-filters { grid-template-columns: repeat(2, minmax(180px, 1fr)); } }
-@media (max-width: 1023px) { .hr-page__header, .hr-layout { display: block; } .hr-workspace { position: static; margin-top: 16px; max-height: none; } .hr-filters, .hr-form-grid { grid-template-columns: 1fr; } }
+@media (max-width: 1023px) { .hr-layout { display: block; } .hr-workspace { position: static; margin-top: 16px; max-height: none; } .hr-filters, .hr-form-grid { grid-template-columns: 1fr; } }
 </style>

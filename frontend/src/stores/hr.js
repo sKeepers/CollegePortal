@@ -121,8 +121,12 @@ export const useHrStore = defineStore('hr', () => {
       const payload = await api.list('employees', { ...filters.value, ...params })
       employees.value = rows(payload)
       pagination.value = meta(payload)
+      // Выбор не переезжает на первого попавшегося: у экрана есть состояние
+      // «никто не выбран», и оно начальное. Пока портал выбирал сам, вход в
+      // раздел сразу открывал карточку первого по списку, будто её открыли, а
+      // «Назад к списку» отменялось следующей же загрузкой. Тот же образец
+      // чинили 24.08.2026 на «Посещаемости».
       if (selectedId.value && !selectedEmployee.value) selectedId.value = null
-      if (!selectedId.value && employees.value.length) selectedId.value = employees.value[0].id
     } catch (err) {
       error.value = err.message || 'Не удалось загрузить сотрудников'
       throw err

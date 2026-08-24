@@ -257,7 +257,7 @@ function toggleDocument(document) {
 
           <section class="admission-details__section">
             <h3><Mail :size="16" /> Комментарий</h3>
-            <p class="admission-details__muted">{{ application.comment || 'Комментарий приемной комиссии пока не указан.' }}</p>
+            <p class="admission-details__muted">{{ application.comment || 'Комментарий приёмной комиссии пока не указан.' }}</p>
           </section>
         </q-tab-panel>
 

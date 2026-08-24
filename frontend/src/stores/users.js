@@ -46,7 +46,7 @@ export const useUsersStore = defineStore('users', () => {
   ]
 
   /*
-   * Поиск людей для форм создания учетной записи. Раньше в обеих формах нужно
+   * Поиск людей для форм создания учётной записи. Раньше в обеих формах нужно
    * было ввести числовой ID профиля, а взять его было неоткуда.
    */
   const PROFILE_SOURCES = {
@@ -76,7 +76,7 @@ export const useUsersStore = defineStore('users', () => {
 
   const personTypeOptions = [
     { label: 'Не связана', value: null },
-    // Портал сам связывает учетную запись с личной карточкой, поэтому этот тип
+    // Портал сам связывает учётную запись с личной карточкой, поэтому этот тип
     // должен быть в списке: без него в поле показывался служебный код «person».
     { label: 'Личная карточка', value: 'person' },
     { label: 'Студент', value: 'student' },
@@ -220,7 +220,7 @@ export const useUsersStore = defineStore('users', () => {
       await load()
       return response?.data || null
     } catch (err) {
-      error.value = err.message || 'Не удалось создать учетную запись'
+      error.value = err.message || 'Не удалось создать учётную запись'
       throw err
     } finally {
       saving.value = false

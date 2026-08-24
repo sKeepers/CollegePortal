@@ -67,7 +67,7 @@ function submitForm() {
 <template>
   <AppCard
     :title="application?.id ? 'Редактирование заявления' : 'Новое заявление'"
-    subtitle="Данные абитуриента, программа обучения, статус и комментарий приемной комиссии."
+    subtitle="Данные абитуриента, программа обучения, статус и комментарий приёмной комиссии."
   >
     <form class="admission-form" @submit.prevent="submitForm">
       <AppFormSection title="Абитуриент">
@@ -124,7 +124,7 @@ function submitForm() {
           outlined
           type="textarea"
           autogrow
-          label="Комментарий приемной комиссии"
+          label="Комментарий приёмной комиссии"
         />
       </AppFormSection>
 

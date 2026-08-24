@@ -362,7 +362,7 @@ export const routes = [
         path: 'admissions/:id?',
         name: 'admissions',
         component: AdmissionsPage,
-        meta: { title: 'Приемная комиссия', permission: 'admissions.view' },
+        meta: { title: 'Приёмная комиссия', permission: 'admissions.view' },
       },
       {
         path: 'admissions/foundation/:id?',

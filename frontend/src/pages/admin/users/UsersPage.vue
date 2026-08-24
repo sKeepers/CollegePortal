@@ -285,7 +285,7 @@ const profileOptions = ref([])
 const profileSearchLoading = ref(false)
 
 /*
- * Логин и email — разные вещи. Когда учетную запись заводит портал, логином
+ * Логин и email — разные вещи. Когда учётную запись заводит портал, логином
  * становится телефон, а email при его отсутствии достраивается служебным
  * адресом @accounts.collegeportal.local. Показывать этот адрес как почту
  * человека нельзя: письма туда не ходят.
@@ -416,14 +416,14 @@ onMounted(async () => {
 
 <template>
   <AppPage>
-    <PageHeader title="Пользователи" subtitle="Управление учетными записями CollegePortal: доступ, статус, роль и связь с личной карточкой." />
+    <PageHeader title="Пользователи" subtitle="Управление учётными записями CollegePortal: доступ, статус, роль и связь с личной карточкой." />
     <AppToolbar>
       <span>Роли на этом этапе используются как основа RBAC, без сложных сценариев делегирования.</span>
       <template #actions>
         <AppLoading v-if="store.loading || store.saving" label="Обработка..." />
         <q-btn flat :disable="store.loading" @click="store.load"><RefreshCw :size="16" class="q-mr-xs" /> Обновить</q-btn>
-        <q-btn v-if="canManage" color="primary" title="Завести учетную запись вручную: вы сами задаете email и пароль" @click="openCreate"><Plus :size="16" class="q-mr-xs" /> Создать вручную</q-btn>
-        <q-btn v-if="canManage" outline color="primary" title="Завести учетную запись человеку, который уже есть в системе: логин и пароль портал придумает сам" @click="provisionDialog = true"><KeyRound :size="16" class="q-mr-xs" /> Создать по профилю</q-btn>
+        <q-btn v-if="canManage" color="primary" title="Завести учётную запись вручную: вы сами задаете email и пароль" @click="openCreate"><Plus :size="16" class="q-mr-xs" /> Создать вручную</q-btn>
+        <q-btn v-if="canManage" outline color="primary" title="Завести учётную запись человеку, который уже есть в системе: логин и пароль портал придумает сам" @click="provisionDialog = true"><KeyRound :size="16" class="q-mr-xs" /> Создать по профилю</q-btn>
       </template>
     </AppToolbar>
     <AppErrorBanner :message="store.error" />
@@ -478,7 +478,7 @@ onMounted(async () => {
             </q-td>
           </template>
         </AppTable>
-        <AppEmptyState v-else title="Пользователи не найдены" description="Измените фильтры или создайте новую учетную запись." />
+        <AppEmptyState v-else title="Пользователи не найдены" description="Измените фильтры или создайте новую учётную запись." />
       </section>
 
       <aside class="users-side">
@@ -528,11 +528,11 @@ onMounted(async () => {
     <q-dialog v-model="formOpen">
       <q-card class="users-dialog">
         <q-card-section>
-          <div class="text-h6">{{ editingUser ? 'Редактировать пользователя' : 'Создать учетную запись вручную' }}</div>
+          <div class="text-h6">{{ editingUser ? 'Редактировать пользователя' : 'Создать учётную запись вручную' }}</div>
           <p v-if="!editingUser" class="users-dialog-subtitle">
             Email и пароль задаете вы, и их нужно передать человеку самостоятельно. Если человек уже заведен
             как студент, преподаватель или сотрудник, быстрее и надежнее «Создать по профилю»: там логин
-            и пароль генерируются, а вместе с учетной записью выпускается QR-пропуск.
+            и пароль генерируются, а вместе с учётной записью выпускается QR-пропуск.
           </p>
         </q-card-section>
         <q-card-section class="users-form">
@@ -597,12 +597,12 @@ onMounted(async () => {
     <q-dialog v-model="provisionDialog" persistent>
       <q-card class="users-dialog">
         <q-card-section>
-          <div class="text-h6">Создать учетную запись по профилю</div>
+          <div class="text-h6">Создать учётную запись по профилю</div>
           <p class="users-dialog-subtitle">
             Для человека, который уже заведен в системе как студент, преподаватель или сотрудник.
             Логин и пароль портал придумает сам: логином станет телефон, при его отсутствии — email,
             пароль будет пятизначным. Обе строки показываются один раз в карточке доступа, распечатайте ее сразу.
-            Вместе с учетной записью выпускается QR-пропуск.
+            Вместе с учётной записью выпускается QR-пропуск.
           </p>
         </q-card-section>
         <q-card-section class="users-form">
@@ -638,7 +638,7 @@ onMounted(async () => {
       </q-card>
     </q-dialog>
 
-    <AppConfirmDialog v-model="deleteDialog" title="Удалить пользователя" :message="`Удалить учетную запись ${pendingUser?.name || ''}?`" confirm-label="Удалить" @confirm="confirmDelete" />
+    <AppConfirmDialog v-model="deleteDialog" title="Удалить пользователя" :message="`Удалить учётную запись ${pendingUser?.name || ''}?`" confirm-label="Удалить" @confirm="confirmDelete" />
     <AppConfirmDialog v-model="blockDialog" title="Заблокировать пользователя" :message="`Заблокировать ${pendingUser?.name || ''}? Пользователь не сможет войти в систему.`" confirm-label="Заблокировать" tone="warning" @confirm="confirmBlock" />
     <AppConfirmDialog v-model="unblockDialog" title="Разблокировать пользователя" :message="`Разблокировать ${pendingUser?.name || ''}?`" confirm-label="Разблокировать" tone="success" @confirm="confirmUnblock" />
   </AppPage>

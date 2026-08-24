@@ -5,7 +5,7 @@ import { api } from '../services/api'
 function rows(payload) { return Array.isArray(payload?.data) ? payload.data : [] }
 
 export const roleLabels = {
-  admin: 'Администратор', director: 'Директор', deputy: 'Заместитель директора', study: 'Учебная часть', admission: 'Приемная комиссия', teacher: 'Преподаватель', security: 'Охрана', student: 'Студент',
+  admin: 'Администратор', director: 'Директор', deputy: 'Заместитель директора', study: 'Учебная часть', admission: 'Приёмная комиссия', teacher: 'Преподаватель', security: 'Охрана', student: 'Студент',
 }
 
 export const statusLabels = {
