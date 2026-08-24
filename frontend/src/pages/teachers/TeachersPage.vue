@@ -501,7 +501,7 @@ onMounted(async () => {
           <q-btn flat label="Отмена" v-close-popup />
           <q-btn
             color="primary"
-            label="Выдать"
+            label="Выдать и показать пароли"
             :loading="store.saving"
             :disable="!accountsPreview?.will_change"
             @click="confirmAccounts"
