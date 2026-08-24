@@ -116,17 +116,7 @@ class MergeGroupsByFundingLetterTest extends TestCase
      */
     public function test_the_list_of_dependants_matches_the_schema(): void
     {
-        $found = [];
-
-        foreach (Schema::getTableListing() as $table) {
-            $table = Str::afterLast($table, '.');
-
-            foreach (Schema::getForeignKeys($table) as $key) {
-                if (Str::afterLast($key['foreign_table'], '.') === 'groups') {
-                    $found[$table] = $key['columns'][0];
-                }
-            }
-        }
+        ['columns' => $found, 'nullified' => $nullified] = $this->foreignKeysToGroups();
 
         ksort($found);
         $known = GroupDependencies::TABLES;
@@ -137,6 +127,52 @@ class MergeGroupsByFundingLetterTest extends TestCase
             $found,
             'Список таблиц в GroupDependencies разошёлся со схемой: удаление группы снесёт каскадом то, чего никто не проверил.',
         );
+
+        $this->assertSame(
+            $nullified,
+            $this->sorted(GroupDependencies::NULLIFIED),
+            'Список NULLIFIED разошёлся со схемой. Ссылка, сменившая правило удаления, опаснее новой: '
+            .'`SET NULL` не уносит строку, а оставляет её без смысла, и снаружи это выглядит исправным.',
+        );
+    }
+
+    /**
+     * Внешние ключи на `groups` прямо из схемы: какая колонка и какое правило
+     * удаления. Читается схема, а не память: список, который сверяют руками,
+     * однажды устареет и промолчит.
+     *
+     * @return array{columns: array<string, string>, nullified: list<string>}
+     */
+    private function foreignKeysToGroups(): array
+    {
+        $columns = [];
+        $nullified = [];
+
+        foreach (Schema::getTableListing() as $table) {
+            $table = Str::afterLast($table, '.');
+
+            foreach (Schema::getForeignKeys($table) as $key) {
+                if (Str::afterLast($key['foreign_table'], '.') !== 'groups') {
+                    continue;
+                }
+
+                $columns[$table] = $key['columns'][0];
+
+                if (Str::contains(Str::lower((string) $key['on_delete']), 'null')) {
+                    $nullified[] = $table;
+                }
+            }
+        }
+
+        return ['columns' => $columns, 'nullified' => $this->sorted($nullified)];
+    }
+
+    /** @param  list<string>  $values @return list<string> */
+    private function sorted(array $values): array
+    {
+        sort($values);
+
+        return $values;
     }
 
     private function makeGroup(string $name): Group

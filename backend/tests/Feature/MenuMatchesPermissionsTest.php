@@ -55,6 +55,7 @@ class MenuMatchesPermissionsTest extends TestCase
         'Нагрузка' => ['teaching-loads'],
         'Экзамены и ГИА' => ['exams'],
         'Выпускники и дипломы' => ['graduates'],
+        'Бланки дипломов' => ['diploma-blanks'],
         'ФРДО' => ['frdo-packages'],
         'ФИС' => ['fis-packages'],
         'Специальности' => ['specialties'],
