@@ -113,7 +113,7 @@ export const useSubjectsStore = defineStore('subjects', () => {
     try {
       const [subjectsPayload, teachersPayload, lessonsPayload] = await Promise.all([
         api.list('subjects'),
-        api.list('teachers'),
+        api.list('teachers', { per_page: 500 }),
         api.list('schedule-lessons'),
       ])
 

@@ -89,7 +89,7 @@ async function loadDashboard() {
   error.value = ''
 
   try {
-    const teachersPayload = auth.can('teachers.view') ? await api.list('teachers', { active_only: 1 }).catch(() => ({ data: [] })) : { data: [] }
+    const teachersPayload = auth.can('teachers.view') ? await api.list('teachers', { active_only: 1, per_page: 500 }).catch(() => ({ data: [] })) : { data: [] }
     teacher.value = findTeacher(extractRows(teachersPayload))
     const id = teacherId.value
     if (!id) {

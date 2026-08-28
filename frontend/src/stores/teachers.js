@@ -119,7 +119,7 @@ export const useTeachersStore = defineStore('teachers', () => {
       // Преподаватели — сам экран, дисциплины и занятия — его справочники:
       // кадровик без прав на них обязан увидеть список преподавателей.
       const { payloads } = await loadReferences({
-        teachers: api.list('teachers'),
+        teachers: api.list('teachers', { per_page: 500 }),
         subjects: api.list('subjects'),
         lessons: api.list('schedule-lessons'),
       })

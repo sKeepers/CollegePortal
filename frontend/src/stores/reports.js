@@ -57,7 +57,7 @@ export const useReportsStore = defineStore('reports', () => {
     const [groupsPayload, subjectsPayload, teachersPayload] = await Promise.all([
       api.list('groups', { per_page: 200 }).catch(() => null),
       canReadSubjects.value ? api.list('subjects').catch(() => null) : Promise.resolve(null),
-      canExportJournal.value ? api.list('teachers', { active_only: 1 }).catch(() => null) : Promise.resolve(null),
+      canExportJournal.value ? api.list('teachers', { active_only: 1, per_page: 500 }).catch(() => null) : Promise.resolve(null),
     ])
 
     groups.value = rows(groupsPayload)

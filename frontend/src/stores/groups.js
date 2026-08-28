@@ -105,7 +105,7 @@ export const useGroupsStore = defineStore('groups', () => {
       const { payloads } = await loadReferences({
         groups: api.list('groups', { per_page: 200 }),
         programs: api.list('education-programs'),
-        teachers: api.list('teachers', { active_only: 1 }),
+        teachers: api.list('teachers', { active_only: 1, per_page: 500 }),
       })
 
       groups.value = extractRows(payloads.groups)

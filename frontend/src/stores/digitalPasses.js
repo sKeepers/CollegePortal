@@ -94,7 +94,7 @@ export const useDigitalPassesStore = defineStore('digitalPasses', () => {
       const { payloads } = await loadReferences({
         identities: api.list('digital-identities', identitiesParams),
         students: options.includeOwners === false ? Promise.resolve({ data: [] }) : api.list('students'),
-        teachers: options.includeOwners === false ? Promise.resolve({ data: [] }) : api.list('teachers'),
+        teachers: options.includeOwners === false ? Promise.resolve({ data: [] }) : api.list('teachers', { per_page: 500 }),
         employees: options.includeOwners === false ? Promise.resolve({ data: [] }) : api.list('employees'),
       })
       identities.value = extractRows(payloads.identities)

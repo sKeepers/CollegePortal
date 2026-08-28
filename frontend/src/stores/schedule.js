@@ -218,7 +218,7 @@ export const useScheduleStore = defineStore('schedule', () => {
       const [lessonsResult, groupsResult, teachersResult, subjectsResult, classroomsResult, conflictsResult, coverageResult, templatesResult] = await Promise.allSettled([
         api.list('schedule-lessons', apiFilters),
         api.list('groups', { per_page: 200 }),
-        api.list('teachers', { active_only: 1 }),
+        api.list('teachers', { active_only: 1, per_page: 500 }),
         api.list('subjects'),
         api.list('classrooms'),
         api.list('schedule/conflicts', apiFilters),
