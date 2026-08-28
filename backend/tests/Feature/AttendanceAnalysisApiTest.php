@@ -171,14 +171,18 @@ class AttendanceAnalysisApiTest extends TestCase
         $student = Student::create(['group_id' => $context['group']->id, 'last_name' => 'Ночная', 'first_name' => 'Смена', 'status' => 'active']);
         $open = Student::create(['group_id' => $context['group']->id, 'last_name' => 'Открытый', 'first_name' => 'Вход', 'status' => 'active']);
         $outOnly = Student::create(['group_id' => $context['group']->id, 'last_name' => 'Лишний', 'first_name' => 'Выход', 'status' => 'active']);
-        $this->addAccessEventAt('student', $student->id, '2026-09-10 23:10:00', AccessEvent::DIRECTION_IN);
-        $this->addAccessEventAt('student', $student->id, '2026-09-11 00:40:00', AccessEvent::DIRECTION_OUT);
+        // Времена событий — UTC, времена занятий — часы на стене. 20:10 UTC это
+        // 23:10 по колледжу, 21:40 — 00:40 следующего дня: смена начинается вечером
+        // десятого и кончается после полуночи, как и говорит имя теста. До 28.08.2026
+        // те же часы стояли здесь без перевода, и сутки считались по часам сервера.
+        $this->addAccessEventAt('student', $student->id, '2026-09-10 20:10:00', AccessEvent::DIRECTION_IN);
+        $this->addAccessEventAt('student', $student->id, '2026-09-10 21:40:00', AccessEvent::DIRECTION_OUT);
         $this->addAccessEventAt('student', $open->id, '2026-09-10 08:30:00', AccessEvent::DIRECTION_IN);
         $this->addAccessEventAt('student', $outOnly->id, '2026-09-10 12:00:00', AccessEvent::DIRECTION_OUT);
 
         $days = collect($this->getJson("/api/attendance/person/student/{$student->id}/days?date_from=2026-09-10&date_to=2026-09-10")->assertOk()->json('data'));
         $this->assertSame(90, $days->first()['minutes_inside']);
-        $this->assertSame('2026-09-11T00:40:00.000000Z', $days->first()['last_exit']);
+        $this->assertSame('2026-09-10T21:40:00.000000Z', $days->first()['last_exit']);
 
         $rows = collect($this->getJson('/api/attendance/history?type=student&date_from=2026-09-10&date_to=2026-09-10')->assertOk()->json('data'))->keyBy('full_name');
         $this->assertTrue($rows->get('Открытый Вход')['has_open_session']);

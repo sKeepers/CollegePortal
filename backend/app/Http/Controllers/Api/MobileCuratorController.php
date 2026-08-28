@@ -14,6 +14,7 @@ use App\Models\Teacher;
 use App\Services\AttendanceAnalysisService;
 use App\Services\CuratorScopeService;
 use App\Services\GroupRosterService;
+use App\Support\Time\CollegeTime;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -153,7 +154,7 @@ class MobileCuratorController extends Controller
             // `whereIn` с пустым массивом так и делает, и это здесь важно —
             // группа без студентов не должна показать проходную всего колледжа.
             ->whereIn('entity_id', $students->pluck('id')->all())
-            ->whereBetween('event_time', [$date->copy()->startOfDay(), $date->copy()->endOfDay()]);
+            ->whereBetween('event_time', [CollegeTime::dayStart($date), CollegeTime::dayEnd($date)]);
 
         $total = (clone $query)->count();
         $events = $query->orderByDesc('event_time')->limit(self::EVENT_LIMIT)->get();
