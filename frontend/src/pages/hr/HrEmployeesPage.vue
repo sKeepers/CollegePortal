@@ -767,7 +767,16 @@ watch(() => route.path, (path) => {
 .hr-main { min-width: 0; }
 .hr-main > * + * { margin-top: 16px; }
 .hr-filters { display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)) auto; gap: 10px; align-items: end; }
-.hr-table { max-height: 620px; }
+/*
+  Высота от окна, а не в постоянных пикселях.
+
+  С `620px` таблица не росла вовсе: замерено 28.08.2026 — при окне 1000 px под
+  карточкой оставалось 22 px, при 1400 px те же 587 px таблицы и **455 px
+  пустоты**, из двадцати строк было видно двенадцать. Остальные списки портала
+  уже считают так же (`calc(100vh - 342px)` в `main.css`), и `.hr-table`
+  оставалась единственной списочной таблицей с высотой числом.
+*/
+.hr-table { max-height: calc(100vh - 342px); }
 /* Карточка не должна ездить вбок: по горизонтали содержимое сжимается само,
    а элементы вроде вкладок прокручиваются внутри себя. */
 .hr-workspace { position: sticky; top: 82px; min-width: 0; max-height: calc(100vh - 104px); overflow-x: hidden; overflow-y: auto; }
