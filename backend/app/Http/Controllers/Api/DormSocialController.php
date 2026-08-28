@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\DormSocialRecordResource;
 use App\Models\DormSocialRecord;
 use App\Services\AuditLogService;
+use App\Support\Http\PageSize;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -32,7 +33,6 @@ class DormSocialController extends Controller
             'student_id' => ['nullable', 'integer'],
             'category' => ['nullable', Rule::in(array_keys(DormSocialRecord::CATEGORIES))],
             'open' => ['nullable', 'boolean'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:300'],
         ]);
 
         $records = DormSocialRecord::query()
@@ -44,7 +44,7 @@ class DormSocialController extends Controller
             })
             ->orderByDesc('opened_on')
             ->orderByDesc('id')
-            ->paginate($filters['per_page'] ?? 100);
+            ->paginate(PageSize::from($request, 100));
 
         AuditLogService::log('dorm.social', 'viewed', null, null, [
             'user_id' => Auth::id(),

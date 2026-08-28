@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Support\Time\CollegeTime;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\DormIncidentResource;
 use App\Models\DormIncident;
 use App\Services\AuditLogService;
 use App\Services\SettingService;
+use App\Support\Http\PageSize;
+use App\Support\Time\CollegeTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -33,7 +34,6 @@ class DormIncidentController extends Controller
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],
             'dorm_room_id' => ['nullable', 'integer'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:300'],
         ], [
             'from.date' => 'Дата «с» не распознана.',
             'to.date' => 'Дата «по» не распознана.',
@@ -49,7 +49,7 @@ class DormIncidentController extends Controller
             ->when($filters['dorm_room_id'] ?? null, fn ($query, int $id) => $query->where('dorm_room_id', $id))
             ->orderByDesc('happened_at')
             ->orderByDesc('id')
-            ->paginate($filters['per_page'] ?? 100);
+            ->paginate(PageSize::from($request, 100));
 
         return DormIncidentResource::collection($incidents);
     }
