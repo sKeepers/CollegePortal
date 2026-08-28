@@ -105,7 +105,7 @@ class AccountProvisioningService
 
             $this->issuePassIfMissing($profile, $roleCode);
 
-            return new ProvisionedAccount($user, $username, $password, $name, $role->code);
+            return new ProvisionedAccount($user, $username, $password, $name, $role->code, (string) $role->name);
         });
     }
 

@@ -95,7 +95,11 @@ class AdminUserController extends Controller
             'login' => $account->login,
             'password' => $account->password,
             'name' => $account->name,
+            // Код остаётся: по нему сверяются права и пишется журнал. Рядом —
+            // название, потому что карточку доступа печатают и отдают человеку,
+            // а «Роль: student» на бумаге человеку ничего не говорит.
             'role' => $account->role,
+            'role_name' => $account->roleName,
         ]], Response::HTTP_CREATED);
     }
 

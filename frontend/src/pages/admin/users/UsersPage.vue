@@ -16,6 +16,7 @@ import AppStatusBadge from '../../../components/ui/AppStatusBadge.vue'
 import AppConfirmDialog from '../../../components/ui/AppConfirmDialog.vue'
 import { createTablePagination, persistTablePagination, TABLE_ROWS_PER_PAGE_OPTIONS } from '../../../services/tableSettings'
 import { useUsersStore } from '../../../stores/users'
+import { escapeHtml, printHtmlDocument } from '../../../utils/print'
 
 const rowsPerPageKey = 'collegePortal.users.rowsPerPage'
 const store = useUsersStore()
@@ -355,8 +356,60 @@ async function provisionAccount() {
   credentialDialog.value = true
 }
 
+/**
+ * Карточка доступа печатается отдельным документом, а не страницей.
+ *
+ * До 28.08.2026 здесь стоял голый `window.print()`, а печатных стилей в файле
+ * не было вовсе — и глобальных в портале тоже нет. Замерено в браузере при
+ * `emulateMedia('print')`: на `/admin/users` боковая панель **видна**, таблица
+ * **видна**, в ней двадцать строк. То есть оператор, печатавший логин и пароль
+ * **одного** человека, уносил с принтера меню, фильтры и список чужих людей —
+ * не выбирал этого, на экране не видел и замечал, только когда лист уже вышел.
+ *
+ * Лечится не печатным блоком, а тем, что печатать перестают страницу: у
+ * `@media print` здесь не было бы даже того слабого щита, что у карточек
+ * студентов, а следующий `scoped`-блок перебил бы его молча. Отдельный документ
+ * не перебивается по построению — каскад приложения в него не приходит.
+ *
+ * Даты на листке нет намеренно: её пришлось бы печатать часами браузера без
+ * пояса, а карточку отдают из рук в руки сразу.
+ */
 function printCredential() {
-  window.print()
+  if (!credential.value) return
+
+  const row = credential.value
+
+  printHtmlDocument(`<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Карточка доступа</title>
+<style>
+  @page { size: A4 portrait; margin: 18mm; }
+  body { margin: 0; color: #000; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; font-size: 14px; }
+  h1 { font-size: 16px; margin: 0 0 12px; }
+  .card { border: 1px solid #000; border-radius: 6px; padding: 14px 16px; max-width: 120mm; }
+  .name { font-size: 15px; font-weight: bold; margin-bottom: 8px; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; }
+  dt { color: #333; }
+  dd { margin: 0; font-family: "Courier New", Courier, monospace; font-weight: bold; }
+  .hint { margin-top: 12px; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>Карточка доступа</h1>
+<div class="card">
+  <div class="name">${escapeHtml(row.name)}</div>
+  <dl>
+    <dt>Роль</dt><dd>${escapeHtml(row.role_name || row.role)}</dd>
+    <dt>Логин</dt><dd>${escapeHtml(row.login)}</dd>
+    <dt>Стартовый пароль</dt><dd>${escapeHtml(row.password)}</dd>
+    <dt>Вход</dt><dd>${escapeHtml(portalUrl)}</dd>
+  </dl>
+  <div class="hint">Смените пароль после первого входа. Пароль показывается один раз и не сохраняется.</div>
+</div>
+</body>
+</html>`)
 }
 
 function applyFilters() {
@@ -633,7 +686,7 @@ onMounted(async () => {
     <q-dialog v-model="credentialDialog" persistent>
       <q-card class="users-dialog credential-card">
         <q-card-section><div class="text-h6">Карточка доступа</div><p class="users-dialog-subtitle">Распечатайте или передайте данные сейчас: пароль не сохраняется и повторно не отображается.</p></q-card-section>
-        <q-card-section v-if="credential" class="credential-card__body"><strong>{{ credential.name }}</strong><span>Роль: {{ credential.role }}</span><span>Логин: <b>{{ credential.login }}</b></span><span>Стартовый пароль: <b>{{ credential.password }}</b></span><span>Вход: {{ portalUrl }}</span></q-card-section>
+        <q-card-section v-if="credential" class="credential-card__body"><strong>{{ credential.name }}</strong><span>Роль: {{ credential.role_name || credential.role }}</span><span>Логин: <b>{{ credential.login }}</b></span><span>Стартовый пароль: <b>{{ credential.password }}</b></span><span>Вход: {{ portalUrl }}</span></q-card-section>
         <q-card-actions align="right"><q-btn flat label="Закрыть" @click="credentialDialog = false; credential = null" /><q-btn color="primary" @click="printCredential"><Printer :size="16" class="q-mr-xs" />Печать</q-btn></q-card-actions>
       </q-card>
     </q-dialog>
