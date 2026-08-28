@@ -53,6 +53,17 @@ class SettingService
                 'max_applications_per_applicant' => ['value' => 3, 'type' => 'integer', 'is_public' => false, 'label' => 'Максимум заявлений на абитуриента', 'description' => 'Ограничение для будущих проверок приема.'],
                 'max_choices_per_application' => ['value' => 5, 'type' => 'integer', 'is_public' => false, 'label' => 'Максимум выбранных программ в заявлении', 'description' => 'Ограничение BACK-004 для выбранных образовательных программ одного заявления.'],
             ],
+            'certificates' => [
+                // Портал продолжает бумажный реестр колледжа, а не начинает свой.
+                // В файле владельца последний занятый номер 1909 при 1181 номере
+                // без пропусков; решение владельца 28.08.2026 — продолжать с 1910.
+                'next_number' => ['value' => 1910, 'type' => 'integer', 'is_public' => false, 'label' => 'Следующий номер справки', 'description' => 'Нумерация продолжает бумажный реестр колледжа и остаётся сплошной.'],
+                // Приказ о переводе один на весь колледж и меняется раз в год,
+                // поэтому он здесь, а не в карточке студента. Первому курсу он не
+                // печатается: переводить неоткуда.
+                'transfer_order_number' => ['value' => '96', 'type' => 'string', 'is_public' => false, 'label' => 'Приказ о переводе: номер', 'description' => 'Печатается в справке студентам второго курса и старше.'],
+                'transfer_order_date' => ['value' => '2026-07-01', 'type' => 'string', 'is_public' => false, 'label' => 'Приказ о переводе: дата', 'description' => 'Дата приказа о переводе на следующий курс.'],
+            ],
             'graduation' => [
                 'current_graduation_year' => ['value' => 2027, 'type' => 'integer', 'is_public' => false, 'label' => 'Текущий год выпуска', 'description' => 'Используется в выпускниках, дипломах и ФРДО.'],
                 'diploma_series_default' => ['value' => '', 'type' => 'string', 'is_public' => false, 'label' => 'Серия диплома по умолчанию', 'description' => 'Не является секретом, но требует проверки перед production.'],
