@@ -20,6 +20,18 @@ abstract class AbstractImportHandler implements ImportHandlerInterface
         return array_filter($payload, fn ($value) => $update ? $value !== null : true);
     }
 
+    /**
+     * По умолчанию замечаний нет.
+     *
+     * Молчание здесь означает «этот загрузчик ничего не теряет по дороге», и для
+     * аудиторий или сетки звонков это правда: ссылок на другие таблицы у них нет.
+     * Загрузчику, который что-то разрешает по названию, метод стоит переопределить.
+     */
+    public function rowNotices(array $data): array
+    {
+        return [];
+    }
+
     public function import(array $data, string $mode): string
     {
         $existing = $this->findExisting($data);

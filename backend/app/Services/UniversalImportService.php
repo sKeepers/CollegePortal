@@ -138,7 +138,7 @@ class UniversalImportService
         $this->assertKnownMode($mode);
         $parsed = $this->parseStoredFile($job->stored_path, $job->original_filename);
         $validation = $this->validateRows($job->data_type, $mapping, $parsed['rows'], 100);
-        $job->update(['mode' => $mode, 'mapping' => $mapping, 'status' => $validation['error_count'] > 0 ? 'validation_failed' : 'validated', 'validation_errors' => $validation['errors'], 'total_rows' => count($parsed['rows']), 'error_count' => $validation['error_count']]);
+        $job->update(['mode' => $mode, 'mapping' => $mapping, 'status' => $validation['error_count'] > 0 ? 'validation_failed' : 'validated', 'validation_errors' => $validation['errors'], 'warnings' => $validation['notices'], 'total_rows' => count($parsed['rows']), 'error_count' => $validation['error_count']]);
         return $job->refresh();
     }
 
@@ -148,7 +148,7 @@ class UniversalImportService
         $this->assertKnownMode($mode);
         $parsed = $this->parseStoredFile($job->stored_path, $job->original_filename);
         $result = $this->importRows($job->data_type, $mapping, $parsed['rows'], $mode);
-        $job->update(['mode' => $mode, 'mapping' => $mapping, 'status' => $result['error_count'] > 0 ? 'completed_with_errors' : 'completed', 'validation_errors' => $result['errors'], 'result' => $result, 'total_rows' => $result['total_rows'], 'created_count' => $result['created'], 'updated_count' => $result['updated'], 'skipped_count' => $result['skipped'], 'error_count' => $result['error_count']]);
+        $job->update(['mode' => $mode, 'mapping' => $mapping, 'status' => $result['error_count'] > 0 ? 'completed_with_errors' : 'completed', 'validation_errors' => $result['errors'], 'warnings' => $result['notices'], 'result' => $result, 'total_rows' => $result['total_rows'], 'created_count' => $result['created'], 'updated_count' => $result['updated'], 'skipped_count' => $result['skipped'], 'error_count' => $result['error_count']]);
         return $job->refresh();
     }
 
@@ -250,19 +250,22 @@ class UniversalImportService
 
     private function validateRows(string $dataType, array $mapping, array $rows, int $limit): array
     {
-        $handler = $this->handler($dataType); $errors = []; $errorCount = 0;
+        $handler = $this->handler($dataType); $errors = []; $errorCount = 0; $notices = [];
         foreach ($rows as $index => $row) {
             $prepared = $this->prepareData($handler, $this->mappedRow($mapping, $row));
             $validator = Validator::make($prepared, $handler->rules());
             if ($validator->fails()) { $errorCount++; foreach ($this->rowValidationErrors($handler, $validator, $mapping, $row, $prepared, $index + 2) as $error) { if (count($errors) < $limit) { $errors[] = $error; } } continue; }
             foreach ($handler->businessValidationErrors($prepared) as $field => $messages) { $errorCount++; if (count($errors) < $limit) { $errors[] = $this->rowError($handler, $mapping, $row, $prepared, $index + 2, implode('; ', $messages), $field, $messages); } }
+            // Замечания видны **до** подтверждения намеренно: файл ещё можно поправить,
+            // а после загрузки останется только догадываться, чего в портале нет.
+            foreach ($handler->rowNotices($prepared) as $field => $messages) { if (count($notices) < $limit) { $notices[] = $this->rowNotice($handler, $mapping, $row, $prepared, $index + 2, implode('; ', $messages), $field, $messages); } }
         }
-        return ['errors' => $errors, 'error_count' => $errorCount];
+        return ['errors' => $errors, 'error_count' => $errorCount, 'notices' => $notices];
     }
 
     private function importRows(string $dataType, array $mapping, array $rows, string $mode): array
     {
-        $handler = $this->handler($dataType); $created = 0; $updated = 0; $skipped = 0; $errors = [];
+        $handler = $this->handler($dataType); $created = 0; $updated = 0; $skipped = 0; $errors = []; $notices = [];
         foreach ($rows as $index => $row) {
             $prepared = $this->prepareData($handler, $this->mappedRow($mapping, $row));
             $validator = Validator::make($prepared, $handler->rules());
@@ -272,9 +275,12 @@ class UniversalImportService
                 if ($businessErrors !== []) { foreach ($businessErrors as $field => $messages) { $errors[] = $this->rowError($handler, $mapping, $row, $prepared, $index + 2, implode('; ', $messages), $field, $messages); } continue; }
                 $result = $handler->import($prepared, $mode);
                 $created += $result === 'created' ? 1 : 0; $updated += $result === 'updated' ? 1 : 0; $skipped += $result === 'skipped' ? 1 : 0;
+                // Замечание собирается **после** успешной загрузки: строка в портале, и
+                // сказать надо о том, чего в ней не хватило, а не отменить её.
+                foreach ($handler->rowNotices($prepared) as $field => $messages) { $notices[] = $this->rowNotice($handler, $mapping, $row, $prepared, $index + 2, implode('; ', $messages), $field, $messages); }
             } catch (\Throwable $exception) { $field = str_contains($exception->getMessage(), 'Дубликат') ? ($handler->keyFields()[0] ?? null) : null; $errors[] = $this->rowError($handler, $mapping, $row, $prepared, $index + 2, $exception->getMessage(), $field); }
         }
-        return ['total_rows' => count($rows), 'created' => $created, 'updated' => $updated, 'skipped' => $skipped, 'error_count' => count($errors), 'errors' => array_slice($errors, 0, 200)];
+        return ['total_rows' => count($rows), 'created' => $created, 'updated' => $updated, 'skipped' => $skipped, 'error_count' => count($errors), 'errors' => array_slice($errors, 0, 200), 'notices' => array_slice($notices, 0, 200), 'notice_count' => count($notices)];
     }
 
     private function rowValidationErrors(ImportHandlerInterface $handler, $validator, array $mapping, array $sourceRow, array $prepared, int $rowNumber): array
@@ -282,6 +288,18 @@ class UniversalImportService
 
     private function rowError(ImportHandlerInterface $handler, array $mapping, array $sourceRow, array $prepared, int $rowNumber, string $reason, ?string $field = null, array $messages = []): array
     { $fields = $handler->fields(); $header = $field ? ($mapping[$field] ?? null) : null; $column = $header ?: ($field ? ($fields[$field]['label'] ?? $field) : 'Строка'); $value = $header ? ($sourceRow[$header] ?? null) : ($field ? ($prepared[$field] ?? null) : null); return ['row' => $rowNumber, 'field' => $field, 'column' => $column, 'reason' => $reason, 'value' => $value, 'errors' => $messages ?: [$reason], 'data' => $prepared]; }
+
+    /**
+     * Замечание к строке. Форма — та же, что у ошибки, и это намеренно.
+     *
+     * Экран показывает их одинаково: номер строки, колонка, значение, причина. Разница
+     * только в том, куда запись попадает: ошибка идёт в `validation_errors` и считается
+     * в `error_count`, замечание — в `warnings` и **не влияет ни на счёт ошибок, ни на
+     * судьбу строки**. Заводить под них второй формат значило бы заводить и второй способ
+     * их показывать.
+     */
+    private function rowNotice(ImportHandlerInterface $handler, array $mapping, array $sourceRow, array $prepared, int $rowNumber, string $reason, ?string $field = null, array $messages = []): array
+    { return $this->rowError($handler, $mapping, $sourceRow, $prepared, $rowNumber, $reason, $field, $messages); }
 
     private function csvContent(array $rows): string { return CsvExport::toString($rows); }
     private function fieldExample(ImportHandlerInterface $handler, string $field): ?string { $headers = $handler->templateHeaders(); $example = $handler->templateExample(); $label = $handler->fields()[$field]['label'] ?? null; $index = array_search($label, $headers, true); if ($index === false && $field === 'name') { $index = array_search($handler->type() === 'groups' ? 'Группа' : ($handler->type() === 'subjects' ? 'Дисциплина' : 'Аудитория'), $headers, true); } if ($index === false && $field === 'number') { $index = array_search('Аудитория', $headers, true); } return $index === false ? null : ($example[$index] ?? null); }

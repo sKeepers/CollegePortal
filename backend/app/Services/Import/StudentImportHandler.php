@@ -61,6 +61,42 @@ class StudentImportHandler extends AbstractImportHandler
         return $data;
     }
 
+    /**
+     * Что у студента потерялось по дороге, а сама строка законна.
+     *
+     * **Документ об образовании без серии и номера не сохраняется вовсе.** Так и
+     * задумано — заводить аттестат из одного названия школы владелец не разрешал, — но
+     * молчать об этом нельзя: 22.08.2026 графа «Учебное заведение» была заполнена у
+     * **580 строк из 593**, серии и номера не было ни у одной, и все 580 названий
+     * исчезли без единого слова. Полтора месяца пустой раздел объясняли тем, что данных
+     * нет ни в одном источнике.
+     *
+     * Про учётные записи здесь ничего нет намеренно: с 24.08.2026 импорт **отказывает**
+     * строке с «Создать учетную запись = да» и называет следующий шаг. Замечание об этом
+     * повторяло бы отказ теми же словами.
+     */
+    public function rowNotices(array $data): array
+    {
+        $notices = [];
+        $namedDocument = array_filter([
+            $data['education_document_organization'] ?? null,
+            $data['education_graduation_year'] ?? null,
+            $data['education_document_type'] ?? null,
+            $data['education_document_issue_date'] ?? null,
+        ], static fn ($value): bool => filled($value));
+
+        $hasRequisites = filled($data['education_document_series'] ?? null)
+            || filled($data['education_document_number'] ?? null);
+
+        if ($namedDocument !== [] && ! $hasRequisites) {
+            $notices['education_document_organization'] = [
+                'Документ об образовании не сохранён: нет ни серии, ни номера аттестата. Студент загружен, название учебного заведения — нет.',
+            ];
+        }
+
+        return $notices;
+    }
+
     public function rules(): array { return ['group_id'=>['required','integer','exists:groups,id'],'last_name'=>['required','string','max:255'],'first_name'=>['required','string','max:255'],'middle_name'=>['nullable','string','max:255'],'course'=>['nullable','integer','min:1','max:6'],'specialty'=>['nullable','string','max:255'],'education_form'=>['nullable','string','max:80'],'funding_form'=>['nullable','string','max:80'],'birth_date'=>['nullable','date'],'phone'=>['nullable','string','max:50'],'email'=>['nullable','email','max:255'],'snils'=>['nullable','string','max:32'],'address'=>['nullable','string','max:2000'],'status'=>['required','in:active,academic_leave,graduated,expelled'],'enrollment_date'=>['nullable','date'],'enrollment_order_number'=>['nullable','string','max:100'],'enrollment_order_date'=>['nullable','date'],'personal_file_number'=>['nullable','string','max:50'],'personal_file_letter'=>['nullable','string','max:1'],'passport_series'=>['nullable','string','max:20'],'passport_number'=>['nullable','string','max:100'],'passport_issue_date'=>['nullable','date'],'passport_issued_by'=>['nullable','string','max:1000'],'education_document_type'=>['nullable','string','max:255'],'education_document_series'=>['nullable','string','max:20'],'education_document_number'=>['nullable','string','max:100'],'education_document_issue_date'=>['nullable','date'],'education_document_organization'=>['nullable','string','max:1000'],'education_graduation_year'=>['nullable','integer','min:1950','max:2100'],'auto_account'=>['boolean']]; }
     public function findExisting(array $data): ?Model { $matches=collect(); if (!empty($data['snils'])) $matches=$matches->merge(Student::where('snils',$data['snils'])->get()); if (!empty($data['email'])) $matches=$matches->merge(Student::where('email',$data['email'])->get()); if (!empty($data['birth_date'])) $matches=$matches->merge(Student::where('last_name',$data['last_name'])->where('first_name',$data['first_name'])->where('birth_date',$data['birth_date'])->get()); if ($matches->isEmpty()) $matches=$matches->merge(Student::where('group_id',$data['group_id'])->where('last_name',$data['last_name'])->where('first_name',$data['first_name'])->where('middle_name',$data['middle_name'] ?? null)->get()); $matches=$matches->unique('id')->values(); if ($matches->count()>1) throw new RuntimeException('Найдено несколько совпадающих студентов. Уточните СНИЛС, email или дату рождения.'); return $matches->first(); }
 
