@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AccessEvent;
+use App\Models\AuditLog;
 use App\Models\Person;
 use App\Models\RfidCard;
 use App\Models\RfidCardIssue;
@@ -129,5 +130,30 @@ class DayBoundariesInCollegeTimeTest extends TestCase
             $this->getJson('/api/access/reports/events?date=2026-08-22')->assertOk()->json('data'),
             'Проход в половине двенадцатого ночи выпал из своего дня',
         );
+    }
+
+    /**
+     * Журнал аудита отбирает по тем же суткам.
+     *
+     * `audit_logs.created_at` — тоже `timestamp` (проверено по схеме стенда
+     * 28.08.2026). Здесь цена ошибки своя: в журнал аудита идут смотреть «кто
+     * и что сделал такого-то числа», и запись, уехавшая в соседний день,
+     * читается как «никто ничего не делал».
+     */
+    public function test_the_audit_journal_finds_a_record_written_after_midnight(): void
+    {
+        AuditLog::create([
+            'module' => 'users',
+            'action' => 'update',
+            'entity_type' => 'User',
+            // 00:30 по колледжу 22 августа
+            'created_at' => '2026-08-21 21:30:00',
+        ]);
+
+        $onTheDay = $this->getJson('/api/admin/audit?date_from=2026-08-22&date_to=2026-08-22')->assertOk();
+        $dayBefore = $this->getJson('/api/admin/audit?date_from=2026-08-21&date_to=2026-08-21')->assertOk();
+
+        $this->assertCount(1, $onTheDay->json('data'), 'Запись сделана 22-го по календарю колледжа, а за 22-е не нашлась');
+        $this->assertCount(0, $dayBefore->json('data'), 'Запись аудита уехала в предыдущий день — границы всё ещё в UTC');
     }
 }
