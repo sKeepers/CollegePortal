@@ -15,6 +15,7 @@ use App\Services\Admissions\AdmissionDocumentReadinessService;
 use App\Services\Admissions\DocumentMaskingService;
 use App\Services\AuditLogService;
 use App\Support\Csv\CsvExport;
+use App\Support\Packages\PackageExport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -109,6 +110,7 @@ class FisPackageController extends Controller
     public function exportCsv(FisPackage $fisPackage): StreamedResponse
     {
         $package = $this->freshPackage($fisPackage);
+        PackageExport::assertExportable($package->status, 'ФИС ГИА');
         // Колонки ГИА добавлены к общим: в пакете приёма они остаются пустыми,
         // зато один файл по-прежнему описывает пакет любого типа.
         return CsvExport::download('fis-package-'.$package->id.'.csv', ['record_id', 'type', 'person', 'birth_date', 'snils', 'group', 'program', 'specialty', 'subject', 'exam_date', 'result', 'score', 'status', 'details'], function (callable $row) use ($package): void {
@@ -122,6 +124,7 @@ class FisPackageController extends Controller
     public function exportJson(FisPackage $fisPackage): JsonResponse
     {
         $package = $this->freshPackage($fisPackage);
+        PackageExport::assertExportable($package->status, 'ФИС ГИА');
         // Выгрузка JSON идёт мимо `CsvExport`, где стоит общий след, поэтому
         // запись здесь своя. Пакет уносит записи о людях, и без неё портал не
         // ответит, кто их унёс.

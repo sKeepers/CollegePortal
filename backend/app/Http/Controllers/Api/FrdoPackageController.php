@@ -11,6 +11,7 @@ use App\Models\Student;
 use App\Services\Admissions\AdmissionDocumentReadinessService;
 use App\Services\AuditLogService;
 use App\Support\Csv\CsvExport;
+use App\Support\Packages\PackageExport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -130,6 +131,7 @@ class FrdoPackageController extends Controller
     public function exportCsv(FrdoPackage $frdoPackage): StreamedResponse
     {
         $package = $this->freshPackage($frdoPackage);
+        PackageExport::assertExportable($package->status, 'ФРДО');
         $filename = 'frdo-package-'.$package->id.'.csv';
 
         return CsvExport::download($filename, ['record_id', 'graduate_id', 'student', 'birth_date', 'specialty', 'education_program', 'diploma_series', 'diploma_number', 'registration_number', 'issue_date', 'qualification', 'diploma_status', 'record_status'], function (callable $row) use ($package): void {
@@ -143,6 +145,7 @@ class FrdoPackageController extends Controller
     public function exportJson(FrdoPackage $frdoPackage): JsonResponse
     {
         $package = $this->freshPackage($frdoPackage);
+        PackageExport::assertExportable($package->status, 'ФРДО');
         // Выгрузка JSON идёт мимо `CsvExport`, где стоит общий след.
         AuditLogService::log('FRDO', 'package_exported_json', $package, null, ['rows' => $package->records->count(), 'package_status' => $package->status]);
 
