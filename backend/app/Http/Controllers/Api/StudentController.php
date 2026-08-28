@@ -41,6 +41,8 @@ class StudentController extends Controller
     {
         $students = Student::query()
             ->with('group.educationProgram.specialty')
+            // Карты грузятся заранее: иначе на 596 студентах это 596 запросов.
+            ->with('person.rfidCards')
             ->when($request->integer('group_id'), fn ($query, int $groupId) => $query->where('group_id', $groupId))
             // Курс и специальность — свойства группы, а не студента. Заводить
             // их копией в `students` нельзя: перевод группы на следующий курс

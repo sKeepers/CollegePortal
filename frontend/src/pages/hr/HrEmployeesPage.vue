@@ -179,6 +179,18 @@ const metrics = computed(() => selected.value ? [
   { label: 'Должность', value: selected.value.primary_position?.name || '—' },
   { label: 'Ставка', value: selected.value.workload_rate || '—' },
   { label: 'Назначений', value: selected.value.assignments?.length || 0 },
+  // Карта СКУД: списком, а не одним полем — у четверых людей их две-три (замер
+  // 29.08.2026), и «номер карты» соврал бы на первой же такой карточке.
+  // Состояние стоит рядом с номером: у кого карту забрали, не должен видеть её
+  // действующей. Поля нет вовсе, если у смотрящего нет права
+  // `rfid.cards.view` — отсутствие честнее прочерка, который читается как
+  // «карты нет».
+  ...(selected.value.rfid_cards ? [{
+    label: 'Карта СКУД',
+    value: selected.value.rfid_cards.length
+      ? selected.value.rfid_cards.map((card) => `${card.uid} — ${card.status_label || card.status}`).join('; ')
+      : 'не привязана',
+  }] : []),
 ] : [])
 const quickActions = computed(() => selected.value ? [
   // Обе ссылки вели параметром запроса, которого получатель не читает: «Люди» и

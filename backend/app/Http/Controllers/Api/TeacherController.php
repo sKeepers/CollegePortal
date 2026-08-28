@@ -30,6 +30,7 @@ class TeacherController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $teachers = Teacher::query()
+            ->with('person.rfidCards')
             ->when($request->string('department')->toString(), fn ($query, string $department) => $query->where('department', $department))
             ->when($request->boolean('active_only'), fn ($query) => $query->where('is_active', true))
             ->when($request->string('search')->toString(), function ($query, string $search): void {
