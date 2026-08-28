@@ -475,18 +475,6 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
   font-size: 20px;
 }
 
-/* Замечание — не ошибка, и различать их приходится цветом: у ошибок рамка уже
-   янтарная (`#f59e0b`), так что «просто предупреждающий» оттенок слился бы с ними.
-   Синий читается как «к сведению», а не «исправьте немедленно». Заголовок карточки
-   говорит то же словами — цвет здесь второй признак, а не единственный. */
-.universal-import-errors--notice article {
-  border-left-color: #2563eb;
-  background: #eff6ff;
-}
-
-.universal-import-errors--notice span {
-  color: #1e40af;
-}
 
 .universal-import-errors {
   display: grid;
@@ -504,6 +492,23 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
 
 .universal-import-errors span {
   color: #92400e;
+}
+
+/* Замечание — не ошибка, и различать их приходится цветом: у ошибок рамка уже
+   янтарная, так что «просто предупреждающий» оттенок слился бы с ними. Синий читается
+   как «к сведению», а не «исправьте немедленно»; заголовок карточки говорит то же
+   словами, цвет — второй признак.
+   **Стоять эти правила обязаны ниже базовых.** Сначала я поставил их выше, и
+   сокращённая запись `border-left: 3px solid #f59e0b` ниже перебивала мой
+   `border-left-color`: сборка проходила, тесты молчали, а на экране замечание было
+   неотличимо от ошибки. Увидено глазами 28.08.2026 — замером цвета в браузере. */
+.universal-import-errors--notice article {
+  border-left-color: #2563eb;
+  background: #eff6ff;
+}
+
+.universal-import-errors--notice span {
+  color: #1e40af;
 }
 
 .universal-import-errors small {
