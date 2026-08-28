@@ -7,6 +7,7 @@ use App\Http\Resources\DormConductRecordResource;
 use App\Models\DormConductRecord;
 use App\Models\Student;
 use App\Services\DormConductService;
+use App\Support\Http\PageSize;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -34,7 +35,6 @@ class DormConductController extends Controller
         $filters = $request->validate([
             'student_id' => ['nullable', 'integer'],
             'active' => ['nullable', 'boolean'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:300'],
         ], [
             'active.boolean' => 'Признак действующей записи задаётся как «да» или «нет».',
         ]);
@@ -52,7 +52,7 @@ class DormConductController extends Controller
             })
             ->orderByDesc('happened_on')
             ->orderByDesc('id')
-            ->paginate($filters['per_page'] ?? 100);
+            ->paginate(PageSize::from($request, 100));
 
         return DormConductRecordResource::collection($records);
     }

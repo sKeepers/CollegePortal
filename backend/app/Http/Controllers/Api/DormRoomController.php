@@ -7,6 +7,7 @@ use App\Http\Resources\DormRoomResource;
 use App\Models\DormRoom;
 use App\Services\AuditLogService;
 use App\Services\SettingService;
+use App\Support\Http\PageSize;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -29,7 +30,6 @@ class DormRoomController extends Controller
             'building_id' => ['nullable', 'integer'],
             'only_free' => ['nullable', 'boolean'],
             'is_active' => ['nullable', 'boolean'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
         ]);
 
         $rooms = DormRoom::query()
@@ -42,7 +42,7 @@ class DormRoomController extends Controller
             )
             ->orderBy('floor')
             ->orderBy('number')
-            ->paginate($filters['per_page'] ?? 100);
+            ->paginate(PageSize::from($request, 100));
 
         if ($filters['only_free'] ?? false) {
             // Свободное место — это разница между вместимостью и действующими

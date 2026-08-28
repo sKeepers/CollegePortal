@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Support\Time\CollegeTime;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ImportJobResource;
 use App\Http\Resources\RfidCardIssueResource;
@@ -17,8 +16,9 @@ use App\Services\Import\RfidCardIssueImportHandler;
 use App\Services\RfidCardJournalExport;
 use App\Services\RfidCardService;
 use App\Services\UniversalImportService;
-use RuntimeException;
+use App\Support\Http\PageSize;
 use App\Support\Rfid\CardNumber;
+use App\Support\Time\CollegeTime;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -26,6 +26,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -59,7 +60,6 @@ class RfidCardController extends Controller
             'status' => ['nullable', Rule::in(RfidCard::STATUSES)],
             'person_id' => ['nullable', 'integer'],
             'search' => ['nullable', 'string', 'max:120'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
         ]);
 
         $operator = $this->likeOperator();
@@ -79,7 +79,7 @@ class RfidCardController extends Controller
             })
             ->orderByRaw("case when status = 'issued' then 0 else 1 end")
             ->orderBy('uid')
-            ->paginate($filters['per_page'] ?? 50);
+            ->paginate(PageSize::from($request, 50));
 
         return RfidCardResource::collection($cards);
     }
