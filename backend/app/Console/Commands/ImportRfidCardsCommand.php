@@ -6,6 +6,7 @@ use App\Models\Person;
 use App\Models\RfidCard;
 use App\Services\RfidCardService;
 use App\Support\Rfid\CarddexPeopleCsv;
+use App\Support\Rfid\CardNumber;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -34,6 +35,9 @@ class ImportRfidCardsCommand extends Command
     /** @var array<string, array<int, Person>>|null */
     private ?array $people = null;
 
+    /** @var array<string, array<int, Person>>|null */
+    private ?array $byName = null;
+
     public function handle(RfidCardService $cards): int
     {
         $file = (string) $this->argument('file');
@@ -60,6 +64,7 @@ class ImportRfidCardsCommand extends Command
 
         $bound = 0;
         $second = [];
+        $again = 0;
         $missing = [];
         $ambiguous = [];
         $failed = [];
@@ -88,6 +93,16 @@ class ImportRfidCardsCommand extends Command
                 ->where('status', RfidCard::STATUS_ISSUED)
                 ->first();
 
+            // Та же карта у того же человека — это повторный запуск, а не
+            // отказ. Без этой ветки второй проход по тем же файлам печатал 236
+            // «Карта уже выдана» и выглядел бы полной неудачей, хотя не сделал
+            // ничего и не должен был.
+            if ($this->alreadyBound($person, $row['card'])) {
+                $again++;
+
+                continue;
+            }
+
             try {
                 $cards->bind($person, $row['card'], null, 'Перенос из СКУД '.$row['department']);
                 $bound++;
@@ -115,6 +130,7 @@ class ImportRfidCardsCommand extends Command
         $this->line('Строк в выгрузке: '.count($rows));
         $this->line('Карт привязано: '.$bound);
         $this->line('Из них вторая карта тому же человеку: '.count($second));
+        $this->line('Уже было привязано раньше: '.$again);
         $this->line('Человек не найден: '.count($missing));
         $this->line('Тёзки, пропущены: '.count($ambiguous));
         $this->line('Отказов: '.count($failed));
@@ -166,7 +182,44 @@ class ImportRfidCardsCommand extends Command
      */
     private function findPeople(array $row): array
     {
+        // Цифра вместо отчества — не имя, а пометка выгрузки. Владелец
+        // 28.08.2026: «на человека оказалось записано больше одной карты,
+        // поэтому добавил цифру». В кадровой выгрузке так помечены семь строк
+        // — три карты одного преподавателя, две другого, две третьего.
+        //
+        // По такой строке ищем по фамилии и имени, и **отказ при неоднозначности
+        // остаётся**: если под парой окажется двое, строка по-прежнему уходит в
+        // «тёзки». Замер по контингенту стенда: пара «фамилия + имя»
+        // неоднозначна у четверых из 596, поэтому отбрасывать отчество там,
+        // где оно есть, нельзя — только там, где вместо него цифра.
+        if ($this->isCardMarker($row['middle_name'])) {
+            return $this->byName()[$this->key($row['last_name'], $row['first_name'], null)] ?? [];
+        }
+
         return $this->index()[$this->key($row['last_name'], $row['first_name'], $row['middle_name'])] ?? [];
+    }
+
+    private function isCardMarker(string $middleName): bool
+    {
+        return $middleName !== '' && ctype_digit($middleName);
+    }
+
+    /** @return array<string, array<int, Person>> */
+    private function byName(): array
+    {
+        if ($this->byName !== null) {
+            return $this->byName;
+        }
+
+        $this->byName = [];
+
+        foreach ($this->index() as $people) {
+            foreach ($people as $person) {
+                $this->byName[$this->key($person->last_name, $person->first_name, null)][] = $person;
+            }
+        }
+
+        return $this->byName;
     }
 
     /** @return array<string, array<int, Person>> */
@@ -191,6 +244,16 @@ class ImportRfidCardsCommand extends Command
             fn (?string $part) => mb_strtolower(trim((string) $part)),
             [$last, $first, $middle],
         ));
+    }
+
+    /** Та же карта уже на руках у того же человека: повторный запуск. */
+    private function alreadyBound(Person $person, string $card): bool
+    {
+        return RfidCard::query()
+            ->where('person_id', $person->id)
+            ->where('uid', CardNumber::normalize($card))
+            ->where('status', RfidCard::STATUS_ISSUED)
+            ->exists();
     }
 
     private function fio(array $row): string

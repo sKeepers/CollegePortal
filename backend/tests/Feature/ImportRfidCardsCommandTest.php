@@ -149,6 +149,69 @@ class ImportRfidCardsCommandTest extends TestCase
         $this->assertDatabaseHas('rfid_cards', ['uid' => '0002222222', 'person_id' => $person->id]);
     }
 
+    public function test_a_digit_instead_of_a_patronymic_means_another_card_for_the_same_person(): void
+    {
+        // Владелец 28.08.2026: «на человека оказалось записано больше одной
+        // карты, поэтому добавил цифру». В кадровой выгрузке так помечены семь
+        // строк: три карты одного преподавателя, две другого, две третьего.
+        // Цифра — пометка карты, а не отчество, и отбрасывается только она.
+        $person = Person::create(['last_name' => 'Михайлов', 'first_name' => 'Дмитрий', 'status' => 'active']);
+
+        $file = $this->csv([
+            "Ф'Михайлов'Дмитрий';'1';1111111;сотрудник;Преподаватели;",
+            "Ф'Михайлов'Дмитрий';'2';2222222;сотрудник;Преподаватели;",
+            "Ф'Михайлов'Дмитрий';'3';3333333;сотрудник;Преподаватели;",
+        ]);
+
+        $this->artisan('identity:import-cards', ['file' => $file])
+            ->expectsOutputToContain('Карт привязано: 3')
+            ->assertExitCode(0);
+
+        foreach (['0001111111', '0002222222', '0003333333'] as $uid) {
+            $this->assertDatabaseHas('rfid_cards', ['uid' => $uid, 'person_id' => $person->id]);
+        }
+    }
+
+    public function test_a_digit_patronymic_still_refuses_when_the_name_is_shared(): void
+    {
+        // Отбросив отчество, легко потерять и отказ. Проверяем, что не
+        // потеряли: если под парой «фамилия + имя» окажется двое, строка
+        // по-прежнему уходит в тёзки. Замер по контингенту стенда — таких
+        // четверо из 596, то есть случай не выдуманный.
+        Person::create(['last_name' => 'Сидоренко', 'first_name' => 'Алина', 'middle_name' => 'Сергеевна', 'status' => 'active']);
+        Person::create(['last_name' => 'Сидоренко', 'first_name' => 'Алина', 'middle_name' => 'Олеговна', 'status' => 'active']);
+
+        $file = $this->csv(["Ф'Сидоренко'Алина';'1';1111111;сотрудник;Преподаватели;"]);
+
+        $this->artisan('identity:import-cards', ['file' => $file])
+            ->expectsOutputToContain('Тёзки, пропущены: 1')
+            ->assertExitCode(0);
+
+        $this->assertDatabaseCount('rfid_cards', 0);
+    }
+
+    public function test_running_the_same_file_twice_changes_nothing_and_says_so(): void
+    {
+        // Загрузку перезапускают: файл уточнили, дубли слили, часть строк
+        // довязали. Второй проход по тем же строкам не отказ, а «уже сделано»
+        // — без этого повторный запуск печатал бы 236 «Карта уже выдана» и
+        // выглядел бы полной неудачей, ничего при этом не сломав.
+        Person::create(['last_name' => 'Иванов', 'first_name' => 'Иван', 'middle_name' => 'Иванович', 'status' => 'active']);
+        $file = $this->csv(["Ф'Иванов'Иван';'Иванович';1234567;сотрудник;Администрация;"]);
+
+        $this->artisan('identity:import-cards', ['file' => $file])
+            ->expectsOutputToContain('Карт привязано: 1')
+            ->assertExitCode(0);
+
+        $this->artisan('identity:import-cards', ['file' => $file])
+            ->expectsOutputToContain('Карт привязано: 0')
+            ->expectsOutputToContain('Уже было привязано раньше: 1')
+            ->expectsOutputToContain('Отказов: 0')
+            ->assertExitCode(0);
+
+        $this->assertDatabaseCount('rfid_cards', 1);
+    }
+
     public function test_a_dry_run_writes_nothing(): void
     {
         Person::create(['last_name' => 'Иванов', 'first_name' => 'Иван', 'middle_name' => 'Иванович', 'status' => 'active']);
