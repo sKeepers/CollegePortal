@@ -12,7 +12,8 @@ import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import { escapeHtml, printHtmlDocument, printPage } from '../../utils/print'
 import { formatPhone } from '../../utils/phone'
-import { plural, PLACES } from '../../utils/plural'
+import { plural, PLACES, PLACES_OF } from '../../utils/plural'
+import { formatDay } from '../../utils/date'
 import { useDormStore } from '../../stores/dorm'
 import { usePermissions } from '../../composables/usePermissions'
 
@@ -407,7 +408,7 @@ function printResidents() {
 
   printHtmlDocument(printPage({
     title: 'Список проживающих в общежитии',
-    subtitle: `Занято ${data.occupied} из ${plural(data.capacity, PLACES)}. Составлен ${new Date().toLocaleString('ru-RU')}`,
+    subtitle: `Занято ${data.occupied} из ${plural(data.capacity, PLACES_OF)}. Составлен ${new Date().toLocaleString('ru-RU')}`,
     body,
   }))
 }
@@ -425,7 +426,12 @@ function printRoomSheet(room) {
 
   printHtmlDocument(printPage({
     title: `Комната № ${room.number}`,
-    subtitle: `Мест ${room.capacity}, занято ${room.occupied}`,
+    // Дата здесь важнее, чем на любом другом листе портала: этот висит на
+    // двери месяцами, жильцы за это время меняются, и отличить сегодняшний
+    // от прошлогоднего было нечем — даты не стояло вообще. Время не пишем:
+    // лист живёт днями, а час его составления никому не нужен и только
+    // сбивал бы с толку рядом с числом.
+    subtitle: `Мест ${room.capacity}, занято ${room.occupied}. Составлен ${new Date().toLocaleDateString('ru-RU')}`,
     landscape: false,
     body: `<table style="font-size:15px">
       <thead><tr><th>Фамилия, имя, отчество</th><th>Курс</th><th>Группа</th></tr></thead>
@@ -444,10 +450,24 @@ function printOccupancy() {
       <td>${floor.rooms}</td><td>${floor.capacity}</td><td>${floor.occupied}</td><td>${floor.free}</td>
     </tr>`).join('')
 
+  // Итог по этажам складывался читателем: три строки по 17 мест, а сколько
+  // всего — считай сам. Числа берутся из сводки отчёта, а не из суммы строк
+  // на экране: если они когда-нибудь разойдутся, это надо увидеть на листе,
+  // а не спрятать сложением.
+  const roomsTotal = data.floors.reduce((sum, floor) => sum + Number(floor.rooms ?? 0), 0)
+  const totals = `
+    <tr>
+      <td><strong>Всего</strong></td>
+      <td><strong>${roomsTotal}</strong></td>
+      <td><strong>${data.totals.capacity}</strong></td>
+      <td><strong>${data.totals.occupied}</strong></td>
+      <td><strong>${data.totals.free}</strong></td>
+    </tr>`
+
   const movement = data.movement.length
     ? data.movement.map((row) => `
         <tr>
-          <td>${escapeHtml(row.date)}</td>
+          <td>${escapeHtml(formatDay(row.date))}</td>
           <td>${row.kind === 'in' ? 'въехал' : 'выехал'}</td>
           <td>${escapeHtml(row.full_name)}</td>
           <td>${escapeHtml(row.group || '')}</td>
@@ -457,12 +477,13 @@ function printOccupancy() {
 
   printHtmlDocument(printPage({
     title: 'Заселённость общежития',
-    subtitle: `За период ${data.from} — ${data.to}. Въехали ${data.totals.moved_in}, выехали ${data.totals.moved_out}`,
+    subtitle: `За период ${formatDay(data.from)} — ${formatDay(data.to)}. Въехали ${data.totals.moved_in}, выехали ${data.totals.moved_out}`,
     body: `
       <h2>По этажам</h2>
       <table>
         <thead><tr><th>Этаж</th><th>Комнат</th><th>Мест</th><th>Занято</th><th>Свободно</th></tr></thead>
         <tbody>${floors}</tbody>
+        <tfoot>${totals}</tfoot>
       </table>
       <h2>Движение за период</h2>
       <table>
