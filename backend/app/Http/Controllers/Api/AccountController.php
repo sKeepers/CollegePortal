@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ChangeAccountPasswordRequest;
 use App\Http\Requests\UpdateAccountContactsRequest;
+use App\Http\Resources\RfidCardResource;
 use App\Models\Person;
 use App\Services\AuditLogService;
 use App\Services\PersonService;
@@ -45,6 +46,12 @@ class AccountController extends Controller
             'has_person' => $person !== null,
             'email' => $person?->email,
             'phone' => $person?->phone,
+            // Свои карты — без проверки права: это собственные данные человека.
+            // Чужих здесь быть не может по построению: карты берутся у той самой
+            // карточки человека, к которой привязана учётная запись.
+            'rfid_cards' => $person === null
+                ? []
+                : RfidCardResource::collection($person->rfidCards()->orderByDesc('issued_at')->get())->resolve(),
         ]]);
     }
 

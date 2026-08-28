@@ -144,6 +144,34 @@ function formatDateTime(value) {
           <div><dt>Имя</dt><dd>{{ account.name || '—' }}</dd></div>
           <div><dt>Вход</dt><dd>{{ account.login || '—' }}</dd></div>
           <div><dt>Роль</dt><dd>{{ account.role || '—' }}</dd></div>
+          <!--
+            Карта показывается списком, а не одним полем: у четверых людей их
+            две-три (замер 29.08.2026), и «номер карты» соврал бы на первой же
+            такой карточке. Состояние стоит рядом с номером — у кого карту
+            забрали, не должен видеть её действующей.
+
+            Поля нет вовсе, если у смотрящего нет права `rfid.cards.view`:
+            отсутствие поля честнее прочерка, который читался бы как «карты
+            нет».
+          -->
+          <div v-if="account.rfid_cards"><dt>Карта СКУД</dt><dd>
+            <template v-if="account.rfid_cards.length">
+              <!--
+                Номер и состояние — разными строками, и между картами отступ.
+                В одну строку они не влезают: колонка значения узкая, и
+                «9799887766 (основная) — На руках» рвалось на три строки, а
+                три карты подряд читались кашей. Замечено глазами 29.08.2026;
+                в разметке этого не видно.
+              -->
+              <div v-for="card in account.rfid_cards" :key="card.id" class="q-mb-xs">
+                <div style="white-space: nowrap">{{ card.uid }}</div>
+                <div class="text-caption text-grey-7">
+                  {{ card.status_label || card.status }}<template v-if="card.label"> · {{ card.label }}</template>
+                </div>
+              </div>
+            </template>
+            <template v-else>карта не выдана</template>
+          </dd></div>
           <div><dt>Последний вход</dt><dd>{{ formatDateTime(account.last_login_at) }}</dd></div>
         </dl>
       </AppCard>

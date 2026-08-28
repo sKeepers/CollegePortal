@@ -151,6 +151,34 @@ function removePhoto() {
               <div><dt>Статус</dt><dd>{{ statusLabels[student.status] || student.status }}</dd></div>
               <div><dt>Дата зачисления</dt><dd>{{ student.enrollment_date || '—' }}</dd></div>
               <div><dt>Приказ о зачислении</dt><dd>{{ student.enrollment_order_number || '—' }}<template v-if="student.enrollment_order_date"> от {{ student.enrollment_order_date }}</template></dd></div>
+              <!--
+                Карта показывается списком, а не одним полем: у четверых людей их
+                две-три (замер 29.08.2026), и «номер карты» соврал бы на первой же
+                такой карточке. Состояние стоит рядом с номером — у кого карту
+                забрали, не должен видеть её действующей.
+
+                Поля нет вовсе, если у смотрящего нет права `rfid.cards.view`:
+                отсутствие поля честнее прочерка, который читался бы как «карты
+                нет».
+              -->
+              <div v-if="student.rfid_cards"><dt>Карта СКУД</dt><dd>
+                <template v-if="student.rfid_cards.length">
+                  <!--
+                    Номер и состояние — разными строками, и между картами отступ.
+                    В одну строку они не влезают: колонка значения узкая, и
+                    «9799887766 (основная) — На руках» рвалось на три строки, а
+                    три карты подряд читались кашей. Замечено глазами 29.08.2026;
+                    в разметке этого не видно.
+                  -->
+                  <div v-for="card in student.rfid_cards" :key="card.id" class="q-mb-xs">
+                    <div style="white-space: nowrap">{{ card.uid }}</div>
+                    <div class="text-caption text-grey-7">
+                      {{ card.status_label || card.status }}<template v-if="card.label"> · {{ card.label }}</template>
+                    </div>
+                  </div>
+                </template>
+                <template v-else>не привязана</template>
+              </dd></div>
               <div><dt>Личное дело</dt><dd>{{ student.personal_file_number ? `${student.personal_file_letter || ''} ${student.personal_file_number}`.trim() : '—' }}</dd></div>
             </dl>
           </section>
