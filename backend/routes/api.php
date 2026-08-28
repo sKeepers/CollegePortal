@@ -79,6 +79,7 @@ use App\Http\Controllers\Api\GiaProtocolController;
 use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\StudentBulkController;
 use App\Http\Controllers\Api\TeacherBulkController;
+use App\Http\Controllers\Api\StudentCertificateController;
 use App\Http\Controllers\Api\StudentDocumentController;
 use App\Http\Controllers\Api\SubjectController;
 use App\Http\Controllers\Api\ScheduleLessonController;
@@ -816,6 +817,19 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->grou
     // Книга регистрации выданных дипломов: её ведут по закону и по ней отвечают
     // на запросы о подлинности. Право на просмотр выпуска, а не на бланки:
     // книгу читают шире, чем ведут склад.
+    // Справки студентам. Реестр читают шире, чем выдают: «выдавали ли такую»
+    // спрашивают у любого, кто ведёт студентов, а выписывает учебная часть.
+    // `registry` объявлен раньше любых маршрутов с параметром — иначе слово
+    // «registry» однажды прочтут как идентификатор.
+    Route::get('student-certificates/registry', [StudentCertificateController::class, 'registry'])
+        ->middleware('permission:certificates.view');
+    Route::get('student-certificates', [StudentCertificateController::class, 'index'])
+        ->middleware('permission:certificates.view');
+    Route::post('students/{student}/certificates', [StudentCertificateController::class, 'store'])
+        ->middleware('permission:certificates.manage');
+    Route::patch('student-certificates/{studentCertificate}/received', [StudentCertificateController::class, 'received'])
+        ->middleware('permission:certificates.manage');
+
     Route::get('diploma-registry', [DiplomaRegistryController::class, 'index'])
         ->middleware('permission:graduation.view');
 

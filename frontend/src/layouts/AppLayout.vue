@@ -76,6 +76,7 @@ const navGroups = [
       { label: 'Люди', to: '/people', icon: UserRound, permission: 'people.view' },
       { label: 'Студенты', to: '/students', icon: GraduationCap, permission: 'students.view' },
       { label: 'Группы', to: '/groups', icon: UsersRound, permission: 'groups.view' },
+      { label: 'Справки студентам', to: '/student-certificates', icon: FileText, permission: 'certificates.view' },
     ],
   },
   {
