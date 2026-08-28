@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Support\Time\CollegeTime;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\DormIncidentResource;
 use App\Models\DormIncident;
@@ -40,8 +41,11 @@ class DormIncidentController extends Controller
 
         $incidents = DormIncident::query()
             ->with(['room', 'createdBy', 'participants.group'])
-            ->when($filters['from'] ?? null, fn ($query, string $from) => $query->where('happened_at', '>=', $from.' 00:00:00'))
-            ->when($filters['to'] ?? null, fn ($query, string $to) => $query->where('happened_at', '<=', $to.' 23:59:59'))
+            // `happened_at` — `timestamp` в UTC, а день выбирают по календарю
+            // колледжа: происшествие в начале первого ночи иначе попадает во
+            // вчера, и отбор за нужный день его не находит.
+            ->when($filters['from'] ?? null, fn ($query, string $from) => $query->where('happened_at', '>=', CollegeTime::dayStart($from)))
+            ->when($filters['to'] ?? null, fn ($query, string $to) => $query->where('happened_at', '<=', CollegeTime::dayEnd($to)))
             ->when($filters['dorm_room_id'] ?? null, fn ($query, int $id) => $query->where('dorm_room_id', $id))
             ->orderByDesc('happened_at')
             ->orderByDesc('id')

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Support\Time\CollegeTime;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ImportJobResource;
 use App\Http\Resources\RfidCardIssueResource;
@@ -310,8 +311,11 @@ class RfidCardController extends Controller
                 ['card', 'issuedBy', 'acceptedBy', 'person'],
                 array_map(fn (string $relation) => 'person.'.$relation, self::PERSON_RELATIONS),
             ))
-            ->when($filters['from'] ?? null, fn ($query, string $from) => $query->where('issued_at', '>=', $from.' 00:00:00'))
-            ->when($filters['to'] ?? null, fn ($query, string $to) => $query->where('issued_at', '<=', $to.' 23:59:59'))
+            // Границы суток колледжа, а не UTC. Пока склеивали строкой, отбор
+            // «за 22-е» давал ноль на карте, выданной 22-го в 00:17, и ведомость
+            // за день выдачи печаталась пустой при верных данных.
+            ->when($filters['from'] ?? null, fn ($query, string $from) => $query->where('issued_at', '>=', CollegeTime::dayStart($from)))
+            ->when($filters['to'] ?? null, fn ($query, string $to) => $query->where('issued_at', '<=', CollegeTime::dayEnd($to)))
             ->when($filters['person_id'] ?? null, fn ($query, int $id) => $query->where('person_id', $id))
             ->when($filters['rfid_card_id'] ?? null, fn ($query, int $id) => $query->where('rfid_card_id', $id))
             ->when($filters['reason'] ?? null, fn ($query, string $reason) => $query->where('close_reason', $reason))

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\Time\CollegeTime;
 use App\Models\AccessEvent;
 use App\Models\Employee;
 use App\Models\Student;
@@ -53,8 +54,7 @@ class AccessReportService
                 .', sum(case when result = ? and direction = ? then 1 else 0 end) as exits'
                 .', sum(case when result = ? then 1 else 0 end) as denied',
                 [
-                    Carbon::today()->startOfDay(),
-                    Carbon::today()->endOfDay(),
+                    ...CollegeTime::dayRange(CollegeTime::todayDate()),
                     AccessEvent::RESULT_ALLOWED,
                     AccessEvent::DIRECTION_IN,
                     AccessEvent::RESULT_ALLOWED,
@@ -130,10 +130,12 @@ class AccessReportService
             ->when($request->string('entity_type')->toString(), fn (Builder $query, string $type) => $query->where('entity_type', $type))
             ->when($request->string('result')->toString(), fn (Builder $query, string $result) => $query->where('result', $result))
             ->when($request->string('date')->toString(), function (Builder $query, string $date): void {
-                $query->whereBetween('event_time', [Carbon::parse($date)->startOfDay(), Carbon::parse($date)->endOfDay()]);
+                // Сутки колледжа, а не сервера: `event_time` — это `timestamp`
+                // в UTC, а день человек выбирает по своему календарю.
+                $query->whereBetween('event_time', CollegeTime::dayRange($date));
             })
-            ->when($request->string('date_from')->toString(), fn (Builder $query, string $date) => $query->where('event_time', '>=', Carbon::parse($date)->startOfDay()))
-            ->when($request->string('date_to')->toString(), fn (Builder $query, string $date) => $query->where('event_time', '<=', Carbon::parse($date)->endOfDay()))
+            ->when($request->string('date_from')->toString(), fn (Builder $query, string $date) => $query->where('event_time', '>=', CollegeTime::dayStart($date)))
+            ->when($request->string('date_to')->toString(), fn (Builder $query, string $date) => $query->where('event_time', '<=', CollegeTime::dayEnd($date)))
             ->when($request->boolean('only_late'), fn (Builder $query) => $this->restrictToKeys($query, $this->lateKeys($request)))
             ->when(trim($request->string('search')->toString()) !== '', fn (Builder $query) => $this->restrictToKeys($query, $this->searchKeys(trim($request->string('search')->toString()))));
     }

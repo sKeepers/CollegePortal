@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\Time\CollegeTime;
 use App\Models\AccessEvent;
 use App\Models\DormAbsence;
 use App\Models\DormLeave;
@@ -147,7 +148,13 @@ class DormNightAbsenceService
         [$hour, $minute] = array_pad(explode(':', $boundary), 2, '0');
 
         // Утро следующего дня: ночь называется по дате своего начала.
-        return Carbon::parse($night)->addDay()->setTime((int) $hour, (int) $minute);
+        //
+        // Восемь утра — это восемь **по колледжу**, а не по часам сервера.
+        // Пока граница строилась в UTC, окно ночи было сдвинуто на три часа:
+        // вернувшийся в начале первого попадал в отсутствующие, а не вернувшийся
+        // до одиннадцати утра — не попадал. Сама дата ночи остаётся датой: по
+        // ней ищут заселения и отлучки, а это колонки типа `date`.
+        return Carbon::parse(CollegeTime::at($night->copy()->addDay(), (int) $hour, (int) $minute));
     }
 
     /** Кто по документам живёт в общежитии в эту ночь. */
