@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const props = defineProps({
@@ -74,9 +74,62 @@ function onRowClick(event, row, index) {
 
 const safeTableRowClassFn = computed(() => props.tableRowClassFn || (() => ''))
 
+/**
+ * Размер страницы живёт внутри таблицы, а не только в свойстве родителя.
+ *
+ * Раньше `tablePagination` читал `props.pagination` напрямую. Страницы, которые
+ * передают литерал — `:pagination="{ rowsPerPage: 25 }"`, а таких в портале
+ * два десятка, — не слушают `update:pagination`, поэтому свойство не менялось
+ * никогда: человек выбирал «50», таблица отдавала событие в пустоту и тут же
+ * возвращалась к 25. Владелец увидел это 29.08.2026 на реестре карт: выбор
+ * «Записей на странице» не реагировал вовсе.
+ *
+ * Теперь состояние своё, а свойство родителя — начальное значение и способ
+ * прислать новое. Слежение сравнивает **содержимое** и срабатывает, только
+ * когда родитель вправду что-то изменил: литерал пересоздаётся на каждом
+ * рендере, и сравнение по ссылке сбрасывало бы выбор человека каждый раз.
+ */
+const innerPagination = ref({ ...(props.pagination || {}) })
+
+watch(
+  () => JSON.stringify(props.pagination || {}),
+  (now, before) => {
+    if (now !== before && props.pagination) {
+      innerPagination.value = { ...props.pagination }
+    }
+  },
+)
+
 const tablePagination = computed({
-  get: () => props.pagination,
-  set: (value) => emit('update:pagination', value),
+  get: () => innerPagination.value,
+  set: (value) => {
+    innerPagination.value = value
+    emit('update:pagination', value)
+  },
+})
+
+/**
+ * Предлагаемые размеры страницы вместе с текущим.
+ *
+ * Если страница просит размер, которого нет в списке, Quasar подставляет его
+ * первым — отсюда порядок «25, 10, 20, 50, Все», по которому владелец и решил,
+ * что список сломан. Досыпаем значение в набор и сортируем; «Все» (ноль)
+ * остаётся последним, потому что это не число строк, а их отсутствие предела.
+ */
+const offeredRowsPerPage = computed(() => {
+  const current = Number(innerPagination.value?.rowsPerPage ?? 0)
+  const all = new Set(props.rowsPerPageOptions.map(Number))
+
+  if (!Number.isNaN(current)) {
+    all.add(current)
+  }
+
+  return Array.from(all).sort((a, b) => {
+    if (a === 0) return 1
+    if (b === 0) return -1
+
+    return a - b
+  })
 })
 </script>
 
@@ -91,7 +144,7 @@ const tablePagination = computed({
     :row-key="rowKey"
     :loading="loading"
     :pagination="tablePagination"
-    :rows-per-page-options="rowsPerPageOptions"
+    :rows-per-page-options="offeredRowsPerPage"
     :rows-per-page-label="rowsPerPageLabel"
     :table-row-class-fn="safeTableRowClassFn"
     binary-state-sort
