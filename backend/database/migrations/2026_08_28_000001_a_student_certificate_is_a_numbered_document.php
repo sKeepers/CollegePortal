@@ -114,6 +114,8 @@ return new class extends Migration
             }
         }
 
+        $this->settings();
+
         $this->grant('certificates.view', self::VIEW_ROLES);
         $this->grant('certificates.manage', self::MANAGE_ROLES);
     }
@@ -131,6 +133,50 @@ return new class extends Migration
 
             DB::table('permission_role')->where('permission_id', $id)->delete();
             DB::table('permissions')->where('id', $id)->delete();
+        }
+    }
+
+
+    /**
+     * Настройки бланка заводятся миграцией, а не одним каталогом умолчаний.
+     *
+     * `SettingService::definitions()` наполняет базу только когда кто-то
+     * спросит значение через `value()`. Печатный бланк собирает **браузер**, и
+     * он читает публичные настройки из базы напрямую: если строки нет, поле
+     * приходит пустым. Замерено 28.08.2026 — на первом же снимке бланка шапка
+     * вышла без краткого имени, без реквизитов и без фамилии директора, а
+     * «Директор» стоял с пустым местом справа. Та же беда, что с правами:
+     * сидер выполняется при установке и больше никогда.
+     *
+     * Миграция только добавляет: значение, поправленное в интерфейсе, она не
+     * трогает.
+     */
+    private function settings(): void
+    {
+        $rows = [
+            ['certificates', 'next_number', 1910, 'integer', false, 'Следующий номер справки', 'Нумерация продолжает бумажный реестр колледжа и остаётся сплошной.'],
+            ['certificates', 'transfer_order_number', '96', 'string', false, 'Приказ о переводе: номер', 'Печатается в справке студентам второго курса и старше.'],
+            ['certificates', 'transfer_order_date', '2026-07-01', 'string', false, 'Приказ о переводе: дата', 'Дата приказа о переводе на следующий курс.'],
+            ['certificates', 'founder', 'Министерство культуры Ставропольского края', 'string', true, 'Учредитель', 'Первая строка шапки печатного бланка справки.'],
+            ['certificates', 'short_name_line', '(ГБПОУ СК «СККИ»)', 'string', true, 'Краткое наименование в шапке', 'Как краткое имя набрано в шапке бланка, со скобками и кавычками.'],
+            ['certificates', 'name_genitive', 'ГБПОУ СК «Ставропольского краевого колледжа искусств»', 'string', true, 'Название в родительном падеже', 'Подставляется в оборот «является студентом N курса …».'],
+            ['certificates', 'requisites', 'ИНН/КПП 2636019138/263601001   ОГРН 1022601971590', 'string', true, 'Реквизиты в шапке', 'Строка ИНН/КПП и ОГРН под контактами.'],
+            ['certificates', 'director_name', 'Т.В. Горбачева', 'string', true, 'Подпись директора', 'Кем подписывается справка. Директор меняется, поэтому это настройка, а не строка в коде.'],
+        ];
+
+        foreach ($rows as [$group, $key, $value, $type, $isPublic, $label, $description]) {
+            // insertOrIgnore, а не проверка с последующей вставкой: на PostgreSQL
+            // упавший INSERT отравил бы транзакцию миграции целиком.
+            DB::table('settings')->insertOrIgnore([
+                'group' => $group,
+                'key' => $key,
+                'value' => json_encode($value, JSON_UNESCAPED_UNICODE),
+                'type' => $type,
+                'is_public' => $isPublic,
+                'description' => $description,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         }
     }
 

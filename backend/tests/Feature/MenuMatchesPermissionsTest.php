@@ -45,6 +45,7 @@ class MenuMatchesPermissionsTest extends TestCase
         'Люди' => ['people'],
         'Студенты' => ['students'],
         'Группы' => ['groups'],
+        'Справки студентам' => ['student-certificates'],
         'Расписание' => ['schedule-lessons', 'schedule/entries'],
         'Успеваемость' => ['mobile/student'],
         'Журнал' => ['journal/lessons'],

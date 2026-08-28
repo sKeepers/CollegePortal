@@ -24,6 +24,7 @@ const TeachingLoadPage = () => import('../pages/teaching-load/TeachingLoadPage.v
 const ExamsPage = () => import('../pages/exams/ExamsPage.vue')
 const GraduationPage = () => import('../pages/graduation/GraduationPage.vue')
 const DiplomaBlanksPage = () => import('../pages/graduation/DiplomaBlanksPage.vue')
+const StudentCertificatesPage = () => import('../pages/students/StudentCertificatesPage.vue')
 const FrdoPage = () => import('../pages/frdo/FrdoPage.vue')
 const FisPage = () => import('../pages/fis/FisPage.vue')
 const ReportsPage = () => import('../pages/reports/ReportsPage.vue')
@@ -327,6 +328,12 @@ export const routes = [
         name: 'graduation',
         component: GraduationPage,
         meta: { title: 'Выпускники и дипломы', permission: 'graduation.view' },
+      },
+      {
+        path: 'student-certificates',
+        name: 'student-certificates',
+        component: StudentCertificatesPage,
+        meta: { title: 'Справки студентам', permission: 'certificates.view' },
       },
       {
         path: 'diploma-blanks',
