@@ -18,7 +18,7 @@ export const useStudentCertificatesStore = defineStore('studentCertificates', ()
   const registryYears = ref([])
   const students = ref([])
   const groups = ref([])
-  const filters = ref({ year: null, group_id: null })
+  const filters = ref({ year: null, group_id: null, number: null })
   const loading = ref(false)
   const saving = ref(false)
   const error = ref('')
@@ -40,6 +40,9 @@ export const useStudentCertificatesStore = defineStore('studentCertificates', ()
 
     try {
       const query = {}
+      // Номер отменяет остальные отборы на стороне сервера: он единственен, и
+      // год с группой при найденном номере только мешают.
+      if (filters.value.number) query.number = filters.value.number
       if (filters.value.year) query.year = filters.value.year
       if (filters.value.group_id) query.group_id = filters.value.group_id
 

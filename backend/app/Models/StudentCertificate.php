@@ -15,7 +15,22 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class StudentCertificate extends Model
 {
+    /** Выдана порталом: снимок полон, за строкой стоит студент. */
+    public const SOURCE_PORTAL = 'portal';
+
+    /**
+     * Перенесена из бумажного реестра колледжа.
+     *
+     * Такая строка знает только то, что было на бумаге: номер, ФИО, дату
+     * рождения, приказ о зачислении. Даты выдачи в реестре нет вовсе, курса и
+     * сроков обучения тоже, а у 89 строк из 591 нет и студента — это выбывшие.
+     * Подставлять сюда сегодняшнюю карточку нельзя: на бумаге стоял тот курс,
+     * что был тогда.
+     */
+    public const SOURCE_PAPER = 'paper';
+
     protected $fillable = [
+        'source',
         'student_id',
         'number',
         'issued_on',
@@ -74,6 +89,12 @@ class StudentCertificate extends Model
     }
 
     /** Нужен ли в бланке приказ о переводе. У первого курса переводить неоткуда. */
+    /** Строка бумажного реестра: у неё нет снимка и может не быть студента. */
+    public function isFromPaper(): bool
+    {
+        return $this->source === self::SOURCE_PAPER;
+    }
+
     public function isTransferred(): bool
     {
         return $this->course > 1;

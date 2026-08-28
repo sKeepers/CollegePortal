@@ -29,6 +29,7 @@ const columns = [
   { name: 'course', label: 'Курс', field: 'course', align: 'left' },
   { name: 'specialty', label: 'Специальность', field: 'specialty', align: 'left' },
   { name: 'issued_on', label: 'Дата выдачи', field: 'issued_on', align: 'left' },
+  { name: 'source', label: 'Откуда', field: 'source', align: 'left' },
   { name: 'received_on', label: 'Получена', field: 'received_on', align: 'left' },
 ]
 
@@ -145,6 +146,15 @@ const letterhead = computed(() => ({
 
     <q-card flat bordered class="q-mb-sm">
       <q-card-section class="row items-center q-gutter-sm">
+        <!--
+          Поиск по номеру стоит первым: ради него владелец и просил реестр —
+          «найти по номеру, кому и когда выдавалась эта справка». Номер
+          единственен, поэтому он отменяет остальные отборы.
+        -->
+        <q-input
+          :model-value="store.filters.number" dense outlined clearable type="number"
+          style="min-width: 160px" label="Номер справки"
+          @update:model-value="(value) => store.setFilters({ number: value || null })" />
         <q-select
           :model-value="store.filters.year" dense outlined clearable emit-value map-options
           style="min-width: 160px" label="Год выдачи" :options="store.yearOptions"
@@ -179,6 +189,18 @@ const letterhead = computed(() => ({
           :rows-per-page-options="[0]">
           <template #body-cell-issued_on="props">
             <q-td :props="props">{{ ru(props.row.issued_on) }}</q-td>
+          </template>
+          <!--
+            Откуда строка. У перенесённой с бумаги нет ни даты выдачи, ни курса,
+            ни сроков обучения — в книге колледжа их не было вовсе. Показывать
+            её как выданную порталом значило бы обещать документ, который портал
+            воспроизвести не может.
+          -->
+          <template #body-cell-source="props">
+            <q-td :props="props">
+              <span v-if="props.row.source === 'paper'" class="text-caption text-grey-7">бумажный реестр</span>
+              <span v-else class="text-caption">портал</span>
+            </q-td>
           </template>
           <template #body-cell-received_on="props">
             <q-td :props="props">
