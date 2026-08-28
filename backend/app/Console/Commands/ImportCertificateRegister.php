@@ -29,7 +29,8 @@ class ImportCertificateRegister extends Command
 {
     protected $signature = 'certificates:import-register
         {file : CSV из книги реестра: №, ФИО студента, Дата рождения, Специальность, Приказ, Дата приказа, Справка 1, Справка 2}
-        {--dry-run : Ничего не писать, только показать, что получится}';
+        {--dry-run : Ничего не писать, только показать, что получится}
+        {--skip-unreadable : Пропустить строки с нечитаемой датой рождения, оставив дыру в нумерации}';
 
     protected $description = 'Перенести бумажный реестр справок в портал: номер, кому выдана, приказ о зачислении';
 
@@ -47,6 +48,7 @@ class ImportCertificateRegister extends Command
         $existing = StudentCertificate::query()->pluck('source', 'number')->all();
 
         $planned = [];
+        $unreadable = [];
         $skipped = 0;
         $collisions = [];
         $matched = 0;
@@ -61,6 +63,16 @@ class ImportCertificateRegister extends Command
             $birth = $this->date($row['Дата рождения'] ?? '');
 
             if ($name === '') {
+                continue;
+            }
+
+            if ($birth === null) {
+                // Дата рождения — часть ключа, по которому строка находит
+                // студента, и обязательное поле реестра. Пустой её быть не
+                // должно: в книге она стоит у всех 591 строки. Значит это не
+                // «нет данных», а испорченная ячейка, и чинит её человек.
+                $unreadable[] = sprintf('строка %d: «%s» — дата рождения «%s»', $line, $name, trim((string) ($row['Дата рождения'] ?? '')));
+
                 continue;
             }
 
@@ -110,6 +122,32 @@ class ImportCertificateRegister extends Command
                     'note' => 'Перенесено из книги реестра справок колледжа.',
                 ];
             }
+        }
+
+        if ($unreadable !== [] && $this->option('skip-unreadable')) {
+            // Решение берёт человек, а не загрузчик: он увидел список и
+            // согласился на дыру. Номера этих строк в реестр не попадут, и
+            // помнить об этом придётся ему.
+            $this->warn(sprintf(
+                "Пропущено строк с нечитаемой датой рождения: %d. В нумерации останется дыра.\n%s",
+                count($unreadable),
+                implode("\n", array_slice($unreadable, 0, 12)),
+            ));
+
+            $unreadable = [];
+        }
+
+        if ($unreadable !== []) {
+            // Отказ на весь файл, а не пропуск строк: пропущенная строка — это
+            // пропущенный номер, а нумерация реестра сплошная. Дыру потом никто
+            // не найдёт, а испорченных ячеек в книге всего несколько.
+            $this->error(sprintf(
+                "ОТКАЗ: %d строк с нечитаемой датой рождения. Реестр загружается целиком, иначе в нумерации появится дыра.\n%s",
+                count($unreadable),
+                implode("\n", array_slice($unreadable, 0, 12)),
+            ));
+
+            return self::FAILURE;
         }
 
         if ($collisions !== []) {
