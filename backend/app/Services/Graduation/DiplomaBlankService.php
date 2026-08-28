@@ -146,18 +146,58 @@ class DiplomaBlankService
         });
     }
 
-    /** Снять закрепление: ошиблись номером, выпускник отказался. Бланк цел и возвращается в наличие. */
+    /**
+     * Снять закрепление: ошиблись номером, выпускник отказался. Бланк цел и
+     * возвращается в наличие.
+     *
+     * Вместе с бланком номер уходит и из диплома. Пока он там оставался, бланк
+     * возвращался в наличие только на вид: закрепить его за другим выпускником
+     * не удавалось вовсе — запись падала ошибкой уникальности
+     * `diplomas.series, diplomas.number` (замерено 28.08.2026 пробой на
+     * внесённом дефекте; кнопка «Снять» стоит на экране бланков и делает это в
+     * один щелчок). Номер снятого бланка при этом оставался в дипломе первого
+     * выпускника и уезжал в книгу регистрации.
+     *
+     * Порядок здесь обратен ожидаемому: сначала движение, потом очистка. Пока
+     * бланк ещё закреплён, `BlankNumberInDiploma` считает его источником номера
+     * и заполнил бы очищенные колонки обратно.
+     */
     public function release(DiplomaBlank $blank, ?int $userId = null, ?string $reason = null): DiplomaBlank
     {
         $this->assertTransition($blank, DiplomaBlank::STATUS_STOCK);
 
-        $this->move($blank, DiplomaBlankEvent::ACTION_RELEASED, DiplomaBlank::STATUS_STOCK, [
-            'graduate_id' => null,
-            'diploma_id' => null,
-            'assigned_at' => null,
-        ], $userId, null, null, $reason);
+        return DB::transaction(function () use ($blank, $userId, $reason): DiplomaBlank {
+            $diploma = $this->diplomaHoldingThisNumber($blank);
 
-        return $blank;
+            $this->move($blank, DiplomaBlankEvent::ACTION_RELEASED, DiplomaBlank::STATUS_STOCK, [
+                'graduate_id' => null,
+                'diploma_id' => null,
+                'assigned_at' => null,
+            ], $userId, null, null, $reason);
+
+            $diploma?->fill(['series' => null, 'number' => null])->save();
+
+            return $blank;
+        });
+    }
+
+    /**
+     * Диплом выпускника, если в нём стоит номер именно этого бланка.
+     *
+     * Сверяется пара «серия + номер», а не связь через `diploma_id`: диплом мог
+     * быть выписан на другой бланк, и тогда снятие закрепления его не касается.
+     */
+    private function diplomaHoldingThisNumber(DiplomaBlank $blank): ?Diploma
+    {
+        if ($blank->graduate_id === null) {
+            return null;
+        }
+
+        return Diploma::query()
+            ->where('graduate_id', $blank->graduate_id)
+            ->where('series', $blank->series)
+            ->where('number', $blank->number)
+            ->first();
     }
 
     /** Выдать на руки. Дальше бланк не меняется. */
@@ -366,7 +406,37 @@ class DiplomaBlankService
             ]);
         }
 
+        $this->assertNumberIsNotInAnotherDiploma($blank, $diploma);
+
         $diploma->fill(['series' => $blank->series, 'number' => $blank->number])->save();
+    }
+
+    /**
+     * Этот номер не должен уже стоять в чужом дипломе.
+     *
+     * У `diplomas` уникальный ключ по паре «серия + номер», и без проверки
+     * запись падает ошибкой базы. На PostgreSQL это хуже некрасивого ответа:
+     * упавший запрос отравляет транзакцию целиком, и следующая ошибка приходит
+     * не оттуда, где беда. Поэтому спрашиваем заранее, а не ловим исключение.
+     */
+    private function assertNumberIsNotInAnotherDiploma(DiplomaBlank $blank, Diploma $diploma): void
+    {
+        $taken = Diploma::query()
+            ->where('series', $blank->series)
+            ->where('number', $blank->number)
+            ->whereKeyNot($diploma->id)
+            ->first();
+
+        if ($taken === null) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'diploma_id' => sprintf(
+                'Бланк %s уже стоит в дипломе другого выпускника. Один номер не бывает у двоих: снимите его там, где он лишний.',
+                $blank->label(),
+            ),
+        ]);
     }
 
     /**
