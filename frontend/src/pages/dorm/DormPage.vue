@@ -624,6 +624,12 @@ onMounted(() => store.loadToday())
           description="Заведите комнаты — потом в них можно будет заселять."
         />
         <AppTable v-else :rows="store.rooms" :columns="roomColumns" row-key="id" :pagination="{ rowsPerPage: 50 }">
+          <template #body-cell-number="props">
+            <q-td :props="props">
+              {{ props.row.number }}
+              <div v-if="props.row.note" class="dorm-secondary">{{ props.row.note }}</div>
+            </q-td>
+          </template>
           <template #body-cell-kind="props">
             <q-td :props="props">{{ store.roomKinds[props.row.kind] || props.row.kind }}</q-td>
           </template>
@@ -898,7 +904,7 @@ onMounted(() => store.loadToday())
               <span class="dorm-secondary"> — {{ room.occupied }} из {{ room.capacity }}</span>
               <q-btn flat dense no-caps size="sm" color="primary" class="q-ml-sm" @click="printRoomSheet(room)">лист на дверь</q-btn>
               <div v-for="person in room.people" :key="person.student_id" class="dorm-secondary">
-                {{ person.full_name }}<span v-if="person.course"> · {{ person.course }} курс</span><span v-if="person.group"> · {{ person.group }}</span><span v-if="person.phone"> · {{ person.phone }}</span>
+                {{ person.full_name }}<span v-if="person.course"> · {{ person.course }} курс</span><span v-if="person.group"> · {{ person.group }}</span><span v-if="person.phone"> · {{ formatPhone(person.phone) }}</span>
               </div>
               <div v-if="!room.people.length" class="dorm-secondary">свободна</div>
             </div>
