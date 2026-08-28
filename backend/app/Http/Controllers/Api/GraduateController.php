@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Support\Http\PageSize;
 
 class GraduateController extends Controller
 {
@@ -46,7 +47,7 @@ class GraduateController extends Controller
             ->when($request->string('diploma_status')->toString(), fn ($query, string $status) => $query->whereHas('diploma', fn ($diploma) => $diploma->where('status', $status)))
             ->orderByDesc('graduation_year')
             ->orderBy('id')
-            ->paginate(50);
+            ->paginate(PageSize::from($request, 50));
 
         return GraduateResource::collection($graduates);
     }

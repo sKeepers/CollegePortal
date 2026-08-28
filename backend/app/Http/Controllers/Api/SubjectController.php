@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Support\Http\PageSize;
 
 class SubjectController extends Controller
 {
@@ -38,7 +39,7 @@ class SubjectController extends Controller
                 });
             })
             ->orderBy('name')
-            ->paginate(20);
+            ->paginate(PageSize::from($request, 20));
 
         return SubjectResource::collection($subjects);
     }

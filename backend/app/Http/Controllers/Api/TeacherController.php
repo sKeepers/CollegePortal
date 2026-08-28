@@ -17,6 +17,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Support\Http\PageSize;
 
 class TeacherController extends Controller
 {
@@ -43,7 +44,7 @@ class TeacherController extends Controller
             })
             ->orderBy('last_name')
             ->orderBy('first_name')
-            ->paginate(20);
+            ->paginate(PageSize::from($request, 20));
 
         return TeacherResource::collection($teachers);
     }

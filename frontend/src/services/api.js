@@ -7,6 +7,10 @@ const CSRF_COOKIE = 'cp_csrf'
 const CSRF_HEADER = 'X-CSRF-Token'
 const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS']
 
+// Сколько строк просить, когда нужен список целиком. Совпадает с потолком
+// сервера `App\Support\Http\PageSize::MAX`; см. `listAll` ниже.
+const WHOLE_LIST_PAGE = 500
+
 function csrfToken() {
   const match = document.cookie.match(new RegExp(`(?:^|; )${CSRF_COOKIE}=([^;]*)`))
   return match ? decodeURIComponent(match[1]) : ''
@@ -259,6 +263,52 @@ export const api = {
     })
   },
 
+  /**
+   * Список целиком, а не первая его страница.
+   *
+   * `list` отдаёт ровно то, что вернул сервер, а сервер страничит. Хранилища
+   * брали из ответа `data` и выбрасывали `meta`, поэтому **страница и весь
+   * список в коде были неразличимы**. Замерено на стенде 28.08.2026: экран
+   * «Студенты» показывал 20 строк и рядом подпись «Найдено записей: 596».
+   *
+   * Здесь сразу просится крупная страница — один запрос вместо тридцати, — а
+   * остаток дочитывается, только если страниц вправду больше одной. Число
+   * `WHOLE_LIST_PAGE` — не «сколько строк бывает в колледже», а «сколько
+   * влезает в один ответ», и совпадает с потолком сервера (`PageSize::MAX`).
+   * Разойдутся — дочитывание закроет разницу, молчаливого усечения не будет.
+   *
+   * **Не для журналов событий.** Проходы, действия пользователей, история
+   * уведомлений постраничны намеренно: их никто не смотрит целиком, а на живых
+   * данных СКУД это 50 337 строк. Такие списки остаются на `list`.
+   */
+  async listAll(resource, params = {}) {
+    // Размер страницы выбирает сам помощник, а переданный игнорирует намеренно.
+    // Иначе `listAll(resource, { per_page: 1 })` — а такой вызов в портале есть,
+    // им дёшево узнают `meta.total` — превратился бы в семьдесят один запрос.
+    // `listAll` значит «весь список», и торговаться о размере страницы тут не о чем.
+    const { per_page: ignored, page: alsoIgnored, ...rest } = params
+    const first = await this.list(resource, { ...rest, per_page: WHOLE_LIST_PAGE })
+
+    const meta = first?.meta
+    const lastPage = Number(meta?.last_page || 0)
+
+    if (!meta || lastPage <= 1) {
+      return first
+    }
+
+    const pages = await Promise.all(
+      Array.from({ length: lastPage - 1 }, (unused, index) =>
+        this.list(resource, { ...rest, per_page: meta.per_page, page: index + 2 })),
+    )
+
+    const data = [...(Array.isArray(first.data) ? first.data : [])]
+    pages.forEach((page) => {
+      if (Array.isArray(page?.data)) data.push(...page.data)
+    })
+
+    return { ...first, data, meta: { ...meta, current_page: 1, last_page: 1, per_page: data.length } }
+  },
+
   async list(resource, params = {}) {
     resource = trimLeadingSlash(resource)
 
@@ -271,7 +321,23 @@ export const api = {
     })
 
     const suffix = query.toString() ? `?${query.toString()}` : ''
-    return request(`/${resource}${suffix}`)
+    const payload = await request(`/${resource}${suffix}`)
+
+    // Кто не просил ни страницу, ни её размер — просил весь список. Если ему
+    // отдали страницу из нескольких, он этого не заметит: `meta` обычно тут же
+    // выбрасывают. Поэтому жалуемся вслух — молча такое живёт неделями.
+    if (
+      params.page === undefined && params.per_page === undefined
+      && Number(payload?.meta?.last_page || 0) > 1
+    ) {
+      console.error(
+        `[api] «${resource}»: отдана страница ${payload.meta.current_page} из ${payload.meta.last_page}`
+        + ` — ${Array.isArray(payload.data) ? payload.data.length : '?'} строк из ${payload.meta.total}.`
+        + ' Список запрошен целиком, а получен кусок: возьмите api.listAll.',
+      )
+    }
+
+    return payload
   },
 
   async create(resource, data) {

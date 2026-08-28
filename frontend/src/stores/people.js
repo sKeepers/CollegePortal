@@ -26,7 +26,7 @@ export const usePeopleStore = defineStore('people', () => {
     loading.value = true
     error.value = ''
     try {
-      const payload = await api.list('people', filters.value)
+      const payload = await api.listAll('people', filters.value)
       people.value = rows(payload)
       pagination.value = meta(payload)
       if (selectedId.value && !people.value.some((person) => Number(person.id) === Number(selectedId.value))) {

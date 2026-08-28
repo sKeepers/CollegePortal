@@ -57,7 +57,7 @@ export const useCuratorGroupStore = defineStore('curatorGroup', () => {
     groupsLoading.value = true
     error.value = ''
     try {
-      const payload = extractData(await api.list('curator/groups'))
+      const payload = extractData(await api.listAll('curator/groups'))
       groups.value = payload.groups || []
       message.value = payload.message || ''
       if (!groupId.value && groups.value.length) groupId.value = groups.value[0].id

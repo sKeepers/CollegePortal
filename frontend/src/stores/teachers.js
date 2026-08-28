@@ -119,9 +119,9 @@ export const useTeachersStore = defineStore('teachers', () => {
       // Преподаватели — сам экран, дисциплины и занятия — его справочники:
       // кадровик без прав на них обязан увидеть список преподавателей.
       const { payloads } = await loadReferences({
-        teachers: api.list('teachers'),
-        subjects: api.list('subjects'),
-        lessons: api.list('schedule-lessons'),
+        teachers: api.listAll('teachers'),
+        subjects: api.listAll('subjects'),
+        lessons: api.listAll('schedule-lessons'),
       })
 
       teachers.value = extractRows(payloads.teachers)

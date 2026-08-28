@@ -39,7 +39,7 @@ export const useReferenceDataStore = defineStore('referenceData', () => {
     error.value = ''
     try {
       selectedCatalogId.value = catalogId
-      items.value = rows(await api.list('admin/reference/items', { catalog_id: catalogId }))
+      items.value = rows(await api.listAll('admin/reference/items', { catalog_id: catalogId }))
     } catch (err) {
       error.value = err.message || 'Не удалось загрузить элементы справочника'
     } finally {

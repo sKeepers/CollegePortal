@@ -19,6 +19,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use RuntimeException;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
+use App\Support\Http\PageSize;
 
 class PersonController extends Controller
 {
@@ -61,7 +62,7 @@ class PersonController extends Controller
             })
             ->orderBy('last_name')
             ->orderBy('first_name')
-            ->paginate(30);
+            ->paginate(PageSize::from($request, 30));
 
         return PersonResource::collection($people);
     }

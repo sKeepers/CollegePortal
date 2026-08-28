@@ -95,8 +95,8 @@ export const useSpecialtiesStore = defineStore('specialties', () => {
       // Программы — справочник карточки: показывают, что на специальности висит.
       // Отказ по ним не должен закрывать сам реестр специальностей.
       const { payloads } = await loadReferences({
-        specialties: api.list('specialties'),
-        programs: api.list('education-programs'),
+        specialties: api.listAll('specialties'),
+        programs: api.listAll('education-programs'),
       })
 
       specialties.value = extractRows(payloads.specialties)

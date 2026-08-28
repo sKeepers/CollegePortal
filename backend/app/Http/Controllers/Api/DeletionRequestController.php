@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
+use App\Support\Http\PageSize;
 
 /**
  * Заявки на удаление и корзина.
@@ -79,7 +80,7 @@ class DeletionRequestController extends Controller
             ->with(['requestedBy', 'reviewedBy', 'subject'])
             ->when($request->string('status')->toString(), fn ($query, string $status) => $query->where('status', $status))
             ->orderByDesc('created_at')
-            ->paginate(50)
+            ->paginate(PageSize::from($request, 50))
             ->through(fn (DeletionRequest $item): array => $this->present($item));
 
         return response()->json($requests);

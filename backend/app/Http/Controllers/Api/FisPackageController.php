@@ -23,6 +23,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Support\Http\PageSize;
 
 class FisPackageController extends Controller
 {
@@ -42,7 +43,7 @@ class FisPackageController extends Controller
             ->when($request->string('status')->toString(), fn ($query, string $status) => $query->where('status', $status))
             ->when($request->integer('education_program_id'), fn ($query, int $id) => $query->where('education_program_id', $id))
             ->orderByDesc('created_at')
-            ->paginate(50);
+            ->paginate(PageSize::from($request, 50));
 
         return FisPackageResource::collection($packages);
     }

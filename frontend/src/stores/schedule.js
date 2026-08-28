@@ -216,11 +216,11 @@ export const useScheduleStore = defineStore('schedule', () => {
       }
 
       const [lessonsResult, groupsResult, teachersResult, subjectsResult, classroomsResult, conflictsResult, coverageResult, templatesResult] = await Promise.allSettled([
-        api.list('schedule-lessons', apiFilters),
-        api.list('groups', { per_page: 200 }),
-        api.list('teachers', { active_only: 1 }),
-        api.list('subjects'),
-        api.list('classrooms'),
+        api.listAll('schedule-lessons', apiFilters),
+        api.listAll('groups', { per_page: 200 }),
+        api.listAll('teachers', { active_only: 1 }),
+        api.listAll('subjects'),
+        api.listAll('classrooms'),
         api.list('schedule/conflicts', apiFilters),
         api.list('schedule/coverage', apiFilters),
         // Шаблоны запрашиваются только тем, кому они разрешены. Директор,

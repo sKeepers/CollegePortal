@@ -148,10 +148,10 @@ export const useStudentsStore = defineStore('students', () => {
 
     try {
       const [studentsPayload, groupsPayload] = await Promise.all([
-        api.list('students', filters.value),
+        api.listAll('students', filters.value),
         // Группы питают три выпадающих списка сразу — группа, курс и
         // специальность. Страницы в двадцать строк для этого мало.
-        api.list('groups', { per_page: 200 }),
+        api.listAll('groups', { per_page: 200 }),
       ])
 
       students.value = extractRows(studentsPayload)
@@ -387,7 +387,7 @@ export const useStudentsStore = defineStore('students', () => {
     try {
       const [attendancePayload, gradesPayload] = await Promise.all([
         api.list('attendance', { student_id: studentId }),
-        api.list('grades', { student_id: studentId }),
+        api.listAll('grades', { student_id: studentId }),
       ])
 
       if (Number(selectedId.value) === Number(studentId)) {

@@ -104,8 +104,8 @@ export const useClassroomsStore = defineStore('classrooms', () => {
 
     try {
       const [classroomsPayload, lessonsPayload] = await Promise.all([
-        api.list('classrooms'),
-        api.list('schedule-lessons'),
+        api.listAll('classrooms'),
+        api.listAll('schedule-lessons'),
       ])
 
       classrooms.value = extractRows(classroomsPayload)
