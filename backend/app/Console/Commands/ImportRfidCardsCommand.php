@@ -31,6 +31,9 @@ class ImportRfidCardsCommand extends Command
 
     protected $description = 'Завести карты СКУД по кадровой выгрузке и выдать их людям';
 
+    /** @var array<string, array<int, Person>>|null */
+    private ?array $people = null;
+
     public function handle(RfidCardService $cards): int
     {
         $file = (string) $this->argument('file');
@@ -64,7 +67,7 @@ class ImportRfidCardsCommand extends Command
         foreach ($rows as $row) {
             $people = $this->findPeople($row);
 
-            if ($people->isEmpty()) {
+            if ($people === []) {
                 $missing[] = $this->fio($row);
 
                 continue;
@@ -73,13 +76,13 @@ class ImportRfidCardsCommand extends Command
             // Тёзки пропускаются поимённо, а не «как-нибудь»: привязать карту
             // не тому человеку хуже, чем не привязать вовсе, и обнаружится это
             // у турникета, а не здесь.
-            if ($people->count() > 1) {
-                $ambiguous[] = $this->fio($row).' — '.$people->count().' совпадения';
+            if (count($people) > 1) {
+                $ambiguous[] = $this->fio($row).' — '.count($people).' совпадения';
 
                 continue;
             }
 
-            $person = $people->first();
+            $person = $people[0];
             $existing = RfidCard::query()
                 ->where('person_id', $person->id)
                 ->where('status', RfidCard::STATUS_ISSUED)
@@ -138,7 +141,6 @@ class ImportRfidCardsCommand extends Command
 
         return self::SUCCESS;
     }
-
     /**
      * Совпадение по трём частям имени, а не по двум.
      *
@@ -147,15 +149,48 @@ class ImportRfidCardsCommand extends Command
      * ни одного. То есть отчество здесь не уточнение, а единственное, что
      * различает всех.
      *
-     * @return \Illuminate\Support\Collection<int, Person>
+     * **Регистр опускает PHP, а не база, и это не вкусовщина.** Первая
+     * редакция сравнивала `lower(trim(...))` в запросе против
+     * `mb_strtolower()` в коде — и ствол покраснел на SQLite при зелёном
+     * PostgreSQL. Причина замерена прямо: `lower('Иванов')` в SQLite
+     * возвращает `Иванов` — эта функция знает только латиницу, — а
+     * `mb_strtolower('Иванов')` даёт `иванов`. Сравнение не сходилось
+     * никогда, человек не находился, и команда не доходила до вывода итога.
+     * На PostgreSQL то же выражение работает, поэтому прогон «поближе к бою»
+     * этого не показывал: **зелёный на одном движке ничего не обещает на
+     * другом, в любую сторону.**
+     *
+     * Заодно это один запрос вместо одного на строку.
+     *
+     * @return array<int, Person>
      */
-    private function findPeople(array $row)
+    private function findPeople(array $row): array
     {
-        return Person::query()
-            ->whereRaw('lower(trim(last_name)) = ?', [mb_strtolower($row['last_name'])])
-            ->whereRaw('lower(trim(first_name)) = ?', [mb_strtolower($row['first_name'])])
-            ->whereRaw('lower(trim(coalesce(middle_name, \'\'))) = ?', [mb_strtolower($row['middle_name'])])
-            ->get();
+        return $this->index()[$this->key($row['last_name'], $row['first_name'], $row['middle_name'])] ?? [];
+    }
+
+    /** @return array<string, array<int, Person>> */
+    private function index(): array
+    {
+        if ($this->people !== null) {
+            return $this->people;
+        }
+
+        $this->people = [];
+
+        foreach (Person::query()->get(['id', 'last_name', 'first_name', 'middle_name']) as $person) {
+            $this->people[$this->key($person->last_name, $person->first_name, $person->middle_name)][] = $person;
+        }
+
+        return $this->people;
+    }
+
+    private function key(?string $last, ?string $first, ?string $middle): string
+    {
+        return implode('|', array_map(
+            fn (?string $part) => mb_strtolower(trim((string) $part)),
+            [$last, $first, $middle],
+        ));
     }
 
     private function fio(array $row): string
