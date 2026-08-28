@@ -7,7 +7,7 @@
  * причиной, потому что по нему отчитываются. «Его тут не было» — не ответ
  * проверке.
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import {
   BLANK_KIND_OPTIONS,
@@ -62,6 +62,26 @@ const graduateOptions = computed(() => graduation.graduates.map((item) => ({
 onMounted(async () => {
   await store.load()
   await graduation.load()
+})
+
+/**
+ * Книга наполняется при открытии вкладки, а не по кнопке «Обновить».
+ *
+ * Три остальные вкладки наполняет `store.load()` при входе на экран, а книга
+ * до 28.08.2026 не грузилась вовсе: её данные брала только кнопка «Обновить» и
+ * выбор года. Открывший вкладку видел пустую таблицу с подписью «Выданных
+ * дипломов пока нет» — утверждение о колледже, верное лишь про сам экран, — и
+ * гаснущую кнопку «Печать книги»: она отключается по числу строк. Замерено в
+ * браузере: пять выданных дипломов, на вкладке ноль строк, печать недоступна;
+ * после нажатия «Обновить» — пять строк и лист на пять строк.
+ *
+ * Грузим при каждом открытии, а не однажды: дипломы выдают в тот же день,
+ * когда книгу и смотрят, и устаревшая книга хуже лишнего запроса.
+ */
+watch(tab, (value) => {
+  if (value === 'registry') {
+    openRegistry()
+  }
 })
 
 async function submitBatch() {
@@ -329,7 +349,7 @@ function printRegistry() {
               <td>{{ formatRuDate(row.issue_date) }}</td>
             </tr>
             <tr v-if="!store.registry.length && !store.loading">
-              <td colspan="6" class="text-center text-grey-7">Выданных дипломов пока нет. Нажмите «Обновить».</td>
+              <td colspan="6" class="text-center text-grey-7">Выданных дипломов пока нет.</td>
             </tr>
           </tbody>
         </q-markup-table>
