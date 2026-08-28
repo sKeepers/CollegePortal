@@ -38,6 +38,9 @@ const fisResult = computed(() => store.currentJob?.source === 'fis_admissions' ?
 const isFisJob = computed(() => store.currentJob?.source === 'fis_admissions')
 const canFisApply = computed(() => Boolean(store.currentJob?.source === 'fis_admissions' && store.currentJob?.id && fisResult.value && (fisResult.value.critical_errors || 0) === 0 && (fisResult.value.ambiguous_duplicates || 0) === 0 && (fisResult.value.unresolved_competitions || 0) === 0 && (fisResult.value.total_rows || 0) > 0))
 const errors = computed(() => store.currentJob?.validation_errors || [])
+// Замечания приходят тем же форматом, что и ошибки, и намеренно: строка, колонка,
+// значение, причина. Отличается только судьба строки — она загрузилась.
+const notices = computed(() => store.currentJob?.warnings || [])
 const canPreview = computed(() => Boolean(dataType.value && file.value))
 const canConfirm = computed(() => Boolean(store.currentJob?.id && Object.keys(mapping).length))
 const requiredLabels = computed(() => selectedTypeConfig.value?.required_fields?.map((field) => field.label) || [])
@@ -252,6 +255,20 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
           </div>
         </AppCard>
 
+        <AppCard
+          v-if="notices.length"
+          title="Загружено, но не полностью"
+          subtitle="Эти строки в портале. Названо то, чего в них не хватило: исправьте файл и загрузите его заново — строки обновятся, а не задвоятся."
+        >
+          <div class="universal-import-errors universal-import-errors--notice">
+            <article v-for="(notice, index) in notices.slice(0, 20)" :key="`n-${notice.row}-${notice.field || index}`">
+              <strong>Строка {{ notice.row }} · {{ notice.column || 'Колонка не определена' }}</strong>
+              <span>{{ notice.reason || notice.errors?.join('; ') }}</span>
+              <small v-if="notice.value !== null && notice.value !== undefined && notice.value !== ''">Исходное значение: {{ notice.value }}</small>
+            </article>
+          </div>
+        </AppCard>
+
         <AppCard title="История импортов" subtitle="Последние загрузки реальных данных.">
           <div class="universal-import-history-title"><History :size="16" /> {{ typeLabel(dataType) }}</div>
           <AppTable v-if="store.history.length" :rows="store.history" :columns="historyColumns" :pagination="{ rowsPerPage: 6 }" :rows-per-page-options="[6, 12, 0]">
@@ -456,6 +473,19 @@ onMounted(async () => { await store.loadConfig(); if (store.typeOptions[0]) data
 .universal-import-report strong {
   color: #0f172a;
   font-size: 20px;
+}
+
+/* Замечание — не ошибка, и различать их приходится цветом: у ошибок рамка уже
+   янтарная (`#f59e0b`), так что «просто предупреждающий» оттенок слился бы с ними.
+   Синий читается как «к сведению», а не «исправьте немедленно». Заголовок карточки
+   говорит то же словами — цвет здесь второй признак, а не единственный. */
+.universal-import-errors--notice article {
+  border-left-color: #2563eb;
+  background: #eff6ff;
+}
+
+.universal-import-errors--notice span {
+  color: #1e40af;
 }
 
 .universal-import-errors {
