@@ -62,7 +62,13 @@ class LessonTimeImportHandler extends AbstractImportHandler
     public function rules(): array
     {
         return [
-            'lesson_number' => ['required', 'integer', 'min:1', 'max:12'],
+            // Сетка колледжа — шестнадцать занятий: нулевое начинается в 7:15,
+            // пятнадцатое кончается в 20:15, каждое по 45 минут (снимок расписания
+            // звонков от владельца, 28.08.2026, прочитан двумя чатами порознь и
+            // сошёлся). Прежние `min:1, max:12` отвергли бы четыре занятия из
+            // шестнадцати — нулевое и три последних, — и вечерние пары просто не
+            // на что было бы поставить.
+            'lesson_number' => ['required', 'integer', 'min:0', 'max:15'],
             'starts_at' => ['required', 'date_format:H:i'],
             'ends_at' => ['required', 'date_format:H:i', 'after:starts_at'],
             'label' => ['nullable', 'string', 'max:255'],

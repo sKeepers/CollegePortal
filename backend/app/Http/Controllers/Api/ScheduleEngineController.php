@@ -246,7 +246,7 @@ class ScheduleEngineController extends Controller
             'date' => ['required', 'date'],
             'starts_at' => ['required', 'date_format:H:i'],
             'ends_at' => ['required', 'date_format:H:i', 'after:starts_at'],
-            'lesson_number' => ['nullable', 'integer', 'min:1', 'max:12'],
+            'lesson_number' => ['nullable', 'integer', 'min:0', 'max:15'],
         ]);
         return new ScheduleEntryResource($this->scheduleEngineService->move($scheduleEntry, $data, $request->user()));
     }
@@ -288,7 +288,7 @@ class ScheduleEngineController extends Controller
             'entries' => ['array'],
             'entries.*.day_of_week' => ['required', 'integer', 'min:1', 'max:7'],
             'entries.*.week_type' => ['nullable', Rule::in(['all', 'even', 'odd'])],
-            'entries.*.lesson_number' => ['required', 'integer', 'min:1', 'max:12'],
+            'entries.*.lesson_number' => ['required', 'integer', 'min:0', 'max:15'],
             'entries.*.starts_at' => ['required', 'date_format:H:i'],
             'entries.*.ends_at' => ['required', 'date_format:H:i'],
             'entries.*.subject_id' => ['required', 'integer', 'exists:subjects,id'],
@@ -331,7 +331,7 @@ class ScheduleEngineController extends Controller
             'lesson_date' => ['nullable', 'date'],
             'day_of_week' => ['nullable', 'integer', 'min:1', 'max:7'],
             'week_type' => ['nullable', Rule::in(['even', 'odd', 'all'])],
-            'lesson_number' => ['nullable', 'integer', 'min:1', 'max:12'],
+            'lesson_number' => ['nullable', 'integer', 'min:0', 'max:15'],
             'starts_at' => ['required', 'date_format:H:i'],
             'ends_at' => ['required', 'date_format:H:i', 'after:starts_at'],
             'group_id' => ['required', 'integer', 'exists:groups,id'],
