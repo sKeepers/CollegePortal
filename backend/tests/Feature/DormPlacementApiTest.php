@@ -64,6 +64,76 @@ class DormPlacementApiTest extends TestCase
             ->assertJsonPath('errors.dorm_room_id.0', "В комнате {$room->number} мест нет: вместимость 1, живут 1.");
     }
 
+    public function test_a_room_without_capacity_takes_nobody(): void
+    {
+        $this->withApiAuth($this->warden());
+        // Ноль здесь не выдуман: это умолчание колонки `capacity` в базе, и
+        // правила ввода комнаты его разрешают (`min:0`). Комната, заведённая
+        // наспех, оказывается именно такой.
+        $room = $this->room(capacity: 0, number: '404');
+
+        $this->postJson('/api/dorm/placements', [
+            'student_id' => $this->student()->id,
+            'dorm_room_id' => $room->id,
+            'moved_in_at' => '2026-09-01',
+        ])
+            ->assertStatus(422)
+            ->assertJsonPath('errors.dorm_room_id.0', 'В комнате 404 мест нет: вместимость 0. Если в ней живут, укажите вместимость в карточке комнаты.');
+
+        $this->assertDatabaseCount('dorm_placements', 0);
+    }
+
+    public function test_a_room_without_capacity_is_never_offered_as_free(): void
+    {
+        $this->withApiAuth($this->warden());
+        // Тот же ноль с другой стороны. Отбор «только со свободными местами»
+        // считал такую комнату занятой ещё до правки, а заселение пускало в
+        // неё кого угодно: две части одной возможности отвечали по-разному на
+        // один вопрос. Проверяем обе сразу, иначе они снова разойдутся.
+        $this->room(capacity: 0, number: '404');
+        $this->room(capacity: 2, number: '405');
+
+        $numbers = collect($this->getJson('/api/dorm/rooms?only_free=1')->assertOk()->json('data'))
+            ->pluck('number')
+            ->all();
+
+        $this->assertSame(['405'], $numbers);
+    }
+
+    public function test_relocating_into_a_room_without_capacity_is_refused(): void
+    {
+        $this->withApiAuth($this->warden());
+        // Переселение идёт мимо `place()` своим путём и проверку вместимости
+        // делает отдельно. Дыра в ней была та же, и закрыть её надо было тем
+        // же местом — этот тест краснеет, если проверку починили только в
+        // одном из двух.
+        $from = $this->room(capacity: 2, number: '406');
+        $to = $this->room(capacity: 0, number: '407');
+        $student = $this->student();
+
+        $this->postJson('/api/dorm/placements', [
+            'student_id' => $student->id,
+            'dorm_room_id' => $from->id,
+            'moved_in_at' => '2026-09-01',
+        ])->assertCreated();
+
+        $this->postJson('/api/dorm/placements/relocate', [
+            'student_id' => $student->id,
+            'dorm_room_id' => $to->id,
+            'moved_in_at' => '2026-09-02',
+        ])
+            ->assertStatus(422)
+            ->assertJsonPath('errors.dorm_room_id.0', 'В комнате 407 мест нет: вместимость 0. Если в ней живут, укажите вместимость в карточке комнаты.');
+
+        // И студент остался там, где был: неудачное переселение не должно
+        // закрывать прежнее заселение.
+        $this->assertDatabaseHas('dorm_placements', [
+            'student_id' => $student->id,
+            'dorm_room_id' => $from->id,
+            'moved_out_at' => null,
+        ]);
+    }
+
     public function test_a_student_is_not_placed_twice(): void
     {
         $this->withApiAuth($this->warden());
