@@ -55,7 +55,7 @@ function sortByRelevance(query, records, fields) {
 }
 
 async function searchStudents(query) {
-  const payload = await api.list('students', { search: query })
+  const payload = await api.listAll('students', { search: query })
   const rows = extractRows(payload)
   const matched = rows.filter((student) => containsQuery(query, [
     fullName(student),
@@ -90,7 +90,7 @@ async function searchStudents(query) {
 }
 
 async function searchTeachers(query) {
-  const payload = await api.list('teachers', { search: query })
+  const payload = await api.listAll('teachers', { search: query })
   const rows = extractRows(payload)
   const matched = rows.filter((teacher) => containsQuery(query, [
     fullName(teacher),
@@ -125,7 +125,7 @@ async function searchTeachers(query) {
 }
 
 async function searchSubjects(query) {
-  const payload = await api.list('subjects', { search: query })
+  const payload = await api.listAll('subjects', { search: query })
   const rows = extractRows(payload)
   const matched = rows.filter((subject) => containsQuery(query, [
     subject.name,
@@ -171,7 +171,7 @@ function classroomLabel(classroom) {
 }
 
 async function searchClassrooms(query) {
-  const payload = await api.list('classrooms')
+  const payload = await api.listAll('classrooms')
   const rows = extractRows(payload)
   const matched = rows.filter((classroom) => containsQuery(query, [
     classroomLabel(classroom),
@@ -249,7 +249,7 @@ async function searchApplicantApplications(query) {
 }
 
 async function searchGroups(query) {
-  const payload = await api.list('groups', { per_page: 200 })
+  const payload = await api.listAll('groups', { per_page: 200 })
   const rows = extractRows(payload)
   const matched = rows.filter((group) => containsQuery(query, [
     group.name,

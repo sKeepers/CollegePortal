@@ -24,6 +24,7 @@ use App\Support\Csv\CsvImport;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Support\Http\PageSize;
 
 class TeachingLoadController extends Controller
 {
@@ -110,7 +111,7 @@ class TeachingLoadController extends Controller
             );
         }
 
-        $loads = $query->paginate(50);
+        $loads = $query->paginate(PageSize::from($request, 50));
 
         return TeachingLoadResource::collection($loads);
     }

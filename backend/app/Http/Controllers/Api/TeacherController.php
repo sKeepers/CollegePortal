@@ -17,6 +17,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Support\Http\PageSize;
 
 class TeacherController extends Controller
 {
@@ -28,17 +29,6 @@ class TeacherController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        // Список отдавал ровно двадцать строк и `per_page` не спрашивал вовсе.
-        // Пока преподавателей было четверо, это не значило ничего; 28.08.2026 их
-        // стало 177, и первыми же двадцатью по алфавиту обрывались все справочники
-        // разом: выбор преподавателя в расписании, в нагрузке, у дисциплины и у
-        // группы. Кабинет самого преподавателя ломался тем же: TeacherDashboard
-        // ищет себя в присланных строках и за двадцатой себя не находил.
-        //
-        // Потолок 500 взят с запасом к 177 замеренным: он ограничивает ответ, а не
-        // список — двадцать по умолчанию остаётся тем, кто ничего не просил.
-        $perPage = min(max((int) ($request->integer('per_page') ?: 20), 1), 500);
-
         $teachers = Teacher::query()
             ->when($request->string('department')->toString(), fn ($query, string $department) => $query->where('department', $department))
             ->when($request->boolean('active_only'), fn ($query) => $query->where('is_active', true))
@@ -54,7 +44,7 @@ class TeacherController extends Controller
             })
             ->orderBy('last_name')
             ->orderBy('first_name')
-            ->paginate($perPage);
+            ->paginate(PageSize::from($request, 20));
 
         return TeacherResource::collection($teachers);
     }

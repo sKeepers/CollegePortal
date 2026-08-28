@@ -78,7 +78,7 @@ export const useMobileAdminStore = defineStore('mobileAdmin', () => {
 
     searching.value = true
     try {
-      const payload = await api.list('people', { search: query, per_page: 20 })
+      const payload = await api.listAll('people', { search: query, per_page: 20 })
       people.value = payload?.data || []
       searched.value = true
     } catch (err) {

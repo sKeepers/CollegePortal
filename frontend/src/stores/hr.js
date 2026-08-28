@@ -118,7 +118,7 @@ export const useHrStore = defineStore('hr', () => {
     loading.value = true
     error.value = ''
     try {
-      const payload = await api.list('employees', { ...filters.value, ...params })
+      const payload = await api.listAll('employees', { ...filters.value, ...params })
       employees.value = rows(payload)
       pagination.value = meta(payload)
       // Выбор не переезжает на первого попавшегося: у экрана есть состояние
@@ -136,13 +136,13 @@ export const useHrStore = defineStore('hr', () => {
   }
 
   async function loadDictionaries() {
-    const [depPayload, posPayload] = await Promise.all([api.list('departments'), api.list('positions')])
+    const [depPayload, posPayload] = await Promise.all([api.listAll('departments'), api.listAll('positions')])
     // Реестр людей закрыт кадрам намеренно: там же студенты и абитуриенты.
     // Раньше запрос уходил всё равно и всегда отвечал 403 — подсказка «выбрать
     // существующего человека» молча оставалась пустой. Дубли это не создаёт:
     // существующего человека находит HrService при сохранении карточки.
     const peoplePayload = useAuthStore().can('people.view')
-      ? await api.list('people', { per_page: 100 }).catch(() => ({ data: [] }))
+      ? await api.listAll('people', { per_page: 100 }).catch(() => ({ data: [] }))
       : { data: [] }
     departments.value = rows(depPayload)
     positions.value = rows(posPayload)

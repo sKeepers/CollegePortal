@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
+use App\Support\Http\PageSize;
 
 class DigitalIdentityController extends Controller
 {
@@ -26,7 +27,7 @@ class DigitalIdentityController extends Controller
             ->when($request->string('entity_type')->toString(), fn ($query, string $type) => $query->where('entity_type', $type))
             ->when($request->string('status')->toString(), fn ($query, string $status) => $query->where('status', $status))
             ->orderByDesc('issued_at')
-            ->paginate(50);
+            ->paginate(PageSize::from($request, 50));
 
         return DigitalIdentityResource::collection($identities);
     }

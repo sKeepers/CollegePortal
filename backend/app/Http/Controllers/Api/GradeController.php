@@ -9,6 +9,7 @@ use App\Models\JournalLesson;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use App\Support\Http\PageSize;
 
 /**
  * Оценки студента списком: карточка студента и его кабинет.
@@ -43,7 +44,7 @@ class GradeController extends Controller
             ))
             ->latest('marked_at')
             ->latest('id')
-            ->paginate(20);
+            ->paginate(PageSize::from($request, 20));
 
         return StudentGradeResource::collection($grades);
     }

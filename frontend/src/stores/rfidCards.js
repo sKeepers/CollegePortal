@@ -70,7 +70,7 @@ export const useRfidCardsStore = defineStore('rfidCards', () => {
       if (filters.value.status) query.status = filters.value.status
       if (filters.value.search) query.search = filters.value.search
 
-      cards.value = rows(await api.list('rfid-cards', query))
+      cards.value = rows(await api.listAll('rfid-cards', query))
     } catch (err) {
       fail(err, 'Не удалось загрузить карты')
     } finally {

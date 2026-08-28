@@ -346,8 +346,12 @@ onMounted(async () => {
   await referenceOptions.loadCatalog("diploma_statuses");
   store.selectById(routeSelectedId());
   await store.load();
-  if (!store.selectedGraduate && store.filteredGraduates[0])
-    await selectGraduate(store.filteredGraduates[0]);
+  // Карточка открывается только по выбору человека или по адресу с
+  // идентификатором. Раньше здесь стояло «если ничего не выбрано — открой
+  // первого», и раздел встречал каждого заходящего **чужой фамилией**: адрес
+  // сам менялся на `/graduation/71`, а список оставался найденным, но
+  // непоказанным. Замерено 28.08.2026 двумя независимыми окнами браузера —
+  // оба попадали на одну и ту же карточку, значит дело не в памяти о выборе.
 });
 </script>
 
@@ -534,12 +538,19 @@ onMounted(async () => {
               @removed="removePhoto" /></template
           ><template #status
             ><AppStatusBadge
-              :label="statusLabel(GRADUATE_STATUS_OPTIONS, selected.status)"
+              :label="
+                'Выпускник: ' +
+                statusLabel(GRADUATE_STATUS_OPTIONS, selected.status)
+              "
               :tone="
                 statusTone(GRADUATE_STATUS_OPTIONS, selected.status)
               " /><AppStatusBadge
-              :label="diplomaStatusLabel(diploma?.status || 'draft')"
-              :tone="diplomaStatusTone(diploma?.status || 'draft')"
+              :label="
+                diploma
+                  ? 'Диплом: ' + diplomaStatusLabel(diploma.status || 'draft')
+                  : 'Диплом не заведён'
+              "
+              :tone="diploma ? diplomaStatusTone(diploma.status || 'draft') : 'neutral'"
           /></template>
           <div class="graduation-details">
             <q-tabs v-model="tab" dense align="left" class="graduation-tabs"

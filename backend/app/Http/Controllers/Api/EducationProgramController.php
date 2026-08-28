@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Support\Http\PageSize;
 
 class EducationProgramController extends Controller
 {
@@ -37,7 +38,7 @@ class EducationProgramController extends Controller
             })
             ->orderByDesc('year_start')
             ->orderBy('name')
-            ->paginate(50);
+            ->paginate(PageSize::from($request, 50));
 
         return EducationProgramResource::collection($programs);
     }

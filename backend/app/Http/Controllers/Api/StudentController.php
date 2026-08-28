@@ -23,6 +23,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Support\Http\PageSize;
 
 class StudentController extends Controller
 {
@@ -77,7 +78,7 @@ class StudentController extends Controller
             })
             ->orderBy('last_name')
             ->orderBy('first_name')
-            ->paginate(20);
+            ->paginate(PageSize::from($request, 20));
 
         $this->attachCompleteness($students->getCollection());
 

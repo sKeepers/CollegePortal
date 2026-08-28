@@ -14,6 +14,7 @@ use App\Models\DiplomaBlankBatch;
 use App\Models\Graduate;
 use App\Services\Graduation\DiplomaBlankService;
 use Illuminate\Http\JsonResponse;
+use App\Support\Http\PageSize;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
@@ -43,7 +44,7 @@ class DiplomaBlankController extends Controller
             ->orderBy('kind')
             ->orderBy('series')
             ->orderBy('number')
-            ->paginate(100);
+            ->paginate(PageSize::from($request, 100));
 
         return DiplomaBlankResource::collection($blanks);
     }
@@ -59,14 +60,14 @@ class DiplomaBlankController extends Controller
         return response()->json(['data' => $this->blanks->balance()]);
     }
 
-    public function batches(): AnonymousResourceCollection
+    public function batches(Request $request): AnonymousResourceCollection
     {
         $batches = DiplomaBlankBatch::query()
             ->withCount('blanks')
             ->with('receivedBy')
             ->orderByDesc('received_at')
             ->orderByDesc('id')
-            ->paginate(50);
+            ->paginate(PageSize::from($request, 50));
 
         return DiplomaBlankBatchResource::collection($batches);
     }

@@ -103,9 +103,9 @@ export const useGroupsStore = defineStore('groups', () => {
       // Группы — сам экран, справочники — его выпадающие списки: отсутствие права
       // на справочник обязано оставить список пустым, а не закрыть экран.
       const { payloads } = await loadReferences({
-        groups: api.list('groups', { per_page: 200 }),
-        programs: api.list('education-programs'),
-        teachers: api.list('teachers', { active_only: 1, per_page: 500 }),
+        groups: api.listAll('groups', { per_page: 200 }),
+        programs: api.listAll('education-programs'),
+        teachers: api.listAll('teachers', { active_only: 1 }),
       })
 
       groups.value = extractRows(payloads.groups)

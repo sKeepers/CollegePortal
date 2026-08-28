@@ -76,7 +76,7 @@ export const useDormStore = defineStore('dorm', () => {
       if (roomFilters.value.only_free) query.only_free = 1
       if (roomFilters.value.is_active !== null) query.is_active = roomFilters.value.is_active ? 1 : 0
 
-      rooms.value = rows(await api.list('dorm/rooms', query))
+      rooms.value = rows(await api.listAll('dorm/rooms', query))
     } catch (err) {
       fail(err, 'Не удалось загрузить комнаты')
     } finally {
@@ -92,7 +92,7 @@ export const useDormStore = defineStore('dorm', () => {
       if (placementFilters.value.dorm_room_id) query.dorm_room_id = placementFilters.value.dorm_room_id
       if (placementFilters.value.open !== null) query.open = placementFilters.value.open ? 1 : 0
 
-      placements.value = rows(await api.list('dorm/placements', query))
+      placements.value = rows(await api.listAll('dorm/placements', query))
     } catch (err) {
       fail(err, 'Не удалось загрузить заселения')
     } finally {
@@ -183,7 +183,7 @@ export const useDormStore = defineStore('dorm', () => {
       if (nightFilters.value.from) query.from = nightFilters.value.from
       if (nightFilters.value.to) query.to = nightFilters.value.to
 
-      incidents.value = rows(await api.list('dorm/incidents', query))
+      incidents.value = rows(await api.listAll('dorm/incidents', query))
     } catch (err) {
       fail(err, 'Не удалось загрузить происшествия')
     } finally {
@@ -199,7 +199,7 @@ export const useDormStore = defineStore('dorm', () => {
       if (nightFilters.value.from) query.from = nightFilters.value.from
       if (nightFilters.value.to) query.to = nightFilters.value.to
 
-      leaves.value = rows(await api.list('dorm/leaves', query))
+      leaves.value = rows(await api.listAll('dorm/leaves', query))
     } catch (err) {
       fail(err, 'Не удалось загрузить отлучки')
     } finally {
@@ -234,7 +234,7 @@ export const useDormStore = defineStore('dorm', () => {
 
     searching.value = true
     try {
-      const payload = await api.list('students', { search, per_page: 25 })
+      const payload = await api.listAll('students', { search, per_page: 25 })
       students.value = rows(payload).map((student) => ({
         id: student.id,
         full_name: student.full_name

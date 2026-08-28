@@ -24,6 +24,7 @@ use App\Support\Csv\CsvImport;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Support\Http\PageSize;
 
 class ExamController extends Controller
 {
@@ -39,7 +40,7 @@ class ExamController extends Controller
             ->when($request->string('exam_type')->toString(), fn ($query, string $type) => $query->where('exam_type', $type))
             ->orderByDesc('exam_date')
             ->orderBy('starts_at')
-            ->paginate(50);
+            ->paginate(PageSize::from($request, 50));
 
         return ExamResource::collection($exams);
     }

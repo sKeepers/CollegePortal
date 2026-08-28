@@ -24,7 +24,7 @@ export const useReferenceOptionsStore = defineStore('referenceOptions', () => {
     loading.value = true
     error.value = ''
     try {
-      const payload = await api.list('admin/reference/items', { catalog_code: code, is_active: 1 })
+      const payload = await api.listAll('admin/reference/items', { catalog_code: code, is_active: 1 })
       const items = rows(payload)
       catalogs.value = { ...catalogs.value, [code]: items }
       setState(code, items.length ? 'ok' : 'empty')

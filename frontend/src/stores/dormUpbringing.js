@@ -72,7 +72,7 @@ export const useDormUpbringingStore = defineStore('dormUpbringing', () => {
       const query = { per_page: 200 }
       if (conductFilters.value.active !== null) query.active = conductFilters.value.active ? 1 : 0
 
-      conduct.value = rows(await api.list('dorm/conduct', query))
+      conduct.value = rows(await api.listAll('dorm/conduct', query))
     } catch (err) {
       fail(err, 'Не удалось загрузить записи')
     } finally {
@@ -88,7 +88,7 @@ export const useDormUpbringingStore = defineStore('dormUpbringing', () => {
       if (socialFilters.value.category) query.category = socialFilters.value.category
       if (socialFilters.value.open !== null) query.open = socialFilters.value.open ? 1 : 0
 
-      social.value = rows(await api.list('dorm/social', query))
+      social.value = rows(await api.listAll('dorm/social', query))
     } catch (err) {
       fail(err, 'Не удалось загрузить социальный паспорт')
     } finally {
@@ -106,7 +106,7 @@ export const useDormUpbringingStore = defineStore('dormUpbringing', () => {
 
     searching.value = true
     try {
-      students.value = rows(await api.list('students', { search, per_page: 25 })).map((student) => ({
+      students.value = rows(await api.listAll('students', { search, per_page: 25 })).map((student) => ({
         id: student.id,
         full_name: student.full_name
           || [student.last_name, student.first_name, student.middle_name].filter(Boolean).join(' '),

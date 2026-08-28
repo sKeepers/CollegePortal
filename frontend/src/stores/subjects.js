@@ -112,9 +112,9 @@ export const useSubjectsStore = defineStore('subjects', () => {
 
     try {
       const [subjectsPayload, teachersPayload, lessonsPayload] = await Promise.all([
-        api.list('subjects'),
-        api.list('teachers', { per_page: 500 }),
-        api.list('schedule-lessons'),
+        api.listAll('subjects'),
+        api.listAll('teachers'),
+        api.listAll('schedule-lessons'),
       ])
 
       subjects.value = extractRows(subjectsPayload)

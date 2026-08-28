@@ -256,12 +256,12 @@ export const useAdmissionsStore = defineStore('admissions', () => {
       const [applicationsPayload, statsPayload, programsPayload, groupsPayload] = await Promise.all([
         api.list('applicant-applications', query),
         api.list('admissions/stats', apiFilters(filters.value)),
-        api.list('education-programs'),
+        api.listAll('education-programs'),
         // Группы здесь питают выпадающий список при зачислении, а не таблицу.
         // По умолчанию список групп отдаёт двадцать строк: с набором 2026-2027
         // их шестьдесят девять, и оператор молча не увидел бы три четверти —
         // включая ту, в которую зачисляет.
-        api.list('groups', { per_page: 200 }),
+        api.listAll('groups', { per_page: 200 }),
       ])
 
       applications.value = extractRows(applicationsPayload)

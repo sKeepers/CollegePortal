@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Support\Http\PageSize;
 
 class SpecialtyController extends Controller
 {
@@ -37,7 +38,7 @@ class SpecialtyController extends Controller
                 });
             })
             ->orderBy('code')
-            ->paginate(50);
+            ->paginate(PageSize::from($request, 50));
 
         return SpecialtyResource::collection($specialties);
     }

@@ -117,9 +117,9 @@ export const useEducationProgramsStore = defineStore('educationPrograms', () => 
       // Группы — справочник карточки: показывают, кто по программе учится.
       // Отказ по ним не должен закрывать реестр программ.
       const { payloads } = await loadReferences({
-        programs: api.list('education-programs'),
-        specialties: api.list('specialties'),
-        groups: api.list('groups', { per_page: 200 }),
+        programs: api.listAll('education-programs'),
+        specialties: api.listAll('specialties'),
+        groups: api.listAll('groups', { per_page: 200 }),
       })
 
       programs.value = extractRows(payloads.programs)

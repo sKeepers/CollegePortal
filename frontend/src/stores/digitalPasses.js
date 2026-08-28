@@ -92,10 +92,10 @@ export const useDigitalPassesStore = defineStore('digitalPasses', () => {
       // Пропуска — сам экран, владельцы — справочник для выдачи: охрана без прав
       // на реестры обязана видеть пропуска, а не пустой экран.
       const { payloads } = await loadReferences({
-        identities: api.list('digital-identities', identitiesParams),
-        students: options.includeOwners === false ? Promise.resolve({ data: [] }) : api.list('students'),
-        teachers: options.includeOwners === false ? Promise.resolve({ data: [] }) : api.list('teachers', { per_page: 500 }),
-        employees: options.includeOwners === false ? Promise.resolve({ data: [] }) : api.list('employees'),
+        identities: api.listAll('digital-identities', identitiesParams),
+        students: options.includeOwners === false ? Promise.resolve({ data: [] }) : api.listAll('students'),
+        teachers: options.includeOwners === false ? Promise.resolve({ data: [] }) : api.listAll('teachers'),
+        employees: options.includeOwners === false ? Promise.resolve({ data: [] }) : api.listAll('employees'),
       })
       identities.value = extractRows(payloads.identities)
       students.value = extractRows(payloads.students)

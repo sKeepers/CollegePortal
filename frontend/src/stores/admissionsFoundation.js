@@ -234,7 +234,7 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
     peopleLoading.value = true
 
     try {
-      const payload = await api.list('people', { search: query, per_page: 30 })
+      const payload = await api.listAll('people', { search: query, per_page: 30 })
       people.value = rows(payload)
       return people.value
     } catch (err) {

@@ -59,9 +59,9 @@ export const useDiplomaBlanksStore = defineStore('diplomaBlanks', () => {
     try {
       const query = Object.fromEntries(Object.entries(filters.value).filter(([, value]) => value !== '' && value !== null))
       const [list, balancePayload, batchPayload] = await Promise.all([
-        api.list('diploma-blanks', query),
+        api.listAll('diploma-blanks', query),
         api.get('diploma-blanks/balance'),
-        api.list('diploma-blanks/batches'),
+        api.listAll('diploma-blanks/batches'),
       ])
       blanks.value = extractRows(list)
       balance.value = extractRows(balancePayload)

@@ -27,6 +27,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Support\Http\PageSize;
 
 class CurriculumController extends Controller
 {
@@ -56,7 +57,7 @@ class CurriculumController extends Controller
             })
             ->orderByDesc('year_start')
             ->orderBy('name')
-            ->paginate(50);
+            ->paginate(PageSize::from($request, 50));
 
         return CurriculumResource::collection($curricula);
     }

@@ -9,6 +9,7 @@ use App\Models\JournalLesson;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use App\Support\Http\PageSize;
 
 /**
  * Отметки посещаемости студента списком: карточка студента и его кабинет.
@@ -42,7 +43,7 @@ class AttendanceController extends Controller
             ))
             ->latest('marked_at')
             ->latest('id')
-            ->paginate(20);
+            ->paginate(PageSize::from($request, 20));
 
         return StudentAttendanceResource::collection($attendance);
     }

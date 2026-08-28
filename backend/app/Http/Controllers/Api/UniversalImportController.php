@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use RuntimeException;
+use App\Support\Http\PageSize;
 
 class UniversalImportController extends Controller
 {
@@ -62,7 +63,7 @@ class UniversalImportController extends Controller
             ->with('user')
             ->when($request->string('data_type')->toString(), fn ($query, string $type) => $query->where('data_type', $type))
             ->latest()
-            ->paginate(20);
+            ->paginate(PageSize::from($request, 20));
 
         return ImportJobResource::collection($jobs);
     }
