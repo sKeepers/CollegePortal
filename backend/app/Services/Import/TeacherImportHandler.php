@@ -8,6 +8,7 @@ use App\Services\AccountProvisioningService;
 use App\Services\Admissions\SnilsService;
 use App\Services\PersonService;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use RuntimeException;
 
 /**
@@ -95,14 +96,42 @@ class TeacherImportHandler extends AbstractImportHandler
         ];
     }
 
+    /**
+     * Преподаватель, к которому относится строка.
+     *
+     * Ключ обновления объявлен один — email, и до 28.08.2026 других не было: строка
+     * без email не находила никого и заводила нового преподавателя **каждую загрузку**.
+     * В выгрузке кадров, которую принёс владелец 28.08, email пуст у всех 175 человек,
+     * то есть вторая загрузка того же файла удвоила бы список целиком — и обещание
+     * `docs/import-templates/README.md` «уже загруженные строки обновятся, а не
+     * задвоятся» для преподавателей не выполнялось.
+     *
+     * Поэтому при пустом email строка ищет человека — так же, как это давно делает
+     * загрузка сотрудников (`EmployeeImportHandler::findExisting`), — и берёт его
+     * карточку преподавателя. Неоднозначное ФИО сюда не доходит: оно отсеивается
+     * в `businessValidationErrors` до единой записи.
+     */
     public function findExisting(array $data): ?Model
     {
-        return ! empty($data['email']) ? Teacher::where('email', $data['email'])->first() : null;
+        if (! empty($data['email']) && ($teacher = Teacher::where('email', $data['email'])->first())) {
+            return $teacher;
+        }
+
+        $person = $this->matchPerson($data);
+
+        return $person ? Teacher::where('person_id', $person->id)->first() : null;
     }
 
     public function businessValidationErrors(array $data): array
     {
         $errors = [];
+
+        // Двух людей с одним ФИО строка без email различить нечем, и любой выбор
+        // здесь — угадывание: карточка ушла бы не тому человеку. Отказ приходит на
+        // предпросмотре, до единой записи.
+        if (empty($data['email']) && $this->matchingPeople($data)->count() > 1) {
+            $errors['last_name'] = ['В портале несколько человек с таким ФИО. Уточните строку: email, СНИЛС или дата рождения.'];
+        }
 
         // Колонка «Создать учётную запись» отказывает, а не создаёт молча:
         // почему именно так — в `AccountProvisioningService::ACCOUNTS_ARE_ISSUED_SEPARATELY`.
@@ -174,7 +203,7 @@ class TeacherImportHandler extends AbstractImportHandler
             'snils' => $data['snils'] ?? null,
         ], static fn ($value): bool => $value !== null && $value !== '');
 
-        $person = $teacher->person ?: $this->findPersonBySnils($data['snils'] ?? null);
+        $person = $teacher->person ?: $this->matchPerson($data);
 
         if (! $person) {
             $person = $this->people->createPerson($shared);
@@ -187,6 +216,59 @@ class TeacherImportHandler extends AbstractImportHandler
         }
 
         $teacher->refresh();
+    }
+
+    /**
+     * Человек, которого описывает строка, или `null`, если такого в портале нет.
+     *
+     * Порядок тот же, что у сотрудников: СНИЛС, затем ФИО с датой рождения, затем
+     * одно ФИО. Совпадений может оказаться несколько — тогда выбирать нельзя, и
+     * метод возвращает `null`: строку к этому времени уже остановила проверка
+     * `businessValidationErrors`, а вызов со стороны (`TeacherCsvService`) заведёт
+     * нового человека, но не привяжет карточку к чужому.
+     *
+     * Совпадение ищется среди всех людей, включая студентов. Полный тёзка студента
+     * и преподавателя получил бы одну карточку человека на двоих: на 28.08.2026 из
+     * 243 строк выгрузки кадров со студентами не совпал никто — замерено запросом к
+     * стенду, — а если такой случай появится, его остановит та же проверка на
+     * неоднозначность.
+     */
+    private function matchPerson(array $data): ?Person
+    {
+        $people = $this->matchingPeople($data);
+
+        return $people->count() === 1 ? $people->first() : null;
+    }
+
+    /**
+     * Все люди, подходящие под строку. Больше одного значит «непонятно кто».
+     *
+     * @return \Illuminate\Support\Collection<int, Person>
+     */
+    private function matchingPeople(array $data): Collection
+    {
+        if ($person = $this->findPersonBySnils($data['snils'] ?? null)) {
+            return collect([$person]);
+        }
+
+        if (empty($data['last_name']) || empty($data['first_name'])) {
+            return collect();
+        }
+
+        $byName = Person::query()
+            ->where('last_name', $data['last_name'])
+            ->where('first_name', $data['first_name'])
+            ->where('middle_name', $data['middle_name'] ?? null);
+
+        if (filled($data['birth_date'] ?? null)) {
+            $byBirthDate = (clone $byName)->where('birth_date', $data['birth_date'])->get();
+
+            if ($byBirthDate->isNotEmpty()) {
+                return $byBirthDate;
+            }
+        }
+
+        return $byName->get();
     }
 
     private function findPersonBySnils(?string $snils): ?Person
