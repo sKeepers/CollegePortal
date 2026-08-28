@@ -63,7 +63,7 @@ export const useTeachingLoadStore = defineStore('teachingLoad', () => {
     loading.value = true; error.value = ''
     try {
       const requests = [api.list('teaching-loads')]
-      if (includeReferenceData) requests.push(api.listAll('teachers'), api.listAll('groups', { per_page: 200 }), api.listAll('subjects'))
+      if (includeReferenceData) requests.push(api.listAll('teachers'), api.listAll('groups'), api.listAll('subjects'))
       const [loadsPayload, teachersPayload = { data: [] }, groupsPayload = { data: [] }, subjectsPayload = { data: [] }] = await Promise.all(requests)
       loads.value = extractRows(loadsPayload)
       teachers.value = extractRows(teachersPayload)

@@ -85,7 +85,7 @@ export const useExamsStore = defineStore('exams', () => {
       // Экзамены — сам экран, остальное — справочники его форм: преподаватель
       // без прав на них обязан увидеть расписание ГИА, а не пустой экран.
       const { payloads } = await loadReferences({
-        exams: api.listAll('exams'), groups: api.listAll('groups', { per_page: 200 }), subjects: api.listAll('subjects'), teachers: api.listAll('teachers'), classrooms: api.listAll('classrooms'), students: api.listAll('students'),
+        exams: api.listAll('exams'), groups: api.listAll('groups'), subjects: api.listAll('subjects'), teachers: api.listAll('teachers'), classrooms: api.listAll('classrooms'), students: api.listAll('students'),
       })
       exams.value = extractRows(payloads.exams); groups.value = extractRows(payloads.groups); subjects.value = extractRows(payloads.subjects); teachers.value = extractRows(payloads.teachers); classrooms.value = extractRows(payloads.classrooms); students.value = extractRows(payloads.students)
       if (selectedId.value && !selectedExam.value) selectedId.value = null

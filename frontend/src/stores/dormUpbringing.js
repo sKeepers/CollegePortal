@@ -106,7 +106,9 @@ export const useDormUpbringingStore = defineStore('dormUpbringing', () => {
 
     searching.value = true
     try {
-      students.value = rows(await api.listAll('students', { search, per_page: 25 })).map((student) => ({
+      // Подсказка по мере набора: предел здесь осознанный, а не обрезанный
+      // список. `listAll` тянул бы всех подходящих на каждое нажатие клавиши.
+      students.value = rows(await api.list('students', { search, per_page: 25 })).map((student) => ({
         id: student.id,
         full_name: student.full_name
           || [student.last_name, student.first_name, student.middle_name].filter(Boolean).join(' '),

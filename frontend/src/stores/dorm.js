@@ -234,7 +234,9 @@ export const useDormStore = defineStore('dorm', () => {
 
     searching.value = true
     try {
-      const payload = await api.listAll('students', { search, per_page: 25 })
+      // Подсказка по мере набора: предел здесь осознанный, а не обрезанный
+      // список. `listAll` тянул бы всех подходящих на каждое нажатие клавиши.
+      const payload = await api.list('students', { search, per_page: 25 })
       students.value = rows(payload).map((student) => ({
         id: student.id,
         full_name: student.full_name

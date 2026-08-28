@@ -151,7 +151,7 @@ export const useStudentsStore = defineStore('students', () => {
         api.listAll('students', filters.value),
         // Группы питают три выпадающих списка сразу — группа, курс и
         // специальность. Страницы в двадцать строк для этого мало.
-        api.listAll('groups', { per_page: 200 }),
+        api.listAll('groups'),
       ])
 
       students.value = extractRows(studentsPayload)

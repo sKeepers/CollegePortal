@@ -142,7 +142,7 @@ export const useHrStore = defineStore('hr', () => {
     // существующего человека» молча оставалась пустой. Дубли это не создаёт:
     // существующего человека находит HrService при сохранении карточки.
     const peoplePayload = useAuthStore().can('people.view')
-      ? await api.listAll('people', { per_page: 100 }).catch(() => ({ data: [] }))
+      ? await api.listAll('people').catch(() => ({ data: [] }))
       : { data: [] }
     departments.value = rows(depPayload)
     positions.value = rows(posPayload)

@@ -261,7 +261,7 @@ export const useAdmissionsStore = defineStore('admissions', () => {
         // По умолчанию список групп отдаёт двадцать строк: с набором 2026-2027
         // их шестьдесят девять, и оператор молча не увидел бы три четверти —
         // включая ту, в которую зачисляет.
-        api.listAll('groups', { per_page: 200 }),
+        api.listAll('groups'),
       ])
 
       applications.value = extractRows(applicationsPayload)

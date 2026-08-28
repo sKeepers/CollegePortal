@@ -64,6 +64,188 @@ class ListsHonourPageSizeTest extends TestCase
         )));
     }
 
+    /**
+     * Ни один список, к которому ходит помощник, не отказывает ему в странице.
+     *
+     * 29.08.2026 владелец увидел на экране «RFID-карты» красную полосу «Поле
+     * „per page“ должно быть не больше 200» — и пустой реестр при 244 картах.
+     * Причина: `api.listAll` просит одну крупную страницу для всех, а ручка с
+     * потолком ниже **не отдаёт своё, а отвечает 422**. Так же погасли три
+     * экрана общежития с потолком 300.
+     *
+     * Поймать это можно было только запросом: и код, и прогон по отдельности
+     * выглядели правильными. Поэтому сторож читает **обе стороны** и ничего не
+     * помнит наизусть:
+     *
+     * - какие ресурсы зовут через `listAll` и сколько строк просят — из самого
+     *   фронтенда;
+     * - какой контроллер отвечает за ресурс — из таблицы маршрутов;
+     * - какой потолок он объявляет — из его исходника.
+     *
+     * Список ресурсов руками сюда вписывать нельзя: ровно из-за такого списка
+     * `rfid-cards` и не попал в первый обход — его там не было, а в портале он
+     * был.
+     */
+    public function test_no_list_reached_by_the_helper_refuses_the_page_it_asks_for(): void
+    {
+        $api = base_path('../frontend/src/services/api.js');
+
+        if (! is_readable($api)) {
+            // Дерево смонтировано без фронтенда — читать нечего. Проверка выше,
+            // про числа в коде, выполняется и здесь.
+            $this->addToAssertionCount(1);
+
+            return;
+        }
+
+        preg_match('/const WHOLE_LIST_PAGE = (\d+)/', (string) file_get_contents($api), $match);
+        $asked = (int) ($match[1] ?? 0);
+
+        $this->assertGreaterThan(0, $asked, 'В `api.js` не нашлось `WHOLE_LIST_PAGE`: неизвестно, сколько просит помощник.');
+        $this->assertLessThanOrEqual(PageSize::MAX, $asked, 'Помощник просит больше, чем разрешает `PageSize::MAX`.');
+
+        $resources = [];
+
+        foreach ($this->frontendSources() as $file) {
+            if (preg_match_all("/listAll\(\s*'([a-z0-9\/_-]+)'/i", (string) file_get_contents($file), $found)) {
+                $resources = array_merge($resources, $found[1]);
+            }
+        }
+
+        $resources = array_values(array_unique($resources));
+        $this->assertNotEmpty($resources, 'Ни одного вызова `listAll` не нашлось — сторож смотрит не туда.');
+
+        $guilty = [];
+
+        foreach ($resources as $resource) {
+            $controller = $this->controllerFor($resource);
+
+            if ($controller === null || ! is_readable($controller)) {
+                continue;
+            }
+
+            $source = (string) file_get_contents($controller);
+
+            if (preg_match_all("/'per_page'\s*=>\s*\[[^\]]*max:(\d+)/", $source, $ceilings) === 0) {
+                continue;
+            }
+
+            foreach ($ceilings[1] as $ceiling) {
+                if ((int) $ceiling < $asked) {
+                    $guilty[] = sprintf('%s → %s: потолок %d, а просят %d', $resource, basename($controller), $ceiling, $asked);
+                }
+            }
+        }
+
+        $this->assertSame([], $guilty, implode("\n", array_merge(
+            ['Эти списки ответят помощнику отказом 422, и экран не наполнится вовсе:'],
+            $guilty,
+            ['Поднимите потолок до `PageSize::MAX` — или перестаньте звать туда `listAll`, если низкий потолок осмыслен.'],
+        )));
+    }
+
+    /**
+     * Никто не передаёт помощнику размер страницы.
+     *
+     * `listAll` берёт список целиком и переданный размер игнорирует — значит
+     * параметр в вызове читается как действующий, а не действует. Так четыре
+     * подсказки по мере набора превратились из «первых тридцати» в «всех
+     * подходящих»: замер на стенде 29.08.2026 — по запросу «а» подходит 826
+     * человек из 841, по «ан» — 402, и это на каждое нажатие клавиши.
+     *
+     * Подсказке нужен `list` с явным пределом: там тридцать строк — не
+     * обрезанный список, а осознанная граница.
+     */
+    public function test_nobody_hands_the_helper_a_page_size(): void
+    {
+        $sources = $this->frontendSources();
+
+        if ($sources === []) {
+            $this->addToAssertionCount(1);
+
+            return;
+        }
+
+        $guilty = [];
+
+        foreach ($sources as $file) {
+            // Комментарии выбрасываются до разбора: в самом помощнике вызов с
+            // `per_page` приведён как пример того, чего делать нельзя, и сторож
+            // краснел на нём. Проверка, кричащая на невиновных, живёт до первой
+            // спешки, а потом её выключают.
+            $source = $this->withoutComments((string) file_get_contents($file));
+
+            if (preg_match_all("/listAll\([^)]*\b(per_page|page)\s*:/", $source, $found) === 0) {
+                continue;
+            }
+
+            foreach ($found[1] as $parameter) {
+                $guilty[] = basename($file).': listAll(..., { '.$parameter.': ... })';
+            }
+        }
+
+        $this->assertSame([], $guilty, implode("\n", array_merge(
+            ['Помощнику передают размер страницы, а он его не принимает — параметр вводит в заблуждение:'],
+            $guilty,
+            ['Нужен предел — зовите `list`. Нужен весь список — уберите параметр.'],
+        )));
+    }
+
+    /** Исходник без комментариев: строчных и блочных. */
+    private function withoutComments(string $source): string
+    {
+        $source = preg_replace('#/\\*.*?\\*/#s', '', $source) ?? $source;
+
+        return preg_replace('#^\\s*//.*$#m', '', $source) ?? $source;
+    }
+
+    /** @return list<string> */
+    private function frontendSources(): array
+    {
+        $root = base_path('../frontend/src');
+
+        if (! is_dir($root)) {
+            return [];
+        }
+
+        $files = [];
+        $walker = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS));
+
+        foreach ($walker as $file) {
+            if ($file->isFile() && in_array($file->getExtension(), ['js', 'vue'], true)) {
+                $files[] = $file->getPathname();
+            }
+        }
+
+        return $files;
+    }
+
+    /** Какой контроллер отвечает за `GET /api/<resource>`. */
+    private function controllerFor(string $resource): ?string
+    {
+        foreach (\Illuminate\Support\Facades\Route::getRoutes() as $route) {
+            if ($route->uri() !== 'api/'.$resource || ! in_array('GET', $route->methods(), true)) {
+                continue;
+            }
+
+            $action = $route->getAction('controller');
+
+            if (! is_string($action) || ! str_contains($action, '@')) {
+                continue;
+            }
+
+            [$class] = explode('@', $action);
+
+            if (! class_exists($class)) {
+                continue;
+            }
+
+            return (new \ReflectionClass($class))->getFileName() ?: null;
+        }
+
+        return null;
+    }
+
     public function test_a_list_gives_as_many_rows_as_asked(): void
     {
         $this->withApiAuth();

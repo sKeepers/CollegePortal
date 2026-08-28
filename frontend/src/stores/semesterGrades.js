@@ -68,8 +68,8 @@ export const useSemesterGradesStore = defineStore('semesterGrades', () => {
 
     try {
       const [groupsPayload, subjectsPayload] = await Promise.all([
-        api.listAll('groups', { per_page: 200 }),
-        api.listAll('subjects', { per_page: 500 }),
+        api.listAll('groups'),
+        api.listAll('subjects'),
       ])
       groups.value = extractRows(groupsPayload)
       subjects.value = extractRows(subjectsPayload)
