@@ -56,7 +56,19 @@ class Person extends Model
     public function digitalIdentities(): HasMany { return $this->hasMany(DigitalIdentity::class); }
     public function rfidCards(): HasMany { return $this->hasMany(RfidCard::class); }
 
-    /** Карта, которая сейчас на руках. У человека она одна. */
+    /**
+     * Последняя выданная карта из тех, что на руках.
+     *
+     * **Не единственная.** Раньше здесь стояло «у человека она одна», и это
+     * было верно ровно до 28.08.2026: владелец сказал, что на человека бывает
+     * записано несколько карт, и запрет на вторую снят в `RfidCardService`.
+     * Отношение осталось для мест, где нужна одна строка на человека — список
+     * выдачи, карточка человека, — и берёт самую свежую по `issued_at`.
+     *
+     * Сколько их всего, отвечает `rfidCardsOnHands()`: полагаться на это
+     * отношение как на «все карты» нельзя, оно вернёт одну и промолчит об
+     * остальных.
+     */
     public function currentRfidCard(): HasOne
     {
         return $this->hasOne(RfidCard::class)->ofMany(
@@ -64,6 +76,14 @@ class Person extends Model
             fn ($query) => $query->whereIn('status', [RfidCard::STATUS_ISSUED, RfidCard::STATUS_BLOCKED]),
         );
     }
+    /** Все карты, которые сейчас на руках: их бывает несколько. */
+    public function rfidCardsOnHands(): HasMany
+    {
+        return $this->hasMany(RfidCard::class)
+            ->whereIn('status', [RfidCard::STATUS_ISSUED, RfidCard::STATUS_BLOCKED])
+            ->orderByDesc('issued_at');
+    }
+
     public function employees(): HasMany { return $this->hasMany(Employee::class); }
 
     public function primaryStudent(): HasOne { return $this->hasOne(Student::class)->latestOfMany(); }

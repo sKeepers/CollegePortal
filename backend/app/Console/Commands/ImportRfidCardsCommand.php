@@ -56,7 +56,7 @@ class ImportRfidCardsCommand extends Command
         }
 
         $bound = 0;
-        $already = [];
+        $second = [];
         $missing = [];
         $ambiguous = [];
         $failed = [];
@@ -85,22 +85,23 @@ class ImportRfidCardsCommand extends Command
                 ->where('status', RfidCard::STATUS_ISSUED)
                 ->first();
 
-            // Вторая карта тому же человеку — это решение, а не мелочь, и
-            // числом её показывать мало. В выгрузке 28.08.2026 такая строка
-            // есть: один преподаватель числится с двумя картами, обе строки
-            // сошлись по ФИО. Пропустить молча — значит оставить вопрос
-            // «какая из двух у него на руках» ненайденным.
-            if ($existing !== null) {
-                $already[] = $this->fio($row).' — на руках карта '.$existing->uid.', из файла '.$row['card'];
-
-                continue;
-            }
-
             try {
                 $cards->bind($person, $row['card'], null, 'Перенос из СКУД '.$row['department']);
                 $bound++;
             } catch (Throwable $e) {
                 $failed[] = $this->fio($row).' — '.$e->getMessage();
+
+                continue;
+            }
+
+            // Вторая карта тому же человеку **привязывается**, а не
+            // пропускается: 28.08.2026 владелец сказал, что на человека бывает
+            // записано несколько карт, и запрет на вторую снят в
+            // `RfidCardService`. Но в отчёт она идёт отдельной строкой — если
+            // две карты сошлись на одном человеке по ошибке сопоставления,
+            // молчание сделало бы эту ошибку ненаходимой.
+            if ($existing !== null) {
+                $second[] = $this->fio($row).' — вторая карта: была '.$existing->uid.', добавлена '.$row['card'];
             }
         }
 
@@ -110,14 +111,14 @@ class ImportRfidCardsCommand extends Command
 
         $this->line('Строк в выгрузке: '.count($rows));
         $this->line('Карт привязано: '.$bound);
-        $this->line('Уже была карта на руках: '.count($already));
+        $this->line('Из них вторая карта тому же человеку: '.count($second));
         $this->line('Человек не найден: '.count($missing));
         $this->line('Тёзки, пропущены: '.count($ambiguous));
         $this->line('Отказов: '.count($failed));
 
         // Пропущенное печатается поимённо, а не числом: число говорит «что-то
         // не сошлось», а список говорит, что именно чинить.
-        foreach (['Не найдены' => $missing, 'Тёзки' => $ambiguous, 'Уже с картой' => $already, 'Отказы' => $failed] as $title => $list) {
+        foreach (['Не найдены' => $missing, 'Тёзки' => $ambiguous, 'Вторая карта' => $second, 'Отказы' => $failed] as $title => $list) {
             if ($list === []) {
                 continue;
             }

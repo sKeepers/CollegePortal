@@ -124,12 +124,14 @@ class ImportRfidCardsCommandTest extends TestCase
         $this->assertDatabaseHas('rfid_cards', ['uid' => '0002222222', 'person_id' => $second->id]);
     }
 
-    public function test_a_second_card_for_the_same_person_is_named_not_swallowed(): void
+    public function test_a_second_card_for_the_same_person_is_bound_and_named(): void
     {
-        // В выгрузке 28.08.2026 такая строка есть: один преподаватель
-        // числится с двумя картами, обе сошлись по ФИО. Вторая не
-        // привязывается — у человека карта одна на руках, — но и молчать о
-        // ней нельзя: иначе вопрос «какая из двух настоящая» никто не задаст.
+        // В выгрузке 28.08.2026 такая строка есть: один преподаватель числится
+        // с двумя картами, обе сошлись по ФИО. Обе привязываются — владелец в
+        // тот же день сказал, что на человека бывает записано несколько карт,
+        // — но вторая идёт в отчёт отдельной строкой: если две карты сошлись
+        // на одном человеке по ошибке сопоставления, молчание сделало бы эту
+        // ошибку ненаходимой.
         $person = Person::create(['last_name' => 'Трубач', 'first_name' => 'Екатерина', 'middle_name' => 'Ивановна', 'status' => 'active']);
 
         $file = $this->csv([
@@ -138,13 +140,13 @@ class ImportRfidCardsCommandTest extends TestCase
         ]);
 
         $this->artisan('identity:import-cards', ['file' => $file])
-            ->expectsOutputToContain('Карт привязано: 1')
-            ->expectsOutputToContain('Уже была карта на руках: 1')
-            ->expectsOutputToContain('на руках карта 0001111111, из файла 2222222')
+            ->expectsOutputToContain('Карт привязано: 2')
+            ->expectsOutputToContain('Из них вторая карта тому же человеку: 1')
+            ->expectsOutputToContain('была 0001111111, добавлена 2222222')
             ->assertExitCode(0);
 
         $this->assertDatabaseHas('rfid_cards', ['uid' => '0001111111', 'person_id' => $person->id]);
-        $this->assertDatabaseMissing('rfid_cards', ['uid' => '0002222222']);
+        $this->assertDatabaseHas('rfid_cards', ['uid' => '0002222222', 'person_id' => $person->id]);
     }
 
     public function test_a_dry_run_writes_nothing(): void
