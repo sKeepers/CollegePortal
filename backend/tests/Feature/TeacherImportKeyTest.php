@@ -85,6 +85,38 @@ class TeacherImportKeyTest extends TestCase
         $this->assertStringContainsString('несколько человек', $result['validation_errors'][0]['reason']);
     }
 
+
+    /**
+     * Число вместо отчества останавливает строку, а не заводит человека.
+     *
+     * Так выгрузка CARDDEX помечает, что карт у человека несколько: «1», «2»,
+     * «3» вместо отчества. 28.08.2026 загрузка приняла пометку за отчество и
+     * завела семь карточек вместо трёх — три Михайловых Дмитрия, две Сидоренко
+     * Алины, две Трубач Екатерины. Разбирали слиянием, задним числом.
+     */
+    public function test_a_number_instead_of_a_name_stops_the_row(): void
+    {
+        $result = $this->import('teachers', "Фамилия;Имя;Отчество\nМихайлов;Дмитрий;1\n", [
+            'last_name' => 'Фамилия', 'first_name' => 'Имя', 'middle_name' => 'Отчество',
+        ], 'create');
+
+        $this->assertSame(0, $result['created_count'], 'пометку выгрузки нельзя принять за человека');
+        $this->assertSame(1, $result['error_count']);
+        $this->assertSame(0, Teacher::count());
+        $this->assertStringContainsString('числом', $result['validation_errors'][0]['reason']);
+    }
+
+    /** Отчество из букв по-прежнему грузится: правило не должно ловить живых людей. */
+    public function test_a_real_patronymic_still_loads(): void
+    {
+        $result = $this->import('teachers', "Фамилия;Имя;Отчество\nМихайлов;Дмитрий;Петрович\n", [
+            'last_name' => 'Фамилия', 'first_name' => 'Имя', 'middle_name' => 'Отчество',
+        ], 'create');
+
+        $this->assertSame(1, $result['created_count']);
+        $this->assertSame(0, $result['error_count']);
+    }
+
     private function import(string $type, string $csv, array $mapping, string $mode): array
     {
         $jobId = $this->preview($type, $csv);
