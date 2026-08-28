@@ -348,8 +348,15 @@ function printRegistry() {
               <td>{{ row.supplement_blank || '—' }}</td>
               <td>{{ formatRuDate(row.issue_date) }}</td>
             </tr>
+            <!--
+              «Пока нет» — утверждение о колледже, и говорить его можно только
+              когда ответ получен. Если запрос не удался, книга молчит о том,
+              чего не знает.
+            -->
             <tr v-if="!store.registry.length && !store.loading">
-              <td colspan="6" class="text-center text-grey-7">Выданных дипломов пока нет.</td>
+              <td colspan="6" class="text-center text-grey-7">
+                {{ store.error ? 'Книгу прочитать не удалось: ответ не получен. Это не значит, что дипломов нет.' : 'Выданных дипломов пока нет.' }}
+              </td>
             </tr>
           </tbody>
         </q-markup-table>
