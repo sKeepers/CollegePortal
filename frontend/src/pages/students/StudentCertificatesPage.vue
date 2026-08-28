@@ -29,6 +29,7 @@ const columns = [
   { name: 'course', label: 'Курс', field: 'course', align: 'left' },
   { name: 'specialty', label: 'Специальность', field: 'specialty', align: 'left' },
   { name: 'issued_on', label: 'Дата выдачи', field: 'issued_on', align: 'left' },
+  { name: 'source', label: 'Откуда', field: 'source', align: 'left' },
   { name: 'received_on', label: 'Получена', field: 'received_on', align: 'left' },
 ]
 
@@ -143,8 +144,29 @@ const letterhead = computed(() => ({
       </template>
     </PageHeader>
 
+    <!--
+      Ошибка показывается раньше пустоты и вместо неё.
+
+      29.08.2026 владелец увидел на этом экране «Выдано справок: 0» и «Справок
+      пока не выдавали» — а таблицы в базе не было вовсе, миграция не была
+      накатана. Экран не мог работать и сказал об этом **словами о колледже**;
+      владелец прочитал подпись как факт и написал, что журнал нужен завести.
+
+      Пустое состояние обязано отличать «данных нет» от «спросить не удалось».
+    -->
+    <q-banner v-if="store.error" class="bg-red-1 text-red-9 q-mb-md" rounded>{{ store.error }}</q-banner>
+
     <q-card flat bordered class="q-mb-sm">
       <q-card-section class="row items-center q-gutter-sm">
+        <!--
+          Поиск по номеру стоит первым: ради него владелец и просил реестр —
+          «найти по номеру, кому и когда выдавалась эта справка». Номер
+          единственен, поэтому он отменяет остальные отборы.
+        -->
+        <q-input
+          :model-value="store.filters.number" dense outlined clearable type="number"
+          style="min-width: 160px" label="Номер справки"
+          @update:model-value="(value) => store.setFilters({ number: value || null })" />
         <q-select
           :model-value="store.filters.year" dense outlined clearable emit-value map-options
           style="min-width: 160px" label="Год выдачи" :options="store.yearOptions"
@@ -166,7 +188,14 @@ const letterhead = computed(() => ({
 
     <q-card flat bordered>
       <q-card-section>
-        <div class="text-subtitle2 q-mb-sm">Выдано справок: {{ total }}</div>
+        <!--
+          Число называется только когда его посчитали. При неполученном ответе
+          «Выдано справок: 0» — то же утверждение о колледже, что и пустая
+          таблица: владелец видел именно эту строку и поверил ей.
+        -->
+        <div class="text-subtitle2 q-mb-sm">
+          Выдано справок: {{ store.error ? 'неизвестно, ответ не получен' : total }}
+        </div>
 
         <q-table
           v-model:selected="selected"
@@ -180,6 +209,18 @@ const letterhead = computed(() => ({
           <template #body-cell-issued_on="props">
             <q-td :props="props">{{ ru(props.row.issued_on) }}</q-td>
           </template>
+          <!--
+            Откуда строка. У перенесённой с бумаги нет ни даты выдачи, ни курса,
+            ни сроков обучения — в книге колледжа их не было вовсе. Показывать
+            её как выданную порталом значило бы обещать документ, который портал
+            воспроизвести не может.
+          -->
+          <template #body-cell-source="props">
+            <q-td :props="props">
+              <span v-if="props.row.source === 'paper'" class="text-caption text-grey-7">бумажный реестр</span>
+              <span v-else class="text-caption">портал</span>
+            </q-td>
+          </template>
           <template #body-cell-received_on="props">
             <q-td :props="props">
               <q-btn flat dense size="sm" :label="props.row.received_on ? ru(props.row.received_on) : 'отметить'"
@@ -188,8 +229,13 @@ const letterhead = computed(() => ({
           </template>
           <template #no-data>
             <AppEmptyState
+              v-if="!store.error"
               title="Справок пока не выдавали"
               description="Нумерация продолжает бумажный реестр колледжа." />
+            <AppEmptyState
+              v-else
+              title="Реестр прочитать не удалось"
+              description="Это не значит, что справок нет: ответ не получен. Сообщение об ошибке — выше." />
           </template>
         </q-table>
       </q-card-section>

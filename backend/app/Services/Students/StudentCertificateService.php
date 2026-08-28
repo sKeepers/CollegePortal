@@ -76,6 +76,9 @@ class StudentCertificateService
 
             return collect($numbers)->map(fn (int $number): StudentCertificate => StudentCertificate::create(
                 $snapshot + [
+                    // Выдано порталом: снимок полон, и это отличает строку от
+                    // перенесённой из бумажного реестра, где половины полей нет.
+                    'source' => StudentCertificate::SOURCE_PORTAL,
                     'student_id' => $student->id,
                     'number' => $number,
                     'issued_on' => $issuedOn,
@@ -98,12 +101,17 @@ class StudentCertificateService
      *
      * @return Collection<int, StudentCertificate>
      */
-    public function registry(?int $year = null, ?int $groupId = null): Collection
+    public function registry(?int $year = null, ?int $groupId = null, ?int $number = null): Collection
     {
         return StudentCertificate::query()
             ->with(['student.group', 'issuedBy'])
-            ->when($year !== null, fn ($query) => $query->whereYear('issued_on', $year))
-            ->when($groupId !== null, fn ($query) => $query->whereHas('student', fn ($s) => $s->where('group_id', $groupId)))
+            // Поиск по номеру — то, ради чего владелец просил реестр: «найти по
+            // номеру, кому и когда выдавалась эта справка». Он идёт первым и
+            // отменяет остальные отборы: номер единственен, и если его нашли,
+            // год и группа только мешают.
+            ->when($number !== null, fn ($query) => $query->where('number', $number))
+            ->when($number === null && $year !== null, fn ($query) => $query->whereYear('issued_on', $year))
+            ->when($number === null && $groupId !== null, fn ($query) => $query->whereHas('student', fn ($s) => $s->where('group_id', $groupId)))
             ->orderBy('number')
             ->get();
     }

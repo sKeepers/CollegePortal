@@ -45,7 +45,9 @@ class StudentCertificateController extends Controller
         $year = $request->integer('year') ?: null;
         $groupId = $request->integer('group_id') ?: null;
 
-        $rows = $this->certificates->registry($year, $groupId);
+        $number = $request->integer('number') ?: null;
+
+        $rows = $this->certificates->registry($year, $groupId, $number);
 
         return response()->json([
             'data' => StudentCertificateResource::collection($rows)->resolve(),
@@ -53,6 +55,7 @@ class StudentCertificateController extends Controller
                 'total' => $rows->count(),
                 'year' => $year,
                 'group_id' => $groupId,
+                'number' => $number,
                 'years' => $this->certificates->years(),
             ],
         ]);
