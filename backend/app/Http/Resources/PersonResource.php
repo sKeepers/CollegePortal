@@ -57,6 +57,11 @@ class PersonResource extends JsonResource
             'digital_identities' => DigitalIdentityResource::collection($this->whenLoaded('digitalIdentities')),
             // Карта, которая сейчас на руках. Комендант заходит в «Люди» и
             // должен видеть её прямо в карточке, не переходя в раздел карт.
+            //
+            // Карт бывает **несколько** (слово владельца 28.08.2026), а поле
+            // отдаёт одну — самую свежую. Поэтому рядом идёт их число: без
+            // него карточка показывала бы одну карту и молчала об остальных,
+            // а комендант, вернувший «ту самую», считал бы, что закрыл проход.
             'rfid_card' => $this->whenLoaded('currentRfidCard', fn () => $this->currentRfidCard === null ? null : [
                 'id' => $this->currentRfidCard->id,
                 'uid' => $this->currentRfidCard->uid,
@@ -65,6 +70,7 @@ class PersonResource extends JsonResource
                 'status_label' => RfidCardResource::statusLabel($this->currentRfidCard->status),
                 'issued_at' => $this->currentRfidCard->issued_at?->toISOString(),
             ]),
+            'rfid_cards_on_hands' => $this->whenLoaded('rfidCardsOnHands', fn () => $this->rfidCardsOnHands->count()),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

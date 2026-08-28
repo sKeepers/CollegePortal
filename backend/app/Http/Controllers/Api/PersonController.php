@@ -83,6 +83,7 @@ class PersonController extends Controller
             'users.roles',
             'digitalIdentities',
             'currentRfidCard',
+            'rfidCardsOnHands',
         ])->loadCount(['students', 'teachers', 'employees', 'applicants', 'applicantApplications', 'graduates', 'users', 'digitalIdentities']));
     }
 
@@ -218,6 +219,7 @@ class PersonController extends Controller
             'users.roles',
             'digitalIdentities',
             'currentRfidCard',
+            'rfidCardsOnHands',
         ])->loadCount(['students', 'teachers', 'employees', 'applicants', 'applicantApplications', 'graduates', 'users', 'digitalIdentities']);
     }
 

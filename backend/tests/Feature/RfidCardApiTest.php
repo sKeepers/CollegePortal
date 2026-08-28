@@ -70,7 +70,7 @@ class RfidCardApiTest extends TestCase
         $this->assertSame($first->id, RfidCard::query()->find($card->id)->person_id);
     }
 
-    public function test_a_person_does_not_hold_two_cards_at_once(): void
+    public function test_a_person_may_hold_two_cards_at_once(): void
     {
         $this->withApiAuth($this->commandant());
         $person = $this->createPerson('Двойнов');
@@ -79,11 +79,18 @@ class RfidCardApiTest extends TestCase
 
         $this->postJson("/api/rfid-cards/{$first->id}/issue", ['person_id' => $person->id])->assertOk();
 
-        // Вторая карта означала бы, что первую потеряли и не отметили: на
-        // проходной прошли бы обе.
-        $this->postJson("/api/rfid-cards/{$second->id}/issue", ['person_id' => $person->id])
-            ->assertStatus(422)
-            ->assertJsonPath('errors.person_id.0', 'У человека уже есть карта на руках — 0000000003. Сначала примите её или отметьте утерянной.');
+        // Проверка перевёрнута 28.08.2026. Раньше здесь стоял отказ со словами
+        // «вторая карта означала бы, что первую потеряли и не отметили: на
+        // проходной прошли бы обе». Владелец сказал прямо, что на человека
+        // бывает записано несколько карт, — и «прошли бы обе» перестало быть
+        // доводом против: это ровно то, что нужно. Подробности и поведение
+        // турникета — в `SeveralCardsPerPersonTest`.
+        $this->postJson("/api/rfid-cards/{$second->id}/issue", ['person_id' => $person->id])->assertOk();
+
+        $this->assertSame(2, RfidCard::query()
+            ->where('person_id', $person->id)
+            ->where('status', RfidCard::STATUS_ISSUED)
+            ->count());
     }
 
     public function test_a_card_is_accepted_back_and_can_be_issued_again(): void
