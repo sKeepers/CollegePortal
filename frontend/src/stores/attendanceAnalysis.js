@@ -122,7 +122,7 @@ export const useAttendanceAnalysisStore = defineStore('attendanceAnalysis', () =
       // Здесь оба запроса — справочники фильтров. Куратор и охрана прав на них
       // не имеют, и раньше отказ ронял загрузку экрана целиком.
       const { payloads } = await loadReferences({
-        groups: api.listAll('groups', { per_page: 200 }),
+        groups: api.listAll('groups'),
         teachers: api.listAll('teachers'),
       })
       groups.value = extractRows(payloads.groups)

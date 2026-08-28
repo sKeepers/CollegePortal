@@ -249,7 +249,7 @@ async function searchApplicantApplications(query) {
 }
 
 async function searchGroups(query) {
-  const payload = await api.listAll('groups', { per_page: 200 })
+  const payload = await api.listAll('groups')
   const rows = extractRows(payload)
   const matched = rows.filter((group) => containsQuery(query, [
     group.name,

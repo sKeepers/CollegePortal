@@ -287,6 +287,16 @@ export const api = {
     // им дёшево узнают `meta.total` — превратился бы в семьдесят один запрос.
     // `listAll` значит «весь список», и торговаться о размере страницы тут не о чем.
     const { per_page: ignored, page: alsoIgnored, ...rest } = params
+
+    // Молча игнорировать переданное — значит оставить в коде параметр, который
+    // читается как действующий. `listAll('people', { per_page: 30 })` выглядел
+    // как подсказка на тридцать строк, а тянул 826 из 841.
+    if (ignored !== undefined || alsoIgnored !== undefined) {
+      console.error(
+        `[api] «${resource}»: listAll не принимает page и per_page — он берёт список целиком.`
+        + ' Нужен предел — зовите list.',
+      )
+    }
     const first = await this.list(resource, { ...rest, per_page: WHOLE_LIST_PAGE })
 
     const meta = first?.meta

@@ -234,7 +234,11 @@ export const useAdmissionsFoundationStore = defineStore('admissionsFoundation', 
     peopleLoading.value = true
 
     try {
-      const payload = await api.listAll('people', { search: query, per_page: 30 })
+      // Подсказка по мере набора, а не список: здесь `list` с явным пределом,
+      // и предел этот — не обрезанный список, а осознанная граница подсказки.
+      // `listAll` тянул бы всех подходящих на каждое нажатие клавиши: замер на
+      // стенде 29.08.2026 — «а» подходит 826 людям из 841, «ан» — 402, «ко» — 281.
+      const payload = await api.list('people', { search: query, per_page: 30 })
       people.value = rows(payload)
       return people.value
     } catch (err) {

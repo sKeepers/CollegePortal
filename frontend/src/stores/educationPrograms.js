@@ -119,7 +119,7 @@ export const useEducationProgramsStore = defineStore('educationPrograms', () => 
       const { payloads } = await loadReferences({
         programs: api.listAll('education-programs'),
         specialties: api.listAll('specialties'),
-        groups: api.listAll('groups', { per_page: 200 }),
+        groups: api.listAll('groups'),
       })
 
       programs.value = extractRows(payloads.programs)
