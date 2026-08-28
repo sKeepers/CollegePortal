@@ -18,7 +18,10 @@ use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\TeachingLoadItem;
 use App\Services\ApplicantApplicationDocumentService;
+use App\Support\Time\CollegeTime;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Grammars\Grammar;
+use Illuminate\Database\Query\Grammars\PostgresGrammar;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
@@ -34,9 +37,18 @@ class DashboardAnalyticsService
 
     public function executive(): array
     {
-        $today = now()->toDateString();
-        $lastSevenDays = collect(range(6, 0))->map(fn (int $daysAgo) => now()->subDays($daysAgo)->toDateString());
-        $accessToday = AccessEvent::query()->whereDate('event_time', $today);
+        // Сутки колледжа, а не сутки сервера. Приложение живёт в UTC, и с
+        // 21:00 UTC до полуночи `now()` называет вчерашнее число: рабочий стол
+        // в это время показывал бы «сегодня» за уже прошедший день.
+        $today = CollegeTime::todayDate();
+        $lastSevenDays = collect(range(6, 0))->map(
+            fn (int $daysAgo) => Carbon::parse($today)->subDays($daysAgo)->toDateString(),
+        );
+        // `whereDate` здесь не годится: у `event_time` тип `timestamp`, и
+        // `whereDate` сравнил бы его с UTC-сутками. Для колонок `date`
+        // (`lesson_date`, `exam_date`) наоборот — там `whereDate` верен, и
+        // перевод в пояс их сломал бы.
+        $accessToday = AccessEvent::query()->whereBetween('event_time', CollegeTime::dayRange($today));
         $frdoErrors = FrdoPackage::query()
             ->withCount('validationErrors')
             ->where(fn ($query) => $query->where('status', 'validation_failed')->orHas('validationErrors'))
@@ -107,8 +119,8 @@ class DashboardAnalyticsService
                     'access' => [
                         'inside_now' => $this->presence->insideNowCount(),
                         'entries_today' => (clone $accessToday)->where('direction', AccessEvent::DIRECTION_IN)->where('result', AccessEvent::RESULT_ALLOWED)->count(),
-                        'exits_today' => AccessEvent::query()->whereDate('event_time', $today)->where('direction', AccessEvent::DIRECTION_OUT)->where('result', AccessEvent::RESULT_ALLOWED)->count(),
-                        'denied_today' => AccessEvent::query()->whereDate('event_time', $today)->where('result', AccessEvent::RESULT_DENIED)->count(),
+                        'exits_today' => (clone $accessToday)->where('direction', AccessEvent::DIRECTION_OUT)->where('result', AccessEvent::RESULT_ALLOWED)->count(),
+                        'denied_today' => (clone $accessToday)->where('result', AccessEvent::RESULT_DENIED)->count(),
                     ],
                     'attendance' => $attendance,
                     'admissions' => [
@@ -147,6 +159,7 @@ class DashboardAnalyticsService
                     ),
                     'access_7_days' => $this->dailySeries(
                         AccessEvent::query()->where('direction', AccessEvent::DIRECTION_IN), 'event_time', $lastSevenDays,
+                        columnCarriesTime: true,
                     ),
                     'lessons_7_days' => $this->dailySeries(
                         ScheduleLesson::query(), 'lesson_date', $lastSevenDays,
@@ -254,24 +267,42 @@ class DashboardAnalyticsService
      * директора (замер 23.08.2026 на 593 студентах). События проходной
      * копятся каждый день, и дальше было бы хуже.
      *
-     * `date(...)` выбрано намеренно: оно есть и в PostgreSQL, и в SQLite, а
-     * `CAST(... AS date)` в SQLite молча даёт не дату. Проверено на обеих.
+     * Чем считается «день» и почему — в `dayExpression()` ниже.
      *
      * Дни, за которые записей нет, база не вернёт вовсе — поэтому ряд
      * собирается по списку дат, а не по ответу: график обязан иметь семь
      * точек, включая нулевые.
      *
+     * `$columnCarriesTime` разводит **два разных вида колонок**, и разница
+     * здесь не косметическая. У колонки типа `date` пояса нет вовсе, и перевод
+     * её в пояс колледжа сдвинул бы ряд на сутки — то есть сломал бы верное;
+     * у колонки `timestamp` день считается по UTC, и без перевода ряд теряет
+     * первые три часа каждых суток. Замерено по схеме стенда 28.08.2026:
+     * `applicant_applications.submitted_at` и `schedule_lessons.lesson_date` —
+     * `date`, `access_events.event_time` — `timestamp`. Поэтому из трёх рядов
+     * рабочего стола перевода требует ровно один.
+     *
      * @param  \Illuminate\Support\Collection<int, string>  $dates
      * @return \Illuminate\Support\Collection<int, array{date: string, value: int, is_demo: bool}>
      */
-    private function dailySeries(Builder $query, string $column, Collection $dates): Collection
+    private function dailySeries(Builder $query, string $column, Collection $dates, bool $columnCarriesTime = false): Collection
     {
+        $grammar = $query->getQuery()->getGrammar();
+
         // Нижняя граница без времени намеренно. В SQLite дата хранится строкой,
         // и сравнение тоже строковое: '2026-08-17' < '2026-08-17 00:00:00',
         // поэтому занятия первого дня выпали бы из ряда.
+        //
+        // У колонки со временем границы другие: там нужен отрезок UTC, который
+        // соответствует семи суткам колледжа, иначе крайние дни ряда обрежутся
+        // по три часа.
+        $range = $columnCarriesTime
+            ? [CollegeTime::dayStart($dates->first()), CollegeTime::dayEnd($dates->last())]
+            : [$dates->first(), $dates->last().' 23:59:59'];
+
         $counts = $query
-            ->whereBetween($column, [$dates->first(), $dates->last().' 23:59:59'])
-            ->selectRaw('date('.$query->getQuery()->getGrammar()->wrap($column).') as day, count(*) as total')
+            ->whereBetween($column, $range)
+            ->selectRaw($this->dayExpression($grammar, $column, $columnCarriesTime).' as day, count(*) as total')
             ->groupBy('day')
             // `toBase()->get()`, а не `pluck()`: `pluck` на построителе подменяет
             // список выбираемых полей своими двумя, и `selectRaw` вместе с ним
@@ -286,6 +317,42 @@ class DashboardAnalyticsService
             'value' => (int) ($counts[$date] ?? 0),
             'is_demo' => false,
         ])->values();
+    }
+
+    /**
+     * Выражение «какой это день», по которому идёт группировка ряда.
+     *
+     * `date(...)` выбрано намеренно и остаётся: оно есть и в PostgreSQL, и в
+     * SQLite, а `CAST(... AS date)` в SQLite молча даёт не дату.
+     *
+     * Перевод в пояс приходится писать на двух диалектах, потому что SQLite
+     * именованных поясов не знает. В PostgreSQL — точный перевод по имени
+     * пояса; в SQLite — смещение числом, и число берётся **у самого пояса**, а
+     * не переписывается сюда руками: два места с одним смещением разошлись бы
+     * молча, и оба выглядели бы рабочими.
+     *
+     * Оговорка, которую видно только здесь: смещение для SQLite берётся на
+     * момент запроса и применяется ко всем семи дням ряда. Для `Europe/Moscow`
+     * это ничего не меняет — перевода часов там нет с 2014 года, — но если
+     * пояс когда-нибудь сменят на переводящий, крайние дни ряда на границе
+     * перевода сойдутся неточно. В бою это не срабатывает: PROD на PostgreSQL,
+     * где перевод точный, а SQLite остаётся connection по умолчанию в тестах.
+     */
+    private function dayExpression(Grammar $grammar, string $column, bool $columnCarriesTime): string
+    {
+        $wrapped = $grammar->wrap($column);
+
+        if (! $columnCarriesTime) {
+            return 'date('.$wrapped.')';
+        }
+
+        if ($grammar instanceof PostgresGrammar) {
+            return 'date('.$wrapped." AT TIME ZONE 'UTC' AT TIME ZONE '".CollegeTime::ZONE."')";
+        }
+
+        $minutes = (int) (Carbon::now(CollegeTime::ZONE)->getOffset() / 60);
+
+        return 'date('.$wrapped.", '".sprintf('%+d', $minutes)." minutes')";
     }
 
     private function legacyApplicantApplications(): Builder
