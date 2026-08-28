@@ -400,7 +400,15 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKey))
       <q-tab name="journal" label="Журнал" @click="openJournal" />
     </q-tabs>
 
-    <q-tab-panels v-model="tab" animated class="rfid-panels">
+    <!--
+      Без `animated`: переход между вкладками фиксирует высоту панели, и если
+      содержимое выросло после него, панель остаётся прежней. Замер 29.08.2026:
+      панель 275 px при содержимом 287 — и при окне 900, и при 1400, то есть от
+      размера окна это не зависело вовсе. Владелец видел блок «Найти человека»
+      обрезанным по полю «Фамилия», со своей полосой прокрутки и пустым местом
+      под ней.
+    -->
+    <q-tab-panels v-model="tab" class="rfid-panels">
       <!-- Рабочее место: считыватель слева, человек справа. -->
       <q-tab-panel name="desk" class="q-pa-none">
         <div class="rfid-desk">
@@ -790,7 +798,17 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKey))
 
 <style scoped>
 .rfid-tabs { border-bottom: 1px solid #e2e8f0; }
-.rfid-panels { background: transparent; }
+/*
+  Панель вкладок берёт высоту от содержимого, а не наоборот.
+
+  Quasar меряет высоту панели один раз и ставит её родителю; выросшее позже
+  содержимое в неё уже не влезает. Замер 29.08.2026: панель 275 px при
+  содержимом 287 — одинаково при окне 900 и 1400, то есть с размером окна это
+  не связано. Владелец видел «Найти человека» обрезанным по полю «Фамилия».
+*/
+.rfid-panels { background: transparent; height: auto; }
+.rfid-panels :deep(.q-panel-parent) { height: auto; }
+.rfid-panels :deep(.q-panel) { height: auto; overflow: visible; }
 .rfid-desk { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr); gap: 16px; margin-top: 12px; }
 .rfid-desk__column { display: grid; gap: 16px; align-content: start; }
 .rfid-block { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #fff; }
