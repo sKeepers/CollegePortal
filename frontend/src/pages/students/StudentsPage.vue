@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import { escapeHtml, printHtmlDocument } from '../../utils/print'
 import { formatPhone } from '../../utils/phone'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
@@ -57,6 +58,12 @@ const tablePagination = ref(createTablePagination(STUDENTS_ROWS_PER_PAGE_KEY, {
 
 const selectedRows = ref([])
 const selectAllFiltered = ref(false)
+// Адрес входа берётся у самого портала, а не пишется в разметке. В карточках
+// стоял `portal.skki.ru` — боевой адрес, и на стенде он был просто неверным:
+// человек, получивший листок со стенда, шёл бы не туда. `window.location.origin`
+// не бывает неправильным по построению.
+const portalAddress = window.location.origin
+
 const bulkDialogVisible = ref(false)
 const bulkAction = ref('')
 const bulkPayload = ref({})
@@ -219,8 +226,60 @@ function credentialsCsv() {
   URL.revokeObjectURL(url)
 }
 
+/**
+ * Карточки печатаются отдельным документом, а не текущей страницей.
+ *
+ * Прежний способ — `window.print()` и печатные правила, прячущие всё, кроме
+ * листа, — **терял карточки**. Лист выносился `position: absolute` в начало
+ * страницы, а абсолютно позиционированный блок на страницы не разбивается:
+ * печатается ровно то, что поместилось на первую, остальное исчезает.
+ *
+ * Замерено 29.08.2026 на группе из 27 человек: в окне 27 карточек, все 27 видны
+ * печатными стилями — **и один лист в готовом PDF**. Владелец на снимке видел
+ * пятнадцать. Двенадцать человек остались бы без доступа, а пароль показывается
+ * один раз и в базе только хеш: восстановить нечем, только выдавать заново.
+ *
+ * Отдельный документ разбивается на страницы сам, и каскад приложения до него
+ * не достаёт — тот же приём, что у ведомости карт, книги дипломов и справок.
+ */
 function printCredentials() {
-  window.print()
+  if (!issuedCredentials.value.length) return
+
+  const cards = issuedCredentials.value.map((row) => `<article class="card">
+  <div class="name">${escapeHtml(row.name)}</div>
+  ${row.group ? `<div class="group">${escapeHtml(row.group)}</div>` : ''}
+  <dl>
+    <dt>Логин</dt><dd>${escapeHtml(row.login)}</dd>
+    <dt>Пароль</dt><dd>${escapeHtml(row.password)}</dd>
+  </dl>
+  <div class="hint">${escapeHtml(portalAddress)} · смените пароль после первого входа</div>
+</article>`).join('\n')
+
+  printHtmlDocument(`<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Карточки доступа</title>
+<style>
+  @page { size: A4 portrait; margin: 12mm; }
+  body { margin: 0; color: #000; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; }
+  .sheet { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8mm; }
+  /* Карточку режут ножницами: разрывать её между страницами нельзя. */
+  .card { border: 1px solid #000; border-radius: 4px; padding: 6mm; break-inside: avoid; page-break-inside: avoid; }
+  .name { font-weight: bold; font-size: 13px; }
+  .group { font-size: 11px; margin-top: 2mm; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 1mm 3mm; margin: 4mm 0 0; font-size: 12px; }
+  dt { color: #333; }
+  dd { margin: 0; font-family: "Courier New", Courier, monospace; font-weight: bold; }
+  .hint { margin-top: 4mm; font-size: 10px; }
+</style>
+</head>
+<body>
+<div class="sheet">
+${cards}
+</div>
+</body>
+</html>`)
 }
 
 function tableRowClass(row) {
@@ -730,7 +789,7 @@ onMounted(async () => {
                 <dd>{{ row.password }}</dd>
               </dl>
               <div class="account-card__hint">
-                portal.skki.ru · смените пароль после первого входа
+                {{ portalAddress }} · смените пароль после первого входа
               </div>
             </div>
           </div>
