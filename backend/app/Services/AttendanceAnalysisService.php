@@ -384,7 +384,7 @@ class AttendanceAnalysisService
         $time = $this->formatTime($lesson->starts_at);
         $lessonDate = $lesson->lesson_date?->toDateString() ?: $date->toDateString();
 
-        return $time ? CarbonImmutable::parse($lessonDate.' '.$time) : null;
+        return $time ? CollegeTime::moment($lessonDate, $time) : null;
     }
 
     private function lessonPayload(?ScheduleLesson $lesson, CarbonImmutable $date): ?array
@@ -902,7 +902,7 @@ class AttendanceAnalysisService
     {
         $time = $this->formatTime($lesson->ends_at);
         $lessonDate = $lesson->lesson_date?->toDateString() ?: $date->toDateString();
-        return $time ? CarbonImmutable::parse($lessonDate.' '.$time) : null;
+        return $time ? CollegeTime::moment($lessonDate, $time) : null;
     }
 
     private function earlyLeaveMinutes(?CarbonImmutable $lastExit, ?CarbonImmutable $plannedEnd): int

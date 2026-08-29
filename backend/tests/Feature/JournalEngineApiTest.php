@@ -15,6 +15,7 @@ use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Support\Time\CollegeTime;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\UploadedFile;
@@ -126,7 +127,7 @@ class JournalEngineApiTest extends TestCase
             'entity_type' => 'student',
             'entity_id' => $students[0]->id,
             'direction' => 'in',
-            'event_time' => '2026-07-12 08:55:00',
+            'event_time' => CollegeTime::moment('2026-07-12', '08:55'),
             'result' => 'allowed',
         ]);
 
@@ -332,8 +333,8 @@ class JournalEngineApiTest extends TestCase
         $admin = $this->createApiUser(roleCode: 'admin');
         $lessonId = $this->withApiAuth($admin)->postJson("/api/journal/from-schedule/{$entry->id}/open")->json('data.id');
 
-        AccessEvent::create(['entity_type' => 'student', 'entity_id' => $students[0]->id, 'direction' => 'in', 'event_time' => '2026-07-12 08:55:00', 'result' => 'allowed']);
-        AccessEvent::create(['entity_type' => 'student', 'entity_id' => $students[0]->id, 'direction' => 'out', 'event_time' => '2026-07-12 09:30:00', 'result' => 'allowed']);
+        AccessEvent::create(['entity_type' => 'student', 'entity_id' => $students[0]->id, 'direction' => 'in', 'event_time' => CollegeTime::moment('2026-07-12', '08:55'), 'result' => 'allowed']);
+        AccessEvent::create(['entity_type' => 'student', 'entity_id' => $students[0]->id, 'direction' => 'out', 'event_time' => CollegeTime::moment('2026-07-12', '09:30'), 'result' => 'allowed']);
 
         $this->withApiAuth($admin)->getJson("/api/journal/lessons/{$lessonId}/attendance-suggestion")
             ->assertOk()

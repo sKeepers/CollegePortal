@@ -16,6 +16,7 @@ use App\Models\Subject;
 use App\Models\Teacher;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
+use App\Support\Time\CollegeTime;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -82,7 +83,14 @@ class AttendanceAnalysisApiTest extends TestCase
         $rows = collect($response->json('data'))->keyBy('full_name');
         $this->assertSame('late', $rows->get('Иванов Дмитрий')['status']);
         $this->assertSame(17, $rows->get('Иванов Дмитрий')['late_minutes']);
-        $this->assertSame('2026-09-10T09:17:00', $rows->get('Иванов Дмитрий')['first_entry']);
+        // Единственное изменённое здесь ожидание, и меняется не смысл, а форма
+        // записи: студент вошёл в 09:17 **по колледжу**, опоздание 17 минут выше
+        // осталось прежним. `first_entry` — не длительность и не вердикт, а сама
+        // метка времени, и портал отдаёт её в UTC, как хранит: 09:17 в колледже
+        // это 06:17 UTC. Перевод таких меток в местное время на экранах — третья,
+        // невыполненная часть работы по поясу (37 вызовов `toLocale*` в 27 файлах,
+        // ни в одном пояс не задан), и здесь она не делается.
+        $this->assertSame('2026-09-10T06:17:00', $rows->get('Иванов Дмитрий')['first_entry']);
         $this->assertSame('not_entered', $rows->get('Сидорова Анна')['status']);
         $this->assertSame($missingStudent->id, $rows->get('Сидорова Анна')['entity_id']);
     }
@@ -175,8 +183,8 @@ class AttendanceAnalysisApiTest extends TestCase
         // 23:10 по колледжу, 21:40 — 00:40 следующего дня: смена начинается вечером
         // десятого и кончается после полуночи, как и говорит имя теста. До 28.08.2026
         // те же часы стояли здесь без перевода, и сутки считались по часам сервера.
-        $this->addAccessEventAt('student', $student->id, '2026-09-10 20:10:00', AccessEvent::DIRECTION_IN);
-        $this->addAccessEventAt('student', $student->id, '2026-09-10 21:40:00', AccessEvent::DIRECTION_OUT);
+        $this->addAccessEventAt('student', $student->id, '2026-09-10 23:10:00', AccessEvent::DIRECTION_IN);
+        $this->addAccessEventAt('student', $student->id, '2026-09-11 00:40:00', AccessEvent::DIRECTION_OUT);
         $this->addAccessEventAt('student', $open->id, '2026-09-10 08:30:00', AccessEvent::DIRECTION_IN);
         $this->addAccessEventAt('student', $outOnly->id, '2026-09-10 12:00:00', AccessEvent::DIRECTION_OUT);
 
@@ -403,7 +411,7 @@ class AttendanceAnalysisApiTest extends TestCase
             'entity_type' => $type,
             'entity_id' => $id,
             'direction' => $direction,
-            'event_time' => $dateTime,
+            'event_time' => CollegeTime::moment(substr($dateTime, 0, 10), substr($dateTime, 11)),
             'result' => AccessEvent::RESULT_ALLOWED,
         ]);
     }
@@ -420,7 +428,7 @@ class AttendanceAnalysisApiTest extends TestCase
             'entity_type' => $type,
             'entity_id' => $id,
             'direction' => $direction,
-            'event_time' => '2026-09-10 '.$time.':00',
+            'event_time' => CollegeTime::moment('2026-09-10', $time),
             'result' => AccessEvent::RESULT_ALLOWED,
         ]);
     }

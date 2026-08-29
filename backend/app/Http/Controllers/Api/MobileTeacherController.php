@@ -12,6 +12,7 @@ use App\Models\ScheduleLesson;
 use App\Models\Teacher;
 use App\Models\User;
 use App\Services\QrSvgService;
+use App\Support\Time\CollegeTime;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -197,7 +198,7 @@ class MobileTeacherController extends Controller
                 return false;
             }
 
-            return Carbon::parse($lesson->lesson_date->toDateString().' '.$lesson->starts_at->format('H:i'))
+            return CollegeTime::moment($lesson->lesson_date, $lesson->starts_at->format('H:i'))
                 ->greaterThanOrEqualTo($now);
         }) ?? $lessons->first();
     }

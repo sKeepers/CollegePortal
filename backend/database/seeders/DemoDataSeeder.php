@@ -36,6 +36,7 @@ use App\Models\User;
 use App\Services\SettingService;
 use App\Services\TeachingLoadGenerationService;
 use Database\Seeders\Support\DemoNameFactory;
+use App\Support\Time\CollegeTime;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -561,7 +562,7 @@ class DemoDataSeeder extends Seeder
                 $signed => JournalLesson::STATUS_SIGNED,
                 default => JournalLesson::STATUS_COMPLETED,
             };
-            $openedAt = $lesson->lesson_date->copy()->setTimeFromTimeString($this->timeString($lesson->starts_at));
+            $openedAt = $this->collegeMoment($lesson->lesson_date, $this->timeString($lesson->starts_at));
 
             $rows[] = [
                 'legacy_schedule_lesson_id' => $lesson->id,
@@ -832,13 +833,28 @@ class DemoDataSeeder extends Seeder
         $now = now();
 
         return $lessons->filter(function (ScheduleLesson $lesson) use ($now): bool {
-            $startedAt = $lesson->lesson_date->copy()->setTimeFromTimeString($this->timeString($lesson->starts_at));
+            $startedAt = $this->collegeMoment($lesson->lesson_date, $this->timeString($lesson->starts_at));
 
             return $startedAt->lessThanOrEqualTo($now);
         });
     }
 
     /** Время занятия строкой «ЧЧ:ММ»: в модели это может быть и строка, и дата. */
+    /**
+     * Момент дня по часам колледжа.
+     *
+     * Набор рисует день человеческими часами: пара в 08:30, обед в 11:45, уход в
+     * 16:20. Это время на стене, а проходы и журнал хранятся в UTC. Пока склейка
+     * была наивной, у набора не оставалось ни одного опоздания: проходы уезжали
+     * на три часа от тех самых пар, к которым их привязывали, — и экран
+     * посещаемости в демонстрации показывал пустоту вместо того, ради чего набор
+     * и сделан.
+     */
+    private function collegeMoment(Carbon|string $day, string $time): Carbon
+    {
+        return Carbon::instance(CollegeTime::moment($day instanceof Carbon ? $day->toDateString() : $day, $time));
+    }
+
     private function timeString(mixed $value): string
     {
         if ($value instanceof \DateTimeInterface) {
@@ -1198,7 +1214,7 @@ class DemoDataSeeder extends Seeder
                     ? 'teacher:'.$identity->entity_id
                     : 'group:'.($groupByStudent[$identity->entity_id] ?? 0);
                 $startsAt = $window[$day->toDateString().'|'.$key] ?? '08:30';
-                $base = $day->copy()->setTimeFromTimeString($startsAt);
+                $base = $this->collegeMoment($day, $startsAt);
                 $shift = match ($profile) {
                     'excellent' => mt_rand(-40, -5),
                     'good' => mt_rand(-30, 0),
@@ -1223,7 +1239,7 @@ class DemoDataSeeder extends Seeder
 
                 // Выход на обед и возвращение.
                 if (! $weekend && mt_rand(1, 100) <= 12) {
-                    $lunch = $day->copy()->setTime(11, 45)->addMinutes(mt_rand(0, 40));
+                    $lunch = $this->collegeMoment($day, "11:45")->addMinutes(mt_rand(0, 40));
                     $back = $lunch->copy()->addMinutes(mt_rand(20, 55));
 
                     if ($back->lessThanOrEqualTo($now)) {
@@ -1240,8 +1256,8 @@ class DemoDataSeeder extends Seeder
                     // а не сидит до вечера. У остальных день кончается как
                     // прежде: у преподавателя позже, у студента раньше.
                     $exit = $this->isVisitingTeacher($teacher, $identity->entity_id) && $lastLesson !== null
-                        ? $day->copy()->setTimeFromTimeString($lastLesson)->addMinutes(mt_rand(2, 20))
-                        : $day->copy()->setTime($teacher ? 16 : 14, 20)->addMinutes(mt_rand(0, 150));
+                        ? $this->collegeMoment($day, $lastLesson)->addMinutes(mt_rand(2, 20))
+                        : $this->collegeMoment($day, ($teacher ? "16" : "14").":20")->addMinutes(mt_rand(0, 150));
 
                     if ($exit->greaterThan($entry) && $exit->lessThanOrEqualTo($now)) {
                         $rows[] = $this->accessRow($identity, $point, AccessEvent::DIRECTION_OUT, $exit, $now);
