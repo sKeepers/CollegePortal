@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted } from 'vue'
 import { Eye, RefreshCw, ShieldCheck } from '@lucide/vue'
 import AppPage from '../../../components/ui/AppPage.vue'
 import PageHeader from '../../../components/ui/PageHeader.vue'
@@ -13,7 +13,29 @@ import AppLoading from '../../../components/ui/AppLoading.vue'
 import { useAuditStore, moduleLabel, actionLabel } from '../../../stores/audit'
 
 const store = useAuditStore()
-const pagination = ref({ rowsPerPage: 20 })
+/**
+ * Постраничность серверная: в журнале 16 977 записей, и держать их в памяти
+ * незачем, а показывать двести и подписывать «из 200» — обман. `rowsNumber`
+ * говорит таблице, сколько строк есть на самом деле, и она сама перестаёт
+ * листать на месте: каждый переход уходит запросом.
+ */
+const tablePagination = computed(() => ({
+  page: store.pagination.page,
+  rowsPerPage: store.pagination.per_page,
+  rowsNumber: store.pagination.total,
+  sortBy: 'created_at',
+  descending: store.direction !== 'asc',
+}))
+
+function onTableRequest(event) {
+  const next = event?.pagination ?? {}
+
+  store.load({
+    page: next.page,
+    per_page: next.rowsPerPage,
+    direction: next.descending === false ? 'asc' : 'desc',
+  })
+}
 const columns = [
   { name: 'created_at', label: 'Дата', field: 'created_at', align: 'left', sortable: true },
   { name: 'module', label: 'Модуль', field: 'module', align: 'left' },
@@ -58,12 +80,14 @@ function selectLog(log) {
 }
 
 function applyFilters() {
-  store.load()
+  // Новый отбор — снова первая страница: сороковая с новым отбором окажется
+  // пустой, и это прочтут как «ничего не найдено».
+  store.load({ page: 1 })
 }
 
 function resetFilters() {
   store.resetFilters()
-  store.load()
+  store.load({ page: 1 })
 }
 
 function rowClass(row) {
@@ -108,7 +132,8 @@ onMounted(async () => {
       <section class="audit-main">
         <AppTable
           v-if="store.logs.length"
-          v-model:pagination="pagination"
+          :pagination="tablePagination"
+          @request="onTableRequest"
           :rows="store.logs"
           :columns="columns"
           :loading="store.loading"

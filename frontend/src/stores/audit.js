@@ -18,6 +18,22 @@ function extractRows(payload) {
 export const useAuditStore = defineStore('audit', () => {
   const logs = ref([])
   const users = ref([])
+
+  /**
+   * Журнал листается на сервере, а не на месте.
+   *
+   * Раньше хранилище забирало 200 строк и отдавало их таблице целиком: подпись
+   * читалась «1 - 20 из 200», хотя записей в журнале 16 977 (замер на стенде
+   * 29.08.2026). Оператор идёт в журнал искать, что произошло, и двести он
+   * прочтёт как «больше ничего не было» — ошибка в сторону «ничего не было»
+   * здесь дороже, чем в сторону «мало данных».
+   */
+  const pagination = ref({ page: 1, per_page: 20, total: 0 })
+  const direction = ref('desc')
+
+  // Значения для полей отбора приходят с сервера по всей таблице: собранные из
+  // выданной страницы, они называли бы модулями те, что попали в двадцать строк.
+  const options = ref({ modules: [], actions: [] })
   const filters = ref({ ...initialFilters })
   const selectedId = ref(null)
   const loading = ref(false)
@@ -25,24 +41,44 @@ export const useAuditStore = defineStore('audit', () => {
 
   const selectedLog = computed(() => logs.value.find((log) => Number(log.id) === Number(selectedId.value)) || null)
   const userOptions = computed(() => users.value.map((user) => ({ label: `${user.name} · ${user.email}`, value: user.id })))
-  const moduleOptions = computed(() => [...new Set(logs.value.map((log) => log.module).filter(Boolean))].sort().map((value) => ({ label: moduleLabel(value), value })))
-  const actionOptions = computed(() => [...new Set(logs.value.map((log) => log.action).filter(Boolean))].sort().map((value) => ({ label: actionLabel(value), value })))
+  const moduleOptions = computed(() => options.value.modules.map((value) => ({ label: moduleLabel(value), value })))
+  const actionOptions = computed(() => options.value.actions.map((value) => ({ label: actionLabel(value), value })))
 
-  async function load() {
+  async function load(params = {}) {
     loading.value = true
     error.value = ''
 
+    const page = Number(params.page ?? pagination.value.page) || 1
+    const perPage = Number(params.per_page ?? pagination.value.per_page) || 20
+
+    if (params.direction) {
+      direction.value = params.direction === 'asc' ? 'asc' : 'desc'
+    }
+
     try {
-      // Список пользователей нужен только фильтру «Пользователь», а лежит он под
-      // правом users.manage. У директора есть audit.view, но нет users.manage,
-      // и общий Promise.all ронял весь экран сообщением «У вас нет доступа
-      // к этому действию» — при том, что журнал отдавался целиком.
       const [logsPayload, usersPayload] = await Promise.all([
-        api.list('admin/audit', { ...filters.value, per_page: 200 }),
-        api.list('admin/users', { per_page: 300 }).catch(() => null),
+        api.list('admin/audit', {
+          ...filters.value, page, per_page: perPage, direction: direction.value,
+        }),
+        // Список пользователей нужен целиком: он наполняет поле отбора, и
+        // страница из него означала бы, что часть авторов выбрать нельзя.
+        api.listAll('admin/users').catch(() => null),
       ])
+
       logs.value = extractRows(logsPayload)
       users.value = extractRows(usersPayload)
+
+      const meta = logsPayload?.meta ?? {}
+      pagination.value = {
+        page: Number(meta.current_page) || page,
+        per_page: Number(meta.per_page) || perPage,
+        total: Number(meta.total) || logs.value.length,
+      }
+
+      options.value = {
+        modules: Array.isArray(logsPayload?.options?.modules) ? logsPayload.options.modules : [],
+        actions: Array.isArray(logsPayload?.options?.actions) ? logsPayload.options.actions : [],
+      }
 
       if (selectedId.value && !selectedLog.value) {
         selectedId.value = null
@@ -56,12 +92,16 @@ export const useAuditStore = defineStore('audit', () => {
 
   function resetFilters() {
     filters.value = { ...initialFilters }
+    pagination.value = { ...pagination.value, page: 1 }
   }
 
   return {
     logs,
     users,
     filters,
+    pagination,
+    options,
+    direction,
     selectedId,
     loading,
     error,
