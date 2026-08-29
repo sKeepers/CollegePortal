@@ -40,6 +40,47 @@ abstract class TestCase extends BaseTestCase
         );
     }
 
+    /**
+     * Пиковая память прогона печатается всегда, а не только при падении.
+     *
+     * 29.08.2026 два тяжёлых теста мигнули, и спор «память или нет» разрешить
+     * было нечем: у зелёных прогонов пика никто не мерил, а сравнивать надо
+     * именно с ними. `CLAUDE.md` описывает упор в память как «Allowed memory
+     * size exhausted» и десяток несвязанных падений — но чтобы отличить «близко
+     * к потолку» от «далеко», нужно число, а не признак.
+     *
+     * Печатается один раз, в самом конце: строка в выводе прогона стоит дёшево,
+     * а следующий такой спор превращает в замер.
+     */
+    private static bool $peakReported = false;
+
+    private function reportPeakMemoryOnce(): void
+    {
+        if (self::$peakReported) {
+            return;
+        }
+
+        self::$peakReported = true;
+
+        register_shutdown_function(static function (): void {
+            $limit = (string) ini_get('memory_limit');
+            $peak = memory_get_peak_usage(true);
+
+            fwrite(STDOUT, sprintf(
+                "\n  Пик памяти за прогон: %d МБ при лимите %s\n",
+                (int) round($peak / 1024 / 1024),
+                $limit,
+            ));
+        });
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->reportPeakMemoryOnce();
+    }
+
     protected function withApiAuth(?User $user = null): self
     {
         $token = Str::random(80);

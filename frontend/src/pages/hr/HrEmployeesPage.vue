@@ -190,6 +190,12 @@ const metrics = computed(() => selected.value ? [
     value: selected.value.rfid_cards.length
       ? selected.value.rfid_cards.map((card) => `${card.uid} — ${card.status_label || card.status}`).join('; ')
       : 'не привязана',
+    // Переход к действиям — в реестр, уже отобранный по этому человеку, а не в
+    // общий список из 244 строк. Под правом `rfid.cards.manage`: видеть карту и
+    // менять её — разные вещи.
+    to: selected.value.rfid_cards.length && auth.can('rfid.cards.manage')
+      ? { path: '/identity/rfid-cards', query: { card: selected.value.rfid_cards[0].uid } }
+      : null,
   }] : []),
 ] : [])
 const quickActions = computed(() => selected.value ? [

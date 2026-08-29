@@ -1,11 +1,19 @@
 <script setup>
 import { computed } from 'vue'
+import { usePermissions } from '../../composables/usePermissions'
 import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import PersonPhotoManager from '../../components/person/PersonPhotoManager.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
 import PersonAccountActions from '../../components/identity/PersonAccountActions.vue'
 import { formatPhone } from '../../utils/phone'
+
+
+// Переход к действиям над картой показывается под тем же правом, под которым
+// действия живут в реестре: `rfid.cards.manage`. Видеть карту и менять её —
+// разные вещи, и обещать кнопкой то, чего человек не сможет, нельзя.
+const auth = usePermissions()
+const canManageCards = computed(() => auth.can('rfid.cards.manage'))
 
 const props = defineProps({
   teacher: { type: Object, default: null },
@@ -108,6 +116,10 @@ function removePhoto() {
                 <div class="text-caption text-grey-7">
                   {{ card.status_label || card.status }}<template v-if="card.label"> · {{ card.label }}</template>
                 </div>
+                <router-link
+                  v-if="canManageCards"
+                  class="text-caption"
+                  :to="{ path: '/identity/rfid-cards', query: { card: card.uid } }">что сделать</router-link>
               </div>
             </template>
             <template v-else>не привязана</template>
