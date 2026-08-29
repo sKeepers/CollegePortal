@@ -13,6 +13,7 @@ use App\Models\Teacher;
 use App\Services\AttendanceAnalysisService;
 use App\Services\SettingService;
 use Carbon\Carbon;
+use App\Support\Time\CollegeTime;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -192,7 +193,10 @@ class LateThresholdTest extends TestCase
             'entity_type' => $identity->entity_type,
             'entity_id' => $identity->entity_id,
             'direction' => AccessEvent::DIRECTION_IN,
-            'event_time' => Carbon::today()->setTimeFromTimeString($time),
+            // Время прохода названо по часам колледжа, как и время занятия рядом:
+            // в базе `event_time` лежит в UTC, и наивная склейка сдвигала бы их друг
+            // относительно друга на три часа.
+            'event_time' => CollegeTime::moment(Carbon::today()->toDateString(), $time),
             'result' => AccessEvent::RESULT_ALLOWED,
         ]);
     }

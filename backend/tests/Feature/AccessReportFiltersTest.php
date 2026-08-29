@@ -14,6 +14,7 @@ use App\Models\Subject;
 use App\Models\Teacher;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
+use App\Support\Time\CollegeTime;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -99,7 +100,7 @@ class AccessReportFiltersTest extends TestCase
             'entity_type' => $identity->entity_type,
             'entity_id' => $identity->entity_id,
             'direction' => AccessEvent::DIRECTION_IN,
-            'event_time' => CarbonImmutable::parse('2026-09-10 09:15:00'),
+            'event_time' => CollegeTime::moment('2026-09-10', '09:15'),
             'access_point' => 'Главный вход',
             'result' => AccessEvent::RESULT_ALLOWED,
         ]);
@@ -157,7 +158,7 @@ class AccessReportFiltersTest extends TestCase
             'entity_type' => $identity->entity_type,
             'entity_id' => $identity->entity_id,
             'direction' => AccessEvent::DIRECTION_IN,
-            'event_time' => CarbonImmutable::parse($at),
+            'event_time' => CollegeTime::moment(substr($at, 0, 10), substr($at, 11)),
             'result' => AccessEvent::RESULT_ALLOWED,
         ]);
     }

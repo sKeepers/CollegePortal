@@ -3,8 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\AccessEvent;
+use App\Models\Group;
+use App\Models\ScheduleLesson;
+use App\Models\Subject;
 use App\Models\Teacher;
 use App\Services\AttendanceAnalysisService;
+use App\Support\Time\CollegeTime;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -118,6 +122,59 @@ class AttendanceDayInCollegeTimeTest extends TestCase
         }
 
         return $files;
+    }
+
+    /**
+     * Пара в 08:30, приход в 08:20 — человек пришёл **за десять минут до**.
+     *
+     * Время занятия — часы на стене: 08:30 значит половину девятого в колледже.
+     * Проходная пишет UTC. Пока их склеивали наивно, 08:30 читалось как 08:30
+     * UTC, то есть половина двенадцатого по колледжу, и пришедший за десять
+     * минут до пары числился пришедшим за два часа пятьдесят.
+     *
+     * Проверяются обе стороны порога: пришедший раньше — не опоздал, пришедший
+     * на семнадцать минут позже — опоздал ровно на семнадцать. Второе число и
+     * есть сторож: при наивной склейке оно превращалось в «пришёл за два часа до».
+     */
+    public function test_a_lesson_at_half_past_eight_measures_lateness_by_the_wall_clock(): void
+    {
+        $early = $this->teacherWithLesson('Ранний', '2026-09-14', '08:30', '08:20');
+        $late = $this->teacherWithLesson('Поздний', '2026-09-14', '08:30', '08:47');
+
+        $service = app(AttendanceAnalysisService::class);
+        $day = ['date_from' => '2026-09-14', 'date_to' => '2026-09-14'];
+
+        $earlyDay = $service->personDays('teacher', $early->id, $day)['data'][0];
+        $lateDay = $service->personDays('teacher', $late->id, $day)['data'][0];
+
+        $this->assertSame(0, (int) $earlyDay['late_minutes'], 'пришедший за десять минут до пары не опоздал');
+        $this->assertSame(17, (int) $lateDay['late_minutes'], 'опоздание считается по часам колледжа, а не сервера');
+    }
+
+    private function teacherWithLesson(string $name, string $date, string $lessonAt, string $entryAt): Teacher
+    {
+        $teacher = Teacher::create(['last_name' => $name, 'first_name' => 'Преподаватель', 'is_active' => true]);
+        $group = Group::create(['name' => 'Г-'.$name, 'specialty' => 'Теория музыки', 'course' => 1, 'year_start' => 2026]);
+        $subject = Subject::create(['name' => 'Дисциплина '.$name, 'code' => 'D-'.$name]);
+
+        ScheduleLesson::create([
+            'group_id' => $group->id,
+            'teacher_id' => $teacher->id,
+            'subject_id' => $subject->id,
+            'lesson_date' => $date,
+            'starts_at' => $lessonAt,
+            'ends_at' => '10:00',
+        ]);
+
+        AccessEvent::create([
+            'entity_type' => 'teacher',
+            'entity_id' => $teacher->id,
+            'direction' => AccessEvent::DIRECTION_IN,
+            'event_time' => CollegeTime::moment($date, $entryAt),
+            'result' => AccessEvent::RESULT_ALLOWED,
+        ]);
+
+        return $teacher;
     }
     /** @param array<string, mixed> $payload */
     private function entries(array $payload): int

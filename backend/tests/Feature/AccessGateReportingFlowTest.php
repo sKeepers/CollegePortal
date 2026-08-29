@@ -13,6 +13,7 @@ use App\Models\Teacher;
 use App\Services\QrSvgService;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
+use App\Support\Time\CollegeTime;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -31,7 +32,7 @@ class AccessGateReportingFlowTest extends TestCase
         parent::setUp();
 
         // Занятие в 09:00, проход в 09:15 — опоздание ровно на 15 минут.
-        $now = CarbonImmutable::parse('2026-09-10 09:15:00');
+        $now = CollegeTime::moment('2026-09-10', '09:15');
         CarbonImmutable::setTestNow($now);
         Carbon::setTestNow($now);
 
@@ -84,7 +85,12 @@ class AccessGateReportingFlowTest extends TestCase
             ->assertJsonPath('data.0.status', 'late')
             ->assertJsonPath('data.0.late_minutes', 15)
             ->assertJsonPath('data.0.inside_now', true)
-            ->assertJsonPath('data.0.first_entry', '2026-09-10T09:15:00');
+            // 09:15 по колледжу — это 06:15 UTC, а портал отдаёт метку так, как
+            // хранит. Утверждение теста осталось прежним: опоздание ровно 15 минут,
+            // строкой выше, и оно арифметическое — сдвиг обоих концов его не задел.
+            // Перевод меток в местное время на экранах — отдельная, невыполненная
+            // часть работы по поясу.
+            ->assertJsonPath('data.0.first_entry', '2026-09-10T06:15:00');
 
         $this->getJson('/api/access/reports/events')
             ->assertOk()
@@ -152,7 +158,7 @@ class AccessGateReportingFlowTest extends TestCase
             'entity_type' => $identity->entity_type,
             'entity_id' => $identity->entity_id,
             'direction' => AccessEvent::DIRECTION_IN,
-            'event_time' => CarbonImmutable::parse('2026-09-09 09:05:00'),
+            'event_time' => CollegeTime::moment('2026-09-09', '09:05'),
             'result' => AccessEvent::RESULT_ALLOWED,
         ]);
 
@@ -169,8 +175,8 @@ class AccessGateReportingFlowTest extends TestCase
 
     public function test_teacher_entry_before_lesson_is_counted_as_on_time(): void
     {
-        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-09-10 08:40:00'));
-        Carbon::setTestNow(Carbon::parse('2026-09-10 08:40:00'));
+        CarbonImmutable::setTestNow(CollegeTime::moment('2026-09-10', '08:40'));
+        Carbon::setTestNow(CollegeTime::moment('2026-09-10', '08:40'));
 
         $context = $this->createScheduleContext();
         $this->createLesson($context, '09:00', '10:30');

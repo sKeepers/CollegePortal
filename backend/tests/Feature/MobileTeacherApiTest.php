@@ -15,6 +15,7 @@ use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\User;
 use App\Services\JournalService;
+use App\Support\Time\CollegeTime;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -28,7 +29,10 @@ class MobileTeacherApiTest extends TestCase
     {
         parent::setUp();
         // Понедельник: границы недели в ответе становятся предсказуемыми.
-        Carbon::setTestNow(Carbon::parse('2026-07-13 08:00:00'));
+        // Восемь утра — по часам колледжа, как и время занятий рядом: кабинет
+        // сравнивает «сейчас» с началом пары, и оба конца обязаны быть в одном
+        // счёте времени.
+        Carbon::setTestNow(CollegeTime::moment('2026-07-13', '08:00'));
     }
 
     protected function tearDown(): void
