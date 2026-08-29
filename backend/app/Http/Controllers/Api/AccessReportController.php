@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AccessEventResource;
 use App\Models\AccessEvent;
+use App\Support\Time\CollegeTime;
 use App\Models\Employee;
 use App\Models\Student;
 use App\Models\Teacher;
@@ -99,8 +100,11 @@ class AccessReportController extends Controller
                 $person = $owner instanceof Employee ? $owner->person : $owner;
                 $name = trim(implode(' ', array_filter([$person?->last_name, $person?->first_name, $person?->middle_name]))) ?: 'Неизвестный пропуск';
                 $row([
-                    $event->event_time?->format('d.m.Y'),
-                    $event->event_time?->format('H:i'),
+                    // По часам колледжа, а не сервера: ручка отбирала события
+                    // сутками колледжа, а печатала их время в UTC — проход в
+                    // 09:15 уходил на лист как 06:15.
+                    CollegeTime::forDisplay($event->event_time)?->format('d.m.Y'),
+                    CollegeTime::forDisplay($event->event_time)?->format('H:i'),
                     $name,
                     match ($event->entity_type) {
                         'student' => 'Студент',

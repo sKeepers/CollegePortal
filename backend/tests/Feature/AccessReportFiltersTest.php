@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AccessEvent;
 use App\Models\AccessPoint;
 use App\Models\Building;
+use App\Support\Time\CollegeTime;
 use App\Models\Classroom;
 use App\Models\DigitalIdentity;
 use App\Models\Group;
@@ -14,7 +15,6 @@ use App\Models\Subject;
 use App\Models\Teacher;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
-use App\Support\Time\CollegeTime;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -100,6 +100,11 @@ class AccessReportFiltersTest extends TestCase
             'entity_type' => $identity->entity_type,
             'entity_id' => $identity->entity_id,
             'direction' => AccessEvent::DIRECTION_IN,
+            // Момент задаётся так, чтобы он **значил** четверть десятого
+            // утра по колледжу: портал хранит время в UTC, а на лист
+            // выгрузка с 30.08.2026 печатает местный час. Прежняя
+            // редакция писала 09:15 UTC, и проверка проходила потому, что
+            // приспособление и печать ошибались одинаково.
             'event_time' => CollegeTime::moment('2026-09-10', '09:15'),
             'access_point' => 'Главный вход',
             'result' => AccessEvent::RESULT_ALLOWED,

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\RfidCardIssue;
+use App\Support\Time\CollegeTime;
 use Illuminate\Support\Collection;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -59,7 +60,7 @@ class RfidCardJournalExport
 
             $sheet->fromArray([
                 $index + 1,
-                $issue->issued_at?->format('d.m.Y H:i'),
+                CollegeTime::forDisplay($issue->issued_at)?->format('d.m.Y H:i'),
                 trim(implode(' ', array_filter([
                     $person?->last_name,
                     $person?->first_name,
@@ -70,7 +71,7 @@ class RfidCardJournalExport
                 // превращается в число, по которому карта не находится.
                 (string) $issue->card?->uid,
                 $issue->issuedBy?->name,
-                $issue->returned_at === null ? 'на руках' : $issue->returned_at->format('d.m.Y H:i'),
+                $issue->returned_at === null ? 'на руках' : CollegeTime::forDisplay($issue->returned_at)->format('d.m.Y H:i'),
                 RfidCardIssue::reasonLabel($issue->close_reason) ?? '—',
                 '',
             ], null, 'A'.$row);
