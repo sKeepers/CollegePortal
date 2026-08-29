@@ -217,7 +217,7 @@ class StudentBulkService
             return ['type' => 'error', 'reason' => $exception->getMessage()];
         }
 
-        return [
+        $result = [
             'type' => 'changed',
             'changes' => ['account' => 'created', 'login' => $account->login],
             'credentials' => [
@@ -225,6 +225,20 @@ class StudentBulkService
                 'password' => $account->password,
             ],
         ];
+
+        // Учётная запись создана, но телефон в карточке негоден — логин пришлось
+        // строить от фамилии. Сказать об этом надо здесь: иначе испорченный
+        // телефон останется незамеченным до первой попытки позвонить.
+        $phone = preg_replace('/\D+/', '', (string) ($student->phone ?: $student->person?->phone)) ?? '';
+
+        if ($phone !== '' && ! preg_match('/^(?:7|8)?\d{10}$/', $phone)) {
+            $result['reason'] = sprintf(
+                'Телефон в карточке не похож на номер (%d цифр), логин построен от фамилии.',
+                mb_strlen($phone),
+            );
+        }
+
+        return $result;
     }
 
     private function archive(Student $student, bool $apply): array
