@@ -84,7 +84,10 @@ export const useRfidCardsStore = defineStore('rfidCards', () => {
     loading.value = true
     error.value = ''
     try {
-      const query = { per_page: 200 }
+      // Без `per_page`: `listAll` дочитывает список целиком и переданный
+      // размер намеренно игнорирует. Пока он здесь стоял, число читалось
+      // как действующее ограничение, хотя не значило ничего.
+      const query = {}
       if (filters.value.status) query.status = filters.value.status
       if (filters.value.search) query.search = filters.value.search
 
