@@ -17,6 +17,15 @@ const ENVIRONMENTS = {
     backgroundColor: '#eff6ff',
     textColor: '#1d4ed8',
   },
+  unknown: {
+    key: 'unknown',
+    label: 'СРЕДА?',
+    titlePrefix: '[?]',
+    tooltip: 'Окружение не задано: VITE_APP_ENV пуста или незнакома',
+    color: '#6b7280',
+    backgroundColor: '#f3f4f6',
+    textColor: '#374151',
+  },
   production: {
     key: 'production',
     label: 'PROD',
@@ -28,7 +37,21 @@ const ENVIRONMENTS = {
   },
 }
 
-const DEFAULT_ENVIRONMENT = 'production'
+/**
+ * Не зная, где он работает, портал говорит «не знаю», а не «боевой».
+ *
+ * Метка берётся из `VITE_APP_ENV`, заданной при сборке. Умолчанием стояло
+ * `production`, и портал, запущенный без этой переменной, показывал зелёное
+ * `PROD`: замерено 30.08.2026 — одноразовая база на своём Vite объявила себя
+ * боевой. Стенд честен, потому что переменную ему задают, но умолчание
+ * страхует ровно тот случай, когда её забыли.
+ *
+ * Ошибиться можно в обе стороны, и они не равны. «Боевой» на стенде делает
+ * человека осторожным там, где осторожность не нужна; «стенд» на боевом делает
+ * его беспечным там, где она нужна. Поэтому умолчание не `development`, а
+ * отдельное «неизвестно»: оно ни к чему не приглашает и заметно глазом.
+ */
+const DEFAULT_ENVIRONMENT = 'unknown'
 
 function normalizeEnvironment(value) {
   if (!value || !ENVIRONMENTS[value]) {
