@@ -427,11 +427,25 @@ async function loadCurrentPeriod() {
   await store.load(periodRange.value)
 }
 
+/**
+ * @param {{day: {value: string}, slot: object}|null} cell клетка сетки, если
+ *   форму открыли из неё.
+ *
+ * Вызывать только со скобками: `@click="openCreateDialog"` передаёт сюда
+ * событие мыши, и до 29.08.2026 кнопка «Создать занятие» падала на нём с
+ * `TypeError: Cannot read properties of undefined (reading 'value')` — форма не
+ * открывалась вовсе, и на экране ничего не происходило. Замерено в браузере:
+ * ноль диалогов после нажатия, ошибка в консоли.
+ *
+ * Форма проверяет не «передали ли что-то», а **тот ли это объект**: событие
+ * мыши тоже истинно, и прежняя проверка `cell ? ... : ...` его пропускала.
+ */
 function openCreateDialog(cell = null) {
-  createForm.value = {
-    ...defaultCreateForm(),
-    ...(cell ? { date: cell.day.value, lesson_number: cell.slot.number, starts_at: cell.slot.starts_at, ends_at: cell.slot.ends_at } : {}),
-  }
+  const fromCell = cell?.day?.value && cell?.slot
+    ? { date: cell.day.value, lesson_number: cell.slot.number, starts_at: cell.slot.starts_at, ends_at: cell.slot.ends_at }
+    : {}
+
+  createForm.value = { ...defaultCreateForm(), ...fromCell }
   createDialog.value = true
 }
 
@@ -650,7 +664,7 @@ onMounted(async () => {
       <span>{{ periodTitle }}</span>
       <template #actions>
         <q-btn v-if="canManageTemplates" flat :disable="store.loading" @click="openTemplateDialog">Шаблон</q-btn>
-        <q-btn v-if="canCreate" color="primary" :disable="store.loading" @click="openCreateDialog">
+        <q-btn v-if="canCreate" color="primary" :disable="store.loading" @click="openCreateDialog()">
           <template #default>
             <Plus :size="16" />
             <span>Создать занятие</span>
