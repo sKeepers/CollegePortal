@@ -72,7 +72,10 @@ export const useDormStore = defineStore('dorm', () => {
     loading.value = true
     error.value = ''
     try {
-      const query = { per_page: 200 }
+      // Без `per_page`: `listAll` дочитывает список целиком и переданный
+      // размер намеренно игнорирует. Пока он здесь стоял, число читалось
+      // как действующее ограничение, хотя не значило ничего.
+      const query = {}
       if (roomFilters.value.only_free) query.only_free = 1
       if (roomFilters.value.is_active !== null) query.is_active = roomFilters.value.is_active ? 1 : 0
 
@@ -88,7 +91,10 @@ export const useDormStore = defineStore('dorm', () => {
     loading.value = true
     error.value = ''
     try {
-      const query = { per_page: 300 }
+      // Без `per_page`: `listAll` дочитывает список целиком и переданный
+      // размер намеренно игнорирует. Пока он здесь стоял, число читалось
+      // как действующее ограничение, хотя не значило ничего.
+      const query = {}
       if (placementFilters.value.dorm_room_id) query.dorm_room_id = placementFilters.value.dorm_room_id
       if (placementFilters.value.open !== null) query.open = placementFilters.value.open ? 1 : 0
 
@@ -179,7 +185,10 @@ export const useDormStore = defineStore('dorm', () => {
     loading.value = true
     error.value = ''
     try {
-      const query = { per_page: 200 }
+      // Без `per_page`: `listAll` дочитывает список целиком и переданный
+      // размер намеренно игнорирует. Пока он здесь стоял, число читалось
+      // как действующее ограничение, хотя не значило ничего.
+      const query = {}
       if (nightFilters.value.from) query.from = nightFilters.value.from
       if (nightFilters.value.to) query.to = nightFilters.value.to
 
@@ -195,7 +204,10 @@ export const useDormStore = defineStore('dorm', () => {
     loading.value = true
     error.value = ''
     try {
-      const query = { per_page: 300 }
+      // Без `per_page`: `listAll` дочитывает список целиком и переданный
+      // размер намеренно игнорирует. Пока он здесь стоял, число читалось
+      // как действующее ограничение, хотя не значило ничего.
+      const query = {}
       if (nightFilters.value.from) query.from = nightFilters.value.from
       if (nightFilters.value.to) query.to = nightFilters.value.to
 
