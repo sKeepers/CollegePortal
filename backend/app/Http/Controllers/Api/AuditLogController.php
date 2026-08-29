@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AuditLogResource;
 use App\Models\AuditLog;
+use App\Support\Http\PageSize;
 use App\Support\Time\CollegeTime;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -24,6 +25,11 @@ class AuditLogController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
+        // Столбец «Дата» в таблице помечен сортируемым, и при постраничности с
+        // сервера сортировать на месте нечего: он сортировал бы двадцать строк
+        // из семнадцати тысяч. Направление приходит запросом.
+        $direction = $request->string('direction')->toString() === 'asc' ? 'asc' : 'desc';
+
         $logs = AuditLog::query()
             ->with('user.role')
             ->when($request->integer('user_id'), fn ($query, int $userId) => $query->where('user_id', $userId))
@@ -40,10 +46,39 @@ class AuditLogController extends Controller
                         ->orWhereHas('user', fn ($userQuery) => $userQuery->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%"));
                 });
             })
-            ->latest('created_at')
-            ->paginate((int) $request->integer('per_page', 50));
+            // Сортировка обязана быть однозначной, иначе постраничность врёт.
+            // Одного `created_at` мало: на стенде 29.08.2026 у 395 меток времени
+            // есть дубли, а на одну секунду приходится 253 записи — база вправе
+            // вернуть их в любом порядке, и при переходе на вторую страницу
+            // часть строк показалась бы дважды, а часть не показалась бы вовсе.
+            // `id` разводит совпавшие по времени раз и навсегда.
+            ->orderBy('created_at', $direction)
+            ->orderBy('id', $direction)
+            ->paginate(PageSize::from($request, 50));
 
-        return AuditLogResource::collection($logs);
+        // Списки для отбора считаются по всей таблице, а не по выданной
+        // странице. Раньше экран забирал 200 строк и собирал «модуль» и
+        // «действие» из них: пока страница была большой, это сходило за правду.
+        return AuditLogResource::collection($logs)->additional([
+            'options' => [
+                'modules' => $this->distinctValues('module'),
+                'actions' => $this->distinctValues('action'),
+            ],
+        ]);
+    }
+
+    /**
+     * Различные значения столбца по всему журналу — для полей отбора.
+     */
+    private function distinctValues(string $column): array
+    {
+        return AuditLog::query()
+            ->select($column)
+            ->whereNotNull($column)
+            ->distinct()
+            ->orderBy($column)
+            ->pluck($column)
+            ->all();
     }
 
     public function show(AuditLog $auditLog): AuditLogResource
