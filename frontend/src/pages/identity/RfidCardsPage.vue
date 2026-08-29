@@ -72,9 +72,16 @@ const openOptions = [
   { value: false, label: 'Только закрытые' },
 ]
 
-/** Заголовок печатной формы: ведомость на группу или журнал за период. */
+/**
+ * Заголовок печатной формы: ведомость на группу или журнал за период.
+ *
+ * Читается **применённый** отбор, а не то, что сейчас в полях. Живой отбор
+ * подписывал бы строки, отобранные по другому: выбрал группу, «Показать» не
+ * нажал, нажал «Печать» — и лист выходил ведомостью на группу со всеми
+ * картами колледжа. Замер 29.08.2026: 245 строк под заголовком одной группы.
+ */
 const printTitle = computed(() => {
-  const group = findGroupOption(store.groupOptions, store.journalFilters.group_id)
+  const group = findGroupOption(store.groupOptions, store.journalApplied?.group_id ?? null)
 
   // Шапка печатной ведомости: здесь нужно полное имя группы, а не строка списка —
   // «2 курс» на бумаге не говорит ни о чём.
@@ -86,7 +93,9 @@ const printTitle = computed(() => {
 })
 
 const printPeriod = computed(() => {
-  const { from, to } = store.journalFilters
+  // Тот же снимок, что и у заголовка: период на листе обязан описывать строки
+  // на листе, а не поле ввода.
+  const { from = '', to = '' } = store.journalApplied ?? {}
   if (!from && !to) return 'за всё время'
 
   return `за период ${from ? formatDate(from) : '…'} — ${to ? formatDate(to) : '…'}`

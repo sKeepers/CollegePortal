@@ -27,6 +27,24 @@ export const useRfidCardsStore = defineStore('rfidCards', () => {
   const filters = ref({ status: '', search: '' })
   const journalFilters = ref({ from: '', to: '', group_id: null, reason: '', open: null })
 
+  /**
+   * Отбор, по которому пришли строки, лежащие в `journal` **сейчас**.
+   *
+   * Отдельно от `journalFilters` потому, что это разные вещи: в полях лежит то,
+   * что человек набрал, а здесь — то, по чему сервер отобрал. Между ними всегда
+   * есть промежуток: выбрал группу, «Показать» не нажал.
+   *
+   * Печать обязана подписываться **этим**. Замерено 29.08.2026: с живым отбором
+   * лист выходил под заголовком «Ведомость выдачи RFID-карт — Театральное
+   * творчество…» и нёс 245 строк — все выданные карты колледжа. Это тот же
+   * дефект, что чинился 24.08, когда ведомость подписала пятерых живых людей
+   * чужим заголовком; причина другая, а неправда на бумаге та же.
+   *
+   * `null` — журнал ещё ни разу не грузили; печатать в этом состоянии нечего,
+   * и кнопка выключена пустым `journal`.
+   */
+  const journalApplied = ref(null)
+
   const STATUS_LABELS = {
     stock: 'На складе',
     issued: 'На руках',
@@ -91,7 +109,12 @@ export const useRfidCardsStore = defineStore('rfidCards', () => {
     loading.value = true
     error.value = ''
     try {
+      const asked = { ...journalFilters.value }
       journal.value = rows(await api.list('rfid-cards/journal', { ...journalQuery(), per_page: 500 }))
+      // Снимок ставится только после удачного ответа: если загрузка отказала,
+      // на экране остаются прежние строки, и подписывать их новым отбором
+      // нельзя.
+      journalApplied.value = asked
     } catch (err) {
       fail(err, 'Не удалось загрузить журнал')
     } finally {
@@ -286,7 +309,7 @@ export const useRfidCardsStore = defineStore('rfidCards', () => {
 
   return {
     cards, journal, groups, foundPeople, person, unknownCard,
-    loading, searching, saving, error, filters, journalFilters,
+    loading, searching, saving, error, filters, journalFilters, journalApplied,
     statusOptions, reasonOptions, groupOptions, counts,
     statusLabels: STATUS_LABELS, reasonLabels: REASON_LABELS,
     load, loadGroups, loadJournal, exportJournalFile, previewJournalImport, confirmJournalImport,
