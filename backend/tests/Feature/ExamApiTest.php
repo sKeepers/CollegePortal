@@ -105,6 +105,82 @@ class ExamApiTest extends TestCase
         $this->assertDatabaseHas('exam_results', ['student_id' => $student->id, 'result' => 'зачет', 'score' => 88]);
     }
 
+    private const IMPORT_HEADER = 'id;academic_year;semester;group_id;group_name;subject_id;subject_code;subject_name;teacher_id;teacher;classroom_id;classroom;classroom_building;exam_date;starts_at;ends_at;exam_type;status;topic;student_id;student;result;score;result_status;comment';
+
+    public function test_a_room_number_in_two_buildings_is_refused_not_guessed(): void
+    {
+        // 30.08.2026 в портал приходят аудитории Голенева и Серова, и номера в
+        // них повторяются. До правки импорт брал первую попавшуюся «101» и не
+        // жаловался: строка проходила, а экзамен назначался в другой корпус.
+        [$group, $subject, $teacher] = $this->baseEntities();
+        Classroom::create(['number' => '101', 'building' => 'Голенева, 21', 'floor' => 1, 'capacity' => 20, 'type' => 'Учебная']);
+        Classroom::create(['number' => '101', 'building' => 'Серова, 277', 'floor' => 1, 'capacity' => 20, 'type' => 'Учебная']);
+
+        $response = $this->post('/api/exams/import', [
+            'file' => UploadedFile::fake()->createWithContent('exams.csv', $this->examCsv($group, $subject, $teacher, '101', '')),
+        ]);
+
+        $response->assertOk()->assertJsonPath('data.created', 0);
+        $this->assertStringContainsString('есть в нескольких корпусах', $response->json('data.errors.0.errors.0'));
+        // Номер строки в отказе обязателен: без него оператор не найдёт, какую
+        // из сотни строк чинить.
+        $this->assertSame(2, $response->json('data.errors.0.line'));
+        $this->assertDatabaseCount('exams', 0);
+    }
+
+    public function test_the_building_column_picks_the_right_room_of_two(): void
+    {
+        // Обратная сторона: отказ не должен превратиться в «нельзя никогда».
+        // С названным корпусом пара однозначна, и строка обязана пройти.
+        [$group, $subject, $teacher] = $this->baseEntities();
+        Classroom::create(['number' => '101', 'building' => 'Голенева, 21', 'floor' => 1, 'capacity' => 20, 'type' => 'Учебная']);
+        $serova = Classroom::create(['number' => '101', 'building' => 'Серова, 277', 'floor' => 1, 'capacity' => 20, 'type' => 'Учебная']);
+
+        $response = $this->post('/api/exams/import', [
+            'file' => UploadedFile::fake()->createWithContent('exams.csv', $this->examCsv($group, $subject, $teacher, '101', 'Серова, 277')),
+        ]);
+
+        $response->assertOk()->assertJsonPath('data.created', 1);
+        $this->assertDatabaseHas('exams', ['academic_year' => '2027/2028', 'classroom_id' => $serova->id]);
+    }
+
+    public function test_a_file_without_the_building_column_still_loads(): void
+    {
+        // Колонка добавлена, но необязательна: пока номер один на портал,
+        // старые файлы обязаны грузиться как раньше. Иначе правка ради
+        // понедельника сломала бы всё, что было до него.
+        [$group, $subject, $teacher, $classroom] = $this->baseEntities();
+
+        // Заголовок **без** колонки корпуса — ровно такой файл был до 30.08.2026.
+        $csv = implode("\n", [
+            str_replace(';classroom_building', '', self::IMPORT_HEADER),
+            ";2027/2028;1;{$group->id};;{$subject->id};;;{$teacher->id};;;{$classroom->number};2027-12-20;;;credit;scheduled;;;;;;;",
+        ]);
+
+        $this->post('/api/exams/import', ['file' => UploadedFile::fake()->createWithContent('exams.csv', $csv)])
+            ->assertOk()
+            ->assertJsonPath('data.created', 1);
+
+        $this->assertDatabaseHas('exams', ['classroom_id' => $classroom->id]);
+    }
+
+    /**
+     * Строка импорта экзамена с заданными аудиторией и корпусом.
+     *
+     * Колонки перечислены **все**, а не только нужные проверке: импортёр читает
+     * часть из них без проверки на наличие, и файл без `starts_at` падает с
+     * английским «Undefined array key». Это его давняя хрупкость, к аудиториям
+     * отношения не имеющая; здесь она обходится, а не чинится — файл чужой
+     * области, и правка сверх поручения была бы уже другой работой.
+     */
+    private function examCsv(Group $group, Subject $subject, Teacher $teacher, string $room, string $building): string
+    {
+        return implode("\n", [
+            self::IMPORT_HEADER,
+            ";2027/2028;1;{$group->id};;{$subject->id};;;{$teacher->id};;;{$room};{$building};2027-12-20;;;credit;scheduled;;;;;;;",
+        ]);
+    }
+
     private function baseEntities(): array
     {
         $group = Group::create(['name' => 'ИСП-101', 'specialty' => 'Инструментальное исполнительство', 'course' => 1, 'year_start' => 2026]);

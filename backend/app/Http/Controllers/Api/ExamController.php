@@ -156,6 +156,10 @@ class ExamController extends Controller
                 'teacher' => ['nullable', 'string'],
                 'classroom_id' => ['nullable', 'integer', 'exists:classrooms,id'],
                 'classroom' => ['nullable', 'string'],
+                // Колонка добавлена 30.08.2026 и необязательна: старые файлы без
+                // неё грузятся по-прежнему. Нужна она с того дня, когда номера
+                // аудиторий начнут повторяться в двух корпусах.
+                'classroom_building' => ['nullable', 'string', 'max:255'],
                 'exam_date' => ['required', 'date'],
                 'starts_at' => ['nullable', 'date_format:H:i'],
                 'ends_at' => ['nullable', 'date_format:H:i'],
@@ -294,11 +298,53 @@ class ExamController extends Controller
         return null;
     }
 
+    /**
+     * Аудитория ищется парой «номер + корпус», а спор не решается наугад.
+     *
+     * До 30.08.2026 здесь стояло `Classroom::where('number', ...)->value('id')`
+     * — корпус не учитывался **вовсе**, даже когда был известен, и при двух
+     * аудиториях «101» экзамен назначался в ту, что попалась первой. Молча:
+     * строка импорта проходила, ошибки не было, а место экзамена оказывалось
+     * в другом корпусе.
+     *
+     * Повод срочный: 30.08.2026 в портал приходят аудитории Голенева и Серова,
+     * и номера в них повторяются. Пока корпус один, промаха нет физически.
+     *
+     * Способ взят из портала, а не выдуман: `ClassroomImportHandler` и
+     * `ClassroomCsvService` ищут той же парой, и уникальность в правилах
+     * объявлена парой же. Из трёх мест, ищущих аудиторию, два делали это верно.
+     *
+     * **Неоднозначность отказывает, а не выбирает.** Ручка — пакетный импорт,
+     * и отказ здесь стоит дёшево: строка попадает в `errors` со своим номером,
+     * остальные грузятся дальше. Тихий промах стоил бы дороже — он обнаружился
+     * бы у двери аудитории.
+     */
     private function resolveClassroomId(array $data): ?int
     {
         if (!empty($data['classroom_id'])) { return (int) $data['classroom_id']; }
-        if (!empty($data['classroom'])) { return Classroom::where('number', $data['classroom'])->value('id'); }
-        return null;
+
+        $number = trim((string) ($data['classroom'] ?? ''));
+
+        if ($number === '') { return null; }
+
+        $building = trim((string) ($data['classroom_building'] ?? ''));
+
+        $found = Classroom::query()
+            ->where('number', $number)
+            ->when($building !== '', fn ($query) => $query->where('building', $building))
+            ->orderBy('id')
+            ->get(['id', 'building']);
+
+        if ($found->count() > 1) {
+            $buildings = $found->pluck('building')->map(fn ($name) => $name ?: 'без корпуса')->implode(', ');
+
+            throw new \RuntimeException(
+                "Аудитория «{$number}» есть в нескольких корпусах ({$buildings}). "
+                .'Укажите колонку `classroom_building` или `classroom_id`.',
+            );
+        }
+
+        return $found->first()?->id;
     }
 
     private function resolveStudentId(array $data): ?int
