@@ -11,6 +11,10 @@ const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS']
 // сервера `App\Support\Http\PageSize::MAX`; см. `listAll` ниже.
 const WHOLE_LIST_PAGE = 500
 
+// С какого размера просьба перестаёт быть страницей и становится «дайте всё».
+// Ниже этого просят счётчики: одна строка ради `meta.total`, и они правы.
+const WHOLE_LIST_HINT = 50
+
 function csrfToken() {
   const match = document.cookie.match(new RegExp(`(?:^|; )${CSRF_COOKIE}=([^;]*)`))
   return match ? decodeURIComponent(match[1]) : ''
@@ -297,7 +301,7 @@ export const api = {
         + ' Нужен предел — зовите list.',
       )
     }
-    const first = await this.list(resource, { ...rest, per_page: WHOLE_LIST_PAGE })
+    const first = await this.list(resource, { ...rest, per_page: WHOLE_LIST_PAGE }, { viaListAll: true })
 
     const meta = first?.meta
     const lastPage = Number(meta?.last_page || 0)
@@ -308,7 +312,7 @@ export const api = {
 
     const pages = await Promise.all(
       Array.from({ length: lastPage - 1 }, (unused, index) =>
-        this.list(resource, { ...rest, per_page: meta.per_page, page: index + 2 })),
+        this.list(resource, { ...rest, per_page: meta.per_page, page: index + 2 }, { viaListAll: true })),
     )
 
     const data = [...(Array.isArray(first.data) ? first.data : [])]
@@ -319,7 +323,14 @@ export const api = {
     return { ...first, data, meta: { ...meta, current_page: 1, last_page: 1, per_page: data.length } }
   },
 
-  async list(resource, params = {}) {
+  /**
+   * @param {object} [options] `viaListAll` — запрос сделан самим `listAll`.
+   *   Он берёт первую страницу большим куском и **дочитывает остальные**, то
+   *   есть делает ровно то, чего требует жалоба ниже. Без пометки сторож
+   *   обвинял единственного, кто поступает правильно: замер на стенде дал пять
+   *   ложных обвинений (`students` трижды, `people`) на одно настоящее.
+   */
+  async list(resource, params = {}, options = {}) {
     resource = trimLeadingSlash(resource)
 
     const query = new URLSearchParams()
@@ -336,6 +347,29 @@ export const api = {
     // Кто не просил ни страницу, ни её размер — просил весь список. Если ему
     // отдали страницу из нескольких, он этого не заметит: `meta` обычно тут же
     // выбрасывают. Поэтому жалуемся вслух — молча такое живёт неделями.
+    // И вторая дверь к той же беде: размер попросили, а страницу приняли за
+    // весь список. Жалоба выше молчала именно здесь — «попросил размер, значит
+    // знает, что просит», — и через эту дверь прошёл журнал аудита: хранилище
+    // берёт 200 строк, таблица листает их у себя, а подпись выдаёт «1 - 20 из
+    // 200» при 16 977 записях в журнале. Замерено 29.08.2026 на стенде.
+    //
+    // Признак сужен так, чтобы не кричать на невиновных: настоящая постраничная
+    // таблица всегда передаёт и `page`, а счётчики просят одну-две строки ради
+    // `meta.total`. Остаётся ровно тот случай, ради которого правило написано:
+    // большой размер без страницы, а строк на сервере всё равно больше.
+    if (
+      ! options.viaListAll
+      && params.page === undefined
+      && Number(params.per_page || 0) >= WHOLE_LIST_HINT
+      && Number(payload?.meta?.last_page || 0) > 1
+    ) {
+      console.error(
+        `[api] «${resource}»: запрошено ${params.per_page} строк, а на сервере ${payload.meta.total}.`
+        + ` Отдана страница ${payload.meta.current_page} из ${payload.meta.last_page}:`
+        + ' экран покажет кусок и назовёт его целым. Возьмите api.listAll или листайте на сервере.',
+      )
+    }
+
     if (
       params.page === undefined && params.per_page === undefined
       && Number(payload?.meta?.last_page || 0) > 1
