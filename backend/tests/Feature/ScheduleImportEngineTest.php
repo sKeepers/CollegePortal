@@ -13,6 +13,7 @@ use App\Models\TeachingLoadItem;
 use App\Services\Import\ScheduleImportHandler;
 use App\Services\ScheduleEngineService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Validator;
 use Tests\TestCase;
 
 /**
@@ -132,6 +133,59 @@ class ScheduleImportEngineTest extends TestCase
         $this->assertSame($context['subject']->id, $prepared['subject_id']);
         $this->assertSame($context['classroom']->id, $prepared['classroom_id']);
         $this->assertNotNull($handler->findExisting($prepared), 'Загруженная обратно строка должна опознаться как та же самая');
+    }
+
+    public function test_a_room_number_in_two_buildings_is_refused_not_guessed(): void
+    {
+        // 30.08.2026 в портал приходят Голенева и Серова, и номера в них
+        // повторяются. До правки строка с пустым корпусом получала первую
+        // попавшуюся аудиторию и загружалась молча — занятие оказывалось в
+        // другом корпусе, и узнали бы об этом у двери.
+        $context = $this->context();
+        Classroom::create(['number' => '101', 'building' => 'Голенева, 21']);
+        Classroom::create(['number' => '101', 'building' => 'Серова, 277']);
+
+        $prepared = $this->row($context, ['classroom_number' => '101', 'classroom_building' => null]);
+
+        $errors = Validator::make($prepared, app(ScheduleImportHandler::class)->rules())->errors();
+
+        $this->assertTrue($errors->has('classroom_id'));
+        $this->assertStringContainsString('в нескольких корпусах', $errors->first('classroom_id'));
+        // Сообщение именно о споре, а не «не найдена»: иначе человек пойдёт
+        // искать опечатку в номере, которой нет.
+        $this->assertStringNotContainsString('не найдена', $errors->first('classroom_id'));
+    }
+
+    public function test_the_building_column_picks_the_right_room_of_two(): void
+    {
+        // Обратная сторона: отказ не должен превратиться в «нельзя никогда».
+        // С названным корпусом пара однозначна, и строка обязана пройти.
+        $context = $this->context();
+        Classroom::create(['number' => '101', 'building' => 'Голенева, 21']);
+        $serova = Classroom::create(['number' => '101', 'building' => 'Серова, 277']);
+
+        $prepared = $this->row($context, ['classroom_number' => '101', 'classroom_building' => 'Серова, 277']);
+
+        $this->assertSame($serova->id, $prepared['classroom_id']);
+        $this->assertFalse(
+            Validator::make($prepared, app(ScheduleImportHandler::class)->rules())->errors()->has('classroom_id'),
+        );
+    }
+
+    public function test_a_file_without_the_building_column_still_loads(): void
+    {
+        // **Этот сторож обязан оставаться зелёным** и на внесённом дефекте не
+        // краснеет — он охраняет не поведение при споре, а то, что спора нет,
+        // пока номер один на портал. Без него правка ради 30.08 могла бы
+        // отвергать файлы, которые грузились всегда.
+        $context = $this->context();
+
+        $prepared = $this->row($context, ['classroom_building' => null]);
+
+        $this->assertSame($context['classroom']->id, $prepared['classroom_id']);
+        $this->assertFalse(
+            Validator::make($prepared, app(ScheduleImportHandler::class)->rules())->errors()->has('classroom_id'),
+        );
     }
 
     /** @return array<string, mixed> */
