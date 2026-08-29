@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
+import { useRoute } from 'vue-router'
 import { CreditCard, Download, Plus, Printer, RefreshCw, Search, Upload, X } from '@lucide/vue'
 import AppPage from '../../components/ui/AppPage.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
@@ -28,6 +29,7 @@ import { usePermissions } from '../../composables/usePermissions'
  * отдельной кнопкой в реестре — это про коробку новых карт, а не про выдачу.
  */
 const store = useRfidCardsStore()
+const route = useRoute()
 const permissions = usePermissions()
 const canManage = computed(() => permissions.hasPermission('rfid.cards.manage'))
 const $q = useQuasar()
@@ -375,6 +377,20 @@ function onGlobalKey(event) {
   }
 
   if (event.key.length === 1 && /[0-9A-Za-z]/.test(event.key)) wedgeBuffer += event.key
+}
+
+/**
+ * Адрес может назвать карту: `/identity/rfid-cards?card=0005082083`.
+ *
+ * Из карточки человека приходят именно так. Раньше ссылка вела в общий список
+ * из 244 строк, и владелец искал свою карту заново — кнопка называла карту, а
+ * приводила к чужим. Теперь отбор уже стоит, и открыт реестр, а не выдача.
+ */
+const routeCard = String(route.query.card || '').trim()
+
+if (routeCard) {
+  store.filters.search = routeCard
+  tab.value = 'registry'
 }
 
 onMounted(async () => {

@@ -1074,7 +1074,19 @@ onMounted(() => store.loadToday())
 
 <style scoped>
 .dorm-tabs { border-bottom: 1px solid #e2e8f0; }
-.dorm-panels { background: transparent; }
+/*
+  Панель вкладок берёт высоту от содержимого, а не наоборот.
+
+  Четвёртый случай одной болезни за сутки, и найден он обходом, а не жалобой:
+  Quasar меряет высоту панели один раз и отдаёт её родителю, а выросшее позже
+  содержимое в неё уже не влезает. Замер 29.08.2026: панель 492 px при
+  содержимом 504 — **одинаково при окне 900 и 1400**, то есть с размером окна
+  это не связано вовсе. Ровно тот же признак и та же величина, что были на
+  экране RFID-карт.
+*/
+.dorm-panels { background: transparent; height: auto; }
+.dorm-panels :deep(.q-panel-parent) { height: auto; }
+.dorm-panels :deep(.q-panel) { height: auto; overflow: visible; }
 .dorm-counters { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0; }
 .dorm-counter { display: grid; gap: 2px; padding: 8px 14px; border: 1px solid #e2e8f0; border-radius: 10px; min-width: 120px; }
 .dorm-counter__value { font-size: 20px; font-weight: 600; color: #0f172a; }
