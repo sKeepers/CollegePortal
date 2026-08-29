@@ -57,6 +57,11 @@ const lessonActivity = computed(() => todayLessons.value.slice(0, 5).map((lesson
   description: [groupName(lesson.group), lesson.classroom?.number, `${lesson.starts_at || '—'}–${lesson.ends_at || '—'}`].filter(Boolean).join(' · '),
   time: lesson.lesson_date || 'Сегодня',
 })))
+// Ответило ли расписание вообще: `Promise.allSettled` прячет отказ, и пустой
+// список после неудачного запроса неотличим от пустого расписания.
+const scheduleAnswered = ref(false)
+const weekLessons = journals
+
 const notifications = computed(() => {
   const items = []
   if (nearestLesson.value) {
@@ -66,7 +71,29 @@ const notifications = computed(() => {
     items.push({ id: 'no-teacher', title: 'Связь с преподавателем', description: 'Пользователь пока не связан с карточкой преподавателя. Показана общая преподавательская панель.', status: 'Настроить', tone: 'warning' })
   }
   if (!items.length) {
-    items.push({ id: 'empty', title: 'Расписание', description: 'На сегодня занятия не найдены', status: 'Свободно', tone: 'success' })
+    // Зелёное «Свободно» — утверждение о дне человека, а знаем мы только про
+    // данные. 30.08.2026 на пустом расписании преподаватель видел его первым
+    // экраном: занятий в портале не было вовсе, а панель поздравляла с
+    // свободным днём. Различаем три случая теми данными, что уже загружены.
+    if (!scheduleAnswered.value) {
+      items.push({
+        id: 'unknown',
+        title: 'Расписание',
+        description: 'Не удалось получить расписание. Нажмите «Обновить».',
+        status: 'Неизвестно',
+        tone: 'warning',
+      })
+    } else if (!weekLessons.value.length && !teachingLoads.value.length) {
+      items.push({
+        id: 'not-loaded',
+        title: 'Расписание',
+        description: 'Занятий на неделю и нагрузки за вами пока нет — расписание ещё не заведено.',
+        status: 'Нет данных',
+        tone: 'info',
+      })
+    } else {
+      items.push({ id: 'empty', title: 'Расписание', description: 'На сегодня занятий нет', status: 'Свободно', tone: 'success' })
+    }
   }
   return items
 })
@@ -104,6 +131,8 @@ async function loadDashboard() {
     if (lessonsResult.status === 'fulfilled') todayLessons.value = extractRows(lessonsResult.value)
     if (loadsResult.status === 'fulfilled') teachingLoads.value = extractRows(loadsResult.value)
     if (journalResult.status === 'fulfilled') journals.value = extractRows(journalResult.value)
+
+    scheduleAnswered.value = lessonsResult.status === 'fulfilled' && journalResult.status === 'fulfilled'
 
     const groups = new Map()
     ;[...todayLessons.value, ...journals.value].forEach((lesson) => {

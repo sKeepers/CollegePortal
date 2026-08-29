@@ -2,6 +2,9 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Eye, EyeOff, GripVertical, RotateCcw, Save, SlidersHorizontal, X } from '@lucide/vue'
 import AppErrorBanner from '../ui/AppErrorBanner.vue'
+// `DASHBOARD_LAYOUT_PROFILE` остаётся прежним: это **хранимое** имя, по нему
+// ищется уже сохранённая расстановка. Переименование потеряло бы её у тех,
+// кто настроил рабочий стол под себя. Здесь переписаны только надписи.
 import { DASHBOARD_LAYOUT_PROFILE, dashboardLayoutService } from '../../services/dashboardLayoutService'
 
 const props = defineProps({
@@ -153,7 +156,7 @@ async function loadLayouts() {
       profile.value = 'custom'
     }
   } catch (err) {
-    error.value = 'Персональные настройки Dashboard недоступны. Показан стандартный вид.'
+    error.value = 'Персональные настройки рабочего стола недоступны. Показан стандартный вид.'
     customLayoutId.value = null
     savedCustomWidgets.value = null
     const localLayout = loadLocalLayout()
@@ -193,7 +196,7 @@ async function saveEditing() {
     profile.value = 'custom'
     editing.value = false
   } catch (err) {
-    error.value = err.message || 'Не удалось сохранить расположение Dashboard'
+    error.value = err.message || 'Не удалось сохранить расположение рабочего стола'
   } finally {
     saving.value = false
   }
@@ -212,7 +215,7 @@ async function resetToStandard() {
     applyStandard()
     editing.value = false
   } catch (err) {
-    error.value = err.message || 'Не удалось вернуть стандартный вид Dashboard'
+    error.value = err.message || 'Не удалось вернуть стандартный вид рабочего стола'
   } finally {
     saving.value = false
   }
@@ -334,7 +337,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
 <template>
   <div class="personal-dashboard">
     <div class="personal-dashboard__bar">
-      <div class="personal-dashboard__profiles" aria-label="Профиль Dashboard">
+      <div class="personal-dashboard__profiles" aria-label="Профиль рабочего стола">
         <button
           type="button"
           :class="['personal-dashboard__profile', { 'personal-dashboard__profile--active': profile === 'standard' }]"
@@ -349,7 +352,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
           :disabled="editing || !canUseCustom"
           @click="switchProfile('custom')"
         >
-          Мой Dashboard
+          Мой вид
         </button>
       </div>
 
@@ -361,7 +364,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
         @click="startEditing"
       >
         <SlidersHorizontal :size="16" />
-        <span>Настроить Dashboard</span>
+        <span>Настроить вид</span>
       </q-btn>
 
       <div v-else class="personal-dashboard__actions">
