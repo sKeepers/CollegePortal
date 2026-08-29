@@ -6,6 +6,7 @@ use App\Models\AccessEvent;
 use App\Models\DigitalIdentity;
 use App\Models\Group;
 use App\Models\Student;
+use App\Support\Time\CollegeTime;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -117,6 +118,14 @@ class AccessReportVolumeTest extends TestCase
     {
         $identity = $this->createStudentIdentity('Иванов', 'Дмитрий');
         $now = now();
+        // Сутки берутся у того же источника, что и код под проверкой.
+        // `Carbon::today()` здесь — сутки **UTC**, а сводка с 28.08.2026
+        // считает «сегодня» сутками колледжа (`Europe/Moscow`). Три часа в
+        // сутки календари не совпадают, и тест падал именно в них: замер
+        // 29.08.2026, UTC 21:14 — это уже 00:14 30-го по Москве, посеянные
+        // «сегодня в 08:00 UTC» события оказывались за тринадцать часов до
+        // начала суток колледжа, и `today_events` приходил нулём.
+        $base = CollegeTime::at(CollegeTime::todayDate(), 8);
         $rows = [];
 
         foreach (range(1, self::VOLUME) as $index) {
@@ -125,9 +134,10 @@ class AccessReportVolumeTest extends TestCase
                 'entity_type' => 'student',
                 'entity_id' => $identity->entity_id,
                 'direction' => AccessEvent::DIRECTION_IN,
-                // Время в пределах сегодняшнего дня, чтобы счётчик «за сегодня»
-                // считал их все.
-                'event_time' => Carbon::today()->setTime(8, 0)->addSeconds($index * 20),
+                // Время в пределах сегодняшнего дня **колледжа**, чтобы
+                // счётчик «за сегодня» считал их все. Прежняя редакция обещала
+                // это же словами, а держалась на совпадении часовых поясов.
+                'event_time' => $base->addSeconds($index * 20),
                 'result' => $index % 35 === 0 ? AccessEvent::RESULT_DENIED : AccessEvent::RESULT_ALLOWED,
                 'created_at' => $now,
                 'updated_at' => $now,

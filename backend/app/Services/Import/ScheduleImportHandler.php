@@ -21,18 +21,25 @@ class ScheduleImportHandler extends AbstractImportHandler { use ResolvesImportRe
   */
  private const CLASSROOM_NOT_FOUND = -1;
 
- private function classroomWasFound(): callable
+ private function classroomWasResolved(): callable
  {
      return static function (string $attribute, $value, callable $fail): void {
          if ((int) $value === self::CLASSROOM_NOT_FOUND) {
              $fail('Аудитория из файла в портале не найдена. Проверьте номер и корпус или заведите аудиторию заранее.');
+         }
+
+         // Спор о корпусе — отдельный случай и отдельное сообщение. «Не найдена»
+         // здесь было бы неправдой: аудитория как раз найдена, и не одна, а
+         // человек пошёл бы искать опечатку в номере, которой нет.
+         if ((int) $value === self::CLASSROOM_AMBIGUOUS) {
+             $fail('Аудитория с таким номером есть в нескольких корпусах. Укажите колонку «Корпус» или ID аудитории.');
          }
      };
  }
 
  public function templateHeaders(): array { return ['Дата','Время начала','Время окончания','Группа','Преподаватель','Дисциплина','Код дисциплины','Аудитория','Корпус','Тип занятия','Тема']; } public function templateExample(): array { return ['01.09.2026','09:00','10:30','ИСП-101','Петрова Анна Викторовна','Специальность','SPEC-001','201','Главный корпус','Практическое','Вводное занятие']; }
  public function prepare(array $data): array { $data['lesson_date']=$this->normalizeDate($data['lesson_date']??null); $data['starts_at']=$this->normalizeTime($data['starts_at']??null); $data['ends_at']=$this->normalizeTime($data['ends_at']??null); $data['group_id']=$this->resolveGroupId($data['group_id']??null,$data['group_name']??null); $data['teacher_id']=$this->resolveTeacherId($data['teacher_id']??null,$data['teacher_name']??null); $data['subject_id']=$this->resolveSubjectId($data['subject_id']??null,$data['subject_code']??null,$data['subject_name']??null); $data['classroom_id']=$this->resolveClassroomId($data['classroom_id']??null,$data['classroom_number']??null,$data['classroom_building']??null); $data['classroom_id']=$data['classroom_id'] ?? (filled($data['classroom_number']??null) ? self::CLASSROOM_NOT_FOUND : null); $data['lesson_type']=$data['lesson_type'] ?: 'lesson'; return $data; }
- public function rules(): array { return ['lesson_date'=>['required','date'],'starts_at'=>['required','date_format:H:i'],'ends_at'=>['required','date_format:H:i','after:starts_at'],'group_id'=>['required','integer','exists:groups,id'],'teacher_id'=>['required','integer','exists:teachers,id'],'subject_id'=>['required','integer','exists:subjects,id'],'classroom_id'=>['nullable','bail','integer',$this->classroomWasFound(),'exists:classrooms,id'],'lesson_type'=>['required','string','max:255'],'topic'=>['nullable','string','max:255']]; }
+ public function rules(): array { return ['lesson_date'=>['required','date'],'starts_at'=>['required','date_format:H:i'],'ends_at'=>['required','date_format:H:i','after:starts_at'],'group_id'=>['required','integer','exists:groups,id'],'teacher_id'=>['required','integer','exists:teachers,id'],'subject_id'=>['required','integer','exists:subjects,id'],'classroom_id'=>['nullable','bail','integer',$this->classroomWasResolved(),'exists:classrooms,id'],'lesson_type'=>['required','string','max:255'],'topic'=>['nullable','string','max:255']]; }
  /**
   * Дата сравнивается через whereDate, а не строкой. Записи, пришедшие зеркалом
   * от движка расписания, лежат с нулевым временем — `2026-09-01 00:00:00`, — и

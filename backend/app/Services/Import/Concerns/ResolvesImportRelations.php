@@ -85,12 +85,41 @@ trait ResolvesImportRelations
         return ['ids' => array_values(array_unique($ids)), 'unresolved' => $unresolved];
     }
 
+    /**
+     * Номер аудитории есть в нескольких корпусах — выбирать наугад нельзя.
+     *
+     * Возвращается вместо идентификатора, чтобы вызывающий отличил спор от
+     * «не нашли»: до 30.08.2026 оба случая давали одно и то же, и спор
+     * разрешался первой попавшейся строкой.
+     */
+    public const CLASSROOM_AMBIGUOUS = -2;
+
+    /**
+     * Аудитория по номеру и корпусу.
+     *
+     * До 30.08.2026 корпус участвовал в отборе, **только если был задан**, а
+     * итог брался через `value('id')` — то есть при двух аудиториях «101» и
+     * пустом корпусе возвращалась первая по порядку, молча. Пока корпус в
+     * портале один, промаха нет физически; он появляется в тот день, когда
+     * корпусов становится два, — 30.08.2026 приходят Голенева и Серова.
+     *
+     * Отбор по корпусу оставлен условным намеренно: файл без колонки «Корпус»
+     * обязан грузиться как раньше, пока номер однозначен. Изменилось только
+     * поведение при споре: раньше выбор, теперь отказ.
+     */
     protected function resolveClassroomId($id, ?string $number, ?string $building): ?int
     {
         if ($id) { return (int) $id; }
         if (!$number) { return null; }
-        $query = Classroom::where('number', $number);
-        if ($building) { $query->where('building', $building); }
-        return $query->value('id');
+
+        $found = Classroom::query()
+            ->where('number', $number)
+            ->when(filled($building), fn ($query) => $query->where('building', $building))
+            ->orderBy('id')
+            ->pluck('id');
+
+        if ($found->count() > 1) { return self::CLASSROOM_AMBIGUOUS; }
+
+        return $found->first();
     }
 }
