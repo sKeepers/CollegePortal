@@ -273,8 +273,25 @@ class UniversalImportService
             try {
                 $businessErrors = $handler->businessValidationErrors($prepared);
                 if ($businessErrors !== []) { foreach ($businessErrors as $field => $messages) { $errors[] = $this->rowError($handler, $mapping, $row, $prepared, $index + 2, implode('; ', $messages), $field, $messages); } continue; }
+                // Повод забывается **здесь**, перед каждой строкой: девять
+                // загрузчиков переопределяют `import()` и о поводе не знают —
+                // иначе причина протекла бы со строки на строку и объяснила бы
+                // пропуск, которого не было.
+                $handler->forgetSkipReason();
                 $result = $handler->import($prepared, $mode);
                 $created += $result === 'created' ? 1 : 0; $updated += $result === 'updated' ? 1 : 0; $skipped += $result === 'skipped' ? 1 : 0;
+                // Пропущенная строка называет причину. До 31.08.2026 она уходила
+                // молча в счётчик «пропущено N», а причин у пропуска две и они
+                // противоположны: «не нашли по ключу — обновлять нечего» и
+                // «нашли — пропускаем как дубликат». Число одно, дела разные.
+                if ($result === 'skipped') {
+                    $reason = $handler->lastSkipReason()
+                        // Загрузчик пропустил строку и не сказал почему. Врать
+                        // за него нельзя: пишем ровно это, чтобы вопрос нашёлся,
+                        // а не растворился в счётчике.
+                        ?? 'Строка пропущена, но загрузчик не назвал причину. Это недоработка загрузчика, а не ваших данных — сообщите о ней.';
+                    $notices[] = $this->rowNotice($handler, $mapping, $row, $prepared, $index + 2, $reason, $handler->keyFields()[0] ?? null, [$reason]);
+                }
                 // Замечание собирается **после** успешной загрузки: строка в портале, и
                 // сказать надо о том, чего в ней не хватило, а не отменить её.
                 foreach ($handler->rowNotices($prepared) as $field => $messages) { $notices[] = $this->rowNotice($handler, $mapping, $row, $prepared, $index + 2, implode('; ', $messages), $field, $messages); }

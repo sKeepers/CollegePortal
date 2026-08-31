@@ -160,8 +160,8 @@ class EmployeeImportHandler extends AbstractImportHandler
     public function import(array $data, string $mode): string
     {
         $existing = $this->findExisting($data);
-        if ($mode === self::MODE_UPDATE && !$existing) { return 'skipped'; }
-        if ($existing && $mode === self::MODE_SKIP_DUPLICATES) { return 'skipped'; }
+        if ($mode === self::MODE_UPDATE && !$existing) { return $this->skipped(self::SKIP_NOT_FOUND); }
+        if ($existing && $mode === self::MODE_SKIP_DUPLICATES) { return $this->skipped(self::SKIP_DUPLICATE); }
         if ($existing && $mode === self::MODE_CREATE) { throw new RuntimeException('Дубликат по табельному номеру.'); }
 
         if ($existing) {

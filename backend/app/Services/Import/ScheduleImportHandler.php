@@ -60,7 +60,7 @@ class ScheduleImportHandler extends AbstractImportHandler { use ResolvesImportRe
   * бы падать целиком. Такая строка в покрытие не попадёт — но она и раньше
   * туда не попадала.
   */
- public function import(array $data,string $mode): string { $lesson=$this->findExisting($data); if($mode===self::MODE_UPDATE && !$lesson){return 'skipped';} if($lesson){ if($mode===self::MODE_SKIP_DUPLICATES){return 'skipped';} if($mode===self::MODE_CREATE){throw new RuntimeException('Занятие уже существует.');}}
+ public function import(array $data,string $mode): string { $lesson=$this->findExisting($data); if($mode===self::MODE_UPDATE && !$lesson){return $this->skipped(self::SKIP_NOT_FOUND);} if($lesson){ if($mode===self::MODE_SKIP_DUPLICATES){return $this->skipped(self::SKIP_DUPLICATE);} if($mode===self::MODE_CREATE){throw new RuntimeException('Занятие уже существует.');}}
      $loadItem=$this->engine->loadItemFor($this->enginePayload($data));
      if($lesson){ if($lesson->schedule_entry_id && ($entry=$lesson->scheduleEntry)){ $this->engine->update($entry,$this->enginePayload($data,$loadItem?->id),$this->currentUser()); return 'updated'; } $this->scheduleLessonService->update($lesson,ScheduleLessonData::fromArray($this->schedulePayload($data))); return 'updated'; }
      if($loadItem){ $this->engine->apply($this->enginePayload($data,$loadItem->id),$this->currentUser()); return 'created'; }

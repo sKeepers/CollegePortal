@@ -106,7 +106,7 @@ class StudentImportHandler extends AbstractImportHandler
 
         if ($mode === self::MODE_UPDATE) {
             if (! $existing) {
-                return 'skipped';
+                return $this->skipped(self::SKIP_NOT_FOUND);
             }
 
             $existing->update($this->payload($data, true));
@@ -117,7 +117,7 @@ class StudentImportHandler extends AbstractImportHandler
 
         if ($existing) {
             if ($mode === self::MODE_SKIP_DUPLICATES) {
-                return 'skipped';
+                return $this->skipped(self::SKIP_DUPLICATE);
             }
 
             throw new RuntimeException('Дубликат по ключевому полю.');

@@ -32,16 +32,59 @@ abstract class AbstractImportHandler implements ImportHandlerInterface
         return [];
     }
 
+    /**
+     * Почему пропущена последняя строка.
+     *
+     * Пропуск возвращается из **двух противоположных случаев**: «не нашли по
+     * ключу, обновлять нечего» и «нашли, пропускаем как дубликат». До
+     * 31.08.2026 оба приходили на экран одинаково — числом «пропущено N», — и
+     * различить их было нечем. На пятнадцати строках это читается как
+     * «наверное, дубликаты»; в день, когда грузят расписание, аудитории двух
+     * корпусов, комнаты и жильцов разом, за этим числом стоят живые пары и
+     * живые комнаты, и разница между «не нашёл» и «уже есть» стоит дорого.
+     *
+     * Повод хранится здесь, а не возвращается из `import()`, потому что
+     * `import()` объявлен в интерфейсе и переопределён девятью загрузчиками:
+     * менять его вид значило бы трогать девять файлов ради одной строки.
+     * Забывает повод **служба** перед каждой строкой — переопределившие
+     * `import()` о нём не знают и знать не обязаны.
+     */
+    private ?string $skipReason = null;
+
+    /** Строку не нашли по ключевым полям: в режиме обновления обновлять нечего. */
+    protected const SKIP_NOT_FOUND = 'Строка не найдена по ключевым полям, а выбран режим обновления — обновлять нечего. Если строку нужно завести, выберите режим создания.';
+
+    /** Такая запись уже есть, и режим велит дубликаты пропускать. */
+    protected const SKIP_DUPLICATE = 'Такая запись уже есть, и выбран режим «пропускать дубликаты» — строка не менялась. Если её нужно обновить, выберите режим обновления.';
+
+    public function lastSkipReason(): ?string
+    {
+        return $this->skipReason;
+    }
+
+    public function forgetSkipReason(): void
+    {
+        $this->skipReason = null;
+    }
+
+    /** Пропуск с названной причиной: возвращать «skipped» молча больше нельзя. */
+    protected function skipped(string $reason): string
+    {
+        $this->skipReason = $reason;
+
+        return 'skipped';
+    }
+
     public function import(array $data, string $mode): string
     {
         $existing = $this->findExisting($data);
         if ($mode === self::MODE_UPDATE) {
-            if (!$existing) { return 'skipped'; }
+            if (!$existing) { return $this->skipped(self::SKIP_NOT_FOUND); }
             $existing->update($this->payload($data, true));
             return 'updated';
         }
         if ($existing) {
-            if ($mode === self::MODE_SKIP_DUPLICATES) { return 'skipped'; }
+            if ($mode === self::MODE_SKIP_DUPLICATES) { return $this->skipped(self::SKIP_DUPLICATE); }
             throw new RuntimeException('Дубликат по ключевому полю.');
         }
         $modelClass = $this->modelClass();

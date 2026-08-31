@@ -34,5 +34,18 @@ interface ImportHandlerInterface
     public function rowNotices(array $data): array;
 
     public function import(array $data, string $mode): string;
+
+    /**
+     * Почему последняя строка была пропущена, если была.
+     *
+     * `import()` отвечает одним словом «skipped», а причин у пропуска две и они
+     * противоположны. Служба спрашивает повод после каждого пропуска и кладёт
+     * его в замечания: молчаливое «пропущено N» ничего не говорит о том, что
+     * делать дальше.
+     */
+    public function lastSkipReason(): ?string;
+
+    /** Забыть повод перед новой строкой: иначе он протечёт со строки на строку. */
+    public function forgetSkipReason(): void;
     public function businessValidationErrors(array $data): array;
 }

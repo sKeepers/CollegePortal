@@ -172,7 +172,7 @@ class TeacherImportHandler extends AbstractImportHandler
 
         if ($mode === self::MODE_UPDATE) {
             if (! $existing) {
-                return 'skipped';
+                return $this->skipped(self::SKIP_NOT_FOUND);
             }
 
             $this->applyPerson($existing, $data);
@@ -183,7 +183,7 @@ class TeacherImportHandler extends AbstractImportHandler
 
         if ($existing) {
             if ($mode === self::MODE_SKIP_DUPLICATES) {
-                return 'skipped';
+                return $this->skipped(self::SKIP_DUPLICATE);
             }
 
             throw new RuntimeException('Дубликат по ключевому полю.');

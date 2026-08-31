@@ -141,7 +141,7 @@ class CurriculumImportHandler extends AbstractImportHandler
                 ->first();
 
         if ($mode === self::MODE_UPDATE && ! $curriculum) {
-            return 'skipped';
+            return $this->skipped(self::SKIP_NOT_FOUND);
         }
 
         $curriculumPayload = [
@@ -162,7 +162,7 @@ class CurriculumImportHandler extends AbstractImportHandler
 
         if ($subject) {
             if ($mode === self::MODE_SKIP_DUPLICATES) {
-                return 'skipped';
+                return $this->skipped(self::SKIP_DUPLICATE);
             }
 
             if ($mode === self::MODE_CREATE) {
