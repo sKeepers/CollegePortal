@@ -75,6 +75,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [Identity Domain](IDENTITY_DOMAIN.md)
 - [Digital Passes](DIGITAL_PASSES.md)
 - [Access Gate](ACCESS_GATE.md)
+- [Приём комнат и жильцов общежития](DORM_ROOMS_INTAKE.md) — что нужно от владельца (только номер и число мест), что делать с пятнадцатью заготовками, в каком виде принимать список и чем проверить после заселения
 - [Статус документов контроля доступа](ACCESS_CONTROL_STATUS.md) — девять `ACCESS_CONTROL_*.md` перенесены из невлитой ветки и описывают проект, а не действующую реализацию. Начинать читать с этого документа.
 - [Взгляд глазами человека](VIEW_AS_PERSON.md) — разбор до кода: где ставится подмена, почему только чтение и что нельзя допустить. Кода ещё нет.
 - [Attendance Engine](ATTENDANCE_ENGINE.md)
