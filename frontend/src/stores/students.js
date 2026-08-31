@@ -61,6 +61,8 @@ function buildStudentQuery(filters) {
 export const useStudentsStore = defineStore('students', () => {
   const students = ref([])
   const groups = ref([])
+  // Справочник групп не отдали: фильтр по группе будет пуст, и это надо сказать.
+  const groupsUnavailable = ref(false)
   const filters = ref({ ...initialFilters })
   const pagination = ref(null)
   const selectedId = ref(null)
@@ -147,15 +149,26 @@ export const useStudentsStore = defineStore('students', () => {
     error.value = ''
 
     try {
-      const [studentsPayload, groupsPayload] = await Promise.all([
+      // Справочник групп питает **фильтры**, а не список, и запрет на него не
+      // должен гасить экран. Замер 01.09.2026: комендант общежития имеет право
+      // `students.view`, сервер отдаёт ему 596 студентов, а страница
+      // показывала ноль и три надписи разом — «У вас нет доступа к этому
+      // действию», «Студенты не найдены», «Найдено записей: 0», — потому что
+      // `Promise.all` роняет всю загрузку из-за побочного 403 на `groups`.
+      //
+      // Различать надо два случая: справочник, без которого экран бессмыслен
+      // (падать честно), и справочник ради фильтра (экран обязан жить). Здесь
+      // второй, поэтому отказ ловится и превращается в отсутствие фильтра.
+      const [studentsPayload, groupsOutcome] = await Promise.all([
         api.listAll('students', filters.value),
         // Группы питают три выпадающих списка сразу — группа, курс и
         // специальность. Страницы в двадцать строк для этого мало.
-        api.listAll('groups'),
+        api.listAll('groups').then((payload) => ({ ok: true, payload })).catch(() => ({ ok: false })),
       ])
 
       students.value = extractRows(studentsPayload)
-      groups.value = extractRows(groupsPayload)
+      groups.value = groupsOutcome.ok ? extractRows(groupsOutcome.payload) : []
+      groupsUnavailable.value = !groupsOutcome.ok
       pagination.value = extractMeta(studentsPayload)
 
       if (selectedId.value && !selectedStudent.value) {
@@ -416,6 +429,7 @@ export const useStudentsStore = defineStore('students', () => {
   return {
     students,
     groups,
+    groupsUnavailable,
     filters,
     pagination,
     selectedId,

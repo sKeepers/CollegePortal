@@ -253,7 +253,7 @@ const selectedPerson = computed(() => store.selectedPerson)
 const selectedApplicant = computed(() => selected.value?.applicant || null)
 const selectedRegistered = computed(() => store.selectedRegistered)
 const selectedStatusTone = computed(() => statusTone(statusCode(selected.value)))
-const tableSubtitle = computed(() => `Найдено foundation-заявлений: ${store.pagination.total || 0}`)
+const tableSubtitle = computed(() => `Найдено заявлений: ${store.pagination.total || 0}`)
 const selectedTitle = computed(() => selected.value?.application_number || `Заявление #${selected.value?.id || ''}`)
 const selectedSubtitle = computed(() => [
   personName(selected.value),
