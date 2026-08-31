@@ -81,6 +81,61 @@ class TeacherScheduleNeedsNoDirectoriesTest extends TestCase
         }
     }
 
+    /**
+     * Шести отказов на экране расписания больше нет.
+     *
+     * Четыре справочника закрыты правкой от 30.08, а конфликты и покрытие часов
+     * оставались: экран просил их безусловно, а прав `schedule.view_conflicts` и
+     * `schedule.view_coverage` у преподавателя со студентом нет. Замер соседей:
+     * шесть отказов на одно открытие экрана.
+     *
+     * Права здесь тоже не выдаются: конфликты и покрытие — работа того, кто
+     * расписание строит, а не того, кто по нему ведёт занятия.
+     */
+    public function test_conflicts_and_coverage_stay_closed_to_a_teacher(): void
+    {
+        $teacher = Teacher::create(['last_name' => 'Своя', 'first_name' => 'Пара', 'is_active' => true]);
+        $this->withApiAuth($this->teacherUser($teacher));
+
+        $this->getJson('/api/schedule/conflicts')->assertForbidden();
+        $this->getJson('/api/schedule/coverage')->assertForbidden();
+    }
+
+    /**
+     * И экран их не просит — иначе отказ придёт всё равно, просто молча.
+     *
+     * Проверка читает само хранилище: список того, что экран запрашивает, растёт,
+     * и переписанный руками однажды разойдётся с кодом.
+     */
+    public function test_the_store_asks_for_nothing_it_may_not_have(): void
+    {
+        $path = base_path('../frontend/src/stores/schedule.js');
+
+        if (! is_file($path)) {
+            $this->markTestSkipped('Рядом нет каталога frontend: проверка идёт в полном дереве, как в CI.');
+        }
+
+        $ungated = [];
+        $seen = 0;
+
+        foreach (file($path) as $number => $line) {
+            foreach (['groups', 'teachers', 'subjects', 'classrooms', 'schedule/conflicts', 'schedule/coverage'] as $resource) {
+                if (! str_contains($line, "'{$resource}'")) {
+                    continue;
+                }
+
+                $seen++;
+
+                if (! str_contains($line, 'listIfAllowed')) {
+                    $ungated[] = $resource.' — строка '.($number + 1);
+                }
+            }
+        }
+
+        $this->assertGreaterThan(0, $seen, 'ни одного запроса не найдено — разбор сломался');
+        $this->assertSame([], $ungated, 'экран просит то, на что права может не быть: '.implode(', ', $ungated));
+    }
+
     private function teacherUser(Teacher $teacher): User
     {
         $role = Role::query()->firstOrCreate(['code' => 'teacher'], ['name' => 'Преподаватель']);

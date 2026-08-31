@@ -253,8 +253,8 @@ export const useScheduleStore = defineStore('schedule', () => {
         listIfAllowed('teachers.view', () => api.listAll('teachers', { active_only: 1 })),
         listIfAllowed('subjects.view', () => api.listAll('subjects')),
         listIfAllowed('classrooms.view', () => api.listAll('classrooms')),
-        api.list('schedule/conflicts', apiFilters),
-        api.list('schedule/coverage', apiFilters),
+        listIfAllowed('schedule.view_conflicts', () => api.list('schedule/conflicts', apiFilters)),
+        listIfAllowed('schedule.view_coverage', () => api.list('schedule/coverage', apiFilters)),
         // Шаблоны запрашиваются только тем, кому они разрешены. Директор,
         // преподаватель, студент и учебная часть 2 видят расписание, но
         // шаблонами не управляют: запрос всё равно отдавал им 403 и просто
