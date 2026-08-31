@@ -102,7 +102,51 @@ class User extends Authenticatable
         return $this->hasOne(Teacher::class);
     }
 
+    /**
+     * Ответы на «есть ли право» и «эта ли роль», уже спрошенные у базы.
+     *
+     * **Зачем.** `StudentResource` спрашивает про право **семь раз на каждую
+     * строку** — один раз про карты и шесть про паспортные поля, — а
+     * `hasPermission()` начинается с `hasRole('admin')`, то есть с запроса.
+     * Замер 01.09.2026 на копии базы стенда, страница из 500 студентов:
+     *
+     * ```
+     * администратор   2,17 с    3 500 запросов к roles
+     * учебная часть   8,93 с   11 000
+     * комендант      10,12 с   13 500
+     * преподаватель  11,47 с   14 000
+     * ```
+     *
+     * С этой памятью — 0,29–0,38 с и от одного до шести запросов. Тридцатикратно
+     * у коменданта, и то же даром получают списки людей, преподавателей и
+     * сотрудников: приём тот же, только вызовов на строку меньше.
+     *
+     * **Насколько долго живут ответы.** Ровно столько, сколько живёт объект, а
+     * объект живёт один запрос: владельца токена отдаёт `ApiTokenResolver`,
+     * объявленный в `AppServiceProvider` через `scoped`. Следующий запрос
+     * спрашивает базу заново — закреплено `PermissionAnswersTest`.
+     *
+     * **Почему это не протекает в просмотр чужими глазами.** Память лежит на
+     * объекте пользователя, а под чужими глазами `$request->user()` — **другой
+     * объект**: администратора подменяет `ViewAsPerson`. Ответы одного не видны
+     * другому, и права смотрящего не могут показаться вместо прав того, на кого
+     * смотрят. Это опаснее медленного экрана и потому закрыто отдельным
+     * сторожем.
+     *
+     * @var array<string, bool>
+     */
+    private array $permissionAnswers = [];
+
+    /** @var array<string, bool> */
+    private array $roleAnswers = [];
+
     public function hasPermission(string $permissionCode): bool
+    {
+        return $this->permissionAnswers[$permissionCode]
+            ??= $this->askTheDatabaseAboutPermission($permissionCode);
+    }
+
+    private function askTheDatabaseAboutPermission(string $permissionCode): bool
     {
         if ($this->hasRole('admin')) {
             return true;
@@ -133,7 +177,7 @@ class User extends Authenticatable
 
     public function hasRole(string $roleCode): bool
     {
-        return $this->roles()->where('code', $roleCode)->exists()
+        return $this->roleAnswers[$roleCode] ??= $this->roles()->where('code', $roleCode)->exists()
             || $this->role()->where('code', $roleCode)->exists();
     }
 }
