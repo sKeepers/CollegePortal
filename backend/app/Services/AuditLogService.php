@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Http\Middleware\ViewAsPerson;
 use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -25,7 +26,21 @@ class AuditLogService
     ): ?AuditLog {
         try {
             $request ??= request();
-            $user ??= $request?->user();
+
+            // Под чужими глазами действующий — **всегда** администратор, а не тот,
+            // на кого смотрят. Взять его из `$request->user()` значило бы научить
+            // журнал врать ровно там, где он нужен больше всего: на вопрос «кто
+            // открывал карточку студента» ответ обязан быть точным. Ровно поэтому
+            // владелец отверг режим с правкой, а не только ради безопасности.
+            $impersonator = $request?->attributes->get(ViewAsPerson::IMPERSONATOR);
+            $viewedAs = null;
+
+            if ($impersonator instanceof User) {
+                $viewedAs = $request?->user()?->id;
+                $user = $impersonator;
+            } else {
+                $user ??= $request?->user();
+            }
             $entityType = null;
             $entityId = null;
 
@@ -40,6 +55,7 @@ class AuditLogService
             return AuditLog::create([
                 'created_at' => now(),
                 'user_id' => $user?->id,
+                'viewed_as_user_id' => $viewedAs,
                 'person_id' => $personId,
                 'action' => $action,
                 'entity_type' => $entityType,

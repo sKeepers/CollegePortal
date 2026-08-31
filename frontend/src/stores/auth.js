@@ -4,6 +4,12 @@ import { api } from '../services/api'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
+  // Под чужими глазами `user` — это **просматриваемый человек**: экраны
+  // строятся по нему, иначе весь режим бессмыслен. Кто смотрит на самом деле,
+  // говорят эти два поля, и приходят они с сервера тем же `auth/me` — своего
+  // признака у фронтенда нет намеренно, забыть его обновить негде.
+  const viewingAs = ref(null)
+  const impersonator = ref(null)
   const loading = ref(false)
   const initialized = ref(false)
   const error = ref('')
@@ -102,6 +108,8 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const payload = await api.me()
       user.value = payload.data
+      viewingAs.value = payload.viewing_as || null
+      impersonator.value = payload.impersonator || null
     } catch {
       api.clearSession()
       user.value = null
@@ -130,13 +138,30 @@ export const useAuthStore = defineStore('auth', () => {
     } finally {
       api.clearSession()
       user.value = null
+      viewingAs.value = null
+      impersonator.value = null
       initialized.value = true
       loading.value = false
     }
   }
 
+  /**
+   * Выйти из чужих глаз.
+   *
+   * После отказа сервера состояние не трогаем: если выход не удался, режим
+   * ещё включён, и стереть полосу значило бы соврать человеку об этом.
+   * Перечитываем `auth/me` — сервер единственный источник, кто мы сейчас.
+   */
+  async function stopViewingAs() {
+    await api.viewAsStop()
+    await restore()
+  }
+
   return {
     user,
+    viewingAs,
+    impersonator,
+    stopViewingAs,
     loading,
     initialized,
     error,

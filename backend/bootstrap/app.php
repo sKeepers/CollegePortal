@@ -3,6 +3,7 @@
 use App\Http\Middleware\AuthenticateApiToken;
 use App\Http\Middleware\EnsureCsrfToken;
 use App\Http\Middleware\EnsurePermission;
+use App\Http\Middleware\ViewAsPerson;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.token' => AuthenticateApiToken::class,
             'api.csrf' => EnsureCsrfToken::class,
             'permission' => EnsurePermission::class,
+            'view.as' => ViewAsPerson::class,
         ]);
 
         // Без этого за обратным прокси $request->ip() возвращает адрес прокси, а
