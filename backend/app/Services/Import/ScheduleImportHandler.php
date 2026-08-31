@@ -60,7 +60,7 @@ class ScheduleImportHandler extends AbstractImportHandler { use ResolvesImportRe
   * бы падать целиком. Такая строка в покрытие не попадёт — но она и раньше
   * туда не попадала.
   */
- public function import(array $data,string $mode): string { $lesson=$this->findExisting($data); if($mode===self::MODE_UPDATE && !$lesson){return $this->skipped(self::SKIP_NOT_FOUND);} if($lesson){ if($mode===self::MODE_SKIP_DUPLICATES){return $this->skipped(self::SKIP_DUPLICATE);} if($mode===self::MODE_CREATE){throw new RuntimeException('Занятие уже существует.');}}
+ public function import(array $data,string $mode): string { $lesson=$this->findExisting($data); if($reason=$this->groupBusySkipReason($data,$lesson?->id)){return $this->skipped($reason);} if($mode===self::MODE_UPDATE && !$lesson){return $this->skipped(self::SKIP_NOT_FOUND);} if($lesson){ if($mode===self::MODE_SKIP_DUPLICATES){return $this->skipped(self::SKIP_DUPLICATE);} if($mode===self::MODE_CREATE){throw new RuntimeException('Занятие уже существует.');}}
      $loadItem=$this->engine->loadItemFor($this->enginePayload($data));
      if($lesson){ if($lesson->schedule_entry_id && ($entry=$lesson->scheduleEntry)){ $this->engine->update($entry,$this->enginePayload($data,$loadItem?->id),$this->currentUser()); return 'updated'; } $this->scheduleLessonService->update($lesson,ScheduleLessonData::fromArray($this->schedulePayload($data))); return 'updated'; }
      if($loadItem){ $this->engine->apply($this->enginePayload($data,$loadItem->id),$this->currentUser()); return 'created'; }
@@ -79,6 +79,37 @@ class ScheduleImportHandler extends AbstractImportHandler { use ResolvesImportRe
  private function enginePayload(array $data,?int $loadItemId=null): array { return ['date'=>$data['lesson_date'],'starts_at'=>$data['starts_at'],'ends_at'=>$data['ends_at'],'group_id'=>$data['group_id'],'subject_id'=>$data['subject_id'],'teacher_id'=>$data['teacher_id'],'classroom_id'=>$data['classroom_id']??null,'teaching_load_item_id'=>$loadItemId,'comment'=>$data['topic']??null,'source'=>'import']; }
  public function businessValidationErrors(array $data): array { return $this->scheduleConflictMessages($data,$this->findExisting($data)?->id); }
  private function schedulePayload(array $data): array { return ['group_id'=>$data['group_id'],'teacher_id'=>$data['teacher_id'],'subject_id'=>$data['subject_id'],'classroom_id'=>$data['classroom_id']??null,'lesson_date'=>$data['lesson_date'],'starts_at'=>$data['starts_at'],'ends_at'=>$data['ends_at'],'lesson_type'=>$data['lesson_type'] ?: 'lesson','topic'=>$data['topic']??null]; }
- private function scheduleConflictMessages(array $data,?int $ignoreLessonId=null): array { $errors=[]; if($this->scheduleHasConflict('group_id',(int)$data['group_id'],$data,$ignoreLessonId)){$errors['group_id'][]='Группа уже занята в это время.';} if($this->scheduleHasConflict('teacher_id',(int)$data['teacher_id'],$data,$ignoreLessonId)){$errors['teacher_id'][]='Преподаватель уже ведет занятие в это время.';} if(!empty($data['classroom_id']) && $this->scheduleHasConflict('classroom_id',(int)$data['classroom_id'],$data,$ignoreLessonId)){$errors['classroom_id'][]='Аудитория уже занята в это время.';} return $errors; }
+ /**
+  * Занятость группы: отказ строке заменён пропуском с названной причиной.
+  *
+  * Владелец подтвердил 01.09.2026, что в расписании есть подгруппы — две пары одной
+  * группы в одно время у разных преподавателей — и индивидуальные занятия у отдельных
+  * студентов. Портал такого не заводит: занятость группы блокирующая в четырёх местах,
+  * а признака подгруппы в модели нет вовсе (разбор —
+  * `docs/SCHEDULE_SUBGROUPS_AND_INDIVIDUAL_LESSONS.md`).
+  *
+  * Пока признака нет, у файла с подгруппами два исхода. Прежний: половина строк
+  * отказывает, и расписание встаёт наполовину, а оператор видит стену ошибок про
+  * «занята» — про занятия, которых он не ставил. Нынешний: первая пара клетки встаёт,
+  * остальные **пропускаются с перечислением**, и завуч видит поимённо, чему не нашлось
+  * места. Ничего не теряется молча, и настоящая накладка по-прежнему ловится: аудитория
+  * и преподаватель остаются ошибкой, потому что они не раздваиваются, а группа — делится.
+  *
+  * Заводить подгруппу нумерацией по порядку строк нельзя: порядок в следующей выгрузке
+  * поменяется, и журнал поедет за не той парой.
+  */
+ private function groupBusySkipReason(array $data,?int $ignoreLessonId): ?string
+ {
+     $busy=ScheduleLesson::query()->with(['subject','teacher','classroom'])->where('group_id',(int)$data['group_id'])
+         ->whereDate('lesson_date',$data['lesson_date'])->where('starts_at','<',$data['ends_at'])->where('ends_at','>',$data['starts_at'])
+         ->when($ignoreLessonId,fn($query)=>$query->whereKeyNot($ignoreLessonId))->first();
+
+     if(!$busy){ return null; }
+
+     $stands=array_filter([$busy->subject?->name,$busy->teacher?->last_name,$busy->classroom?->number?'ауд. '.$busy->classroom->number:null]);
+
+     return 'В это время у группы уже стоит занятие: '.implode(', ',$stands).'. Портал пока не умеет ставить одной группе две пары в одно время: подгруппы и индивидуальные занятия он различать не научен, и эта строка не загружена. Если это подгруппа — она ждёт признака подгруппы в портале; если накладка — её надо развести в файле.';
+ }
+ private function scheduleConflictMessages(array $data,?int $ignoreLessonId=null): array { $errors=[];  if($this->scheduleHasConflict('teacher_id',(int)$data['teacher_id'],$data,$ignoreLessonId)){$errors['teacher_id'][]='Преподаватель уже ведет занятие в это время.';} if(!empty($data['classroom_id']) && $this->scheduleHasConflict('classroom_id',(int)$data['classroom_id'],$data,$ignoreLessonId)){$errors['classroom_id'][]='Аудитория уже занята в это время.';} return $errors; }
  private function scheduleHasConflict(string $column,int $value,array $data,?int $ignoreLessonId): bool { return ScheduleLesson::query()->where($column,$value)->whereDate('lesson_date',$data['lesson_date'])->where('starts_at','<',$data['ends_at'])->where('ends_at','>',$data['starts_at'])->when($ignoreLessonId,fn($query)=>$query->whereKeyNot($ignoreLessonId))->exists(); }
 }
