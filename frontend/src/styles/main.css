@@ -8039,3 +8039,35 @@ body {
   font-weight: 800;
   text-decoration: none;
 }
+
+/*
+  Полоса «портал глазами другого человека».
+
+  Цвет намеренно не красный и не янтарный: это **не ошибка и не
+  предупреждение**, а особое состояние портала. 28.08.2026 рамка карточки
+  замечаний уже вышла янтарной, неотличимой от ошибки, и смысл цвета пропал
+  целиком. Здесь взят фиолетовый — он не занят ни одним из состояний.
+
+  Вид проверяется замером в браузере, а не чтением этого правила.
+*/
+.cp-view-as-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #4c1d95;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.cp-view-as-bar__text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cp-view-as-bar__exit {
+  background: #fff;
+  color: #4c1d95;
+  font-weight: 600;
+}

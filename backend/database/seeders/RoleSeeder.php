@@ -239,6 +239,7 @@ class RoleSeeder extends Seeder
             ['module' => 'HR', 'code' => 'hr.replacements.view', 'name' => 'Кадры: замены просмотр', 'description' => 'Просмотр кандидатов и затронутых занятий.'],
             ['module' => 'HR', 'code' => 'hr.replacements.manage', 'name' => 'Кадры: замены управление', 'description' => 'Назначение замен преподавателей.'],
             ['module' => 'System', 'code' => 'users.manage', 'name' => 'Пользователи: управление', 'description' => 'Управление пользователями.'],
+            ['module' => 'Admin', 'code' => 'users.view_as', 'name' => 'Пользователи: смотреть портал чужими глазами', 'description' => 'Просмотр портала так, как его видит выбранный человек. Только чтение, без выгрузок.'],
             ['module' => 'System', 'code' => 'roles.manage', 'name' => 'Роли: управление', 'description' => 'Управление ролями.'],
             ['module' => 'System', 'code' => 'permissions.manage', 'name' => 'Разрешения: управление', 'description' => 'Управление матрицей разрешений.'],
             ['module' => 'System', 'code' => 'settings.manage', 'name' => 'Настройки: управление', 'description' => 'Управление настройками колледжа.'],

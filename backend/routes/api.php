@@ -90,6 +90,7 @@ use App\Http\Controllers\Api\ReferenceItemController;
 use App\Http\Controllers\Api\SpecialtyController;
 use App\Http\Controllers\Api\TeacherController;
 use App\Http\Controllers\Api\UniversalImportController;
+use App\Http\Controllers\Api\ViewAsController;
 use App\Http\Controllers\Api\TeachingLoadController;
 use App\Http\Controllers\Api\UatController;
 use Illuminate\Support\Facades\Route;
@@ -110,9 +111,17 @@ Route::get('public/education-programs', [EducationProgramController::class, 'ind
 
 // `api.csrf` стоит после `api.token` намеренно: проверять происхождение имеет смысл
 // только для запроса, который уже опознан, и только когда токен пришёл из cookie.
-Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated'])->group(function (): void {
+// `view.as` идёт последним: подмена ставится после того, как опознан настоящий
+// владелец токена. Ограничитель частоты при этом уже отработал и посчитал
+// администратора — если подменить раньше, он начнёт считать просматриваемого.
+Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated', 'view.as'])->group(function (): void {
     Route::get('auth/me', [AuthController::class, 'me']);
     Route::post('auth/logout', [AuthController::class, 'logout']);
+    // Вход в режим и выход из него: сам режим их пропускает не подменяя —
+    // иначе «Выйти» на полосе оказалось бы кнопкой, которую портал сам же и
+    // отвергает. Смотри `ViewAsPerson::isTheWayOut()`.
+    Route::post('admin/view-as/{user}', [ViewAsController::class, 'start'])->middleware('permission:users.view_as');
+    Route::delete('admin/view-as', [ViewAsController::class, 'stop'])->middleware('permission:users.view_as');
     // Раздел «Моя учётная запись» — без права: своей почтой, телефоном и паролем
     // распоряжается любой вошедший, независимо от роли.
     Route::get('account', [AccountController::class, 'show']);

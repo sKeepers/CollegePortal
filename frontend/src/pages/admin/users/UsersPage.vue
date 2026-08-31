@@ -1,8 +1,11 @@
 <script setup>
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { usePermissions } from '../../../composables/usePermissions'
+import { useAuthStore } from '../../../stores/auth'
+import { api } from '../../../services/api'
 import { useQuasar } from 'quasar'
-import { Ban, CheckCircle2, Edit, KeyRound, Plus, Printer, RefreshCw, ShieldCheck, Trash2, UserRound } from '@lucide/vue'
+import { Ban, CheckCircle2, Edit, Eye, KeyRound, Plus, Printer, RefreshCw, ShieldCheck, Trash2, UserRound } from '@lucide/vue'
 import AppPage from '../../../components/ui/AppPage.vue'
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import AppToolbar from '../../../components/ui/AppToolbar.vue'
@@ -22,6 +25,9 @@ const rowsPerPageKey = 'collegePortal.users.rowsPerPage'
 const store = useUsersStore()
 const permissions = usePermissions()
 const canManage = computed(() => permissions.hasPermission('users.manage'))
+const canViewAs = computed(() => permissions.hasPermission('users.view_as'))
+const auth = useAuthStore()
+const router = useRouter()
 const $q = useQuasar()
 const portalUrl = window.location.origin
 const formOpen = ref(false)
@@ -242,6 +248,27 @@ async function saveUser() {
 function askDelete(user) {
   pendingUser.value = user
   deleteDialog.value = true
+}
+
+/**
+ * Открыть портал глазами выбранного человека.
+ *
+ * Подтверждения нет намеренно: режим ничего не меняет и снимается одной
+ * кнопкой на полосе, которая после этого висит на каждом экране. Лишний
+ * вопрос здесь только приучал бы жать «да» не глядя.
+ *
+ * Уходим на главную, а не остаёмся в списке учётных записей: под чужими
+ * глазами его почти наверняка не видно, и человек упёрся бы в отказ сразу
+ * после входа в режим.
+ */
+async function askViewAs(user) {
+  try {
+    await api.viewAsStart(user.id)
+    await auth.restore()
+    router.push('/')
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error?.message || 'Не удалось открыть портал глазами этого человека.' })
+  }
 }
 
 function askBlock(user) {
@@ -528,6 +555,7 @@ onMounted(async () => {
           </template>
           <template #body-cell-actions="props">
             <q-td :props="props" class="users-actions">
+              <q-btn v-if="canViewAs && props.row.is_active" flat dense round color="purple-9" title="Смотреть портал глазами этого человека (только просмотр)" @click.stop="askViewAs(props.row)"><Eye :size="16" /></q-btn>
               <q-btn v-if="canManage" flat dense round title="Редактировать" @click.stop="openEdit(props.row)"><Edit :size="16" /></q-btn>
               <q-btn v-if="canManage && props.row.is_active" flat dense round color="warning" title="Заблокировать" @click.stop="askBlock(props.row)"><Ban :size="16" /></q-btn>
               <q-btn v-else-if="canManage" flat dense round color="positive" title="Разблокировать" @click.stop="askUnblock(props.row)"><CheckCircle2 :size="16" /></q-btn>

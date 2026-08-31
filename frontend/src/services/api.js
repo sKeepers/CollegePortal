@@ -250,6 +250,14 @@ export const api = {
     return request('/auth/me')
   },
 
+  async viewAsStart(userId) {
+    return request(`/admin/view-as/${userId}`, { method: 'POST' })
+  },
+
+  async viewAsStop() {
+    return request('/admin/view-as', { method: 'DELETE' })
+  },
+
   async logout() {
     return request('/auth/logout', {
       method: 'POST',

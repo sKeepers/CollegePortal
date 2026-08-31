@@ -14,6 +14,7 @@ import {
   CreditCard,
   Database,
   DoorOpen,
+  Eye,
   FileSpreadsheet,
   FileSearch,
   FileText,
@@ -288,6 +289,22 @@ function toggleNavGroup(group) {
   saveNavigationSections()
 }
 
+const leavingViewAs = ref(false)
+
+async function leaveViewAs() {
+  leavingViewAs.value = true
+  try {
+    await auth.stopViewingAs()
+    router.push('/')
+  } catch (error) {
+    // Полосу не убираем: если сервер отказал, режим ещё включён, и стереть
+    // её значило бы соврать человеку о том, чьими глазами он смотрит.
+    $q.notify({ type: 'negative', message: error?.message || 'Не удалось выйти из режима просмотра.' })
+  } finally {
+    leavingViewAs.value = false
+  }
+}
+
 async function logout() {
   await auth.logout()
   router.push('/login')
@@ -348,6 +365,20 @@ watch(
     :style="layoutStyle"
   >
     <q-header bordered class="bg-white text-dark">
+      <!--
+        Полоса стоит внутри `q-header` и **выше** панели намеренно: так Quasar
+        считает её в высоту шапки и сдвигает содержимое страницы. Наложение
+        поверх угла закрыло бы собой строку таблицы и потерялось бы на узком
+        экране — а забыть про режим нельзя: забыв, человек решит, что портал
+        сломан, и мы будем искать дефект, которого нет.
+      -->
+      <div v-if="auth.impersonator" class="cp-view-as-bar">
+        <Eye :size="18" class="q-mr-sm" />
+        <span class="cp-view-as-bar__text">
+          Вы смотрите портал глазами: <b>{{ auth.viewingAs?.name }}</b>. Только просмотр.
+        </span>
+        <q-btn dense unelevated class="cp-view-as-bar__exit" :loading="leavingViewAs" @click="leaveViewAs">Выйти</q-btn>
+      </div>
       <q-toolbar class="cp-topbar">
         <q-btn
           flat

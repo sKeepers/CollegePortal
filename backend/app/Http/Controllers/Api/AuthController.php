@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\ViewAsPerson;
 use App\Http\Requests\LoginRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
@@ -59,6 +60,12 @@ class AuthController extends Controller
         $ttl = (int) config('auth.api_token_ttl_minutes', 720);
 
         $user->forceFill([
+            // Новый вход начинается своими глазами. Найдено взглядом через браузер
+            // 31.08.2026: фронтенд берёт человека из ответа входа, а не из
+            // `auth/me`, и про режим не узнаёт — то есть после входа в уже
+            // включённом режиме портал работал бы чужими глазами **без полосы**.
+            // Это худшее из состояний: человек не знает, что он не он.
+            'viewing_as_user_id' => null,
             'api_token_hash' => Hash::make($token),
             'api_token_lookup_hash' => hash('sha256', $token),
             'api_token_expires_at' => now()->addMinutes($ttl),
@@ -106,6 +113,12 @@ class AuthController extends Controller
         $ttl = (int) config('auth.api_token_ttl_minutes', 720);
 
         $user->forceFill([
+            // Новый вход начинается своими глазами. Найдено взглядом через браузер
+            // 31.08.2026: фронтенд берёт человека из ответа входа, а не из
+            // `auth/me`, и про режим не узнаёт — то есть после входа в уже
+            // включённом режиме портал работал бы чужими глазами **без полосы**.
+            // Это худшее из состояний: человек не знает, что он не он.
+            'viewing_as_user_id' => null,
             'api_token_hash' => Hash::make($token),
             'api_token_lookup_hash' => hash('sha256', $token),
             'api_token_expires_at' => now()->addMinutes($ttl),
@@ -166,6 +179,12 @@ class AuthController extends Controller
         $ttl = (int) config('auth.api_token_ttl_minutes', 720);
 
         $user->forceFill([
+            // Новый вход начинается своими глазами. Найдено взглядом через браузер
+            // 31.08.2026: фронтенд берёт человека из ответа входа, а не из
+            // `auth/me`, и про режим не узнаёт — то есть после входа в уже
+            // включённом режиме портал работал бы чужими глазами **без полосы**.
+            // Это худшее из состояний: человек не знает, что он не он.
+            'viewing_as_user_id' => null,
             'api_token_hash' => Hash::make($token),
             'api_token_lookup_hash' => hash('sha256', $token),
             'api_token_expires_at' => now()->addMinutes($ttl),
@@ -215,9 +234,26 @@ class AuthController extends Controller
         return response()->json(['data' => $providers->available()]);
     }
 
+    /**
+     * Кто смотрит портал прямо сейчас.
+     *
+     * Под чужими глазами `data` — это **просматриваемый человек**: экраны
+     * обязаны строиться по нему, иначе весь режим бессмыслен. Кто смотрит на
+     * самом деле, говорят два добавленных поля, и полоса на экране строится
+     * из них, а не из флага во фронтенде: источник один и он серверный,
+     * забыть его обновить негде.
+     */
     public function me(Request $request): UserResource
     {
-        return new UserResource($request->user()->load(['role.permissions', 'roles.permissions', 'student.group', 'teacher']));
+        $user = $request->user();
+        $impersonator = $request->attributes->get(ViewAsPerson::IMPERSONATOR);
+        $viewing = $impersonator instanceof User;
+
+        return (new UserResource($user->load(['role.permissions', 'roles.permissions', 'student.group', 'teacher'])))
+            ->additional([
+                'viewing_as' => $viewing ? ['id' => $user->id, 'name' => $user->name] : null,
+                'impersonator' => $viewing ? ['id' => $impersonator->id, 'name' => $impersonator->name] : null,
+            ]);
     }
 
     public function logout(Request $request): JsonResponse
@@ -225,6 +261,9 @@ class AuthController extends Controller
         $user = $request->user();
         AuditLogService::log('auth', 'logout', $user, null, ['email' => $user->email], $request, $user);
         $user->forceFill([
+            // Иначе следующий вход начался бы чужими глазами, и человек этого не
+            // ждал бы: режим он оставил в прошлой сессии.
+            'viewing_as_user_id' => null,
             'api_token_hash' => null,
             'api_token_lookup_hash' => null,
             'api_token_expires_at' => null,

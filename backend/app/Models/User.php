@@ -37,6 +37,7 @@ class User extends Authenticatable
         'last_login_at',
         'person_type',
         'person_id',
+        'viewing_as_user_id',
     ];
 
     /**
