@@ -82,6 +82,7 @@ This index is the central entrypoint for CollegePortal documentation. It links m
 - [Curriculum Engine](CURRICULUM_ENGINE.md)
 - [Teaching Load Engine](TEACHING_LOAD_ENGINE.md)
 - [Schedule Engine](SCHEDULE_ENGINE.md)
+- [Подгруппы и индивидуальные занятия в расписании](SCHEDULE_SUBGROUPS_AND_INDIVIDUAL_LESSONS.md) — разбор до кода: почему подгруппу и «правку преподавателя» не различить нынешним ключом, где считается занятость (в трёх местах) и что успеваем к приходу расписания
 - [Journal Engine](JOURNAL_ENGINE.md)
 - [Репетиция первого сентября](SEPTEMBER_FIRST_REHEARSAL.md) — пустой портал → открытый журнал настоящими маршрутами: сколько шагов руками и что сломается
 - [Экзамены, ГИА и приложение к диплому](EXAMS_AND_GIA_REVIEW_2026-08-24.md) — три разрыва контура: приложение не собирается ниоткуда, итоговой оценки нет нигде, ГИА — строка экзамена
