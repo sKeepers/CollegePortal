@@ -60,7 +60,7 @@ class ScheduleImportHandler extends AbstractImportHandler { use ResolvesImportRe
   * бы падать целиком. Такая строка в покрытие не попадёт — но она и раньше
   * туда не попадала.
   */
- public function import(array $data,string $mode): string { $lesson=$this->findExisting($data); if($mode===self::MODE_UPDATE && !$lesson){return $this->skipped(self::SKIP_NOT_FOUND);} if($lesson){ if($mode===self::MODE_SKIP_DUPLICATES){return $this->skipped(self::SKIP_DUPLICATE);} if($mode===self::MODE_CREATE){throw new RuntimeException('Занятие уже существует.');}}
+ public function import(array $data,string $mode): string { $lesson=$this->findExisting($data); if($reason=$this->cellIsTakenReason($data,$lesson?->id)){return $this->skipped($reason);} if($mode===self::MODE_UPDATE && !$lesson){return $this->skipped(self::SKIP_NOT_FOUND);} if($lesson){ if($mode===self::MODE_SKIP_DUPLICATES){return $this->skipped(self::SKIP_DUPLICATE);} if($mode===self::MODE_CREATE){throw new RuntimeException('Занятие уже существует.');}}
      $loadItem=$this->engine->loadItemFor($this->enginePayload($data));
      if($lesson){ if($lesson->schedule_entry_id && ($entry=$lesson->scheduleEntry)){ $this->engine->update($entry,$this->enginePayload($data,$loadItem?->id),$this->currentUser()); return 'updated'; } $this->scheduleLessonService->update($lesson,ScheduleLessonData::fromArray($this->schedulePayload($data))); return 'updated'; }
      if($loadItem){ $this->engine->apply($this->enginePayload($data,$loadItem->id),$this->currentUser()); return 'created'; }
@@ -82,13 +82,15 @@ class ScheduleImportHandler extends AbstractImportHandler { use ResolvesImportRe
     /**
      * Занятие, стоящее в этой клетке у этой группы.
      *
-     * Клетка — дата, начало, группа. Второго занятия в ней быть не может:
-     * занятость группы — `blocking` и в движке расписания, и в
-     * `ScheduleLessonService`, и здесь. Поэтому найденное — единственное.
+     * Клетка — дата, начало, группа. Второго занятия в ней не появится: занятость
+     * группы блокирующая в движке расписания и в `ScheduleLessonService`, а здесь
+     * строка, попавшая в занятую клетку, пропускается (см. ниже). Поэтому найденное —
+     * единственное.
      */
     private function lessonInTheCell(array $data): ?ScheduleLesson
     {
         return ScheduleLesson::query()
+            ->with(['subject', 'teacher', 'classroom'])
             ->whereDate('lesson_date', $data['lesson_date'] ?? null)
             ->where('starts_at', $data['starts_at'] ?? null)
             ->where('group_id', $data['group_id'] ?? null)
@@ -96,48 +98,70 @@ class ScheduleImportHandler extends AbstractImportHandler { use ResolvesImportRe
     }
 
     /**
-     * Причина отказа называет, что стоит в клетке, а не «группа занята».
+     * Ошибки строки: занятие своей же клетки в них не участвует.
      *
-     * До 01.09.2026 строка со сменой преподавателя получала **две** ошибки —
-     * «Группа уже занята в это время» и «Аудитория уже занята в это время», — и
-     * обе были про то самое занятие, которое она собиралась изменить. Замер
-     * 01.09.2026: воспроизведено на паре строк. Оба сообщения верны по букве и
-     * ложны по смыслу: человек идёт искать чужую пару, которой нет.
+     * До 01.09.2026 строка со сменой преподавателя получала **две** ошибки — «Группа
+     * уже занята в это время» и «Аудитория уже занята в это время», — и обе были про
+     * то самое занятие, которое она собиралась изменить. Человек шёл искать чужую
+     * пару, которой нет.
      *
-     * **Отказ остаётся, меняется причина.** Менять занятие загрузкой портал не
-     * умеет, и это не дефект: подгруппы он не поддерживает вовсе, а две
-     * подгруппы по одной дисциплине у одной группы в одно время не различаются
-     * **ничем, кроме состава студентов**, которого в занятии нет. Значит
-     * достраивать надо сущность, а не ключ, и делать это здесь нельзя.
+     * Занятие клетки исключается из всех трёх проверок разом. Иначе оно даёт «аудиторию
+     * занята» про себя же — и строка отказывает **до** того, как дойдёт до пропуска с
+     * названной причиной, то есть подгруппа так и осталась бы стеной ошибок.
      *
-     * Сообщение одно: и «группа занята», и «аудитория занята» шли от одной и
-     * той же строки. Конфликты **с другими** занятиями остаются — их считаем
-     * отдельно, исключив занятие клетки, иначе настоящее столкновение с чужой
-     * парой спряталось бы за этим сообщением.
+     * Конфликты **с другими** занятиями остаются ошибками: пара, которая началась
+     * раньше и заходит на этот час, — настоящая накладка, и её надо разводить в файле.
+     * Преподаватель и аудитория остаются ошибкой всегда: человек и комната не
+     * раздваиваются, делится только группа.
      */
     private function scheduleConflictMessages(array $data, ?int $ignoreLessonId = null): array
     {
         $cell = $this->lessonInTheCell($data);
-        $errors = [];
 
         if ($cell && $cell->id !== $ignoreLessonId) {
-            $teacher = $cell->teacher;
-            $who = $teacher ? trim($teacher->last_name.' '.mb_substr((string) $teacher->first_name, 0, 1).'.') : 'преподаватель не указан';
-            $what = $cell->subject?->name ?: 'дисциплина не указана';
-
-            $errors['group_id'][] = "В это время у группы уже стоит занятие: {$what}, {$who}."
-                .' Загрузкой оно не меняется — измените занятие на экране расписания.';
-
-            // Дальше считаем так, будто занятия клетки нет: иначе оно даст ещё
-            // и «аудитория занята» — про себя же.
             $ignoreLessonId = $cell->id;
         }
 
-        if ($this->scheduleHasConflict('group_id', (int) $data['group_id'], $data, $ignoreLessonId)) { $errors['group_id'][] = 'Группа уже занята в это время.'; }
+        $errors = [];
+
+        if ($this->scheduleHasConflict('group_id', (int) $data['group_id'], $data, $ignoreLessonId)) { $errors['group_id'][] = 'Группа уже занята в это время другим занятием — оно началось раньше и заходит на этот час.'; }
         if ($this->scheduleHasConflict('teacher_id', (int) $data['teacher_id'], $data, $ignoreLessonId)) { $errors['teacher_id'][] = 'Преподаватель уже ведет занятие в это время.'; }
         if (! empty($data['classroom_id']) && $this->scheduleHasConflict('classroom_id', (int) $data['classroom_id'], $data, $ignoreLessonId)) { $errors['classroom_id'][] = 'Аудитория уже занята в это время.'; }
 
         return $errors;
+    }
+
+    /**
+     * Строка попала в занятую клетку: пропуск с названной причиной вместо отказа.
+     *
+     * Владелец подтвердил 01.09.2026, что в расписании есть подгруппы — две пары одной
+     * группы в одно время у разных преподавателей — и индивидуальные занятия у отдельных
+     * студентов. Портал такого не заводит: признака подгруппы в модели нет вовсе, а две
+     * подгруппы по одной дисциплине не различаются **ничем, кроме состава студентов**,
+     * которого в занятии нет. Значит достраивать надо сущность, а не ключ, и здесь этого
+     * не сделать. Разбор — `docs/SCHEDULE_SUBGROUPS_AND_INDIVIDUAL_LESSONS.md`.
+     *
+     * Пока сущности нет, выбор не между «правильно» и «неправильно», а между двумя
+     * видами неполноты. Отказ строке даёт стену ошибок и половину расписания без
+     * перечня потерянного. Пропуск ставит первую пару клетки и **называет остальные
+     * поимённо**: что стоит в этом часе и что с этим делать.
+     */
+    private function cellIsTakenReason(array $data, ?int $ignoreLessonId): ?string
+    {
+        $cell = $this->lessonInTheCell($data);
+
+        if (! $cell || $cell->id === $ignoreLessonId) {
+            return null;
+        }
+
+        $teacher = $cell->teacher;
+        $who = $teacher ? trim($teacher->last_name.' '.mb_substr((string) $teacher->first_name, 0, 1).'.') : 'преподаватель не указан';
+        $what = $cell->subject?->name ?: 'дисциплина не указана';
+        $where = $cell->classroom?->number ? ', ауд. '.$cell->classroom->number : '';
+
+        return "В это время у группы уже стоит занятие: {$what}, {$who}{$where}."
+            .' Портал пока не умеет ставить одной группе две пары в одно время: подгруппы и индивидуальные занятия он различать не научен, и эта строка не загружена.'
+            .' Если это подгруппа — она ждёт признака подгруппы в портале; если накладка — её надо развести в файле; если это правка занятия — измените его на экране расписания.';
     }
  private function scheduleHasConflict(string $column,int $value,array $data,?int $ignoreLessonId): bool { return ScheduleLesson::query()->where($column,$value)->whereDate('lesson_date',$data['lesson_date'])->where('starts_at','<',$data['ends_at'])->where('ends_at','>',$data['starts_at'])->when($ignoreLessonId,fn($query)=>$query->whereKeyNot($ignoreLessonId))->exists(); }
 }
