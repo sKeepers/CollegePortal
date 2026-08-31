@@ -146,7 +146,14 @@ async function loadDashboard() {
     const accessResult = isHr.value ? await api.list('access/reports/summary').then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
     const lessonsResult = !isAdmission.value && auth.can('schedule.view') ? await api.list('schedule-lessons', { date: todayIso() }).then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
     // Карты спрашиваем только у того, кто их ведёт: остальным этот запрос вернул бы отказ.
-    const cardsResult = auth.can('rfid.cards.view') ? await api.list('rfid-cards', { per_page: 200 }).then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
+    //
+    // Считаем **счётом на сервере**, а не листанием строк в браузере. Прежняя
+    // редакция брала `per_page: 200` и считала `filter(...).length` — то есть
+    // была верна ровно до двухсот первой карты. 31.08.2026 карт стало 244, и
+    // плитка показывала бы «выдано 200»: число неверное, и неверное молча.
+    // Заодно это два ответа по одной строке вместо двухсот сорока четырёх.
+    const cardsIssuedResult = auth.can('rfid.cards.view') ? await api.list('rfid-cards', { status: 'issued', per_page: 1 }).then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
+    const cardsStockResult = auth.can('rfid.cards.view') ? await api.list('rfid-cards', { status: 'stock', per_page: 1 }).then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })) : null
 
     if (applicationsResult?.status === 'fulfilled') totals.value.applications = extractTotal(applicationsResult.value)
     if (studentsResult?.status === 'fulfilled') totals.value.students = extractTotal(studentsResult.value)
@@ -155,11 +162,8 @@ async function loadDashboard() {
     if (employeesResult?.status === 'fulfilled') totals.value.employees = extractTotal(employeesResult.value)
     if (accessResult?.status === 'fulfilled') { totals.value.insideNow = accessResult.value?.data?.inside_now || 0; totals.value.denied = accessResult.value?.data?.denied || 0 }
     if (lessonsResult?.status === 'fulfilled') totals.value.todayLessons = extractTotal(lessonsResult.value)
-    if (cardsResult?.status === 'fulfilled') {
-      const cards = Array.isArray(cardsResult.value?.data) ? cardsResult.value.data : []
-      totals.value.cardsIssued = cards.filter((card) => card.status === 'issued').length
-      totals.value.cardsStock = cards.filter((card) => card.status === 'stock').length
-    }
+    if (cardsIssuedResult?.status === 'fulfilled') totals.value.cardsIssued = extractTotal(cardsIssuedResult.value)
+    if (cardsStockResult?.status === 'fulfilled') totals.value.cardsStock = extractTotal(cardsStockResult.value)
 
     if (!isStudent.value && !isAdmission.value && [studentsResult, groupsResult, teachersResult, lessonsResult, employeesResult, accessResult].filter(Boolean).some((result) => result.status === 'rejected')) {
       error.value = 'Часть показателей не удалось загрузить'
