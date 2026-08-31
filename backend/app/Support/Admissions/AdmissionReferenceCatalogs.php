@@ -109,7 +109,7 @@ class AdmissionReferenceCatalogs
             self::catalog('competition_types', 'Типы конкурсов', 'Типы конкурсных потоков приемной кампании.', [
                 ['general', 'Общий конкурс'],
                 ['budget', 'Бюджет'],
-                ['contract', 'Договор'],
+                ['contract', 'Хозрасчёт'],
                 ['target_quota', 'Целевая квота'],
                 ['benefit_quota', 'Льготная квота'],
             ]),

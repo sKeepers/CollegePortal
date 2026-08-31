@@ -140,7 +140,7 @@ function submitForm() {
             видел различия там, где его правят. Значения — из справочника
             «Формы финансирования», чтобы в базе не завелось три написания одного.
           -->
-          <q-select v-model="form.funding_form" dense outlined clearable emit-value map-options label="Форма финансирования" :options="[{ label: 'Бюджет', value: 'Бюджет' }, { label: 'Договор', value: 'Договор' }, { label: 'Целевое обучение', value: 'Целевое обучение' }]" />
+          <q-select v-model="form.funding_form" dense outlined clearable emit-value map-options label="Форма финансирования" :options="[{ label: 'Бюджет', value: 'Бюджет' }, { label: 'Хозрасчёт', value: 'Договор' }, { label: 'Целевое обучение', value: 'Целевое обучение' }]" />
           <q-input v-model="form.enrollment_order_number" dense outlined label="Приказ о зачислении" />
           <q-input v-model="form.enrollment_order_date" dense outlined type="date" label="Дата приказа" stack-label />
           <q-input

@@ -736,7 +736,17 @@ onMounted(async () => {
           <q-select v-if="bulkAction === 'change_status'" v-model="bulkPayload.status" outlined dense :options="statusOptions" emit-value map-options label="Статус" />
           <q-input v-if="bulkAction === 'change_course'" v-model.number="bulkPayload.course" outlined dense type="number" min="1" max="6" label="Курс" />
           <q-input v-if="bulkAction === 'change_education_form'" v-model="bulkPayload.education_form" outlined dense label="Форма обучения" />
-          <q-input v-if="bulkAction === 'change_funding_form'" v-model="bulkPayload.funding_form" outlined dense label="Форма финансирования" />
+          <!--
+            Было поле свободного ввода: оператор мог набрать «Хозрасчёт» — и в
+            базе появилось бы второе слово для того же смысла. Выбор из двух
+            вариантов показывает привычное слово и сохраняет прежнее значение.
+          -->
+          <q-select
+            v-if="bulkAction === 'change_funding_form'"
+            v-model="bulkPayload.funding_form"
+            outlined dense emit-value map-options
+            label="Форма финансирования"
+            :options="[{ label: 'Бюджет', value: 'Бюджет' }, { label: 'Хозрасчёт', value: 'Договор' }]" />
           <q-banner v-if="bulkAction === 'issue_digital_passes'" rounded class="bg-blue-1 text-blue-10">Активные QR-пропуска не дублируются: такие студенты будут пропущены.</q-banner>
           <q-banner v-if="bulkAction === 'issue_accounts'" rounded class="bg-orange-1 text-orange-10">
             Пароль показывается один раз, сразу после создания. Восстановить его нельзя — только сбросить и выдать новый.

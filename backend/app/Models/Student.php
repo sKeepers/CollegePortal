@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\Students\FundingForm;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -46,6 +48,26 @@ class Student extends Model
         'funding_form',
         'archived_at',
     ];
+
+    /**
+     * Форма финансирования приводится к одному написанию при любой записи.
+     *
+     * Колледж говорит «хозрасчёт», в базе лежит «Договор» — 63 студента на
+     * 31.08.2026. Подпись на экране переписана на привычное слово, и без этого
+     * правила первый же человек, набравший «Хозрасчёт» в поле или приславший
+     * файл со своим словом, завёл бы **второе значение для того же смысла**:
+     * отбор «кто на договоре» перестал бы находить половину.
+     *
+     * Правило стоит на модели, а не в контроллере, потому что путей записи у
+     * студента несколько: форма, массовое действие, загрузка CSV, импорт из
+     * файла и консольные команды. Так же закрыт номер бланка диплома.
+     */
+    protected function fundingForm(): Attribute
+    {
+        return Attribute::make(
+            set: fn (?string $value): ?string => FundingForm::store($value),
+        );
+    }
 
     protected function casts(): array
     {
