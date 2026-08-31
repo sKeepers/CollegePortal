@@ -182,14 +182,14 @@ class RfidCardIssueImportHandler extends AbstractImportHandler
             }
 
             if ($mode === self::MODE_SKIP_DUPLICATES) {
-                return 'skipped';
+                return $this->skipped(self::SKIP_DUPLICATE);
             }
 
             throw new RuntimeException('Такая выдача уже есть в журнале.');
         }
 
         if ($mode === self::MODE_UPDATE) {
-            return 'skipped';
+            return $this->skipped(self::SKIP_NOT_FOUND);
         }
 
         $person = $this->findPerson($data);

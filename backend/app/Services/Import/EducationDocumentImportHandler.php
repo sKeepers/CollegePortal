@@ -181,11 +181,11 @@ class EducationDocumentImportHandler extends AbstractImportHandler
         $existing = $this->findExisting($data);
 
         if ($mode === self::MODE_UPDATE && ! $existing) {
-            return 'skipped';
+            return $this->skipped(self::SKIP_NOT_FOUND);
         }
 
         if ($mode === self::MODE_SKIP_DUPLICATES && $existing) {
-            return 'skipped';
+            return $this->skipped(self::SKIP_DUPLICATE);
         }
 
         $person = $this->studentPeople->ensureForStudent($student)['person'];
