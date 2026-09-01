@@ -417,7 +417,13 @@ export const routes = [
         path: 'access/reports',
         name: 'access-reports',
         component: AccessReportsPage,
-        meta: { title: 'Отчеты по проходам', roles: ['admin', 'security'], permission: 'gate.reports' },
+        // `hr` здесь по решению владельца 01.09.2026: «отчёты по проходам отделу
+        // кадров должны быть доступны». Доступа к данным это не расширяет ни на
+        // строку — право `gate.reports` у кадров уже есть, сервер их отчёты уже
+        // отдаёт, и «Кто сейчас в здании» им уже открыто. Закрыт был только этот
+        // маршрут, при том что пункт меню кадрам показывался: замер того же дня —
+        // пункт «Отчеты по проходам» виден, нажатие даёт «Доступ запрещён».
+        meta: { title: 'Отчеты по проходам', roles: ['admin', 'security', 'hr'], permission: 'gate.reports' },
       },
       {
         path: 'access/muster',
