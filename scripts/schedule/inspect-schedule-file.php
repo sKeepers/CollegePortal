@@ -84,9 +84,9 @@ $building = pick($headers, ['корпус', 'building']);
 echo "\n";
 if ($building === null) {
     echo "КОЛОНКИ КОРПУСА В ФАЙЛЕ НЕТ.\n";
-    echo "  Номеров, встречающихся в двух корпусах, на 01.09.2026 — 32. Строки с такими\n";
-    echo "  номерами откажут все до единой: «Аудитория с таким номером есть в нескольких\n";
-    echo "  корпусах». Колонку надо добавить до загрузки, а не после.\n";
+    echo "  Строки с такими номерами откажут все до единой: «Аудитория с таким номером\n";
+    echo "  есть в нескольких корпусах». Колонку надо добавить до загрузки, а не после;\n";
+    echo "  сколько именно номеров неоднозначны — сказано ниже, по базе.\n";
 } else {
     $filled = count(array_filter($rows, static fn (array $row): bool => trim((string) $row[$building]) !== ''));
     $values = array_unique(array_map(static fn (array $row): string => trim((string) $row[$building]), $rows));
@@ -94,7 +94,7 @@ if ($building === null) {
 
     echo "Колонка корпуса: «{$building}», заполнена {$filled} из ".count($rows)."\n";
     echo "  Значения в файле: ".implode(', ', array_map(static fn (string $v): string => $v === '' ? '(пусто)' : $v, $values))."\n";
-    echo "  В портале корпуса называются: Крупской, Голенева. Написание должно совпадать.\n";
+    echo "  Написание должно совпадать с тем, как корпуса названы в портале — список ниже.\n";
 }
 
 // ——— Что из названного в файле портал не найдёт ———
@@ -183,6 +183,19 @@ try {
 
     echo "Проверено строк по справочникам портала: {$checked}\n";
 
+    // Корпуса и неоднозначные номера — из базы, а не из текста этого файла. Числа,
+    // вписанные в скрипт руками, устаревают за сутки: 01.09.2026 корпусов стало сначала
+    // два, потом три, и «в портале корпуса называются: Крупской, Голенева» соврало бы
+    // уже к вечеру того же дня.
+    $portalRoomNames = App\Models\Classroom::query()->pluck('number');
+    $portalBuildings = App\Models\Classroom::query()->distinct()->orderBy('building')->pluck('building')->filter()->values();
+    $ambiguous = App\Models\Classroom::query()
+        ->select('number')->groupBy('number')->havingRaw('count(distinct building) > 1')->pluck('number');
+
+    echo "  Корпуса в портале: ".($portalBuildings->isEmpty() ? '(ни одного)' : $portalBuildings->implode(', '))."\n";
+    echo "  Номеров, встречающихся в нескольких корпусах: ".$ambiguous->count();
+    echo $ambiguous->isEmpty() ? "\n" : " — такие строки без корпуса откажут все до единой.\n";
+
     if ($missing === []) {
         echo "  Всё названное в файле в портале есть.\n";
     }
@@ -191,7 +204,12 @@ try {
         arsort($names);
         echo "  ".mb_strtoupper($label).": имён ".count($names).", строк ".array_sum($names)."\n";
         foreach ($names as $name => $count) {
-            echo "      «{$name}» — {$count} ".plural($count, 'строка', 'строки', 'строк')."\n";
+            // Подсказка, а не подстановка: «105А» русской буквой и «105A» латинской
+            // выглядят одинаково, и человек будет искать опечатку в цифрах.
+            $hint = $label === 'аудитории' ? latinLookalike(explode(' — ', $name)[0], $portalRoomNames) : null;
+
+            echo "      «{$name}» — {$count} ".plural($count, 'строка', 'строки', 'строк')
+                .($hint ? "; похоже на латинскую букву — в портале есть «{$hint}»" : '')."\n";
         }
     }
 } catch (Throwable $exception) {
@@ -397,3 +415,35 @@ function plural(int $count, string $one, string $few, string $many): string
         default => $many,
     };
 }
+    /**
+     * Не набрана ли в имени латинская буква вместо русской.
+     *
+     * `105А` с русской «А» и `105A` с латинской выглядят одинаково и не совпадают ни при
+     * каком сравнении — и это правильно, портал не должен их сводить: угаданная аудитория
+     * ставит группу не туда молча. Но человеку надо сказать, **что** не так, иначе он будет
+     * искать опечатку в цифрах. Замерено 01.09.2026: `105А` в портале — 4 знака и 5 байт,
+     * то есть буква русская; файл с латинской даёт «не найдено».
+     *
+     * Здесь только подсказка в отчёте. Ничего не подставляется и не исправляется.
+     */
+    function latinLookalike(string $name, Illuminate\Support\Collection $portalNames): ?string
+    {
+        $latin = ['A', 'B', 'E', 'K', 'M', 'H', 'O', 'P', 'C', 'T', 'Y', 'X', 'a', 'e', 'o', 'p', 'c', 'y', 'x'];
+        $cyrillic = ['А', 'В', 'Е', 'К', 'М', 'Н', 'О', 'Р', 'С', 'Т', 'У', 'Х', 'а', 'е', 'о', 'р', 'с', 'у', 'х'];
+        $swapped = str_replace($latin, $cyrillic, $name);
+
+        if ($swapped === $name) {
+            return null;
+        }
+
+        $comparable = static fn (string $value): string => mb_strtolower(trim(preg_replace('/\s+/u', ' ', $value)));
+        $wanted = $comparable($swapped);
+
+        foreach ($portalNames as $portalName) {
+            if ($comparable((string) $portalName) === $wanted) {
+                return (string) $portalName;
+            }
+        }
+
+        return null;
+    }
