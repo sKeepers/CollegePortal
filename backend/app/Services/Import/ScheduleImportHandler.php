@@ -19,7 +19,8 @@ class ScheduleImportHandler extends AbstractImportHandler { use ResolvesImportRe
   * возвращает свой текст и в переводе не нуждается. `bail` рядом — чтобы к нему не
   * добавилось ещё и `validation.exists` от следующего правила.
   */
- private const CLASSROOM_NOT_FOUND = -1;
+ /** Парная к `CLASSROOM_AMBIGUOUS` из трейта: обе называют, почему аудитории нет, и обе видны снаружи — иначе о них нельзя написать проверку. */
+ public const CLASSROOM_NOT_FOUND = -1;
 
  private function classroomWasResolved(): callable
  {

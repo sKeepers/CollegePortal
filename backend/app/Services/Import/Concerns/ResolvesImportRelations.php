@@ -7,6 +7,7 @@ use App\Models\EducationProgram;
 use App\Models\Group;
 use App\Models\Subject;
 use App\Models\Teacher;
+use Illuminate\Support\Collection;
 
 trait ResolvesImportRelations
 {
@@ -94,6 +95,9 @@ trait ResolvesImportRelations
      */
     public const CLASSROOM_AMBIGUOUS = -2;
 
+    /** Аудитории, прочитанные один раз на загрузку: за неё они не меняются. */
+    private ?Collection $classroomsForMatching = null;
+
     /**
      * Аудитория по номеру и корпусу.
      *
@@ -112,14 +116,54 @@ trait ResolvesImportRelations
         if ($id) { return (int) $id; }
         if (!$number) { return null; }
 
-        $found = Classroom::query()
-            ->where('number', $number)
-            ->when(filled($building), fn ($query) => $query->where('building', $building))
-            ->orderBy('id')
+        $wantedNumber = $this->comparableRoomName($number);
+        $wantedBuilding = $this->comparableRoomName($building);
+
+        $found = $this->classroomsForMatching()
+            ->filter(function (Classroom $classroom) use ($wantedNumber, $wantedBuilding): bool {
+                if ($this->comparableRoomName($classroom->number) !== $wantedNumber) { return false; }
+
+                return $wantedBuilding === '' || $this->comparableRoomName($classroom->building) === $wantedBuilding;
+            })
             ->pluck('id');
 
         if ($found->count() > 1) { return self::CLASSROOM_AMBIGUOUS; }
 
         return $found->first();
+    }
+
+    /**
+     * Имя аудитории в сравнимом виде: лишние пробелы убраны, регистр снят.
+     *
+     * До 01.09.2026 сравнение было точным, и пока аудитории звались числами, этого
+     * хватало. 01.09 у колледжа появились залы — «Большой зал» на Голеневой и
+     * «Концертный зал» на Крупской, — а имя зала завуч набирает руками: «Большой  зал»
+     * с двумя пробелами и «большой зал» со строчной для человека одно и то же, а для
+     * точного сравнения — разное, и строка отказывала бы «аудитория не найдена».
+     *
+     * **Синонимы не сводятся намеренно.** «БЗ» и «Большой зал» портал считать одним не
+     * должен: это уже угадывание, а угаданная аудитория ставит группу не туда молча.
+     * Приводится только запись одного и того же имени, не разные имена.
+     *
+     * Сравнение делается в PHP, а не в SQL, и это не прихоть: `lower()` в SQLite не
+     * знает кириллицы — на этом 01.09.2026 ствол простоял красным, пока причину не
+     * нашли. Строк здесь сто с небольшим, цена перебора незаметна.
+     */
+    private function comparableRoomName(?string $value): string
+    {
+        return mb_strtolower(trim(preg_replace('/\s+/u', ' ', (string) $value)));
+    }
+
+    /**
+     * Аудитории для сравнения, прочитанные один раз на загрузку.
+     *
+     * Файл расписания — это тысячи строк, и запрашивать сотню аудиторий на каждую
+     * незачем: за одну загрузку они не меняются.
+     *
+     * @return \Illuminate\Support\Collection<int, Classroom>
+     */
+    private function classroomsForMatching(): Collection
+    {
+        return $this->classroomsForMatching ??= Classroom::query()->get(['id', 'number', 'building']);
     }
 }
