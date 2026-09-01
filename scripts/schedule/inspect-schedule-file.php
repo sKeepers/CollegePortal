@@ -96,6 +96,109 @@ if ($building === null) {
     echo "  Значения в файле: ".implode(', ', array_map(static fn (string $v): string => $v === '' ? '(пусто)' : $v, $values))."\n";
     echo "  В портале корпуса называются: Крупской, Голенева. Написание должно совпадать.\n";
 }
+
+// ——— Что из названного в файле портал не найдёт ———
+//
+// Спрашивается **тем же правилом**, которым спросит загрузка: у файла берутся колонки по
+// синонимам загрузчика, строка прогоняется через его же `prepare()`, и смотрится, что он
+// сумел разрешить. Своя копия правил разошлась бы с портальной в первый же день — а
+// разойдясь, сказала бы «всё найдено» там, где загрузка откажет.
+//
+// Ничего не пишется: `prepare()` только читает справочники. Если базы нет — а завтра
+// инструмент может понадобиться раньше доступа к ней, — проверка пропускается с одной
+// строкой, а разбор клеток выше остаётся в силе.
+echo "\n";
+
+try {
+    $bootstrap = dirname(__DIR__, 2).'/backend/bootstrap/app.php';
+
+    if (! is_file($bootstrap)) {
+        throw new RuntimeException('рядом нет backend/bootstrap/app.php');
+    }
+
+    $app = require $bootstrap;
+    $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+    $handler = app(App\Services\Import\ScheduleImportHandler::class);
+    $fields = $handler->fields();
+    $mapping = [];
+
+    foreach ($fields as $field => $meta) {
+        foreach ($meta['aliases'] as $alias) {
+            foreach ($headers as $header) {
+                if (mb_strtolower(trim((string) $header)) === mb_strtolower($alias)) {
+                    $mapping[$field] = $header;
+                    break 2;
+                }
+            }
+        }
+    }
+
+    // Что именно спрашивать про каждую ссылку: колонка с именем и поле с разрешённым id.
+    $checks = [
+        'аудитории' => ['id' => 'classroom_id', 'named' => ['classroom_number']],
+        'группы' => ['id' => 'group_id', 'named' => ['group_name']],
+        'преподаватели' => ['id' => 'teacher_id', 'named' => ['teacher_name']],
+        'дисциплины' => ['id' => 'subject_id', 'named' => ['subject_name', 'subject_code']],
+    ];
+
+    $missing = [];
+    $checked = 0;
+
+    foreach ($rows as $row) {
+        $mapped = [];
+        foreach ($mapping as $field => $header) {
+            $mapped[$field] = $row[$header] ?? null;
+        }
+
+        if ($mapped === []) {
+            continue;
+        }
+
+        $checked++;
+        $prepared = $handler->prepare($mapped);
+
+        foreach ($checks as $label => $check) {
+            $named = null;
+            foreach ($check['named'] as $field) {
+                if (filled($mapped[$field] ?? null)) { $named = trim((string) $mapped[$field]); break; }
+            }
+
+            if ($named === null) {
+                continue;
+            }
+
+            $id = $prepared[$check['id']] ?? null;
+            $verdict = match (true) {
+                $id === App\Services\Import\ScheduleImportHandler::CLASSROOM_AMBIGUOUS => 'есть в нескольких корпусах',
+                $id === App\Services\Import\ScheduleImportHandler::CLASSROOM_NOT_FOUND, $id === null => 'не найдено',
+                default => null,
+            };
+
+            if ($verdict !== null) {
+                $missing[$label][$named.' — '.$verdict] = ($missing[$label][$named.' — '.$verdict] ?? 0) + 1;
+            }
+        }
+    }
+
+    echo "Проверено строк по справочникам портала: {$checked}\n";
+
+    if ($missing === []) {
+        echo "  Всё названное в файле в портале есть.\n";
+    }
+
+    foreach ($missing as $label => $names) {
+        arsort($names);
+        echo "  ".mb_strtoupper($label).": имён ".count($names).", строк ".array_sum($names)."\n";
+        foreach ($names as $name => $count) {
+            echo "      «{$name}» — {$count} ".plural($count, 'строка', 'строки', 'строк')."\n";
+        }
+    }
+} catch (Throwable $exception) {
+    echo "Справочники портала не прочитаны, проверка имён пропущена: ".$exception->getMessage()."\n";
+    echo "  Разбор клеток ниже от этого не зависит.\n";
+}
+
 echo "\nКлетка считается по колонкам: «{$group}» + «{$date}» + «{$start}»\n";
 
 $cells = [];
@@ -154,6 +257,8 @@ foreach ($differByCount as $signature => $count) {
     }
 }
 
+
+
 echo "\nЧто это значит:\n";
 echo "  — различаются только преподавателем или аудиторией: это подгруппы, и портал их\n";
 echo "    сегодня не различит; нужна пометка, которой в файле нет.\n";
@@ -196,7 +301,7 @@ function readCsv(string $path, int $headerRow): array
     $first = fgets($handle);
     rewind($handle);
 
-    // BOM снимается до разбора: иначе первая колонка теряется, и это уже стоило нам дня.
+    // Разделитель определяется по первой строке — тем же способом, что и у портала.
     $delimiter = substr_count((string) $first, ';') >= substr_count((string) $first, ',') ? ';' : ',';
     $rows = [];
     $headers = null;
@@ -209,9 +314,16 @@ function readCsv(string $path, int $headerRow): array
             continue;
         }
 
-        $cells = array_map(static fn ($value): string => trim((string) $value, "\xEF\xBB\xBF \t\n\r"), $cells);
+        // BOM снимается **один раз и только с начала заголовка**. Прежде здесь стоял
+        // `trim($value, "\xEF\xBB\xBF \t\n\r")`, и это не «убрать BOM», а «убрать с краёв
+        // любой из этих байтов»: «л» в UTF-8 — это D0 BB, «п» — D0 BF, и у имени,
+        // кончающегося на такую букву, съедался последний байт. «Большой зал»
+        // превращался в «большой за» с обломком и не находился в портале — то есть
+        // разбор врал бы «аудитории нет» про исправную аудиторию.
+        $cells = array_map(static fn ($value): string => trim((string) $value), $cells);
 
         if ($headers === null) {
+            $cells[0] = preg_replace('/^\xEF\xBB\xBF/', '', $cells[0] ?? '');
             $headers = $cells;
             continue;
         }
