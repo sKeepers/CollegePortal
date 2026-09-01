@@ -289,12 +289,26 @@ export const useRfidCardsStore = defineStore('rfidCards', () => {
     }
   }
 
-  const bind = (personId, uid, label, note) => act(() => api.create('rfid-cards/bind', {
-    person_id: personId,
-    uid,
-    label: label || null,
-    note: note || null,
-  }))
+  /**
+   * Карты, оставшиеся у человека на руках после только что выданной.
+   *
+   * `act()` возвращает только «получилось или нет» и ответ выбрасывает, а
+   * оператору у стойки нужен именно ответ: вторая карта разрешена, и молчать о
+   * первой нельзя — человек «потерял» карту, получил новую, а найденная старая
+   * по-прежнему открывает турникет.
+   */
+  const cardsStillOut = ref([])
+
+  const bind = (personId, uid, label, note) => act(async () => {
+    const payload = await api.create('rfid-cards/bind', {
+      person_id: personId,
+      uid,
+      label: label || null,
+      note: note || null,
+    })
+
+    cardsStillOut.value = Array.isArray(payload?.meta?.cards_still_out) ? payload.meta.cards_still_out : []
+  })
 
   const create = (payload) => act(() => api.create('rfid-cards', payload))
   const release = (card, reason, note) => act(() => api.create(`rfid-cards/${card.id}/release`, {
@@ -311,7 +325,7 @@ export const useRfidCardsStore = defineStore('rfidCards', () => {
   }))
 
   return {
-    cards, journal, groups, foundPeople, person, unknownCard,
+    cards, journal, groups, foundPeople, person, unknownCard, cardsStillOut,
     loading, searching, saving, error, filters, journalFilters, journalApplied,
     statusOptions, reasonOptions, groupOptions, counts,
     statusLabels: STATUS_LABELS, reasonLabels: REASON_LABELS,

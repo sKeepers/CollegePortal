@@ -63,9 +63,15 @@ class RfidCardApiTest extends TestCase
 
         $this->postJson("/api/rfid-cards/{$card->id}/issue", ['person_id' => $first->id])->assertOk();
 
-        $this->postJson("/api/rfid-cards/{$card->id}/issue", ['person_id' => $second->id])
+        // Отказ с 01.09.2026 **называет владельца**: у стойки «примите обратно»
+        // без имени невыполнимо. Утверждение проверки прежнее — карта не
+        // переходит молча, — а текст стал точнее.
+        $refusal = (string) $this->postJson("/api/rfid-cards/{$card->id}/issue", ['person_id' => $second->id])
             ->assertStatus(422)
-            ->assertJsonPath('errors.card.0', 'Карта уже выдана. Сначала примите её обратно.');
+            ->json('errors.card.0');
+
+        $this->assertStringContainsString('Карта уже выдана', $refusal);
+        $this->assertStringContainsString('Первый', $refusal);
 
         $this->assertSame($first->id, RfidCard::query()->find($card->id)->person_id);
     }

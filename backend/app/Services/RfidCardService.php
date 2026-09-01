@@ -70,11 +70,42 @@ class RfidCardService
         return $this->issue($card, $person, $note);
     }
 
+    /**
+     * Кто держит карту сейчас — словами, для сообщения оператору.
+     *
+     * Отдельно названо, если владелец **выбыл**: часть карт из выгрузки СКУД
+     * числится за теми, кого в колледже уже нет, и «примите у него» тогда
+     * невыполнимо — карту нужно отметить возвращённой, а не искать человека.
+     */
+    private function whoHoldsIt(RfidCard $card): string
+    {
+        $person = $card->person;
+
+        if ($person === null) {
+            return 'владелец не указан';
+        }
+
+        $name = trim(implode(' ', array_filter([$person->last_name, $person->first_name, $person->middle_name])));
+        $name = $name === '' ? 'человек без имени в карточке' : $name;
+
+        $student = $person->primaryStudent;
+
+        if ($student !== null && $student->status !== 'active') {
+            return $name.' (выбыл — примите карту как возвращённую)';
+        }
+
+        return $name;
+    }
+
     public function issue(RfidCard $card, Person $person, ?string $note = null): RfidCard
     {
         if ($card->status === RfidCard::STATUS_ISSUED) {
+            // Имя владельца — не украшение сообщения, а единственное, что делает
+            // совет выполнимым: «примите её обратно» у стойки означает «у кого?».
+            // При 636 строках выгрузки СКУД на 596 студентов номера повторяются,
+            // и оператор столкнётся с этим не раз.
             throw ValidationException::withMessages([
-                'card' => 'Карта уже выдана. Сначала примите её обратно.',
+                'card' => 'Карта уже выдана: '.$this->whoHoldsIt($card).'. Сначала примите её обратно у него.',
             ]);
         }
 

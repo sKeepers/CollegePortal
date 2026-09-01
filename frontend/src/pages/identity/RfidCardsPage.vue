@@ -162,7 +162,20 @@ async function bindPending() {
   const uid = pendingUid.value
   if (await store.bind(store.person.id, uid)) {
     pendingUid.value = ''
-    notify(`Карта ${uid} выдана`)
+
+    // Вторая карта разрешена — но сказать о первой обязаны. Иначе оператор не
+    // узнает, что у человека **две живые карты**, и старая продолжает открывать
+    // турникет. Замер 01.09.2026: до этой правки экран говорил только «выдана».
+    const stillOut = store.cardsStillOut
+    if (stillOut.length) {
+      notify(
+        `Карта ${uid} выдана. На руках остаётся ещё ${stillOut.length === 1 ? 'карта' : 'карт'}: `
+        + `${stillOut.join(', ')} — примите её, если она больше не нужна.`,
+        'warning',
+      )
+    } else {
+      notify(`Карта ${uid} выдана`)
+    }
   }
   focusScan()
 }
