@@ -41,6 +41,13 @@ export const useMobileStudentStore = defineStore('mobileStudent', () => {
   const qrRefreshSeconds = ref(30)
   const scheduleDate = ref(localIsoDate())
   const notifications = ref([])
+  /**
+   * Своё общежитие: блок и своя оплата, либо null у непроживающего.
+   *
+   * Соседей и занятости здесь нет и быть не может — их не отдаёт сервер
+   * (решение владельца 01.09.2026, закреплено `TheStudentSeesOnlyHisOwnDormTest`).
+   */
+  const dorm = ref(null)
   const message = ref('')
   const loading = ref(false)
   const error = ref('')
@@ -73,6 +80,7 @@ export const useMobileStudentStore = defineStore('mobileStudent', () => {
       qrRefreshSeconds.value = Number(payload.qr_refresh_seconds || 30)
       scheduleDate.value = payload.schedule_date || date
       notifications.value = payload.notifications || []
+      dorm.value = payload.dorm || null
       message.value = payload.message || ''
     } catch (err) {
       error.value = err.message || 'Не удалось загрузить мобильный кабинет'
@@ -101,6 +109,7 @@ export const useMobileStudentStore = defineStore('mobileStudent', () => {
     qrRefreshSeconds,
     scheduleDate,
     notifications,
+    dorm,
     message,
     loading,
     error,
