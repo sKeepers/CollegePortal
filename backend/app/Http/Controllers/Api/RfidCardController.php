@@ -128,9 +128,25 @@ class RfidCardController extends Controller
         ]);
 
         $person = Person::query()->findOrFail($data['person_id']);
+
+        // Что было на руках **до** выдачи: после неё новая карта тоже попадёт в
+        // выборку, и «остальные» перестанут быть остальными.
+        $before = RfidCard::query()
+            ->where('person_id', $person->id)
+            ->where('status', RfidCard::STATUS_ISSUED)
+            ->pluck('uid')
+            ->all();
+
         $card = $this->cards->bind($person, $data['uid'], $data['label'] ?? null, $data['note'] ?? null);
 
-        return new RfidCardResource($card->load('person'));
+        // Вторая карта разрешена, и это не повод молчать о первой. Оператор у
+        // стойки иначе не узнает, что у человека **две живые карты**: он
+        // «потерял» одну, получил новую, а найденная старая по-прежнему
+        // открывает турникет. Дыра в проходной, растянутая во времени.
+        $stillOut = array_values(array_diff($before, [$card->uid]));
+
+        return (new RfidCardResource($card->load('person')))
+            ->additional(['meta' => ['cards_still_out' => $stillOut]]);
     }
 
     /**
