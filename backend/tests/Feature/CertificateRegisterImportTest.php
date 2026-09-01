@@ -85,6 +85,27 @@ class CertificateRegisterImportTest extends TestCase
         $this->assertSame($student->id, StudentCertificate::where('number', 741)->firstOrFail()->student_id);
     }
 
+    public function test_a_note_in_brackets_does_not_hide_a_student(): void
+    {
+        // В книге рядом с фамилией пишут прежнюю фамилию в скобках. Карточка
+        // студента такого не содержит, и строка не находила человека: замер
+        // 02.09.2026 на рабочем реестре — 86 строк из 591 без студента, из них
+        // 85 держались ровно на скобках.
+        $student = $this->makeStudent('Ковалёва', 'Дарина', 'Игоревна', '2007-05-14');
+
+        $this->import([
+            ['1', 'Ковалёва Дарина Игоревна (Птицына)', '14.05.2007', 'Фортепиано', '114', '17.08.2026', '751', '752', '', ''],
+        ]);
+
+        $row = StudentCertificate::where('number', 751)->firstOrFail();
+
+        $this->assertSame($student->id, $row->student_id);
+
+        // Уточнение остаётся в записи: печатный реестр повторяет книгу, а не
+        // приведённое к карточке имя.
+        $this->assertSame('Ковалёва Дарина Игоревна (Птицына)', $row->full_name);
+    }
+
     public function test_loading_twice_adds_nothing_the_second_time(): void
     {
         $rows = [['1', 'Ветрова Мирослава Олеговна', '01.02.2007', 'Вокальное искусство', '114', '17.08.2026', '751', '752']];
