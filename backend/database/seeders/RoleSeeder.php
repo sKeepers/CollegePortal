@@ -292,6 +292,18 @@ class RoleSeeder extends Seeder
             'schedule.view', 'schedule.view_conflicts', 'schedule.view_coverage', 'journal.view', 'journal.view_all', 'journal.export', 'attendance.view', 'attendance.reports',
             'admissions.view', 'admissions.applicant.view', 'admissions.application.view', 'admissions.choice.view', 'admissions.document.view', 'admissions.document.download_sensitive', 'admissions.documents.view', 'admissions.documents.download', 'admissions.bulk_export', 'admissions.reference.view', 'curricula.view', 'curricula.subjects.view', 'teachingload.view', 'teaching_load.view_coverage', 'exams.view', 'graduation.view', 'diploma.blanks.view', 'certificates.view',
             'frdo.view', 'fis.view', 'fis.outbound.view', 'fis.outbound.status', 'gate.reports', 'audit.view', 'reference.manage', 'uat.manage', 'hr.employees.view', 'hr.calendar.view', 'hr.replacements.view', 'hr.reports.view',
+            // Общежитие — только просмотр. Владелец 01.09.2026 назвал директора
+            // третьим, кому нужен раздел, рядом с комендантом общежития и
+            // заместителем по воспитательной работе; замер того же дня показал у
+            // директора ноль прав на общежитие. Действий здесь нет намеренно:
+            // заселяет комендант, воспитательную работу ведёт заместитель, и
+            // `dorm.relocation.recommend` — тоже действие.
+            //
+            // Та же выдача продублирована миграцией 2026_09_01_000001: сидер при
+            // обновлении не выполняется никогда, а миграция без сидера стёрлась бы
+            // на новой установке через sync().
+            'dorm.rooms.view', 'dorm.placements.view', 'dorm.payments.view', 'dorm.incidents.view',
+            'dorm.absences.view', 'dorm.conduct.view', 'dorm.social.view',
             // Своё собственное: без этого права директор не видел даже свой QR-пропуск.
             'view_own_data',
         ];
