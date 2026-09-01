@@ -1,0 +1,233 @@
+<?php
+
+namespace App\Console\Commands;
+
+use App\Models\Building;
+use App\Models\DormRoom;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
+use Throwable;
+
+/**
+ * Комнаты общежития по списку помещений от коменданта.
+ *
+ * Команда, а не миграция: это данные конкретного колледжа, а не каталог
+ * системы. Миграция выполнилась бы на боевом сервере сама при первом же
+ * обновлении, а владелец просит переносить данные отдельно и сам. Команду
+ * зовут руками — на стенде мы, на боевом он.
+ *
+ * **Блок — не комната, и одна строка здесь означает блок целиком.** Владелец
+ * 01.09.2026: в блоке две жилые комнаты, кухня и санузел с ванной — то есть
+ * жилых комнат в общежитии 80, а строк тут 40. Так сделано намеренно: как
+ * делятся места между двумя комнатами, владелец не назвал, а гадать нельзя —
+ * 6 = 3+3 очевидно, 8 = 4+4 правдоподобно, а 3 на две комнаты не делится никак.
+ * Сорок настоящих блоков лучше восьмидесяти выдуманных комнат.
+ *
+ * Отсюда следствие, которое стоит увидеть заранее: лист на дверь выходит **на
+ * блок**, и это верно ровно до тех пор, пока лист вешают на входную дверь
+ * блока. Если окажется, что его вешают на каждую внутреннюю дверь, деление
+ * придётся завести, и тогда изменятся данные, а не портал: номера вида 201а и
+ * 201б, восемьдесят строк вместо сорока.
+ *
+ * До неё в базе стояли пятнадцать заготовок с пометкой «ЗАГОТОВКА: номер и
+ * вместимость уточнить у коменданта», и в одну из них уже заселили двоих.
+ * Поэтому команда **обновляет по номеру, а не заводит заново**: номер уникален
+ * в паре со зданием, заселения висят на строке комнаты, и новая строка увела
+ * бы жильцов в никуда.
+ */
+class ImportDormRoomsCommand extends Command
+{
+    protected $signature = 'dorm:import-rooms
+        {--building=SER277 : код здания общежития}
+        {--dry-run : посчитать и откатить, ничего не записав}';
+
+    protected $description = 'Завести комнаты общежития по списку помещений от коменданта';
+
+    /**
+     * Жилые блоки: позиция в номере => койко-мест.
+     *
+     * Записано позициями, а не сорока строками, потому что документ владельца
+     * так и устроен — замер 01.09.2026 по всем 57 абзацам: вместимость каждой
+     * позиции **одинакова на всех четырёх этажах**, и первая цифра номера
+     * всегда равна этажу. Проверяется в один взгляд против самого документа, а
+     * итоговые 40 комнат и 236 мест закреплены сторожем.
+     *
+     * Позиции 07 в жилых нет **ни на одном** этаже: на 2 и 3 там учебный класс
+     * (207, 307), на 4 и 5 — помещение около 16,5 м² (407, 507). Нежилые
+     * помещения команда не заводит вовсе — что они такое, владелец ещё не
+     * сказал, а комната общежития, в которой никто не живёт и жить не может,
+     * будет мешать коменданту при заселении.
+     */
+    private const PLACES = [
+        '01' => 3,
+        '02' => 6,
+        '03' => 6,
+        '04' => 6,
+        '05' => 6,
+        '06' => 6,
+        '08' => 8,
+        '09' => 6,
+        '10' => 6,
+        '11' => 6,
+    ];
+
+    /** Жилые этажи. Первый занят учебными классами целиком. */
+    private const FLOORS = [2, 3, 4, 5];
+
+    /** Пометка, которой были подписаны заготовки. Свои заметки коменданта не трогаем. */
+    private const PLACEHOLDER_NOTE = 'ЗАГОТОВКА';
+
+    public function handle(): int
+    {
+        $code = (string) $this->option('building');
+        $building = Building::query()->firstWhere('code', $code);
+
+        if ($building === null) {
+            $this->error("Здание с кодом {$code} не найдено. Общежитие — SER277.");
+
+            return self::FAILURE;
+        }
+
+        $rooms = $this->rooms();
+        $this->line("Здание: {$building->name}");
+        $this->line('В списке: комнат '.count($rooms).', мест '.array_sum(array_column($rooms, 'capacity')));
+
+        $existing = DormRoom::query()
+            ->where('building_id', $building->id)
+            ->withCount('currentPlacements')
+            ->get()
+            ->keyBy('number');
+
+        if (($stop = $this->tooFullForTheNewCapacity($rooms, $existing)) !== []) {
+            $this->error('Отказ: в этих комнатах живут больше, чем даёт новая вместимость.');
+            foreach ($stop as $line) {
+                $this->line('  '.$line);
+            }
+            $this->line('Сначала переселите людей, потом повторите — иначе портал откажет коменданту в заселении по причине, которой он не создавал.');
+
+            return self::FAILURE;
+        }
+
+        // Комнаты, которых в списке нет, — только называем, и до записи, чтобы
+        // это было видно и в пробном прогоне. Удалять их нельзя: за комнатой
+        // стоит история заселений, и портал их намеренно не удаляет.
+        $extra = $existing->keys()->diff(array_column($rooms, 'number'));
+        if ($extra->isNotEmpty()) {
+            $this->warn('В базе есть комнаты, которых нет в списке: '.$extra->implode(', '));
+            $this->line('Команда их не трогает. Если их больше нет — выведите из обращения в карточке комнаты.');
+        }
+
+        $dryRun = (bool) $this->option('dry-run');
+        $created = 0;
+        $updated = 0;
+        $same = 0;
+
+        // Транзакция ведётся руками, а не через DB::transaction: пробный прогон
+        // откатывает записанное, а замыкание закоммитило бы его раньше отката.
+        DB::beginTransaction();
+
+        try {
+            foreach ($rooms as $row) {
+                $room = $existing->get($row['number']);
+
+                if ($room === null) {
+                    // firstOrNew + save, а не updateOrCreate: последний внутри
+                    // транзакции открывает точку сохранения на каждую строку, а
+                    // таблица блокировок PostgreSQL одна на весь сервер.
+                    $room = new DormRoom(['building_id' => $building->id, 'number' => $row['number']]);
+                    $room->fill($row + ['kind' => DormRoom::KIND_REGULAR, 'is_active' => true]);
+                    $room->save();
+                    $created++;
+
+                    continue;
+                }
+
+                $room->fill($row);
+
+                if (str_starts_with((string) $room->note, self::PLACEHOLDER_NOTE)) {
+                    $room->note = null;
+                }
+
+                if ($room->isDirty()) {
+                    $room->save();
+                    $updated++;
+                } else {
+                    $same++;
+                }
+            }
+        } catch (Throwable $e) {
+            DB::rollBack();
+
+            throw $e;
+        }
+
+        if ($dryRun) {
+            DB::rollBack();
+            $this->line("Завелось бы: {$created}, обновилось бы: {$updated}, без изменений: {$same}");
+            $this->warn('Пробный прогон: записанное откачено.');
+
+            return self::SUCCESS;
+        }
+
+        DB::commit();
+
+        $this->line("Заведено: {$created}, обновлено: {$updated}, без изменений: {$same}");
+
+        $this->total($building->id);
+
+        return self::SUCCESS;
+    }
+
+    /** Список комнат по документу: номер, этаж, вместимость. */
+    private function rooms(): array
+    {
+        $rooms = [];
+
+        foreach (self::FLOORS as $floor) {
+            foreach (self::PLACES as $position => $capacity) {
+                // Слово «Блок» из документа в номер не идёт: лист на дверь
+                // собирает заголовок как «Комната № {номер}», и вышло бы
+                // «Комната № Блок 201». Если владелец захочет «блок» — это одно
+                // слово в заголовке листа, а не сорок номеров.
+                $rooms[] = [
+                    'number' => $floor.$position,
+                    'floor' => $floor,
+                    'capacity' => $capacity,
+                ];
+            }
+        }
+
+        return $rooms;
+    }
+
+    /**
+     * Комнаты, где живут больше, чем даст новая вместимость.
+     *
+     * Отказ по всей команде, а не пропуск строки: половина списка, записанная
+     * при отказавшей второй половине, хуже, чем не записанная вовсе — числа на
+     * листе заселённости сойдутся, а комнат будет не сорок.
+     */
+    private function tooFullForTheNewCapacity(array $rooms, $existing): array
+    {
+        $stop = [];
+
+        foreach ($rooms as $row) {
+            $room = $existing->get($row['number']);
+
+            if ($room !== null && $room->current_placements_count > $row['capacity']) {
+                $stop[] = "комната {$room->number}: живут {$room->current_placements_count}, по списку мест {$row['capacity']}";
+            }
+        }
+
+        return $stop;
+    }
+
+    private function total(int $buildingId): void
+    {
+        $rooms = DormRoom::query()->where('building_id', $buildingId);
+
+        $this->line('Стало: комнат '.(clone $rooms)->count()
+            .', мест '.(clone $rooms)->sum('capacity')
+            .', занято '.(clone $rooms)->withCount('currentPlacements')->get()->sum('current_placements_count'));
+    }
+}
