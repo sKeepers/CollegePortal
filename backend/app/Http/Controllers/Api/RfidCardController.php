@@ -372,6 +372,42 @@ class RfidCardController extends Controller
         return 'за период '.$format($from).' — '.$format($to);
     }
 
+    /**
+     * Своя карта — человеку, у которого нет и не должно быть доступа к реестру.
+     *
+     * Решение владельца 01.09.2026: сотруднику нужен только QR-пропуск и карта.
+     * Реестр карт закрыт правом `rfid.cards.view`, и открывать его ради того,
+     * чтобы человек увидел свой номер, нельзя — это дало бы ему и чужие.
+     *
+     * Отдаём **список**, а не одну: с 30.08.2026 у человека законно бывает
+     * несколько карт (слово владельца), и показать одну значило бы умолчать об
+     * остальных — ровно та беда, из-за которой `currentRfidCard` пришлось
+     * переописывать.
+     *
+     * Учётная запись без карточки человека получает пустой список, а не отказ:
+     * правило портала — «отсутствие связанного профиля не даёт 403».
+     */
+    public function mine(Request $request): JsonResponse
+    {
+        $personId = $request->user()->person_id;
+
+        $cards = $personId === null
+            ? collect()
+            : RfidCard::query()
+                ->where('person_id', $personId)
+                ->whereIn('status', [RfidCard::STATUS_ISSUED, RfidCard::STATUS_BLOCKED])
+                ->orderByDesc('issued_at')
+                ->get();
+
+        return response()->json(['data' => $cards->map(fn (RfidCard $card) => [
+            'uid' => $card->uid,
+            'label' => $card->label,
+            'status' => $card->status,
+            'status_label' => RfidCardResource::statusLabel($card->status),
+            'issued_at' => $card->issued_at?->toISOString(),
+        ])->values()->all()]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([

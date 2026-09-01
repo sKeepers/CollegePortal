@@ -657,6 +657,10 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated', 'view.
         ->middleware('permission:rfid.cards.view');
     // Объявлены до `rfid-cards/{rfidCard}`: иначе «lookup» и «journal» ушли бы
     // в параметр маршрута и искались бы как карты с такими номерами.
+    // Своя карта — за правом видеть своё, а не за правом на реестр: сотруднику
+    // нужен номер своей карты, а реестр открывать ему нельзя.
+    Route::get('rfid-cards/mine', [RfidCardController::class, 'mine'])
+        ->middleware('permission:view_own_data');
     Route::get('rfid-cards/lookup', [RfidCardController::class, 'lookup'])
         ->middleware('permission:rfid.cards.view');
     Route::get('rfid-cards/people', [RfidCardController::class, 'people'])

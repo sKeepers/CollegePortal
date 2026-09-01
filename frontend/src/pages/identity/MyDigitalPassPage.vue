@@ -10,8 +10,36 @@ import AppLoading from '../../components/ui/AppLoading.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
 import { useDigitalPassesStore, entityTypeLabel, formatDateTime, ownerName, statusLabel, statusTone } from '../../stores/digitalPasses'
+import { api } from '../../services/api'
 
 const store = useDigitalPassesStore()
+
+/**
+ * Свои карты — здесь же, а не отдельным экраном.
+ *
+ * Решение владельца 01.09.2026: сотруднику нужен только QR-пропуск и карта. Эта
+ * страница и есть «моё удостоверение», и заводить ради одной строки второй
+ * пункт меню роли, у которой пунктов всего два, значило бы отдать под него треть
+ * меню.
+ *
+ * Карт может быть **несколько**: с 30.08.2026 у человека законно бывает не одна.
+ * Поэтому список, а не одна строка.
+ */
+const cards = ref([])
+const cardsFailed = ref(false)
+
+async function loadCards() {
+  try {
+    const payload = await api.list('rfid-cards/mine')
+    cards.value = Array.isArray(payload?.data) ? payload.data : []
+    cardsFailed.value = false
+  } catch {
+    // Карта — не главное на этой странице: пропуск важнее, и падать из-за карт
+    // страница не должна. Но и молчать нельзя — скажем, что не спросили.
+    cards.value = []
+    cardsFailed.value = true
+  }
+}
 const qrDialogVisible = ref(false)
 let refreshTimer = null
 let clockTimer = null
@@ -31,6 +59,7 @@ const qrSecondsLeft = computed(() => {
 })
 
 async function loadPass() {
+  await loadCards()
   await store.load({ mine: true, includeOwners: false })
   if (store.identities[0]) {
     await store.select(store.identities[0])
@@ -107,6 +136,28 @@ onBeforeUnmount(() => {
       description="Обратитесь к администратору или сотруднику проходной для выпуска цифрового пропуска."
     />
 
+    <!--
+      Карта показывается **всегда**, а не только при живом пропуске: у человека
+      может быть карта и не быть пропуска, и наоборот. Связывать их показ значило
+      бы прятать одно за отсутствием другого.
+    -->
+    <WorkspacePanel class="my-digital-pass-card" title="Моя карта" subtitle="Номер, по которому вас узнаёт проходная">
+      <div v-if="cards.length" class="my-card-list">
+        <div v-for="card in cards" :key="card.uid" class="my-card-row">
+          <strong class="my-card-row__uid">{{ card.uid }}</strong>
+          <AppStatusBadge :label="card.status_label" :tone="card.status === 'issued' ? 'success' : 'warning'" />
+          <span v-if="card.issued_at" class="my-card-row__issued">выдана {{ formatDateTime(card.issued_at) }}</span>
+        </div>
+      </div>
+      <p v-else-if="cardsFailed" class="my-card-empty">
+        Не удалось спросить о карте. Обновите страницу; если повторится — скажите администратору.
+      </p>
+      <p v-else class="my-card-empty">
+        Карта вам не выдана. За картой обращаются к коменданту — на проходной она нужна вместо QR-кода,
+        когда телефона нет под рукой.
+      </p>
+    </WorkspacePanel>
+
     <q-dialog v-model="qrDialogVisible">
       <q-card class="my-digital-pass-dialog">
         <q-card-section>
@@ -126,6 +177,31 @@ onBeforeUnmount(() => {
 <style scoped>
 .my-digital-pass-card {
   max-width: 760px;
+}
+
+.my-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Номер и признак в строку, но на узком экране — столбиком: сотрудник придёт к
+   турникету с телефоном, и номер не должен уезжать за край. */
+.my-card-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.my-card-row__uid {
+  font-size: 20px;
+  letter-spacing: 1px;
+}
+
+.my-card-row__issued,
+.my-card-empty {
+  color: var(--text-secondary, #6b7280);
 }
 
 .my-digital-pass {
