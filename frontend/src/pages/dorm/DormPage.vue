@@ -925,7 +925,7 @@ onMounted(() => store.loadToday())
 
         <div v-if="store.occupancy" class="dorm-block">
           <div class="dorm-block__title">
-            Заселённость за {{ store.occupancy.from }} — {{ store.occupancy.to }}
+            Заселённость за {{ formatDate(store.occupancy.from) }} — {{ formatDate(store.occupancy.to) }}
           </div>
           <div class="dorm-hint">
             Занято {{ store.occupancy.totals.occupied }} из {{ store.occupancy.totals.capacity }},
