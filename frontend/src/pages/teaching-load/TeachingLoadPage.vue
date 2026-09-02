@@ -75,11 +75,25 @@ const itemColumns = [
 
 const loadTypeOptions = computed(() => referenceOptions.options('teaching_load_types', { valueField: 'name' }))
 const tableSubtitle = computed(() => profileUnavailable.value ? 'Профиль преподавателя еще не настроен' : `Найдено нагрузок: ${store.filteredLoads.length}`)
+/**
+ * Число покрытия — или прочерк, если покрытие не спрашивали.
+ *
+ * Стояло `?? 0`, и у преподавателя на **его собственной** нагрузке экран рисовал
+ * «Назначено 0, Остаток 0, Превышение 0» рядом с честным «План 72». Покрытие ему не
+ * запрашивается вовсе — `includeCoverage: !isOwnView`, — то есть ноль там никто не
+ * считал, а читается он как «часов не назначено». Посчитанный ноль и непосчитанный
+ * обязаны выглядеть по-разному.
+ *
+ * Настоящий ноль остаётся нулём: если покрытие пришло и в нём ноль, так и написано.
+ * «План» тоже остаётся числом — он считается на месте из загруженных строк нагрузки.
+ */
+function coverageValue(field) { return store.coverage ? store.coverage[field] ?? 0 : '—' }
+
 const teachingLoadMetrics = computed(() => [
   { label: 'План', value: store.coverage?.planned_hours ?? store.selectedHours },
-  { label: 'Назначено', value: store.coverage?.assigned_hours ?? 0 },
-  { label: 'Остаток', value: store.coverage?.unassigned_hours ?? 0 },
-  { label: 'Превышение', value: store.coverage?.overassigned_hours ?? 0 },
+  { label: 'Назначено', value: coverageValue('assigned_hours') },
+  { label: 'Остаток', value: coverageValue('unassigned_hours') },
+  { label: 'Превышение', value: coverageValue('overassigned_hours') },
 ])
 const teachingLoadActions = computed(() => [
   ...(!isOwnView.value ? [{ label: 'Преподаватель', to: { path: `/teachers/${store.selectedLoad?.teacher_id}`,} }] : []),
