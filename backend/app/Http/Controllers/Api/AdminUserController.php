@@ -16,6 +16,7 @@ use App\Services\AccountProvisioningService;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -122,13 +123,35 @@ class AdminUserController extends Controller
             'employee' => Employee::findOrFail($data['profile_id']),
         };
 
-        $user = $this->profileUser($profile);
+        $accounts = $this->profileAccounts($profile);
+        $active = $accounts->filter(fn (User $candidate): bool => (bool) $candidate->is_active)->values();
 
-        if ($user === null) {
+        if ($accounts->isEmpty()) {
             return response()->json([
                 'message' => 'У этого человека нет учетной записи. Сначала создайте ее.',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
+
+        // Отключённая запись — не «нет записи». Сказать «создайте» тому, у кого
+        // она есть, значит отправить его заводить вторую, а две записи у одного
+        // человека и есть причина этой правки.
+        if ($active->isEmpty()) {
+            return response()->json([
+                'message' => 'Учетная запись этого человека отключена. Включите ее в разделе «Пользователи», потом сбрасывайте пароль.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        // Портал не угадывает, какой из двух записей сбрасывать пароль.
+        // До 01.09.2026 угадывал: `first()` без порядка и без отбора
+        // действующих — и сброс дважды попал в отключённую, а человек остался
+        // без входа, думая, что пароль ему выдали.
+        if ($active->count() > 1) {
+            return response()->json([
+                'message' => 'У этого человека несколько действующих учетных записей ('.$active->count().'). Портал не выбирает за вас: откройте раздел «Пользователи» и сбросьте пароль нужной.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $user = $active->first();
 
         $password = TemporaryPassword::generate();
         // Выданный пароль временный: после входа портал предложит завести свой,
@@ -152,15 +175,36 @@ class AdminUserController extends Controller
         ]]);
     }
 
-    private function profileUser(Student|Teacher|Employee $profile): ?User
+    /**
+     * Учётные записи, которые могут принадлежать этой карточке.
+     *
+     * Возвращается **список**, а не одна запись, и это существо правки. Раньше
+     * здесь стоял `first()` без порядка и без отбора действующих: при двух
+     * записях у одного человека база отдавала любую, и сброс пароля дважды
+     * попал в отключённую — человек остался без входа, а тот, кто сбрасывал,
+     * был уверен, что выдал пароль.
+     *
+     * Ссылка из самой карточки (`user_id`) — не угадывание, а прямое указание,
+     * и она по-прежнему главнее: если карточка называет запись, берётся она.
+     *
+     * @return \Illuminate\Support\Collection<int, User>
+     */
+    private function profileAccounts(Student|Teacher|Employee $profile): Collection
     {
         if (($profile->user_id ?? null) !== null) {
-            return User::find($profile->user_id);
+            $named = User::find($profile->user_id);
+
+            return $named ? collect([$named]) : collect();
         }
 
-        return $profile->person_id
-            ? User::query()->where('person_id', $profile->person_id)->first()
-            : null;
+        if (! $profile->person_id) {
+            return collect();
+        }
+
+        return User::query()
+            ->where('person_id', $profile->person_id)
+            ->orderBy('id')
+            ->get();
     }
 
     public function show(User $user): UserResource
