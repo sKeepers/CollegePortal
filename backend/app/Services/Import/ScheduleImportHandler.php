@@ -61,7 +61,7 @@ class ScheduleImportHandler extends AbstractImportHandler { use ResolvesImportRe
   * бы падать целиком. Такая строка в покрытие не попадёт — но она и раньше
   * туда не попадала.
   */
- public function import(array $data,string $mode): string { $lesson=$this->findExisting($data); if($reason=$this->cellIsTakenReason($data,$lesson?->id)){return $this->skipped($reason);} if($mode===self::MODE_UPDATE && !$lesson){return $this->skipped(self::SKIP_NOT_FOUND);} if($lesson){ if($mode===self::MODE_SKIP_DUPLICATES){return $this->skipped(self::SKIP_DUPLICATE);} if($mode===self::MODE_CREATE){throw new RuntimeException('Занятие уже существует.');}}
+ public function import(array $data,string $mode): string { $lesson=$this->findExisting($data); if($reason=$this->cellIsTakenReason($data,$lesson?->id)){return $this->skipped($reason);} if($mode===self::MODE_UPDATE && !$lesson){return $this->skipped($this->movedLessonReason($data) ?? self::SKIP_NOT_FOUND);} if($lesson){ if($mode===self::MODE_SKIP_DUPLICATES){return $this->skipped(self::SKIP_DUPLICATE);} if($mode===self::MODE_CREATE){throw new RuntimeException('Занятие уже существует.');}}
      $loadItem=$this->engine->loadItemFor($this->enginePayload($data));
      if($lesson){ if($lesson->schedule_entry_id && ($entry=$lesson->scheduleEntry)){ $this->engine->update($entry,$this->enginePayload($data,$loadItem?->id),$this->currentUser()); return 'updated'; } $this->scheduleLessonService->update($lesson,ScheduleLessonData::fromArray($this->schedulePayload($data))); return 'updated'; }
      if($loadItem){ $this->engine->apply($this->enginePayload($data,$loadItem->id),$this->currentUser()); return 'created'; }
@@ -164,5 +164,61 @@ class ScheduleImportHandler extends AbstractImportHandler { use ResolvesImportRe
             .' Портал пока не умеет ставить одной группе две пары в одно время: подгруппы и индивидуальные занятия он различать не научен, и эта строка не загружена.'
             .' Если это подгруппа — она ждёт признака подгруппы в портале; если накладка — её надо развести в файле; если это правка занятия — измените его на экране расписания.';
     }
+    /**
+     * Строка описывает занятие, которое стоит в этот день в другое время.
+     *
+     * Занятие опознаётся пятью полями, и время начала — одно из них
+     * (`keyFields`). Значит строка с новым временем не находит прежнюю пару и в
+     * режиме обновления пропускается. Само по себе это честно, а вот общий текст
+     * пропуска — нет: он советует «выберите режим создания», и **именно этот
+     * режим делает молчаливого двойника**. Замер 03.09.2026 полным путём загрузки
+     * (файл → предпросмотр → подтверждение): та же пара с временем 11:00 вместо
+     * 09:00 дала в режиме создания `создано 1, ошибок 0, замечаний 0` и **две**
+     * пары в базе — 09:00 и 11:00. То есть починка молчаливого пропуска сама
+     * стала дорогой во второй дефект: человек делает то, что ему посоветовали.
+     *
+     * Поэтому здесь причина своя, и она называет три вещи: где занятие стоит
+     * сейчас, почему строка не считается переносом и что сделает режим создания.
+     * Переносить занятие сами мы не имеем права: две пары одной дисциплины у
+     * одного преподавателя в один день — это обычная сдвоенная пара, а не
+     * ошибка, и правило «перенести однозначное» съело бы вторую из них.
+     *
+     * Ограничение записано намеренно: перенести занятие файлом нельзя ни в
+     * одном режиме — замерено тем же прогоном, все четыре исхода. Перенос
+     * делается на экране расписания.
+     */
+    private function movedLessonReason(array $data): ?string
+    {
+        $standing = ScheduleLesson::query()
+            ->with(["subject", "teacher"])
+            ->whereDate("lesson_date", $data["lesson_date"] ?? null)
+            ->where("group_id", $data["group_id"] ?? null)
+            ->where("subject_id", $data["subject_id"] ?? null)
+            ->where("teacher_id", $data["teacher_id"] ?? null)
+            ->orderBy("starts_at")
+            ->get();
+
+        if ($standing->isEmpty()) {
+            return null;
+        }
+
+        $times = $standing
+            ->map(fn (ScheduleLesson $lesson): string => $lesson->starts_at?->format("H:i") ?? "")
+            ->filter()
+            ->implode(", ");
+
+        $first = $standing->first();
+        $what = $first->subject?->name ?: "дисциплина не указана";
+        $teacher = $first->teacher;
+        $who = $teacher
+            ? trim($teacher->last_name . " " . mb_substr((string) $teacher->first_name, 0, 1) . ".")
+            : "преподаватель не указан";
+
+        return "У этой группы в этот день это занятие уже стоит: {$what}, {$who} — в {$times}."
+            . " Занятие опознаётся вместе с временем начала, поэтому строка с другим временем — это не перенос, а другое занятие, и обновлять по ней нечего."
+            . " Режим создания её загрузит, но прежняя пара останется, и у группы окажется две."
+            . " Перенести занятие можно на экране расписания.";
+    }
+
  private function scheduleHasConflict(string $column,int $value,array $data,?int $ignoreLessonId): bool { return ScheduleLesson::query()->where($column,$value)->whereDate('lesson_date',$data['lesson_date'])->where('starts_at','<',$data['ends_at'])->where('ends_at','>',$data['starts_at'])->when($ignoreLessonId,fn($query)=>$query->whereKeyNot($ignoreLessonId))->exists(); }
 }
