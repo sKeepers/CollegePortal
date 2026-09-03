@@ -20,6 +20,15 @@ export const useAccessBuildingsStore = defineStore('accessBuildings', () => {
   const saving = ref(false)
   const error = ref('')
 
+  // «Спросили и получили ответ» — не то же самое, что «в зданиях никого нет».
+  // Пока эти признаки ложны, экран не имеет права ни называть число, ни
+  // объяснять пустоту. Замер 03.09.2026 браузером с оборванным запросом
+  // `api/access/muster`: экран писал «0 всего в зданиях» и «Корпуса не
+  // заведены. Добавьте корпуса и точки прохода в справочнике» — на списке для
+  // эвакуации, при трёх заведённых корпусах.
+  const musterLoaded = ref(false)
+  const referenceLoaded = ref(false)
+
   const insideNow = computed(() => muster.value.inside_now || 0)
   const buildingOptions = computed(() => buildings.value.map((building) => ({ label: building.name, value: building.id })))
 
@@ -29,6 +38,7 @@ export const useAccessBuildingsStore = defineStore('accessBuildings', () => {
     try {
       const payload = await api.list('access/muster')
       muster.value = payload?.data || muster.value
+      musterLoaded.value = true
     } catch (err) {
       error.value = err.message || 'Не удалось загрузить список находящихся в здании'
     } finally {
@@ -46,6 +56,7 @@ export const useAccessBuildingsStore = defineStore('accessBuildings', () => {
       ])
       buildings.value = extractRows(buildingsPayload)
       points.value = extractRows(pointsPayload)
+      referenceLoaded.value = true
     } catch (err) {
       error.value = err.message || 'Не удалось загрузить справочник корпусов'
     } finally {
@@ -118,7 +129,7 @@ export const useAccessBuildingsStore = defineStore('accessBuildings', () => {
 
   return {
     buildings, points, muster, loading, saving, error,
-    insideNow, buildingOptions,
+    insideNow, buildingOptions, musterLoaded, referenceLoaded,
     loadMuster, loadReference, saveBuilding, savePoint, removeBuilding, removePoint,
     formatEnteredAt,
   }

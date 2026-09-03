@@ -46,10 +46,10 @@ onBeforeUnmount(() => {
     <div class="muster-total">
       <div class="muster-total__count">
         <Users :size="28" />
-        <span>{{ store.insideNow }}</span>
+        <span>{{ store.musterLoaded ? store.insideNow : '—' }}</span>
       </div>
       <div class="muster-total__meta">
-        <div>всего в зданиях</div>
+        <div>{{ store.musterLoaded ? 'всего в зданиях' : 'список не получен' }}</div>
         <div v-if="updatedAt" class="muster-total__time">данные на {{ updatedAt }}</div>
       </div>
       <q-btn flat class="muster-total__refresh" :disable="store.loading" @click="refresh">
@@ -58,6 +58,17 @@ onBeforeUnmount(() => {
     </div>
 
     <AppLoading v-if="store.loading && !buildings.length" label="Загрузка списка..." />
+
+    <!--
+      Отказ запроса впереди всех объяснений пустоты: пока ответа нет, экран не
+      знает ни про корпуса, ни про людей, и любое из объяснений ниже было бы
+      утверждением о колледже вместо утверждения о запросе.
+    -->
+    <AppEmptyState
+      v-else-if="!store.musterLoaded"
+      title="Список не получен"
+      description="Портал не ответил на запрос. Это не значит, что в зданиях никого нет: до ответа экран не знает ни одного человека."
+    />
 
     <AppEmptyState
       v-else-if="!buildings.length"

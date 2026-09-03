@@ -75,6 +75,14 @@ export const useRfidCardsStore = defineStore('rfidCards', () => {
     return Array.isArray(payload?.data) ? payload.data : []
   }
 
+  // Список получен — только тогда «Карт нет» говорит о колледже, а не о
+  // запросе. 28.08.2026 этот экран уже соврал владельцу «Карт нет» при 244
+  // картах: тогда причиной был 422 на потолке страницы. Причину убрали, а
+  // форма ответа осталась прежней — пустой список после отказа неотличим от
+  // пустого справочника.
+  const cardsLoaded = ref(false)
+  const journalLoaded = ref(false)
+
   function fail(err, fallback) {
     error.value = err?.message || fallback
     return false
@@ -92,6 +100,7 @@ export const useRfidCardsStore = defineStore('rfidCards', () => {
       if (filters.value.search) query.search = filters.value.search
 
       cards.value = rows(await api.listAll('rfid-cards', query))
+      cardsLoaded.value = true
     } catch (err) {
       fail(err, 'Не удалось загрузить карты')
     } finally {
@@ -113,7 +122,15 @@ export const useRfidCardsStore = defineStore('rfidCards', () => {
     error.value = ''
     try {
       const asked = { ...journalFilters.value }
-      journal.value = rows(await api.list('rfid-cards/journal', { ...journalQuery(), per_page: 500 }))
+      // `listAll`, а не страница на 500: печатный лист подписывает низ строкой
+      // «Всего записей: N», где N — число загруженных строк. Пока записей
+      // меньше пятисот, число совпадает с журналом случайно; 03.09.2026 их
+      // 245, но карты пока у 244 сотрудников и ни у одного из 618 студентов.
+      // Как только карты раздадут студентам, печатный лист сказал бы «500» при
+      // втрое большем журнале, а выгрузка в Excel (предел 10000 на сервере)
+      // увезла бы всё — два документа с одного экрана разошлись бы в числах.
+      journal.value = rows(await api.listAll('rfid-cards/journal', journalQuery()))
+      journalLoaded.value = true
       // Снимок ставится только после удачного ответа: если загрузка отказала,
       // на экране остаются прежние строки, и подписывать их новым отбором
       // нельзя.
@@ -326,6 +343,7 @@ export const useRfidCardsStore = defineStore('rfidCards', () => {
 
   return {
     cards, journal, groups, foundPeople, person, unknownCard, cardsStillOut,
+    cardsLoaded, journalLoaded,
     loading, searching, saving, error, filters, journalFilters, journalApplied,
     statusOptions, reasonOptions, groupOptions, counts,
     statusLabels: STATUS_LABELS, reasonLabels: REASON_LABELS,

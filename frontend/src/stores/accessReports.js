@@ -45,6 +45,12 @@ export const useAccessReportsStore = defineStore('accessReports', () => {
   const loading = ref(false)
   const exporting = ref(false)
   const error = ref('')
+
+  // Отчёт получен — только тогда его числа что-то значат. При оборванном
+  // запросе `meta` остаётся начальной, и «Событий в отчете: 0» становится
+  // утверждением о проходной; пустое состояние при этом советовало «изменить
+  // фильтры», хотя фильтры ни при чём. Замер 03.09.2026.
+  const loaded = ref(false)
   const filters = reactive({ date_from: todayIsoDate(), date_to: todayIsoDate(), entity_type: '', result: '', search: '', only_late: false })
   const period = ref('day')
 
@@ -90,6 +96,7 @@ export const useAccessReportsStore = defineStore('accessReports', () => {
       summary.value = summaryPayload?.data || summary.value
       events.value = extractRows(eventsPayload)
       meta.value = eventsPayload?.meta || { total: events.value.length, limit: events.value.length, truncated: false }
+      loaded.value = true
     } catch (err) {
       error.value = err.message || 'Не удалось загрузить отчет по проходам'
     } finally {
@@ -129,5 +136,5 @@ export const useAccessReportsStore = defineStore('accessReports', () => {
     }
   }
 
-  return { events, meta, summary, loading, exporting, error, filters, period, lateFilterAvailable, totalEvents, shownEvents, truncated, load, resetFilters, setPeriod, personRoute, exportCsv, directionLabel, entityTypeLabel, formatEventTime, ownerName, resultLabel, resultTone }
+  return { events, meta, summary, loading, exporting, error, loaded, filters, period, lateFilterAvailable, totalEvents, shownEvents, truncated, load, resetFilters, setPeriod, personRoute, exportCsv, directionLabel, entityTypeLabel, formatEventTime, ownerName, resultLabel, resultTone }
 })

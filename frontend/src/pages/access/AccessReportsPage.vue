@@ -55,7 +55,7 @@ onMounted(() => store.load())
     <AppToolbar>
       <!-- Пока обрезка списка не была подписана, последние 200 строк читались
            как весь отчёт, и по ним же делались выводы. -->
-      <span>Событий в отчете: {{ store.totalEvents }}</span>
+      <span>Событий в отчете: {{ store.loaded ? store.totalEvents : '—' }}</span>
       <span v-if="store.truncated" class="access-reports__note">
         В таблице последние {{ store.shownEvents }}. Выгрузка CSV содержит все {{ store.totalEvents }}.
       </span>
@@ -126,6 +126,7 @@ onMounted(() => store.load())
           </template>
           <template #body-cell-reason="props"><q-td :props="props">{{ props.row.reason || '—' }}</q-td></template>
         </AppTable>
+        <AppEmptyState v-else-if="!store.loaded" title="Отчёт не получен" description="Портал не ответил на запрос. Фильтры тут ни при чём — повторите запрос." />
         <AppEmptyState v-else title="События не найдены" description="Измените фильтры или выполните сканирование на проходной." />
       </div>
       <WorkspaceSplitter label="Изменить ширину панели отчета" @resize-start="startResize" @reset="resetSplitter" />

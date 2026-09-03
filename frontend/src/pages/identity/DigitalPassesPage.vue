@@ -38,7 +38,9 @@ const columns = [
   { name: 'expires_at', label: 'Срок действия', field: 'expires_at', align: 'left', sortable: true },
   { name: 'actions', label: '', field: 'actions', align: 'right' },
 ]
-const tableSubtitle = computed(() => `Найдено пропусков: ${store.identities.length}`)
+// Число называется только когда его посчитали: при отказе запроса «Найдено
+// пропусков: 0» — утверждение о колледже, а не о списке.
+const tableSubtitle = computed(() => (store.loaded ? `Найдено пропусков: ${store.identities.length}` : 'Список не получен'))
 const currentOwnerOptions = computed(() => store.ownerOptions[issueForm.entity_type] || [])
 
 const passMetrics = computed(() => [
@@ -123,6 +125,7 @@ onMounted(async () => { await store.load() })
           <template #body-cell-expires_at="props"><q-td :props="props">{{ formatDateTime(props.row.expires_at) }}</q-td></template>
           <template #body-cell-actions="props"><q-td :props="props"><div class="digital-passes-row-actions"><q-btn v-if="canManage" flat round dense color="negative" title="Отозвать" :disable="props.row.status === 'revoked' || store.saving" @click.stop="requestRevoke(props.row)"><ShieldX :size="16" /></q-btn></div></q-td></template>
         </AppTable>
+        <AppEmptyState v-else-if="!store.loaded" title="Список не получен" description="Портал не ответил на запрос. Сколько пропусков выпущено, экран сейчас не знает." />
         <AppEmptyState v-else title="Цифровые пропуска не найдены" description="Выпустите первый QR-пропуск для студента, преподавателя или сотрудника."><q-btn v-if="canManage" color="primary" label="Выпустить пропуск" @click="openIssueDialog()" /></AppEmptyState>
       </div>
       <aside class="digital-passes-side workspace-page__card">

@@ -89,7 +89,10 @@ onMounted(() => store.loadReference())
     />
 
     <AppToolbar>
-      <span>Корпусов: {{ store.buildings.length }} · точек прохода: {{ store.points.length }}</span>
+      <!-- Числа называются только когда справочник получен: иначе «Корпусов: 0»
+           читается как утверждение о колледже. -->
+      <span v-if="store.referenceLoaded">Корпусов: {{ store.buildings.length }} · точек прохода: {{ store.points.length }}</span>
+      <span v-else>Справочник не получен</span>
       <template #actions>
         <q-btn flat :disable="store.loading" @click="store.loadReference"><RefreshCw :size="16" class="q-mr-xs" /> Обновить</q-btn>
         <q-btn color="primary" @click="openBuilding()"><Plus :size="16" class="q-mr-xs" /> Корпус</q-btn>
