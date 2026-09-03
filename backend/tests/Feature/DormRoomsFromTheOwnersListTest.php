@@ -16,7 +16,9 @@ use Tests\TestCase;
  * До 01.09.2026 в базе стояли пятнадцать заготовок с выдуманными номерами и
  * вместимостями, и в одну из них уже заселили двоих. Настоящий список пришёл от
  * владельца документом: 40 жилых блоков, 236 койко-мест, по 10 блоков и 59 мест
- * на каждом из этажей 2-5.
+ * на каждом из этажей 2-5. К ним 03.09.2026 добавилась комната 312 на два места
+ * — бывший кабинет воспитателя, владелец велел завести его жилым, — и потому
+ * строк 41, мест 238, а на третьем этаже 11 строк и 61 место.
  *
  * Сорок — это блоки, а не комнаты: в блоке две жилые комнаты, кухня и санузел
  * (владелец, 01.09.2026). Деление мест между двумя комнатами он не назвал, и
@@ -39,14 +41,18 @@ class DormRoomsFromTheOwnersListTest extends TestCase
 
         $rooms = DormRoom::query()->get();
 
-        $this->assertCount(40, $rooms, 'жилых блоков в документе владельца 40');
-        $this->assertSame(236, $rooms->sum('capacity'), 'койко-мест в документе владельца 236');
+        $this->assertCount(41, $rooms, 'сорок блоков документа и комната 312');
+        $this->assertSame(238, $rooms->sum('capacity'), '236 койко-мест документа и два места в 312');
 
-        foreach ([2, 3, 4, 5] as $floor) {
+        foreach ([2, 4, 5] as $floor) {
             $onTheFloor = $rooms->where('floor', $floor);
             $this->assertCount(10, $onTheFloor, "на этаже {$floor} десять блоков");
             $this->assertSame(59, $onTheFloor->sum('capacity'), "на этаже {$floor} 59 мест");
         }
+
+        $third = $rooms->where('floor', 3);
+        $this->assertCount(11, $third, 'на третьем этаже десять блоков и комната 312');
+        $this->assertSame(61, $third->sum('capacity'), 'на третьем этаже 59 мест в блоках и два в 312');
     }
 
     public function test_it_does_not_create_the_non_residential_rooms(): void
@@ -55,22 +61,45 @@ class DormRoomsFromTheOwnersListTest extends TestCase
         // должно** появиться, и потому не покраснеет ни на одном внесённом в
         // команду дефекте, кроме одного — попытки завести нежилое.
         //
-        // Учебные классы 104, 105, 105А, 207, 212, 307, кабинет воспитателя 312
-        // и четыре помещения около 16,5 м² (407, 412, 507, 512) стоят в том же
-        // здании на Серова, 277, но комнатами общежития не являются. Что они
-        // такое, владелец на 01.09.2026 ещё не сказал; до его ответа их не
-        // заводят никуда. Комната, в которой никто не живёт и жить не может,
-        // мешает коменданту при заселении.
+        // Учебные классы 104, 105, 105А, 207, 212, 307 и четыре помещения около
+        // 16,5 м² (407, 412, 507, 512) стоят в том же здании на Серова, 277, но
+        // комнатами общежития не являются. Что они такое, владелец на
+        // 03.09.2026 всё ещё не сказал; до его ответа их не заводят никуда.
+        // Комната, в которой никто не живёт и жить не может, мешает коменданту
+        // при заселении.
+        //
+        // Кабинет воспитателя 312 из этого списка ушёл 03.09.2026: владелец
+        // велел завести его жилой комнатой. Он проверяется отдельно —
+        // test_the_tutors_office_is_now_a_room.
         $this->dorm();
 
         $this->artisan('dorm:import-rooms')->assertSuccessful();
 
-        foreach (['104', '105', '105А', '207', '212', '307', '312', '407', '412', '507', '512'] as $number) {
+        foreach (['104', '105', '105А', '207', '212', '307', '407', '412', '507', '512'] as $number) {
             $this->assertNull(
                 DormRoom::query()->firstWhere('number', $number),
                 "{$number} — не комната общежития, заводить её нельзя",
             );
         }
+    }
+
+    public function test_the_tutors_office_is_now_a_room(): void
+    {
+        // До 03.09.2026 кабинет воспитателя 312 стоял в списке нежилых и не
+        // заводился никуда. В тот день владелец велел завести его жилой
+        // комнатой на два места — вместимость названа им, а не выведена нами
+        // из площади: она решает, скольких портал пустит туда селиться.
+        $this->dorm();
+
+        $this->artisan('dorm:import-rooms')->assertSuccessful();
+
+        $room = DormRoom::query()->firstWhere('number', '312');
+
+        $this->assertNotNull($room, '312 заводится командой вместе с блоками, а не руками');
+        $this->assertSame(2, $room->capacity, 'два места — по слову владельца от 03.09.2026');
+        $this->assertSame(3, $room->floor, 'третий этаж');
+        $this->assertSame(DormRoom::KIND_REGULAR, $room->kind, 'жилая комната, а не нежилое помещение');
+        $this->assertTrue($room->is_active, 'в обращении: в неё можно селить');
     }
 
     public function test_a_placeholder_is_updated_and_not_duplicated(): void
@@ -88,7 +117,7 @@ class DormRoomsFromTheOwnersListTest extends TestCase
 
         $this->artisan('dorm:import-rooms')->assertSuccessful();
 
-        $this->assertSame(40, DormRoom::query()->count(), 'заготовка обязана обновиться, а не встать рядом второй строкой');
+        $this->assertSame(41, DormRoom::query()->count(), 'заготовка обязана обновиться, а не встать рядом второй строкой');
 
         $placeholder->refresh();
         $this->assertSame(6, $placeholder->capacity, 'вместимость взята из списка владельца');
@@ -170,7 +199,7 @@ class DormRoomsFromTheOwnersListTest extends TestCase
         $second = DormRoom::query()->orderBy('number')->get(['number', 'floor', 'capacity'])->toArray();
 
         $this->assertSame($first, $second);
-        $this->assertSame(40, DormRoom::query()->count());
+        $this->assertSame(41, DormRoom::query()->count());
     }
 
     public function test_a_dry_run_writes_nothing(): void
