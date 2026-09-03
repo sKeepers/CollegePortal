@@ -16,6 +16,7 @@ use App\Models\Subject;
 use App\Models\Teacher;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
+use App\Support\Time\CollegeTime;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -82,7 +83,14 @@ class AttendanceAnalysisApiTest extends TestCase
         $rows = collect($response->json('data'))->keyBy('full_name');
         $this->assertSame('late', $rows->get('Иванов Дмитрий')['status']);
         $this->assertSame(17, $rows->get('Иванов Дмитрий')['late_minutes']);
-        $this->assertSame('2026-09-10T09:17:00', $rows->get('Иванов Дмитрий')['first_entry']);
+        // Единственное изменённое здесь ожидание, и меняется не смысл, а форма
+        // записи: студент вошёл в 09:17 **по колледжу**, опоздание 17 минут выше
+        // осталось прежним. `first_entry` — не длительность и не вердикт, а сама
+        // метка времени, и портал отдаёт её в UTC, как хранит: 09:17 в колледже
+        // это 06:17 UTC. Перевод таких меток в местное время на экранах — третья,
+        // невыполненная часть работы по поясу (37 вызовов `toLocale*` в 27 файлах,
+        // ни в одном пояс не задан), и здесь она не делается.
+        $this->assertSame('2026-09-10T06:17:00', $rows->get('Иванов Дмитрий')['first_entry']);
         $this->assertSame('not_entered', $rows->get('Сидорова Анна')['status']);
         $this->assertSame($missingStudent->id, $rows->get('Сидорова Анна')['entity_id']);
     }
@@ -171,6 +179,10 @@ class AttendanceAnalysisApiTest extends TestCase
         $student = Student::create(['group_id' => $context['group']->id, 'last_name' => 'Ночная', 'first_name' => 'Смена', 'status' => 'active']);
         $open = Student::create(['group_id' => $context['group']->id, 'last_name' => 'Открытый', 'first_name' => 'Вход', 'status' => 'active']);
         $outOnly = Student::create(['group_id' => $context['group']->id, 'last_name' => 'Лишний', 'first_name' => 'Выход', 'status' => 'active']);
+        // Времена событий — UTC, времена занятий — часы на стене. 20:10 UTC это
+        // 23:10 по колледжу, 21:40 — 00:40 следующего дня: смена начинается вечером
+        // десятого и кончается после полуночи, как и говорит имя теста. До 28.08.2026
+        // те же часы стояли здесь без перевода, и сутки считались по часам сервера.
         $this->addAccessEventAt('student', $student->id, '2026-09-10 23:10:00', AccessEvent::DIRECTION_IN);
         $this->addAccessEventAt('student', $student->id, '2026-09-11 00:40:00', AccessEvent::DIRECTION_OUT);
         $this->addAccessEventAt('student', $open->id, '2026-09-10 08:30:00', AccessEvent::DIRECTION_IN);
@@ -178,7 +190,7 @@ class AttendanceAnalysisApiTest extends TestCase
 
         $days = collect($this->getJson("/api/attendance/person/student/{$student->id}/days?date_from=2026-09-10&date_to=2026-09-10")->assertOk()->json('data'));
         $this->assertSame(90, $days->first()['minutes_inside']);
-        $this->assertSame('2026-09-11T00:40:00.000000Z', $days->first()['last_exit']);
+        $this->assertSame('2026-09-10T21:40:00.000000Z', $days->first()['last_exit']);
 
         $rows = collect($this->getJson('/api/attendance/history?type=student&date_from=2026-09-10&date_to=2026-09-10')->assertOk()->json('data'))->keyBy('full_name');
         $this->assertTrue($rows->get('Открытый Вход')['has_open_session']);
@@ -399,7 +411,7 @@ class AttendanceAnalysisApiTest extends TestCase
             'entity_type' => $type,
             'entity_id' => $id,
             'direction' => $direction,
-            'event_time' => $dateTime,
+            'event_time' => CollegeTime::moment(substr($dateTime, 0, 10), substr($dateTime, 11)),
             'result' => AccessEvent::RESULT_ALLOWED,
         ]);
     }
@@ -416,7 +428,7 @@ class AttendanceAnalysisApiTest extends TestCase
             'entity_type' => $type,
             'entity_id' => $id,
             'direction' => $direction,
-            'event_time' => '2026-09-10 '.$time.':00',
+            'event_time' => CollegeTime::moment('2026-09-10', $time),
             'result' => AccessEvent::RESULT_ALLOWED,
         ]);
     }

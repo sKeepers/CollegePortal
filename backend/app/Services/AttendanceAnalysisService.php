@@ -9,6 +9,7 @@ use App\Models\JournalAttendance;
 use App\Models\ScheduleLesson;
 use App\Models\Student;
 use App\Models\Teacher;
+use App\Support\Time\CollegeTime;
 use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -262,7 +263,7 @@ class AttendanceAnalysisService
             ->where('entity_type', $entityType)
             ->where('result', AccessEvent::RESULT_ALLOWED)
             ->whereIn('entity_id', $ownerIds)
-            ->whereBetween('event_time', [$dateFrom->startOfDay(), $dateTo->endOfDay()])
+            ->whereBetween('event_time', [CollegeTime::dayStart($dateFrom), CollegeTime::dayEnd($dateTo)])
             ->orderBy('event_time')
             ->get()
             ->groupBy('entity_id');
@@ -383,7 +384,7 @@ class AttendanceAnalysisService
         $time = $this->formatTime($lesson->starts_at);
         $lessonDate = $lesson->lesson_date?->toDateString() ?: $date->toDateString();
 
-        return $time ? CarbonImmutable::parse($lessonDate.' '.$time) : null;
+        return $time ? CollegeTime::moment($lessonDate, $time) : null;
     }
 
     private function lessonPayload(?ScheduleLesson $lesson, CarbonImmutable $date): ?array
@@ -806,7 +807,9 @@ class AttendanceAnalysisService
         foreach ($events->sortBy('event_time') as $event) {
             if ($event->direction === AccessEvent::DIRECTION_IN) {
                 $eventTime = CarbonImmutable::instance($event->event_time);
-                if ($eventTime->toDateString() !== $date->toDateString()) {
+                // День события — день **колледжа**, а не UTC: иначе проход в начале
+                // первого ночи отбрасывается здесь, уже будучи правильно выбранным.
+                if (CollegeTime::dateOf($eventTime) !== CollegeTime::dateOf($date)) {
                     continue;
                 }
                 if ($openIn === null) {
@@ -854,8 +857,8 @@ class AttendanceAnalysisService
     private function eventsForSessionDay(Collection $events, CarbonImmutable $date): Collection
     {
         $maxHours = max(1, (int) SettingService::value('attendance', 'max_open_session_hours', 16));
-        $from = $date->startOfDay();
-        $to = $date->endOfDay()->addHours($maxHours);
+        $from = CollegeTime::dayStart($date);
+        $to = CollegeTime::dayEnd($date)->addHours($maxHours);
 
         return $events->filter(fn (AccessEvent $event) => CarbonImmutable::instance($event->event_time)->betweenIncluded($from, $to))->values();
     }
@@ -867,7 +870,7 @@ class AttendanceAnalysisService
             ->where('entity_type', $type)
             ->where('entity_id', $id)
             ->where('result', AccessEvent::RESULT_ALLOWED)
-            ->whereBetween('event_time', [$dateFrom->startOfDay(), $dateTo->endOfDay()->addHours($maxHours)])
+            ->whereBetween('event_time', [CollegeTime::dayStart($dateFrom), CollegeTime::dayEnd($dateTo)->addHours($maxHours)])
             ->orderBy('event_time')
             ->get();
     }
@@ -899,7 +902,7 @@ class AttendanceAnalysisService
     {
         $time = $this->formatTime($lesson->ends_at);
         $lessonDate = $lesson->lesson_date?->toDateString() ?: $date->toDateString();
-        return $time ? CarbonImmutable::parse($lessonDate.' '.$time) : null;
+        return $time ? CollegeTime::moment($lessonDate, $time) : null;
     }
 
     private function earlyLeaveMinutes(?CarbonImmutable $lastExit, ?CarbonImmutable $plannedEnd): int

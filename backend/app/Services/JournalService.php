@@ -13,6 +13,7 @@ use App\Models\ScheduleEntry;
 use App\Models\ScheduleLesson;
 use App\Models\Student;
 use App\Models\User;
+use App\Support\Time\CollegeTime;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -295,8 +296,8 @@ class JournalService
 
     public function attendanceSuggestion(JournalLesson $lesson): array
     {
-        $lessonStart = Carbon::parse($lesson->lesson_date->toDateString().' '.$this->timeValue($lesson->starts_at));
-        $lessonEnd = Carbon::parse($lesson->lesson_date->toDateString().' '.$this->timeValue($lesson->ends_at));
+        $lessonStart = CollegeTime::moment($lesson->lesson_date, $this->timeValue($lesson->starts_at));
+        $lessonEnd = CollegeTime::moment($lesson->lesson_date, $this->timeValue($lesson->ends_at));
 
         return Student::query()->where('group_id', $lesson->group_id)->orderBy('last_name')->get()->map(function (Student $student) use ($lessonStart, $lessonEnd): array {
             $events = AccessEvent::query()

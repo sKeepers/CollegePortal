@@ -105,7 +105,7 @@ class AccessReportFiltersTest extends TestCase
             // выгрузка с 30.08.2026 печатает местный час. Прежняя
             // редакция писала 09:15 UTC, и проверка проходила потому, что
             // приспособление и печать ошибались одинаково.
-            'event_time' => CollegeTime::at('2026-09-10', 9, 15),
+            'event_time' => CollegeTime::moment('2026-09-10', '09:15'),
             'access_point' => 'Главный вход',
             'result' => AccessEvent::RESULT_ALLOWED,
         ]);
@@ -163,7 +163,7 @@ class AccessReportFiltersTest extends TestCase
             'entity_type' => $identity->entity_type,
             'entity_id' => $identity->entity_id,
             'direction' => AccessEvent::DIRECTION_IN,
-            'event_time' => CarbonImmutable::parse($at),
+            'event_time' => CollegeTime::moment(substr($at, 0, 10), substr($at, 11)),
             'result' => AccessEvent::RESULT_ALLOWED,
         ]);
     }

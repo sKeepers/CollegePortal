@@ -16,6 +16,7 @@ use App\Models\JournalGrade;
 use App\Models\ScheduleLesson;
 use App\Models\Student;
 use App\Services\QrSvgService;
+use App\Support\Time\CollegeTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -68,7 +69,7 @@ class MobileStudentController extends Controller
         $now = Carbon::now();
         $nextLesson = $scheduleDate->isToday()
             ? $schedule->first(function (ScheduleLesson $lesson) use ($now): bool {
-                return $lesson->starts_at !== null && Carbon::parse($lesson->lesson_date->toDateString().' '.$lesson->starts_at->format('H:i'))->greaterThanOrEqualTo($now);
+                return $lesson->starts_at !== null && CollegeTime::moment($lesson->lesson_date, $lesson->starts_at->format('H:i'))->greaterThanOrEqualTo($now);
             }) ?? $schedule->first()
             : $schedule->first();
 

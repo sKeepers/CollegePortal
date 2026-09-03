@@ -37,7 +37,7 @@ onMounted(store.load)
           <div v-if="store.grades.length" class="student-cabinet-grades"><button v-for="grade in store.grades" :key="grade.id" type="button" @click="openGrade(grade)"><strong>{{ grade.grade }}</strong><span>{{ grade.lesson?.subject?.name || 'Дисциплина' }}</span><small>{{ formatMobileDate(grade.lesson?.lesson_date) }}</small></button></div>
           <p v-else class="cp-muted">Оценок пока нет.</p>
         </AppCard>
-        <AppCard title="Посещаемость" :subtitle="`Присутствие: ${store.attendanceSummary.present}/${store.attendanceTotal}`">
+        <AppCard title="Посещаемость" :subtitle="store.attendanceLine">
           <div v-if="store.attendance.length" class="student-cabinet-attendance"><div v-for="item in store.attendance" :key="item.id"><strong>{{ item.lesson?.subject?.name || 'Занятие' }}</strong><span>{{ formatMobileDate(item.lesson?.lesson_date) }} · {{ attendanceLabel(item.status) }}<template v-if="item.status === 'late' && item.minutes_late"> · {{ item.minutes_late }} мин.</template></span></div></div>
           <p v-else class="cp-muted">Данных посещаемости пока нет.</p>
         </AppCard>

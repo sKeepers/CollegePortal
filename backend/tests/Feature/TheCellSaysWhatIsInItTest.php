@@ -20,28 +20,37 @@ use Tests\TestCase;
  * смыслу: заняты они тем самым занятием, которое строка собиралась изменить, и
  * человек шёл искать чужую пару, которой нет.
  *
- * **Чинится сообщение, а не поведение.** Отказ уместен: менять занятие
- * загрузкой портал не умеет. Сломана была причина отказа.
+ * **Дальше решение изменилось, и тесты переписаны под него — 01.09.2026, вечер.**
+ * Владелец подтвердил, что в расписании есть подгруппы и индивидуальные занятия;
+ * тогда строка, попавшая в занятую клетку, — чаще всего не ошибка человека, а
+ * пара, которую портал пока не умеет держать. Отказ строке даёт стену ошибок и
+ * половину расписания без перечня потерянного, поэтому строка теперь
+ * **пропускается с названной причиной**: первая пара клетки встаёт, остальные
+ * перечисляются поимённо.
+ *
+ * **Что охраняется, не изменилось:** человек узнаёт, что стоит в клетке и что с
+ * этим делать, и получает **одну** причину, а не две про одно занятие. Изменилось,
+ * откуда он это узнаёт: не из ошибки строки, а из причины пропуска.
  */
 class TheCellSaysWhatIsInItTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_the_refusal_names_the_lesson_that_occupies_the_cell(): void
+    public function test_the_skip_names_the_lesson_that_occupies_the_cell(): void
     {
         $c = $this->context();
         $this->lesson($c, $c['first']);
 
-        $errors = app(ScheduleImportHandler::class)
-            ->businessValidationErrors($this->row($c, $c['second']));
+        $handler = app(ScheduleImportHandler::class);
+        $result = $handler->import($this->row($c, $c['second']), 'create');
+        $reason = (string) $handler->lastSkipReason();
 
-        $this->assertArrayHasKey('group_id', $errors);
-        $reason = $errors['group_id'][0];
+        $this->assertSame('skipped', $result, 'строка не отказывает, а пропускается');
 
-        // Кто и что стоит в клетке — иначе человек не поймёт, что заменяет.
+        // Кто и что стоит в клетке — иначе человек не поймёт, чему не нашлось места.
         $this->assertStringContainsString('Сольфеджио', $reason);
         $this->assertStringContainsString('Первый', $reason);
-        // И что делать: отказ без выхода хуже отказа с выходом.
+        // И что делать: пропуск без выхода не лучше отказа без выхода.
         $this->assertStringContainsString('на экране расписания', $reason);
         // Прежней неправды больше нет.
         $this->assertStringNotContainsString('Группа уже занята', $reason);
@@ -54,18 +63,20 @@ class TheCellSaysWhatIsInItTest extends TestCase
         $c = $this->context();
         $this->lesson($c, $c['first']);
 
-        $errors = app(ScheduleImportHandler::class)
-            ->businessValidationErrors($this->row($c, $c['second']));
+        $handler = app(ScheduleImportHandler::class);
+        $row = $this->row($c, $c['second']);
 
-        $this->assertSame(['group_id'], array_keys($errors));
-        $this->assertCount(1, $errors['group_id']);
+        $this->assertSame([], $handler->businessValidationErrors($row), 'ошибок строке больше не выдаётся');
+        $this->assertSame('skipped', $handler->import($row, 'create'));
+        $this->assertNotNull($handler->lastSkipReason(), 'и причина ровно одна, она же и есть');
     }
 
     public function test_a_clash_with_someone_elses_lesson_is_still_reported(): void
     {
-        // Сообщение о клетке не должно прятать настоящее столкновение: тот же
+        // Пропуск по клетке не должен прятать настоящее столкновение: тот же
         // преподаватель в это же время у **другой** группы — отдельная беда, и
-        // сказать о ней надо.
+        // сказать о ней надо. Она остаётся ошибкой строки, потому что человек не
+        // раздваивается, а группа делится.
         $c = $this->context();
         $this->lesson($c, $c['first']);
 
@@ -79,8 +90,8 @@ class TheCellSaysWhatIsInItTest extends TestCase
         $errors = app(ScheduleImportHandler::class)
             ->businessValidationErrors($this->row($c, $c['second']));
 
-        $this->assertArrayHasKey('group_id', $errors);
         $this->assertArrayHasKey('teacher_id', $errors, 'занятость преподавателя у другой группы обязана остаться видимой');
+        $this->assertArrayNotHasKey('group_id', $errors, 'а про свою же клетку ошибки нет: она уходит в пропуск с причиной');
     }
 
     public function test_an_empty_cell_says_nothing(): void

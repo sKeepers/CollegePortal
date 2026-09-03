@@ -200,6 +200,27 @@ export const useScheduleStore = defineStore('schedule', () => {
       })
   })
 
+  /**
+   * Значения справочника, встречающиеся в загруженных занятиях.
+   *
+   * Нужна там, где справочник целиком недоступен: преподаватель и студент видят
+   * только свои пары, и списка всего колледжа им не полагается. Занятие приходит
+   * с вложенными `group`, `teacher`, `subject`, `classroom` — этого хватает.
+   */
+  function fromLessons(key) {
+    const found = new Map()
+
+    for (const lesson of lessons.value) {
+      const item = lesson?.[key]
+
+      if (item && item.id != null && !found.has(item.id)) {
+        found.set(item.id, item)
+      }
+    }
+
+    return [...found.values()]
+  }
+
   async function load(range = {}) {
     loading.value = true
     error.value = ''
@@ -212,17 +233,28 @@ export const useScheduleStore = defineStore('schedule', () => {
         classroom_id: filters.value.classroom_id,
         date_from: range.date_from,
         date_to: range.date_to,
-        per_page: 200,
       }
+
+      // Справочники спрашиваются только у того, кому они разрешены — как и шаблоны
+      // ниже. Преподавателю и студенту они возвращали 403: четыре отказа на каждое
+      // открытие экрана, и четыре пустых поля фильтра без объяснения.
+      //
+      // Права здесь не хватает **намеренно**, и добавлять его не надо. Занятия таким
+      // пользователям отдаются свои: `ScheduleLessonController::applyScope` сужает
+      // выборку до `teacher_id` вошедшего или до группы студента. Значит справочник
+      // всего колледжа — на 30.08.2026 это 173 преподавателя, 58 групп, 140 дисциплин
+      // и 71 аудитория — экрану с собственными парами не нужен вовсе; нужны только те
+      // значения, что в этих парах встречаются. Их и берём из самих занятий ниже.
+      const listIfAllowed = (permission, request) => (useAuthStore().can(permission) ? request() : Promise.resolve({ data: [] }))
 
       const [lessonsResult, groupsResult, teachersResult, subjectsResult, classroomsResult, conflictsResult, coverageResult, templatesResult] = await Promise.allSettled([
         api.listAll('schedule-lessons', apiFilters),
-        api.listAll('groups'),
-        api.listAll('teachers', { active_only: 1 }),
-        api.listAll('subjects'),
-        api.listAll('classrooms'),
-        api.list('schedule/conflicts', apiFilters),
-        api.list('schedule/coverage', apiFilters),
+        listIfAllowed('groups.view', () => api.listAll('groups')),
+        listIfAllowed('teachers.view', () => api.listAll('teachers', { active_only: 1 })),
+        listIfAllowed('subjects.view', () => api.listAll('subjects')),
+        listIfAllowed('classrooms.view', () => api.listAll('classrooms')),
+        listIfAllowed('schedule.view_conflicts', () => api.list('schedule/conflicts', apiFilters)),
+        listIfAllowed('schedule.view_coverage', () => api.list('schedule/coverage', apiFilters)),
         // Шаблоны запрашиваются только тем, кому они разрешены. Директор,
         // преподаватель, студент и учебная часть 2 видят расписание, но
         // шаблонами не управляют: запрос всё равно отдавал им 403 и просто
@@ -241,6 +273,16 @@ export const useScheduleStore = defineStore('schedule', () => {
       teachers.value = teachersResult.status === 'fulfilled' ? extractRows(teachersResult.value) : []
       subjects.value = subjectsResult.status === 'fulfilled' ? extractRows(subjectsResult.value) : []
       classrooms.value = classroomsResult.status === 'fulfilled' ? extractRows(classroomsResult.value) : []
+
+      // Чего не дал справочник — берём из самих занятий: они приходят с вложенными
+      // группой, преподавателем, дисциплиной и аудиторией. Для того, кто видит только
+      // свои пары, это и есть полный набор значений его фильтра — и он честнее
+      // общего справочника: в нём нет чужих групп, которых у него не бывает.
+      groups.value = groups.value.length ? groups.value : fromLessons('group')
+      teachers.value = teachers.value.length ? teachers.value : fromLessons('teacher')
+      subjects.value = subjects.value.length ? subjects.value : fromLessons('subject')
+      classrooms.value = classrooms.value.length ? classrooms.value : fromLessons('classroom')
+
       conflicts.value = conflictsResult.status === 'fulfilled' ? extractRows(conflictsResult.value) : []
       coverage.value = coverageResult.status === 'fulfilled' ? extractRows(coverageResult.value) : []
       templates.value = templatesResult.status === 'fulfilled' ? extractRows(templatesResult.value) : []

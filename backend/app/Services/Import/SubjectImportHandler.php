@@ -55,7 +55,21 @@ class SubjectImportHandler extends AbstractImportHandler
 
     public function prepare(array $data): array
     {
-        $data['code'] = ($data['code'] ?? null) ?: $this->autoCodeService->subjectCode($data['name'] ?? null);
+        // Код здесь НЕ проставляется, и это главное в методе. `findExisting`
+        // вызывается после `prepare`, а автокод — всегда новый: поиск по нему не
+        // находил ничего, и запасной поиск по названию, стоящий в `findExisting`
+        // строкой ниже, не выполнялся ни разу. Режим «пропускать дубли» при этом
+        // обещал защиту, которой не было: 28.08.2026 повторная загрузка того же
+        // файла дала «создано 140, пропущено 0» и задвоила одиннадцать дисциплин
+        // в рабочей базе стенда.
+        //
+        // Код нужен только новой дисциплине, поэтому он и получается при создании —
+        // в `import()`, когда уже известно, что existing нет.
+        //
+        // Пустая клетка приводится к «нет значения»: пустая строка пережила бы фильтр
+        // в `payload()` и стёрла бы код у существующей дисциплины при обновлении.
+        $data['code'] = ($data['code'] ?? null) ?: null;
+
         $resolved = $this->resolveTeacherIdList($data['teachers'] ?? null);
         $data['teacher_ids'] = $resolved['ids'];
         $data['teachers_unresolved'] = $resolved['unresolved'];
@@ -140,6 +154,10 @@ class SubjectImportHandler extends AbstractImportHandler
 
             throw new RuntimeException('Дубликат по ключевому полю.');
         }
+
+        // Код получает только новая дисциплина: у существующей он свой и меняться
+        // от повторной загрузки не должен.
+        $data['code'] = ($data['code'] ?? null) ?: $this->autoCodeService->subjectCode($data['name'] ?? null);
 
         $subject = Subject::create($this->payload($data));
         $this->syncTeachers($subject, $data);

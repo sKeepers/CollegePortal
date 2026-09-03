@@ -63,6 +63,22 @@ export const useMobileStudentStore = defineStore('mobileStudent', () => {
   })
   const attendanceTotal = computed(() => Object.values(attendanceSummary.value || {}).reduce((sum, value) => sum + Number(value || 0), 0))
 
+  /**
+   * Подпись посещаемости — или ничего, пока считать нечего.
+   *
+   * Стояло «Присутствие: 0/0», и это число, названное там, где его не из чего было
+   * посчитать: занятий у студента ещё не было вовсе. Читается оно как «ни разу не
+   * пришёл» — то есть хуже, чем отсутствие подписи. Средний балл в этом же кабинете
+   * при пустых оценках честно рисует прочерк; здесь то же правило, и пустая строка
+   * прячет подзаголовок целиком (`AppCard` рисует его по `v-if`).
+   *
+   * Отказ запроса сюда не доходит: при нём `error` рисует полосу выше, и «данных нет»
+   * с «спросить не удалось» не путаются.
+   */
+  const attendanceLine = computed(() => attendanceTotal.value === 0
+    ? ''
+    : `Присутствие: ${attendanceSummary.value.present}/${attendanceTotal.value}`)
+
   async function load(date = scheduleDate.value) {
     loading.value = true
     error.value = ''
@@ -119,6 +135,7 @@ export const useMobileStudentStore = defineStore('mobileStudent', () => {
     hasActivePass,
     gradeAverage,
     attendanceTotal,
+    attendanceLine,
     load,
     changeScheduleDate,
   }
