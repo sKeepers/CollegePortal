@@ -364,6 +364,9 @@ function printJournal() {
 <tbody>${rows}
 </tbody>
 </table>`,
+    // Число честное ровно потому, что журнал читается целиком (`listAll` в
+    // хранилище). Вернётся страница на 500 — вернётся и подпись, называющая
+    // размер страницы журналом.
     footer: `Всего записей: ${store.journal.length}. Напечатано ${printedAt.value}.`,
   }))
 }
@@ -630,6 +633,12 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKey))
         <AppLoading v-if="store.loading" />
 
         <AppEmptyState
+          v-else-if="!store.cardsLoaded"
+          title="Реестр не получен"
+          description="Портал не ответил на запрос. Сколько карт заведено, экран сейчас не знает."
+        />
+
+        <AppEmptyState
           v-else-if="!store.cards.length"
           title="Карт нет"
           description="Карта заводится сама, когда её впервые подносят к считывателю на вкладке «Выдача»."
@@ -718,6 +727,12 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKey))
         </AppToolbar>
 
         <AppLoading v-if="store.loading" />
+
+        <AppEmptyState
+          v-else-if="!store.journalLoaded"
+          title="Журнал не получен"
+          description="Портал не ответил на запрос. Это не значит, что за период ничего не выдавали."
+        />
 
         <AppEmptyState
           v-else-if="!store.journal.length"

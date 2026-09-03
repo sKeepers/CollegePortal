@@ -71,6 +71,10 @@ export const useDigitalPassesStore = defineStore('digitalPasses', () => {
   const teachers = ref([])
   const employees = ref([])
   const selectedId = ref(null)
+  // Список получен — только тогда его длина что-то значит. При оборванном
+  // запросе экран писал «Цифровые пропуска не найдены. Выпустите первый
+  // QR-пропуск» при 861 живом пропуске на стенде: замер 03.09.2026.
+  const loaded = ref(false)
   const loading = ref(false)
   const saving = ref(false)
   const error = ref('')
@@ -97,6 +101,7 @@ export const useDigitalPassesStore = defineStore('digitalPasses', () => {
         teachers: options.includeOwners === false ? Promise.resolve({ data: [] }) : api.listAll('teachers'),
         employees: options.includeOwners === false ? Promise.resolve({ data: [] }) : api.listAll('employees'),
       })
+      loaded.value = true
       identities.value = extractRows(payloads.identities)
       students.value = extractRows(payloads.students)
       teachers.value = extractRows(payloads.teachers)
@@ -167,5 +172,5 @@ export const useDigitalPassesStore = defineStore('digitalPasses', () => {
 
   async function select(identity) { selectedId.value = identity?.id || null; qrValueVisible.value = false; await loadQr(identity) }
 
-  return { identities, students, teachers, employees, selectedId, selectedIdentity, studentOptions, teacherOptions, employeeOptions, ownerOptions, loading, saving, error, qrSvg, qrExpiresAt, qrValueVisible, load, issue, revoke, loadQr, downloadQrPng, select }
+  return { identities, students, teachers, employees, loaded, selectedId, selectedIdentity, studentOptions, teacherOptions, employeeOptions, ownerOptions, loading, saving, error, qrSvg, qrExpiresAt, qrValueVisible, load, issue, revoke, loadQr, downloadQrPng, select }
 })
