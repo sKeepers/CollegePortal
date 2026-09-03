@@ -52,8 +52,13 @@ docker run --rm -e CP_WORKTREE="$(basename "$PWD")" -v "$V1" -v "$V2" -w /var/ww
 **Так смонтирован только `backend/`, и проверки, которым нужен фронтенд, молча пропускаются.** `MenuMatchesPermissionsTest` ищет рядом `../frontend/src/layouts/AppLayout.vue`, не находит и честно пишет «пропущен». CI берёт дерево целиком, поэтому там он выполняется — и 23-24.08.2026 ствол простоял красным **90 прогонов подряд**, пока все четыре области читали «3 skipped» как «всё в порядке». **«Пропущено» — это вопрос, а не норма: прогон, часть которого не выполнялась, зелёным не является.** Перед вливанием правки, задевающей меню, роли или экраны, монтируйте дерево целиком:
 
 ```bash
-docker run --rm -v "/tmp/work:/tree" -v "$V2" -w /tree/backend collegeportal-backend php artisan test
+V3="/home/andale/CollegePortal/backend/vendor:/tree/backend/vendor:ro"
+docker run --rm -e CP_WORKTREE="$(basename "$PWD")" -v "/tmp/work:/tree" -v "$V3" -w /tree/backend collegeportal-backend php artisan test
 ```
+
+**`$V2` сюда не годится, и до 03.09.2026 здесь стоял именно он.** Точка монтирования `vendor` идёт за рабочим каталогом: у прогона по `backend/` это `/var/www/html/vendor`, у прогона целым деревом — `/tree/backend/vendor`. С `$V2` рецепт не запускался **вовсе** — `artisan` падал на `require(/tree/backend/vendor/autoload.php)`, замерено. То есть рецепт, написанный ради `MenuMatchesPermissionsTest`, не выполнял ни одного теста, и попробовавший откатывался к прогону по `backend/`, где этот тест пропускается, — к тому самому состоянию, из-за которого ствол простоял красным 90 прогонов. **Проверять надо не только что рецепт написан, но и что он запускается.** Признак, что дерево смонтировано целиком: `MenuMatchesPermissionsTest` в выводе `PASS`, а не `skipped`; замер того же дня — 1292 теста, 0 пропущенных.
+
+`CP_WORKTREE` здесь нужна ровно так же, как в прогоне по `backend/`: без неё сторож тестовой базы не сверит имя базы с вашим worktree.
 
 Образ бэкенда называется `collegeportal-backend`. Зависимости `vendor` монтируются из основного checkout — в worktree их нет.
 
