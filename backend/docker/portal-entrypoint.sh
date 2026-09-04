@@ -25,6 +25,18 @@
 # 3 ГБ в худшем случае; на боевом 15 ГБ.
 set -e
 
+# `--write-only`: записать настройку и выйти, не запуская php-fpm.
+#
+# Релизный образ работает от `www-data`, а каталог пулов принадлежит root: на
+# запуске файл там создать уже нельзя, и настройка молча осталась бы
+# умолчанием образа. Поэтому в релизном образе этот же скрипт зовётся **на
+# сборке**, root'ом, с этим ключом. Число живёт в одном месте на оба образа.
+WRITE_ONLY=""
+if [ "$1" = "--write-only" ]; then
+    WRITE_ONLY="да"
+    shift
+fi
+
 CHILDREN="${PHP_FPM_MAX_CHILDREN:-24}"
 START="${PHP_FPM_START_SERVERS:-8}"
 MIN_SPARE="${PHP_FPM_MIN_SPARE_SERVERS:-4}"
@@ -47,8 +59,17 @@ pm.start_servers = ${START}
 pm.min_spare_servers = ${MIN_SPARE}
 pm.max_spare_servers = ${MAX_SPARE}
 CONF
+elif [ -n "$WRITE_ONLY" ]; then
+    # На сборке это отказ, а не мелочь: образ уехал бы с пятью процессами из
+    # умолчания `php:fpm`, и узнали бы об этом на боевом, на пункте Б4 приёмки.
+    echo "portal-entrypoint: ${POOL_DIR} недоступен на запись при сборке образа" >&2
+    exit 1
 else
     echo "portal-entrypoint: ${POOL_DIR} недоступен на запись, число рабочих процессов остаётся от образа" >&2
+fi
+
+if [ -n "$WRITE_ONLY" ]; then
+    exit 0
 fi
 
 exec docker-php-entrypoint "$@"

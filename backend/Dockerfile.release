@@ -17,5 +17,23 @@ RUN composer install --no-dev --prefer-dist --optimize-autoloader --no-interacti
     && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache
 
+# Сколько запросов портал обслуживает одновременно.
+#
+# До 04.09.2026 этой строки здесь не было, и починка `de2d8def2` доезжала
+# **только до стенда**: там число пишет `ENTRYPOINT`, а здесь его нет вовсе —
+# образ стартует `php-fpm` напрямую и остаётся с умолчанием `php:fpm`, то есть
+# с пятью процессами на шестнадцати ядрах. Замер изнутри собранного образа:
+# до этой правки `pm.max_children = 5`, после — `24`.
+#
+# Пишем **на сборке**, root'ом, до `USER www-data`: на запуске каталог пулов
+# этому пользователю уже не принадлежит. Значит и переменная окружения на
+# боевом ничего не изменит — число задаётся при сборке, `--build-arg
+# PHP_FPM_MAX_CHILDREN=32`, а не в `.env`. Скрипт тот же, что у образа стенда:
+# двух правд о числе процессов не заводим.
+ARG PHP_FPM_MAX_CHILDREN
+COPY docker/portal-entrypoint.sh /usr/local/bin/portal-entrypoint.sh
+RUN chmod +x /usr/local/bin/portal-entrypoint.sh \
+    && PHP_FPM_MAX_CHILDREN="${PHP_FPM_MAX_CHILDREN}" /usr/local/bin/portal-entrypoint.sh --write-only
+
 USER www-data
 CMD ["php-fpm"]
