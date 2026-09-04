@@ -52,7 +52,33 @@ class EmptyStateTellsFailureTest extends TestCase
         'pages/graduation/GraduationPage.vue' => 'Выпускники не найдены',
         'pages/frdo/FrdoPage.vue' => 'Пакеты ФРДО не найдены',
         'pages/fis/FisPage.vue' => 'Пакеты ФИС не найдены',
+        // Учебный процесс, замер 03.09.2026 тем же обрывом: шесть экранов из
+        // семи при отказе запроса утверждали о колледже то, чего не
+        // спрашивали, и пять называли рядом число, которого не считали —
+        // «Найдено нагрузок: 0», «Найдено экзаменов: 0», «Найдено учебных
+        // планов: 0», «Занятий: 0; не заполнено: 0; ожидают подписи: 0».
+        'pages/teaching-load/TeachingLoadPage.vue' => 'Нагрузка не найдена',
+        'pages/exams/ExamsPage.vue' => 'Экзамены не найдены',
+        'pages/curricula/CurriculaPage.vue' => 'Учебные планы не найдены',
+        'pages/journal/JournalPage.vue' => 'Данные журнала не найдены',
+        'pages/attendance/AttendancePage.vue' => 'Нет данных для анализа',
+        'pages/journal/SemesterGradesPage.vue' => 'Выберите группу и дисциплину',
     ];
+
+    /**
+     * Чем экран отличает отказ — признаков два, и они не одно и то же.
+     *
+     * `store.error` годится там, где у хранилища один источник ошибок. Где их
+     * несколько, он подводит: на экране нагрузки ошибку поднимают ещё импорт,
+     * экспорт и сохранение, и после неудачного экспорта список цел, а признак
+     * уже поднят — экран сказал бы «не получено» о том, что получено.
+     * `loaded` отвечает ровно на нужный вопрос: пришёл ли **этот** список.
+     *
+     * Поэтому принимается любой из двух. Навязывать один — это и есть тот
+     * сторож, который вынуждает переписывать работающие экраны под себя;
+     * ровно об этом сказано выше про две формы записи.
+     */
+    private const REFUSAL_ASKED = ['store.error', 'store.loaded', 'store.referencesLoaded'];
 
     public function test_the_empty_list_asks_whether_the_request_failed(): void
     {
@@ -80,7 +106,16 @@ class EmptyStateTellsFailureTest extends TestCase
             }
 
             foreach ($groups as $group) {
-                if (! str_contains($group, 'store.error')) {
+                $asked = false;
+
+                foreach (self::REFUSAL_ASKED as $sign) {
+                    if (str_contains($group, $sign)) {
+                        $asked = true;
+                        break;
+                    }
+                }
+
+                if (! $asked) {
                     $mute[] = $path.': «'.$lie.'» говорится, не спросив, не отказал ли запрос';
                 }
             }
