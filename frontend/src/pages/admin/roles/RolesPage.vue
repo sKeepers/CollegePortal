@@ -210,7 +210,11 @@ onMounted(async () => {
             </q-td>
           </template>
         </AppTable>
-        <AppEmptyState v-else title="Роли не найдены" description="Создайте роль или измените фильтр поиска." />
+        <AppEmptyState
+          v-else
+          :title="store.error ? 'Список не загрузился' : 'Роли не найдены'"
+          :description="store.error ? 'Портал не ответил на запрос. Обновите страницу: пусто здесь не потому, что ролей нет.' : 'Создайте роль или измените фильтр поиска.'"
+        />
       </section>
 
       <aside class="roles-side">

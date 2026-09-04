@@ -146,7 +146,11 @@ onMounted(async () => {
             <q-td :props="props"><q-btn flat dense round title="Открыть событие" @click="selectLog(props.row)"><Eye :size="16" /></q-btn></q-td>
           </template>
         </AppTable>
-        <AppEmptyState v-else title="Событий аудита нет" description="События появятся после действий пользователей." />
+        <AppEmptyState
+          v-else
+          :title="store.error ? 'Журнал не загрузился' : 'Событий аудита нет'"
+          :description="store.error ? 'Портал не ответил на запрос. Обновите страницу: пусто здесь не потому, что событий не было.' : 'События появятся после действий пользователей.'"
+        />
       </section>
 
       <aside class="audit-side">

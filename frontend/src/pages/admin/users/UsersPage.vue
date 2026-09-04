@@ -585,7 +585,11 @@ onMounted(async () => {
             </q-td>
           </template>
         </AppTable>
-        <AppEmptyState v-else title="Пользователи не найдены" description="Измените фильтры или создайте новую учётную запись." />
+        <AppEmptyState
+          v-else
+          :title="store.error ? 'Список не загрузился' : 'Пользователи не найдены'"
+          :description="store.error ? 'Портал не ответил на запрос. Обновите страницу: пусто здесь не потому, что записей нет.' : 'Измените фильтры или создайте новую учётную запись.'"
+        />
       </section>
 
       <aside class="users-side">

@@ -92,7 +92,11 @@ onMounted(store.load)
           <template #body-cell-module="props"><q-td :props="props"><q-chip dense color="blue-1" text-color="blue-9">{{ props.row.module }}</q-chip></q-td></template>
           <template #body-cell-active="props"><q-td :props="props"><AppStatusBadge :label="props.row.active ? 'Активно' : 'Отключено'" :tone="props.row.active ? 'success' : 'neutral'" /></q-td></template>
         </AppTable>
-        <AppEmptyState v-else title="Разрешения не найдены" description="Запустите сидеры или измените фильтры поиска." />
+        <AppEmptyState
+          v-else
+          :title="store.error ? 'Список не загрузился' : 'Разрешения не найдены'"
+          :description="store.error ? 'Портал не ответил на запрос. Обновите страницу: пусто здесь не потому, что прав нет.' : 'Запустите сидеры или измените фильтры поиска.'"
+        />
       </section>
 
       <aside class="permissions-side workspace-page__card">
