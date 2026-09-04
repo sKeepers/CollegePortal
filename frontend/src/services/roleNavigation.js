@@ -1,5 +1,13 @@
 const ROLE_ROUTE_PREFIXES = {
-  admission: ['/dashboard', '/admissions/foundation'],
+  // `/identity/my-pass` добавлен 03.09.2026 по той же причине, что
+  // `/semester-grades` преподавателю: право `view_own_data` у роли есть (оно
+  // есть у всех шестнадцати ролей), а пути в списке не было — и список
+  // решает раньше права. Замер 03.09 17:32 UTC на стенде: пункта «Мой
+  // QR-пропуск» в меню приёмной комиссии нет вовсе, прямой заход на
+  // `/identity/my-pass` уводит на `/forbidden`. Это пункт 17 обязательного
+  // минимума приёмки — «свой пропуск у любой роли», — и на этой роли он не
+  // проходил. Закреплено `OwnPassIsReachableByEveryRoleTest`.
+  admission: ['/dashboard', '/admissions/foundation', '/identity/my-pass'],
   student: ['/dashboard', '/schedule', '/student', '/identity/my-pass', '/m/student'],
   // `/curator/group` открыт преподавателю намеренно: куратором назначают
   // карточку преподавателя, а учётная запись при этом чаще всего с ролью
