@@ -277,6 +277,31 @@ class DormRoomsFromTheOwnersListTest extends TestCase
         $this->assertSame(0, DormRoom::query()->count(), 'пробный прогон не оставляет следов');
     }
 
+    public function test_a_dry_run_does_not_rename_an_existing_block(): void
+    {
+        // Проверка на пустой базе слепа к переименованию: переименовывать
+        // нечего. А именно оно 05.09.2026 и утекло мимо отката — стояло до
+        // начала транзакции, и пробный прогон переименовал на стенде 36 строк,
+        // напечатав «записанное откачено». Комнаты «б» при этом откатились, и
+        // у комнаты «а» осталась вместимость блока: половина списка.
+        $building = $this->dorm();
+        $блок = DormRoom::create([
+            'building_id' => $building->id,
+            'number' => '202',
+            'floor' => 2,
+            'capacity' => 6,
+            'kind' => DormRoom::KIND_REGULAR,
+            'is_active' => true,
+        ]);
+
+        $this->artisan('dorm:import-rooms', ['--dry-run' => true])->assertSuccessful();
+
+        $блок->refresh();
+        $this->assertSame('202', $блок->number, 'пробный прогон не переименовывает строку блока');
+        $this->assertSame(6, $блок->capacity, 'и не меняет её вместимость');
+        $this->assertSame(1, DormRoom::query()->count(), 'и не заводит комнат рядом');
+    }
+
     /** Здание общежития заводится миграцией — здесь оно только находится. */
     private function dorm(): Building
     {

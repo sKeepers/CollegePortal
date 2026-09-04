@@ -139,8 +139,6 @@ class ImportDormRoomsCommand extends Command
             ->get()
             ->keyBy('number');
 
-        $renamed = $this->renameBlocksIntoFirstRooms($rooms, $existing);
-
         if (($stop = $this->tooFullForTheNewCapacity($rooms, $existing)) !== []) {
             $this->error('Отказ: в этих комнатах живут больше, чем даёт новая вместимость.');
             foreach ($stop as $line) {
@@ -160,11 +158,6 @@ class ImportDormRoomsCommand extends Command
             $this->line('Команда их не трогает. Если их больше нет — выведите из обращения в карточке комнаты.');
         }
 
-        if ($renamed !== []) {
-            $this->line('Строки блоков стали первыми комнатами: '.implode(', ', $renamed));
-            $this->line('Жильцы остались на своих строках и оказались в комнате «а».');
-        }
-
         $dryRun = (bool) $this->option('dry-run');
         $created = 0;
         $updated = 0;
@@ -175,6 +168,19 @@ class ImportDormRoomsCommand extends Command
         DB::beginTransaction();
 
         try {
+            // Переименование — такая же запись, как всё остальное, и потому
+            // стоит ВНУТРИ транзакции. Пока оно стояло снаружи, пробный прогон
+            // переименовывал строки по-настоящему и печатал «записанное
+            // откачено»: замер на стенде 05.09.2026 — 36 строк блоков стали
+            // комнатами «а» при `--dry-run`, а комнаты «б» откатились. Половина
+            // списка хуже, чем ничего: у комнаты остаётся вместимость блока.
+            $renamed = $this->renameBlocksIntoFirstRooms($rooms, $existing);
+
+            if ($renamed !== []) {
+                $this->line('Строки блоков стали первыми комнатами: '.implode(', ', $renamed));
+                $this->line('Жильцы остались на своих строках и оказались в комнате «а».');
+            }
+
             foreach ($rooms as $row) {
                 $room = $existing->get($row['number']);
 
