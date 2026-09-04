@@ -1,9 +1,9 @@
 <?php
 namespace App\Services\Import;
-use App\DTO\ScheduleLessonData; use App\Models\ScheduleLesson; use App\Models\User; use App\Services\Import\Concerns\ResolvesImportRelations; use App\Services\ScheduleEngineService; use App\Services\ScheduleLessonService; use Illuminate\Database\Eloquent\Model; use RuntimeException;
+use App\DTO\ScheduleLessonData; use App\Models\LessonTime; use App\Models\ScheduleLesson; use App\Models\User; use App\Services\Import\Concerns\ResolvesImportRelations; use App\Services\ScheduleEngineService; use App\Services\ScheduleLessonService; use Illuminate\Database\Eloquent\Model; use RuntimeException;
 class ScheduleImportHandler extends AbstractImportHandler { use ResolvesImportRelations; public function __construct(private readonly ScheduleLessonService $scheduleLessonService, private readonly ScheduleEngineService $engine) {}
  public function type(): string { return 'schedule'; } public function label(): string { return 'Расписание'; } public function modelClass(): string { return ScheduleLesson::class; } public function keyFields(): array { return ['lesson_date','starts_at','group_id','subject_id','teacher_id']; }
- public function fields(): array { return ['lesson_date'=>['label'=>'Дата','required'=>true,'aliases'=>['дата','lesson_date']],'starts_at'=>['label'=>'Время начала','required'=>true,'aliases'=>['время начала','starts_at','начало']],'ends_at'=>['label'=>'Время окончания','required'=>true,'aliases'=>['время окончания','ends_at','окончание']],'group_id'=>['label'=>'ID группы','required'=>false,'aliases'=>['group_id','id группы']],'group_name'=>['label'=>'Группа','required'=>false,'aliases'=>['группа','group','group_name']],'teacher_id'=>['label'=>'ID преподавателя','required'=>false,'aliases'=>['teacher_id','id преподавателя']],'teacher_name'=>['label'=>'Преподаватель','required'=>false,'aliases'=>['преподаватель','teacher','teacher_name']],'subject_id'=>['label'=>'ID дисциплины','required'=>false,'aliases'=>['subject_id','id дисциплины']],'subject_code'=>['label'=>'Код дисциплины','required'=>false,'aliases'=>['код дисциплины','subject_code']],'subject_name'=>['label'=>'Дисциплина','required'=>false,'aliases'=>['дисциплина','subject_name']],'classroom_id'=>['label'=>'ID аудитории','required'=>false,'aliases'=>['classroom_id','id аудитории']],'classroom_number'=>['label'=>'Аудитория','required'=>false,'aliases'=>['аудитория','classroom','classroom_number']],'classroom_building'=>['label'=>'Корпус','required'=>false,'aliases'=>['корпус','building','classroom_building']],'lesson_type'=>['label'=>'Тип занятия','required'=>false,'aliases'=>['тип занятия','lesson_type']],'topic'=>['label'=>'Тема','required'=>false,'aliases'=>['тема','topic']]]; }
+ public function fields(): array { return ['lesson_date'=>['label'=>'Дата','required'=>true,'aliases'=>['дата','lesson_date']],'starts_at'=>['label'=>'Время начала','required'=>true,'aliases'=>['время начала','starts_at','начало']],'ends_at'=>['label'=>'Время окончания','required'=>true,'aliases'=>['время окончания','ends_at','окончание']],'lesson_number'=>['label'=>'Номер пары','required'=>false,'aliases'=>['номер пары','№ пары','пара','lesson_number','номер']],'group_id'=>['label'=>'ID группы','required'=>false,'aliases'=>['group_id','id группы']],'group_name'=>['label'=>'Группа','required'=>false,'aliases'=>['группа','group','group_name']],'teacher_id'=>['label'=>'ID преподавателя','required'=>false,'aliases'=>['teacher_id','id преподавателя']],'teacher_name'=>['label'=>'Преподаватель','required'=>false,'aliases'=>['преподаватель','teacher','teacher_name']],'subject_id'=>['label'=>'ID дисциплины','required'=>false,'aliases'=>['subject_id','id дисциплины']],'subject_code'=>['label'=>'Код дисциплины','required'=>false,'aliases'=>['код дисциплины','subject_code']],'subject_name'=>['label'=>'Дисциплина','required'=>false,'aliases'=>['дисциплина','subject_name']],'classroom_id'=>['label'=>'ID аудитории','required'=>false,'aliases'=>['classroom_id','id аудитории']],'classroom_number'=>['label'=>'Аудитория','required'=>false,'aliases'=>['аудитория','classroom','classroom_number']],'classroom_building'=>['label'=>'Корпус','required'=>false,'aliases'=>['корпус','building','classroom_building']],'lesson_type'=>['label'=>'Тип занятия','required'=>false,'aliases'=>['тип занятия','lesson_type']],'topic'=>['label'=>'Тема','required'=>false,'aliases'=>['тема','topic']]]; }
 
  /**
   * Аудитория названа, но такой в портале нет.
@@ -38,9 +38,9 @@ class ScheduleImportHandler extends AbstractImportHandler { use ResolvesImportRe
      };
  }
 
- public function templateHeaders(): array { return ['Дата','Время начала','Время окончания','Группа','Преподаватель','Дисциплина','Код дисциплины','Аудитория','Корпус','Тип занятия','Тема']; } public function templateExample(): array { return ['01.09.2026','09:00','10:30','ИСП-101','Петрова Анна Викторовна','Специальность','SPEC-001','201','Главный корпус','Практическое','Вводное занятие']; }
- public function prepare(array $data): array { $data['lesson_date']=$this->normalizeDate($data['lesson_date']??null); $data['starts_at']=$this->normalizeTime($data['starts_at']??null); $data['ends_at']=$this->normalizeTime($data['ends_at']??null); $data['group_id']=$this->resolveGroupId($data['group_id']??null,$data['group_name']??null); $data['teacher_id']=$this->resolveTeacherId($data['teacher_id']??null,$data['teacher_name']??null); $data['subject_id']=$this->resolveSubjectId($data['subject_id']??null,$data['subject_code']??null,$data['subject_name']??null); $data['classroom_id']=$this->resolveClassroomId($data['classroom_id']??null,$data['classroom_number']??null,$data['classroom_building']??null); $data['classroom_id']=$data['classroom_id'] ?? (filled($data['classroom_number']??null) ? self::CLASSROOM_NOT_FOUND : null); $data['lesson_type']=$data['lesson_type'] ?: 'lesson'; return $data; }
- public function rules(): array { return ['lesson_date'=>['required','date'],'starts_at'=>['required','date_format:H:i'],'ends_at'=>['required','date_format:H:i','after:starts_at'],'group_id'=>['required','integer','exists:groups,id'],'teacher_id'=>['required','integer','exists:teachers,id'],'subject_id'=>['required','integer','exists:subjects,id'],'classroom_id'=>['nullable','bail','integer',$this->classroomWasResolved(),'exists:classrooms,id'],'lesson_type'=>['required','string','max:255'],'topic'=>['nullable','string','max:255']]; }
+ public function templateHeaders(): array { return ['Дата','Номер пары','Время начала','Время окончания','Группа','Преподаватель','Дисциплина','Код дисциплины','Аудитория','Корпус','Тип занятия','Тема']; } public function templateExample(): array { return ['01.09.2026','3','09:40','10:25','ИСП-101','Петрова Анна Викторовна','Специальность','SPEC-001','201','Главный корпус','Практическое','Вводное занятие']; }
+ public function prepare(array $data): array { $data['lesson_date']=$this->normalizeDate($data['lesson_date']??null); $data['starts_at']=$this->normalizeTime($data['starts_at']??null); $data['ends_at']=$this->normalizeTime($data['ends_at']??null); $data=$this->fillTimesFromBells($data); $data['group_id']=$this->resolveGroupId($data['group_id']??null,$data['group_name']??null); $data['teacher_id']=$this->resolveTeacherId($data['teacher_id']??null,$data['teacher_name']??null); $data['subject_id']=$this->resolveSubjectId($data['subject_id']??null,$data['subject_code']??null,$data['subject_name']??null); $data['classroom_id']=$this->resolveClassroomId($data['classroom_id']??null,$data['classroom_number']??null,$data['classroom_building']??null); $data['classroom_id']=$data['classroom_id'] ?? (filled($data['classroom_number']??null) ? self::CLASSROOM_NOT_FOUND : null); $data['lesson_type']=$data['lesson_type'] ?: 'lesson'; return $data; }
+ public function rules(): array { return ['lesson_date'=>['required','date'],'starts_at'=>['required_without:lesson_number','nullable','date_format:H:i'],'ends_at'=>['required_without:lesson_number','nullable','date_format:H:i','after:starts_at'],'group_id'=>['required','integer','exists:groups,id'],'teacher_id'=>['required','integer','exists:teachers,id'],'subject_id'=>['required','integer','exists:subjects,id'],'classroom_id'=>['nullable','bail','integer',$this->classroomWasResolved(),'exists:classrooms,id'],'lesson_number'=>['nullable','bail','integer',$this->bellWasFound()],'lesson_type'=>['required','string','max:255'],'topic'=>['nullable','string','max:255']]; }
  /**
   * Дата сравнивается через whereDate, а не строкой. Записи, пришедшие зеркалом
   * от движка расписания, лежат с нулевым временем — `2026-09-01 00:00:00`, — и
@@ -77,7 +77,7 @@ class ScheduleImportHandler extends AbstractImportHandler { use ResolvesImportRe
   * а на экране покрытия по-прежнему стояли нули — то есть находка осталась бы
   * незакрытой при переписанном импорте.
   */
- private function enginePayload(array $data,?int $loadItemId=null): array { return ['date'=>$data['lesson_date'],'starts_at'=>$data['starts_at'],'ends_at'=>$data['ends_at'],'group_id'=>$data['group_id'],'subject_id'=>$data['subject_id'],'teacher_id'=>$data['teacher_id'],'classroom_id'=>$data['classroom_id']??null,'teaching_load_item_id'=>$loadItemId,'comment'=>$data['topic']??null,'source'=>'import']; }
+ private function enginePayload(array $data,?int $loadItemId=null): array { return ['date'=>$data['lesson_date'],'lesson_number'=>$data['lesson_number']??null,'starts_at'=>$data['starts_at'],'ends_at'=>$data['ends_at'],'group_id'=>$data['group_id'],'subject_id'=>$data['subject_id'],'teacher_id'=>$data['teacher_id'],'classroom_id'=>$data['classroom_id']??null,'teaching_load_item_id'=>$loadItemId,'comment'=>$data['topic']??null,'source'=>'import']; }
  public function businessValidationErrors(array $data): array { return $this->scheduleConflictMessages($data,$this->findExisting($data)?->id); }
  private function schedulePayload(array $data): array { return ['group_id'=>$data['group_id'],'teacher_id'=>$data['teacher_id'],'subject_id'=>$data['subject_id'],'classroom_id'=>$data['classroom_id']??null,'lesson_date'=>$data['lesson_date'],'starts_at'=>$data['starts_at'],'ends_at'=>$data['ends_at'],'lesson_type'=>$data['lesson_type'] ?: 'lesson','topic'=>$data['topic']??null]; }
     /**
@@ -88,6 +88,63 @@ class ScheduleImportHandler extends AbstractImportHandler { use ResolvesImportRe
      * строка, попавшая в занятую клетку, пропускается (см. ниже). Поэтому найденное —
      * единственное.
      */
+    /**
+     * Номер пары вместо времени.
+     *
+     * Расписание колледжа живёт номерами пар, а не часами: во всех семи
+     * присланных файлах время не написано ни разу, стоит только номер — от нуля
+     * до пятнадцати, и сетка звонков в портале ровно такая же, шестнадцать
+     * строк от 07:15 до 20:15 (сверено с листом владельца 04.09.2026, сошлись
+     * все шестнадцать). Пересчитывать полторы тысячи номеров в часы руками
+     * незачем, если это умеет портал.
+     *
+     * **Заданное время сетка не трогает** — то же правило, что в движке
+     * расписания (`ScheduleEngineService`), и запрос к сетке у них теперь один
+     * на двоих. Иначе перенос и замена стали бы невозможны: время, написанное
+     * руками, обязано побеждать.
+     */
+    private function fillTimesFromBells(array $data): array
+    {
+        $number = trim((string) ($data['lesson_number'] ?? ''));
+        $data['lesson_number'] = $number === '' ? null : (int) $number;
+
+        if ($data['lesson_number'] === null) {
+            return $data;
+        }
+
+        if (filled($data['starts_at'] ?? null) && filled($data['ends_at'] ?? null)) {
+            return $data;
+        }
+
+        $bell = LessonTime::activeByNumber($data['lesson_number']);
+
+        if ($bell === null) {
+            return $data;
+        }
+
+        $data['starts_at'] = filled($data['starts_at'] ?? null) ? $data['starts_at'] : $bell->startsAtShort();
+        $data['ends_at'] = filled($data['ends_at'] ?? null) ? $data['ends_at'] : $bell->endsAtShort();
+
+        return $data;
+    }
+
+    /**
+     * Номер пары назван, а в сетке звонков его нет.
+     *
+     * Молчать здесь нельзя: без строки сетки время не подставится, и строка
+     * упадёт на «время начала обязательно» — сообщение, по которому человек
+     * пойдёт искать пустую клетку времени, которой в его файле и не должно
+     * быть. Причина называется прямо.
+     */
+    private function bellWasFound(): callable
+    {
+        return static function (string $attribute, $value, callable $fail): void {
+            if ($value !== null && LessonTime::activeByNumber((int) $value) === null) {
+                $fail('Пары с таким номером нет в сетке звонков. Проверьте номер или заведите строку сетки.');
+            }
+        };
+    }
+
     private function lessonInTheCell(array $data): ?ScheduleLesson
     {
         return ScheduleLesson::query()

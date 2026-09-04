@@ -307,7 +307,7 @@ class ScheduleEngineService
         // время пустое, оно берётся из сетки звонков. Заданное руками время сетка
         // не трогает — перенос и замена остаются возможными.
         if ($startsAt === '' || $endsAt === '') {
-            $bell = LessonTime::query()->where('lesson_number', $lessonNumber)->where('is_active', true)->first();
+            $bell = LessonTime::activeByNumber($lessonNumber);
 
             if ($bell !== null) {
                 $startsAt = $startsAt !== '' ? $startsAt : $bell->startsAtShort();

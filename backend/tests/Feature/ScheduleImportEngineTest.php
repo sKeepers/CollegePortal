@@ -113,20 +113,22 @@ class ScheduleImportEngineTest extends TestCase
 
         // Строка выгрузки, разобранная теми же полями, что и при импорте,
         // должна пройти подготовку и найти те же группу, преподавателя и дисциплину.
+        //
+        // Колонки берутся **по заголовку, а не по месту**. На местах проверка
+        // держалась до 04.09.2026 и упала от новой колонки «Номер пары»,
+        // вставшей второй: смысл её при этом не изменился ни на йоту, сместились
+        // только индексы. Сопоставление по имени переживёт и следующую колонку.
         $values = array_map(fn (string $value): string => trim($value, '"'), explode(';', $lines[1]));
-        $prepared = $handler->prepare([
-            'lesson_date' => $values[0],
-            'starts_at' => $values[1],
-            'ends_at' => $values[2],
-            'group_name' => $values[3],
-            'teacher_name' => $values[4],
-            'subject_name' => $values[5],
-            'subject_code' => $values[6],
-            'classroom_number' => $values[7],
-            'classroom_building' => $values[8],
-            'lesson_type' => $values[9],
-            'topic' => $values[10],
-        ]);
+        $byHeader = array_combine($headers, array_pad($values, count($headers), ''));
+        $labels = [];
+        foreach ($handler->fields() as $field => $meta) {
+            if (isset($byHeader[$meta['label']])) {
+                $labels[$field] = $byHeader[$meta['label']];
+            }
+        }
+
+        $this->assertArrayHasKey('group_name', $labels, 'Колонка группы должна находиться по заголовку, а не по номеру');
+        $prepared = $handler->prepare($labels);
 
         $this->assertSame($context['group']->id, $prepared['group_id']);
         $this->assertSame($context['teacher']->id, $prepared['teacher_id']);

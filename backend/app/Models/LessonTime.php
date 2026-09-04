@@ -20,6 +20,23 @@ class LessonTime extends Model
         return ['lesson_number' => 'integer', 'is_active' => 'boolean'];
     }
 
+    /**
+     * Действующая строка сетки по номеру пары — или ничего.
+     *
+     * Живёт здесь, а не в двух местах: время по номеру пары спрашивают и движок
+     * расписания, и загрузка файлом, и правило у них одно — «заданное руками
+     * время сетка не трогает». Пока запрос стоял в движке, у загрузки его не
+     * было вовсе, и номер пары она не понимала.
+     */
+    public static function activeByNumber(?int $number): ?self
+    {
+        if ($number === null) {
+            return null;
+        }
+
+        return self::query()->where('lesson_number', $number)->where('is_active', true)->first();
+    }
+
     public function startsAtShort(): string
     {
         return substr((string) $this->starts_at, 0, 5);

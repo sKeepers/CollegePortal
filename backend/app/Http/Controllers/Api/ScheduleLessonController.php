@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\LessonTime;
 use App\DTO\ScheduleLessonData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreScheduleLessonRequest;
@@ -72,10 +73,18 @@ class ScheduleLessonController extends Controller
             ->orderBy('starts_at')
             ->lazy();
 
-        return CsvExport::download('schedule-'.now()->format('Ymd-His').'.csv', $handler->templateHeaders(), function (callable $row) use ($lessons): void {
+        $bells = LessonTime::query()->where('is_active', true)->get()
+            ->mapWithKeys(fn (LessonTime $bell): array => [$bell->startsAtShort() => $bell->lesson_number])
+            ->all();
+
+        return CsvExport::download('schedule-'.now()->format('Ymd-His').'.csv', $handler->templateHeaders(), function (callable $row) use ($lessons, $bells): void {
             foreach ($lessons as $lesson) {
                 $row([
                     $lesson->lesson_date?->format('d.m.Y'),
+                    // Номер пары выводится из времени начала: своей колонки у
+                    // legacy-записи нет, а выгрузка обязана давать файл, который
+                    // загрузится обратно без правки — вместе с новой колонкой.
+                    $bells[$lesson->starts_at?->format('H:i')] ?? null,
                     // Время приведено к Carbon кастом модели: строкой оно даёт
                     // полную дату со временем, и в колонке «Время начала»
                     // оказывалось «2026-».
