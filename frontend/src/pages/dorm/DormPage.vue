@@ -13,7 +13,7 @@ import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import { escapeHtml, printHtmlDocument, printPage } from '../../utils/print'
 import { formatPhone } from '../../utils/phone'
 import { plural, PLACES, PLACES_OF } from '../../utils/plural'
-import { formatDay } from '../../utils/date'
+import { formatDate as formatCollegeDate, formatDateTime as formatCollegeDateTime, formatDay, printedAtNow, printedDayNow } from '../../utils/datetime'
 import { useDormStore } from '../../stores/dorm'
 import { usePermissions } from '../../composables/usePermissions'
 
@@ -149,19 +149,11 @@ function yesterday() {
 }
 
 function formatDate(value) {
-  if (!value) return '—'
-  const date = new Date(value)
-
-  return Number.isNaN(date.valueOf()) ? String(value) : date.toLocaleDateString('ru-RU')
+  return formatCollegeDate(value)
 }
 
 function formatDateTime(value) {
-  if (!value) return '—'
-  const date = new Date(value)
-
-  return Number.isNaN(date.valueOf())
-    ? String(value)
-    : date.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return formatCollegeDateTime(value, { year: undefined })
 }
 
 function notify(message, type = 'positive') {
@@ -408,7 +400,7 @@ function printResidents() {
 
   printHtmlDocument(printPage({
     title: 'Список проживающих в общежитии',
-    subtitle: `Занято ${data.occupied} из ${plural(data.capacity, PLACES_OF)}. Составлен ${new Date().toLocaleString('ru-RU')}`,
+    subtitle: `Занято ${data.occupied} из ${plural(data.capacity, PLACES_OF)}. Составлен ${printedAtNow()}`,
     body,
   }))
 }
@@ -431,7 +423,7 @@ function printRoomSheet(room) {
     // от прошлогоднего было нечем — даты не стояло вообще. Время не пишем:
     // лист живёт днями, а час его составления никому не нужен и только
     // сбивал бы с толку рядом с числом.
-    subtitle: `Мест ${room.capacity}, занято ${room.occupied}. Составлен ${new Date().toLocaleDateString('ru-RU')}`,
+    subtitle: `Мест ${room.capacity}, занято ${room.occupied}. Составлен ${printedDayNow()}`,
     landscape: false,
     body: `<table style="font-size:15px">
       <thead><tr><th>Фамилия, имя, отчество</th><th>Курс</th><th>Группа</th></tr></thead>
@@ -490,7 +482,7 @@ function printOccupancy() {
         <thead><tr><th>Дата</th><th>Что</th><th>Фамилия, имя, отчество</th><th>Группа</th><th>Комната</th></tr></thead>
         <tbody>${movement}</tbody>
       </table>`,
-    footer: `Составлен ${new Date().toLocaleString('ru-RU')}`,
+    footer: `Составлен ${printedAtNow()}`,
   }))
 }
 

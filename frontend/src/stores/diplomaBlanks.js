@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
+import { formatDate } from '../utils/datetime'
 
 /**
  * Бланки строгой отчётности и книга регистрации выданных дипломов.
@@ -33,9 +34,7 @@ export function statusLabel(value) { return BLANK_STATUS_OPTIONS.find((item) => 
 export function statusTone(value) { return BLANK_STATUS_OPTIONS.find((item) => item.value === value)?.tone || 'neutral' }
 
 export function formatRuDate(value) {
-  if (!value) return '—'
-  const date = new Date(`${value}T00:00:00`)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('ru-RU')
+  return formatDate(value)
 }
 
 export const useDiplomaBlanksStore = defineStore('diplomaBlanks', () => {

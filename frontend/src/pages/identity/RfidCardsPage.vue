@@ -15,6 +15,7 @@ import { escapeHtml, printHtmlDocument, printPage } from '../../utils/print'
 import { findGroupOption } from '../../utils/groupOptions'
 import { useRfidCardsStore } from '../../stores/rfidCards'
 import { usePermissions } from '../../composables/usePermissions'
+import { formatDate as formatCollegeDate, formatDateTime as formatCollegeDateTime, printedAtNow } from '../../utils/datetime'
 
 /**
  * Кабинет коменданта и отдела кадров: RFID-карты.
@@ -102,19 +103,11 @@ const printPeriod = computed(() => {
 })
 
 function formatDate(value) {
-  if (!value) return ''
-  const date = new Date(value)
-
-  return Number.isNaN(date.valueOf()) ? String(value) : date.toLocaleDateString('ru-RU')
+  return formatCollegeDate(value, {}, '')
 }
 
 function formatDateTime(value) {
-  if (!value) return '—'
-  const date = new Date(value)
-
-  return Number.isNaN(date.valueOf())
-    ? String(value)
-    : date.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return formatCollegeDateTime(value)
 }
 
 function notify(message, type = 'positive') {
@@ -340,7 +333,7 @@ function printJournal() {
     return
   }
 
-  printedAt.value = new Date().toLocaleString('ru-RU')
+  printedAt.value = printedAtNow()
 
   const rows = store.journal.map((row, index) => `
       <tr>

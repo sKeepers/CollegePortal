@@ -13,6 +13,7 @@ import { api } from '../../services/api'
 import { useAuthStore } from '../../stores/auth'
 import { useHrStore } from '../../stores/hr'
 import { formatPhone } from '../../utils/phone'
+import { formatDate as formatCollegeDate } from '../../utils/datetime'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -224,9 +225,7 @@ function employmentLabel(value) {
 }
 
 function formatDate(value) {
-  if (!value) return '—'
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('ru-RU')
+  return formatCollegeDate(value)
 }
 
 function routeForTab(tab) {

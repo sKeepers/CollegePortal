@@ -7,6 +7,7 @@ import WorkspacePanel from "../../components/workspace/WorkspacePanel.vue";
 import { useAuthStore } from "../../stores/auth";
 import { useHrStore } from "../../stores/hr";
 import { api } from "../../services/api";
+import { formatDate as formatCollegeDate } from '../../utils/datetime'
 
 const $q = useQuasar();
 const auth = useAuthStore();
@@ -174,9 +175,7 @@ function periodStatusColor(value) {
   );
 }
 function formatDate(value) {
-  if (!value) return "—";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString("ru-RU");
+  return formatCollegeDate(value);
 }
 function employeeName(id) {
   return (

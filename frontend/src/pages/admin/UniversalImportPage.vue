@@ -12,6 +12,7 @@ import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import AppTable from '../../components/ui/AppTable.vue'
 import { useUniversalImportStore } from '../../stores/universalImport'
 import { usePermissions } from '../../composables/usePermissions'
+import { formatDateTime as formatCollegeDateTime } from '../../utils/datetime'
 
 const store = useUniversalImportStore()
 const permissions = usePermissions()
@@ -48,10 +49,7 @@ const keyLabels = computed(() => selectedTypeConfig.value?.key_field_labels || s
 const exampleEntries = computed(() => Object.entries(selectedTypeConfig.value?.template?.example || {}))
 
 function formatDate(value) {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value)
-  return date.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return formatCollegeDateTime(value)
 }
 function typeLabel(type) { return store.typeOptions.find((item) => item.value === type)?.label || type }
 function statusTone(status) { return status === 'completed' ? 'success' : status === 'completed_with_errors' || status === 'validation_failed' ? 'warning' : 'info' }

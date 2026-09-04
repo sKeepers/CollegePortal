@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
 import { loadReferences } from '../services/referenceLoader'
+import { formatDateTime } from '../utils/datetime'
 
 const initialFilters = { graduation_year: '', status: '', education_program_id: '' }
 export const FRDO_STATUS_OPTIONS = [
@@ -20,7 +21,7 @@ export const FRDO_RECORD_STATUS_OPTIONS = [
 function extractRows(payload) { return Array.isArray(payload?.data) ? payload.data : [] }
 export function statusLabel(options, value) { return options.find((item) => item.value === value)?.label || value || '—' }
 export function statusTone(options, value) { return options.find((item) => item.value === value)?.tone || 'neutral' }
-export function formatRuDateTime(value) { if (!value) return '—'; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }
+export function formatRuDateTime(value) { return formatDateTime(value) }
 export const useFrdoStore = defineStore('frdo', () => {
   const packages = ref([]), programs = ref([]), graduates = ref([])
   const filters = ref({ ...initialFilters })

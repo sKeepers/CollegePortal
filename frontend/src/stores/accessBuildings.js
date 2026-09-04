@@ -1,15 +1,13 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
+import { formatTime } from '../utils/datetime'
 
 function extractRows(payload) { return Array.isArray(payload?.data) ? payload.data : [] }
 
 export function formatEnteredAt(value) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  // 24-часовой вид независимо от локали браузера — как везде в портале.
-  return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', hour12: false })
+  // Час прохода — по часам колледжа, а не по часам того, кто смотрит.
+  return formatTime(value, {}, '')
 }
 
 export const useAccessBuildingsStore = defineStore('accessBuildings', () => {

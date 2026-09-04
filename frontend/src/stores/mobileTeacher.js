@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
+import { formatDate } from '../utils/datetime'
 
 function extractData(payload) { return payload?.data || {} }
 function fullName(person) { return [person?.last_name, person?.first_name, person?.middle_name].filter(Boolean).join(' ') }
@@ -8,16 +9,10 @@ export function localIsoDate(date = new Date()) {
   return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-')
 }
 export function formatCabinetDate(value) {
-  if (!value) return '—'
-  const date = new Date(`${value}T12:00:00`)
-  if (Number.isNaN(date.getTime())) return String(value)
-  return date.toLocaleDateString('ru-RU', { weekday: 'long', day: '2-digit', month: 'long' })
+  return formatDate(value, { weekday: 'long', day: '2-digit', month: 'long', year: undefined })
 }
 export function weekdayShort(value) {
-  if (!value) return ''
-  const date = new Date(`${value}T12:00:00`)
-  if (Number.isNaN(date.getTime())) return ''
-  return date.toLocaleDateString('ru-RU', { weekday: 'short' })
+  return formatDate(value, { weekday: 'short', day: undefined, month: undefined, year: undefined }, '')
 }
 export function dayNumber(value) {
   if (!value) return ''

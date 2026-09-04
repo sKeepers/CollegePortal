@@ -20,6 +20,7 @@ import AppConfirmDialog from '../../../components/ui/AppConfirmDialog.vue'
 import { createTablePagination, persistTablePagination, TABLE_ROWS_PER_PAGE_OPTIONS } from '../../../services/tableSettings'
 import { useUsersStore } from '../../../stores/users'
 import { escapeHtml, printHtmlDocument } from '../../../utils/print'
+import { formatDateTime as formatCollegeDateTime } from '../../../utils/datetime'
 
 const rowsPerPageKey = 'collegePortal.users.rowsPerPage'
 const store = useUsersStore()
@@ -171,10 +172,7 @@ function statusTone(user) {
 }
 
 function formatDate(value) {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value)
-  return date.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return formatCollegeDateTime(value)
 }
 
 function rolesLabel(user) {

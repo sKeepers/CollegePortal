@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
 import { loadReferences } from '../services/referenceLoader'
+import { formatDate } from '../utils/datetime'
 
 export const ENTITY_OPTIONS = [
   { label: 'Студент', value: 'student' },
@@ -59,10 +60,8 @@ export function ownerSearchQuery(identity) {
 export function statusLabel(status) { return STATUS_OPTIONS.find((option) => option.value === status)?.label || status || '—' }
 export function statusTone(status) { return STATUS_OPTIONS.find((option) => option.value === status)?.tone || 'neutral' }
 export function formatDateTime(value) {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value)
-  return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  // Имя досталось по наследству: показывается здесь только дата.
+  return formatDate(value)
 }
 
 export const useDigitalPassesStore = defineStore('digitalPasses', () => {

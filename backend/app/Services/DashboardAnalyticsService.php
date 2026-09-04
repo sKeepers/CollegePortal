@@ -175,7 +175,11 @@ class DashboardAnalyticsService
                         'id' => $log->id,
                         'title' => $log->action,
                         'description' => trim(implode(' · ', array_filter([$log->module, $log->entity_type]))),
-                        'time' => $log->created_at?->format('d.m H:i'),
+                        // Час рисуется здесь, на сервере, поэтому пояс надо задать явно: без
+                        // него виджет показывал UTC рядом с журналом действий, который
+                        // показывает время колледжа, — одно событие, два часа на одном
+                        // экране. Замерено 03.09.2026: 18:22 в виджете против 21:22 в журнале.
+                        'time' => CollegeTime::forDisplay($log->created_at)?->format('d.m H:i'),
                         'user' => $log->user?->name,
                     ])->values(),
             ],
@@ -366,7 +370,7 @@ class DashboardAnalyticsService
             'id' => $package->id,
             'name' => $package->name,
             'status' => $package->status,
-            'updated_at' => $package->updated_at?->format('d.m.Y H:i'),
+            'updated_at' => CollegeTime::forDisplay($package->updated_at)?->format('d.m.Y H:i'),
         ];
     }
 

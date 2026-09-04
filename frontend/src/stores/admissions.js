@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
 import { buildGroupOptions } from '../utils/groupOptions'
+import { formatDate as formatCollegeDate, formatDateTime as formatCollegeDateTime } from '../utils/datetime'
 
 const initialFilters = {
   search: '',
@@ -93,43 +94,11 @@ export function documentsCompleteness(application) {
 }
 
 export function formatDate(value) {
-  if (!value) {
-    return '—'
-  }
-
-  const isoDate = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/)
-
-  if (isoDate) {
-    return `${isoDate[3]}.${isoDate[2]}.${isoDate[1]}`
-  }
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) {
-    return String(value)
-  }
-
-  return date.toLocaleDateString('ru-RU')
+  return formatCollegeDate(value)
 }
 
 export function formatDateTime(value) {
-  if (!value) {
-    return '—'
-  }
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) {
-    return formatDate(value)
-  }
-
-  return date.toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return formatCollegeDateTime(value)
 }
 
 export function documentsCompletenessLabel(application) {

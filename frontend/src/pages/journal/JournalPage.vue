@@ -16,6 +16,7 @@ import JournalLessonPanel from './JournalLessonPanel.vue'
 import { useJournalStore } from '../../stores/journal'
 import { usePermissions } from '../../composables/usePermissions'
 import { api } from '../../services/api'
+import { formatDateTime as formatCollegeDateTime } from '../../utils/datetime'
 
 const store = useJournalStore()
 const route = useRoute()
@@ -177,7 +178,7 @@ function changeSummary(change) {
 }
 
 function formatDateTime(value) {
-  return value ? new Intl.DateTimeFormat('ru-RU', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)) : '—'
+  return formatCollegeDateTime(value)
 }
 
 function suggestionLabel(suggestion) {

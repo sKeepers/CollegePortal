@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { api } from '../services/api'
 import { loadReferences } from '../services/referenceLoader'
 import { buildGroupOptions } from '../utils/groupOptions'
+import { formatDate } from '../utils/datetime'
 
 const initialFilters = { academic_year: '', group_id: '', subject_id: '', teacher_id: '', exam_type: '' }
 export const EXAM_TYPE_OPTIONS = [
@@ -36,7 +37,7 @@ export function examStatusLabel(value) { return EXAM_STATUS_OPTIONS.find((item) 
 export function examStatusTone(value) { return EXAM_STATUS_OPTIONS.find((item) => item.value === value)?.tone || 'neutral' }
 export function resultStatusLabel(value) { return RESULT_STATUS_OPTIONS.find((item) => item.value === value)?.label || value || '—' }
 export function resultStatusTone(value) { return RESULT_STATUS_OPTIONS.find((item) => item.value === value)?.tone || 'neutral' }
-export function formatRuDate(value) { if (!value) return '—'; const date = new Date(`${value}T00:00:00`); return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('ru-RU') }
+export function formatRuDate(value) { return formatDate(value) }
 function cleanExam(payload) {
   return {
     academic_year: payload.academic_year?.trim() || '',

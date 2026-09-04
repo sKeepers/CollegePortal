@@ -12,6 +12,7 @@ import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import { useDormUpbringingStore } from '../../stores/dormUpbringing'
 import { usePermissions } from '../../composables/usePermissions'
+import { formatDate as formatCollegeDate } from '../../utils/datetime'
 
 /**
  * Воспитательная работа: провинности и социальный паспорт.
@@ -64,10 +65,7 @@ function today() {
 }
 
 function formatDate(value) {
-  if (!value) return '—'
-  const date = new Date(value)
-
-  return Number.isNaN(date.valueOf()) ? String(value) : date.toLocaleDateString('ru-RU')
+  return formatCollegeDate(value)
 }
 
 function notify(message, type = 'positive') {

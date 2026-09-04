@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
 import { useSettingsStore } from './settings'
+import { formatDateTime } from '../utils/datetime'
 
 function extractRows(payload) { return Array.isArray(payload?.data) ? payload.data : [] }
 export function normalizeQrToken(value) {
@@ -42,12 +43,7 @@ export function outcomeDetail(event) {
   return event.reason || 'Пропуск действителен.'
 }
 export function formatEventTime(value) {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value)
-  const datePart = date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  const timePart = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
-  return datePart + " " + timePart
+  return formatDateTime(value, { hour12: false }).replace(', ', ' ')
 }
 
 export const useAccessGateStore = defineStore('accessGate', () => {

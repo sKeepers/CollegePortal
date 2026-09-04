@@ -14,6 +14,7 @@ import PageHeader from '../../components/ui/PageHeader.vue'
 import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import { escapeHtml, printHtmlDocument, printPage } from '../../utils/print'
 import { buildCertificateSheet } from '../../utils/certificateSheet'
+import { printedAtNow } from '../../utils/datetime'
 
 const store = useStudentCertificatesStore()
 const settings = useSettingsStore()
@@ -109,7 +110,7 @@ function printRegistry() {
 <tbody>${rows}
 </tbody>
 </table>`,
-    footer: `Всего записей: ${total.value}. Напечатано ${new Date().toLocaleString('ru-RU')}.`,
+    footer: `Всего записей: ${total.value}. Напечатано ${printedAtNow()}.`,
   }))
 }
 

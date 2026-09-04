@@ -1,3 +1,4 @@
+import { formatDate as formatCollegeDate, formatDateTime as formatCollegeDateTime } from '../../../utils/datetime'
 export function extractRows(payload) {
   return Array.isArray(payload?.data) ? payload.data : []
 }
@@ -11,12 +12,8 @@ export function todayIso() {
 }
 
 export function currentDateRu() {
-  return new Intl.DateTimeFormat('ru-RU', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date())
+  // Сегодня — по календарю колледжа, а не по календарю смотрящего.
+  return formatCollegeDate(new Date().toISOString(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 export function formatShortDateTime(value) {
@@ -24,18 +21,7 @@ export function formatShortDateTime(value) {
     return '—'
   }
 
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-
-  return new Intl.DateTimeFormat('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date)
+  return formatCollegeDateTime(value, { year: undefined })
 }
 
 export function teacherName(teacher) {

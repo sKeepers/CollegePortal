@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
+import { formatDateTime } from '../utils/datetime'
 
 const initialFilters = { package_type: '', year: '', status: '', education_program_id: '' }
 export const FIS_TYPE_OPTIONS = [{ label: 'ФИС Приема', value: 'admission' }, { label: 'ФИС ГИА', value: 'gia' }]
@@ -11,7 +12,7 @@ export const FIS_RECORD_STATUS_OPTIONS = [{ label: 'Черновик', value: 'd
 function extractRows(payload) { return Array.isArray(payload?.data) ? payload.data : [] }
 export function optionLabel(options, value) { return options.find((item) => item.value === value)?.label || value || '—' }
 export function statusTone(options, value) { return options.find((item) => item.value === value)?.tone || 'neutral' }
-export function formatRuDateTime(value) { if (!value) return '—'; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }
+export function formatRuDateTime(value) { return formatDateTime(value) }
 export const useFisStore = defineStore('fis', () => {
   const packages = ref([]), outboundPackages = ref([]), specInfo = ref(null), gatewayStatus = ref({ health: null, version: null, zkspd: null, dictionaries: null, institution: null, lastCheckAt: null }), programs = ref([]), applications = ref([]), exams = ref([]), graduates = ref([])
   const dictionaryIntake = ref(null)

@@ -28,6 +28,7 @@ import QuickActionsWidget from '../widgets/QuickActionsWidget.vue'
 import RecentActivityWidget from '../widgets/RecentActivityWidget.vue'
 import PersonalDashboardLayout from '../../../components/dashboard/PersonalDashboardLayout.vue'
 import { currentDateRu } from './dashboardData'
+import { formatDate as formatCollegeDate } from '../../../utils/datetime'
 
 const auth = useAuthStore()
 const settingsStore = useSettingsStore()
@@ -157,12 +158,7 @@ function formatChartDate(value) {
     return ''
   }
 
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-
-  return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit' }).format(date)
+  return formatCollegeDate(value, { day: '2-digit', month: '2-digit', year: undefined })
 }
 
 async function loadDashboard() {

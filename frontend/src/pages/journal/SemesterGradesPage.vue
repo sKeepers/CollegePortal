@@ -7,6 +7,7 @@ import AppCard from '../../components/ui/AppCard.vue'
 import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import { useSemesterGradesStore } from '../../stores/semesterGrades'
+import { formatDate } from '../../utils/datetime'
 
 const store = useSemesterGradesStore()
 
@@ -127,7 +128,7 @@ watch(
             <td class="text-left">
               <q-input v-model="row.comment" dense outlined maxlength="500" placeholder="необязательно" />
             </td>
-            <td class="text-left semester-table__set-at">{{ row.set_at ? new Date(row.set_at).toLocaleDateString('ru-RU') : '—' }}</td>
+            <td class="text-left semester-table__set-at">{{ formatDate(row.set_at) }}</td>
           </tr>
         </tbody>
       </q-markup-table>

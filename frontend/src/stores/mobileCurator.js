@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
 import { localIsoDate } from './mobileTeacher'
+import { formatTime } from '../utils/datetime'
 
 function extractData(payload) { return payload?.data || {} }
 
@@ -10,10 +11,7 @@ export function eventDirectionLabel(direction) {
 }
 
 export function eventTime(value) {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value)
-  return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+  return formatTime(value)
 }
 
 export const useMobileCuratorStore = defineStore('mobileCurator', () => {

@@ -11,6 +11,7 @@ import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import AppLoading from '../../components/ui/AppLoading.vue'
 import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import { useTrashStore } from '../../stores/trash'
+import { formatDateTime as formatCollegeDateTime } from '../../utils/datetime'
 
 /**
  * Корзина и заявки на удаление.
@@ -41,8 +42,7 @@ function statusLabel(status) { return STATUS_TONES[status]?.label || status }
 function statusTone(status) { return STATUS_TONES[status]?.tone || 'neutral' }
 
 function formatDate(value) {
-  if (!value) return '—'
-  return new Intl.DateTimeFormat('ru-RU', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value))
+  return formatCollegeDateTime(value)
 }
 
 function notify(message, type = 'positive') {

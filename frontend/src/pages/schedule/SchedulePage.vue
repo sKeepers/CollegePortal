@@ -23,6 +23,7 @@ import {
   teacherName,
   useScheduleStore,
 } from '../../stores/schedule'
+import { formatDate as formatCollegeDate, toCalendarDay } from '../../utils/datetime'
 
 const store = useScheduleStore()
 const permissions = usePermissions()
@@ -61,18 +62,6 @@ const visibleViewOptions = computed(() => {
   if (auth.hasRole('student')) return viewOptions.filter((option) => ['day', 'week', 'month'].includes(option.value))
   if (auth.hasRole('teacher')) return viewOptions.filter((option) => ['day', 'week', 'month'].includes(option.value))
   return viewOptions
-})
-
-const dayFormatter = new Intl.DateTimeFormat('ru-RU', {
-  weekday: 'short',
-  day: '2-digit',
-  month: '2-digit',
-})
-
-const longDateFormatter = new Intl.DateTimeFormat('ru-RU', {
-  day: '2-digit',
-  month: 'long',
-  year: 'numeric',
 })
 
 const canCreate = computed(() => permissions.hasPermission('schedule.create'))
@@ -140,8 +129,8 @@ const selectedWeekDays = computed(() => {
     const date = addDays(start, index)
     return {
       date,
-      value: formatDate(date),
-      label: capitalize(dayFormatter.format(date)),
+      value: toCalendarDay(date),
+      label: capitalize(formatCollegeDate(toCalendarDay(date), { weekday: 'short', day: '2-digit', month: '2-digit', year: undefined })),
     }
   })
 })
@@ -150,17 +139,17 @@ const selectedMonthDays = computed(() => {
   const days = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
   return Array.from({ length: days }, (_, index) => {
     const day = new Date(date.getFullYear(), date.getMonth(), index + 1)
-    return { date: day, value: formatDate(day), label: capitalize(dayFormatter.format(day)) }
+    return { date: day, value: toCalendarDay(day), label: capitalize(formatCollegeDate(toCalendarDay(day), { weekday: 'short', day: '2-digit', month: '2-digit', year: undefined })) }
   })
 })
 
 const periodTitle = computed(() => {
   if (activeView.value === 'day') {
-    return longDateFormatter.format(parseLocalDate(selectedDate.value))
+    return formatCollegeDate(selectedDate.value, { day: '2-digit', month: 'long', year: 'numeric' })
   }
 
   if (activeView.value === 'month') {
-    return new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' }).format(parseLocalDate(selectedDate.value))
+    return formatCollegeDate(selectedDate.value, { day: undefined, month: 'long', year: 'numeric' })
   }
 
   const days = selectedWeekDays.value
@@ -189,7 +178,7 @@ const viewGroups = computed(() => {
   if (activeView.value === 'day') {
     return [{
       key: selectedDate.value,
-      title: longDateFormatter.format(parseLocalDate(selectedDate.value)),
+      title: formatCollegeDate(selectedDate.value, { day: '2-digit', month: 'long', year: 'numeric' }),
       subtitle: 'Занятия выбранного дня',
       lessons: sortLessons(periodLessons.value),
     }]
@@ -272,7 +261,7 @@ const periodRange = computed(() => {
   const date = parseLocalDate(selectedDate.value)
   const first = new Date(date.getFullYear(), date.getMonth(), 1)
   const last = new Date(date.getFullYear(), date.getMonth() + 1, 0)
-  return { date_from: formatDate(first), date_to: formatDate(last) }
+  return { date_from: toCalendarDay(first), date_to: toCalendarDay(last) }
 })
 const scheduleInitialLoading = computed(() => store.loading && !store.lessons.length)
 const scheduleBlockingError = computed(() => store.error && !store.loading && !store.lessons.length)
@@ -315,19 +304,12 @@ function defaultCreateForm() {
 }
 
 function todayString() {
-  return formatDate(new Date())
+  return toCalendarDay(new Date())
 }
 
 function parseLocalDate(value) {
   const [year, month, day] = String(value || todayString()).split('-').map(Number)
   return new Date(year, (month || 1) - 1, day || 1)
-}
-
-function formatDate(date) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
 }
 
 function startOfWeek(date) {
@@ -344,7 +326,7 @@ function addDays(date, count) {
 }
 
 function formatShortDate(date) {
-  return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
+  return formatCollegeDate(toCalendarDay(date), { day: '2-digit', month: '2-digit', year: undefined })
 }
 
 function capitalize(value) {
@@ -485,9 +467,9 @@ async function changePeriod(days) {
   const date = parseLocalDate(selectedDate.value)
   if (activeView.value === 'month') {
     date.setMonth(date.getMonth() + Math.sign(days || 1))
-    selectedDate.value = formatDate(date)
+    selectedDate.value = toCalendarDay(date)
   } else {
-    selectedDate.value = formatDate(addDays(date, days))
+    selectedDate.value = toCalendarDay(addDays(date, days))
   }
   await loadCurrentPeriod()
   await syncQuery()

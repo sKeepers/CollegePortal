@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { api } from '../services/api'
 import { loadReferences } from '../services/referenceLoader'
 import { buildGroupOptions } from '../utils/groupOptions'
+import { formatDate as formatCollegeDate, formatDateTime as formatCollegeDateTime } from '../utils/datetime'
 
 function extractRows(payload) {
   return Array.isArray(payload?.data) ? payload.data : []
@@ -25,19 +26,11 @@ function teacherName(teacher) {
 }
 
 export function formatAttendanceDateTime(value) {
-  if (!value) return '—'
-  return new Intl.DateTimeFormat('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value))
+  return formatCollegeDateTime(value)
 }
 
 export function formatAttendanceDate(value) {
-  if (!value) return '—'
-  return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
+  return formatCollegeDate(value)
 }
 
 export function firstLessonLabel(lesson) {

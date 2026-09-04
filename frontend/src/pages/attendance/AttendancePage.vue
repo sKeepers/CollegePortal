@@ -15,6 +15,7 @@ import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import WorkspaceBackBar from '../../components/workspace/WorkspaceBackBar.vue'
 import WorkspacePanel from '../../components/workspace/WorkspacePanel.vue'
 import { ATTENDANCE_REPORT_MODE_OPTIONS, ATTENDANCE_STATUS_OPTIONS, useAttendanceAnalysisStore } from '../../stores/attendanceAnalysis'
+import { formatDate } from '../../utils/datetime'
 
 const route = useRoute()
 const router = useRouter()
@@ -48,8 +49,8 @@ const modeOptions = [
 ]
 const pageSubtitle = computed(() => (
   store.date === store.dateTo
-    ? `Сопоставление проходной с расписанием за ${new Date(store.date).toLocaleDateString('ru-RU')}`
-    : `Сопоставление проходной с расписанием за период ${new Date(store.date).toLocaleDateString('ru-RU')} — ${new Date(store.dateTo).toLocaleDateString('ru-RU')}`
+    ? `Сопоставление проходной с расписанием за ${formatDate(store.date)}`
+    : `Сопоставление проходной с расписанием за период ${formatDate(store.date)} — ${formatDate(store.dateTo)}`
 ))
 const metrics = computed(() => {
   if (store.reportMode === 'today') {

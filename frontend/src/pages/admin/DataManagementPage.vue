@@ -12,6 +12,7 @@ import AppStatusBadge from '../../components/ui/AppStatusBadge.vue'
 import { useDemoDataStore } from '../../stores/demoData'
 import { useDatabaseBackupsStore } from '../../stores/databaseBackups'
 import { usePermissions } from '../../composables/usePermissions'
+import { formatDateTime as formatCollegeDateTime } from '../../utils/datetime'
 
 const store = useDemoDataStore()
 const backups = useDatabaseBackupsStore()
@@ -39,7 +40,7 @@ async function createBackup() { if (!canManageBackups.value) return; const paylo
 function openRestore(snapshot) { selectedSnapshot.value = snapshot; restoreConfirmation.value = ''; restoreDialog.value = true }
 async function restoreBackup() { if (!canManageBackups.value || restoreConfirmation.value !== 'RESTORE' || !selectedSnapshot.value) return; const payload = await backups.restore(selectedSnapshot.value.id, restoreConfirmation.value); restoreDialog.value = false; notify(payload?.message || 'База данных восстановлена') }
 function formatSize(size) { if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} КБ`; return `${(size / 1024 / 1024).toFixed(1)} МБ` }
-function formatDate(value) { return new Intl.DateTimeFormat('ru-RU', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date(value)) }
+function formatDate(value) { return formatCollegeDateTime(value, { second: '2-digit' }) }
 onMounted(() => { store.load(); if (canManageBackups.value) backups.load() })
 </script>
 

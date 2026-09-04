@@ -1,4 +1,5 @@
 import { getCurrentEnvironment } from './environmentService'
+import { formatDate } from '../utils/datetime'
 
 const DEFAULT_VERSION_INFO = {
   name: 'CollegePortal',
@@ -50,13 +51,7 @@ export function formatVersionDate(value) {
     return 'Не указана'
   }
 
-  const date = new Date(`${value}T00:00:00`)
-
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-
-  return new Intl.DateTimeFormat('ru-RU').format(date)
+  return formatDate(value, {}, 'Не указана')
 }
 
 export function presentVersionInfo(value) {

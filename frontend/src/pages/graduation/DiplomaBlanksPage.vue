@@ -22,6 +22,7 @@ import { useGraduationStore } from '../../stores/graduation'
 import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import { escapeHtml, printHtmlDocument, printPage } from '../../utils/print'
+import { printedAtNow } from '../../utils/datetime'
 
 const store = useDiplomaBlanksStore()
 const graduation = useGraduationStore()
@@ -165,7 +166,7 @@ function printRegistry() {
 <tbody>${rows}
 </tbody>
 </table>`,
-    footer: `Всего записей: ${store.registry.length}. Напечатано ${new Date().toLocaleString('ru-RU')}.`,
+    footer: `Всего записей: ${store.registry.length}. Напечатано ${printedAtNow()}.`,
   }))
 }
 </script>

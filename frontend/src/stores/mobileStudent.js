@@ -1,21 +1,16 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
+import { formatDate } from '../utils/datetime'
 
 function extractData(payload) { return payload?.data || {} }
 function fullName(person) { return [person?.last_name, person?.first_name, person?.middle_name].filter(Boolean).join(' ') }
 function localIsoDate(date = new Date()) { return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-') }
 export function formatMobileDate(value) {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value)
-  return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return formatDate(value)
 }
 export function formatMobileScheduleDate(value) {
-  if (!value) return '—'
-  const date = new Date(`${value}T12:00:00`)
-  if (Number.isNaN(date.getTime())) return String(value)
-  return date.toLocaleDateString('ru-RU', { weekday: 'long', day: '2-digit', month: 'long' })
+  return formatDate(value, { weekday: 'long', day: '2-digit', month: 'long', year: undefined })
 }
 export function formatLessonTime(lesson) { return [lesson?.starts_at, lesson?.ends_at].filter(Boolean).join('–') || '—' }
 export function lessonTitle(lesson) { return lesson?.subject?.name || 'Занятие' }

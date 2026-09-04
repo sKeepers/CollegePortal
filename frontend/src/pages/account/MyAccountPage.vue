@@ -10,6 +10,7 @@ import AppErrorBanner from '../../components/ui/AppErrorBanner.vue'
 import TelegramLoginButton from '../../components/auth/TelegramLoginButton.vue'
 import { formatPhone } from '../../utils/phone'
 import { useAccountStore } from '../../stores/account'
+import { formatDateTime as formatCollegeDateTime } from '../../utils/datetime'
 
 const store = useAccountStore()
 const $q = useQuasar()
@@ -118,9 +119,7 @@ async function savePassword() {
 }
 
 function formatDateTime(value) {
-  if (!value) return 'нет данных'
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('ru-RU')
+  return formatCollegeDateTime(value, {}, 'нет данных')
 }
 </script>
 

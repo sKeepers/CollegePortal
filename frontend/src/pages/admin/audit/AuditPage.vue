@@ -11,6 +11,7 @@ import AppErrorBanner from '../../../components/ui/AppErrorBanner.vue'
 import AppEmptyState from '../../../components/ui/AppEmptyState.vue'
 import AppLoading from '../../../components/ui/AppLoading.vue'
 import { useAuditStore, moduleLabel, actionLabel } from '../../../stores/audit'
+import { formatDateTime as formatCollegeDateTime } from '../../../utils/datetime'
 
 const store = useAuditStore()
 /**
@@ -49,10 +50,7 @@ const columns = [
 const selectedLog = computed(() => store.selectedLog)
 
 function formatDate(value) {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value)
-  return date.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return formatCollegeDateTime(value)
 }
 
 function prettyJson(value) {

@@ -9,6 +9,7 @@ import AppStatusBadge from '../../../components/ui/AppStatusBadge.vue'
 import AppEmptyState from '../../../components/ui/AppEmptyState.vue'
 import { api } from '../../../services/api'
 import { roleLabels, statusLabels, statusTone, useUatStore } from '../../../stores/uat'
+import { formatDateTime as formatCollegeDateTime } from '../../../utils/datetime'
 
 const store = useUatStore()
 const createDialog = ref(false)
@@ -50,9 +51,7 @@ async function createRun() {
 async function saveResult(result) { await store.updateResult(store.selectedRun.id, result.id, resultModel(result)) }
 async function completeRun() { await store.completeRun(store.selectedRun.id, summary.value); completeDialog.value = false }
 function formatDateTime(value) {
-  if (!value) return '—'
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return formatCollegeDateTime(value)
 }
 function filenameFromPath(path, fallback = 'uat-download') {
   return String(path || '').split('/').pop()?.split('?')[0] || fallback

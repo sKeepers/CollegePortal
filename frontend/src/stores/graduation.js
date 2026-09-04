@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { api } from '../services/api'
 import { loadReferences } from '../services/referenceLoader'
 import { buildGroupOptions } from '../utils/groupOptions'
+import { formatDate } from '../utils/datetime'
 
 const initialFilters = { graduation_year: '', group_id: '', education_program_id: '', diploma_status: '' }
 export const GRADUATE_STATUS_OPTIONS = [
@@ -22,7 +23,7 @@ function fullName(person) { return [person?.last_name, person?.first_name, perso
 export function studentName(student) { return fullName(student) || '—' }
 export function statusLabel(options, value) { return options.find((item) => item.value === value)?.label || value || '—' }
 export function statusTone(options, value) { return options.find((item) => item.value === value)?.tone || 'neutral' }
-export function formatRuDate(value) { if (!value) return '—'; const date = new Date(`${value}T00:00:00`); return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('ru-RU') }
+export function formatRuDate(value) { return formatDate(value) }
 function cleanGraduate(payload) { return { student_id: Number(payload.student_id), group_id: payload.group_id ? Number(payload.group_id) : null, education_program_id: payload.education_program_id ? Number(payload.education_program_id) : null, specialty_id: payload.specialty_id ? Number(payload.specialty_id) : null, graduation_year: Number(payload.graduation_year), qualification: payload.qualification?.trim() || '', status: payload.status || 'draft', note: payload.note?.trim() || '' } }
 function cleanDiploma(payload) { return { series: payload.series?.trim() || '', number: payload.number?.trim() || '', registration_number: payload.registration_number?.trim() || '', issue_date: payload.issue_date || null, qualification: payload.qualification?.trim() || '', gia_decision: payload.gia_decision?.trim() || '', status: payload.status || 'draft', note: payload.note?.trim() || '' } }
 // `subjects` — перечень дисциплин приложения. До 24.08.2026 он не доходил до сервера
