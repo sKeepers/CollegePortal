@@ -10,6 +10,39 @@ checksum="${archive}.sha256"
 manifest="${out_dir}/${release_name}.manifest.json"
 fail() { printf '[ERROR] %s\n' "$*" >&2; exit 1; }
 [[ -z "$(git status --porcelain)" ]] || fail "Git working tree must be clean before building a release."
+
+# Проверки и архив берутся из **разных источников**, и это не теория.
+#
+# Прогоны идут `docker compose exec -T backend`, то есть внутри контейнеров
+# стенда, а у них `backend/` примонтирован из основного checkout. Архив же
+# снимается `git archive HEAD` — из дерева, где запущен скрипт. Совпадают эти
+# два источника ровно тогда, когда скрипт запущен в том же checkout, что
+# смонтирован в контейнеры, и никто не влил туда за девять минут прогонов.
+#
+# 04.09.2026 разошлись оба условия, по разу каждое. Сначала слияние легло в
+# фазе прогонов: архив уехал с тремя коммитами, которых эта сборка не
+# проверяла ни разу, а выглядела зелёной. Потом сборку запустили из
+# закреплённого worktree, чтобы дерево не двигалось, — и она упала на первой
+# строке с `service "backend" is not running`, потому что compose там другой;
+# не упади она, архив взялся бы из worktree, а прогоны прошли бы по основному
+# checkout.
+#
+# Поэтому ниже два отказа: первый — до прогонов (чужое дерево ловится сразу),
+# второй — перед снятием архива (уехавший коммит виден только там).
+
+# 1. Проверки пойдут по тому же дереву, из которого снимется архив.
+#
+# Спрашиваем не имя каталога и не имя проекта compose, а сам контейнер: что у
+# него примонтировано под `/var/www/html`. Имя совпадает и у чужого checkout,
+# а точка монтирования — предмет.
+backend_container=$(docker compose ps -q backend 2>/dev/null || true)
+[[ -n "${backend_container}" ]] || fail "В этом дереве нет поднятого контейнера backend, а прогоны идут внутри него. Собирайте там, где подняты контейнеры стенда: у worktree свой проект compose, и сборка отсюда проверила бы одно дерево, а заархивировала другое."
+mounted_backend=$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/var/www/html"}}{{.Source}}{{end}}{{end}}' "${backend_container}")
+[[ "${mounted_backend}" == "${ROOT}/backend" ]] || fail "Прогоны пойдут по чужому дереву: контейнер держит ${mounted_backend}, а архив снимется с ${ROOT}/backend. Собирайте там же, где подняты контейнеры."
+
+# 2. Запоминаем коммит: перед снятием архива он обязан быть тем же.
+head_before=$(git rev-parse HEAD)
+
 mkdir -p "${out_dir}"
 printf '[INFO] Running backend tests on SQLite.\n'
 docker compose exec -T backend php artisan test
@@ -22,7 +55,14 @@ docker compose exec -T backend php artisan test
 # с `migrate:fresh`, и прогон, направленный на базу стенда, сотрёт стенд.
 # Переопределение приходит переменной окружения контейнера — Dotenv не
 # перекрывает уже заданное, поэтому `.env` тут ни при чём.
-release_test_db="college_portal_release_test"
+# Имя с коммитом, а не общее на все сборки: у двух сборок разом общее имя
+# означает, что `RefreshDatabase` одной сносит базу другой, и вторая покажет
+# падения, не имеющие отношения к коду. Сегодня это никого не задело только
+# потому, что собирает один человек.
+#
+# Упавший прогон базу оставляет нарочно — по ней видно, на чём встало; с
+# коммитом в имени видно ещё и на какой сборке.
+release_test_db="college_portal_release_test_${head_before:0:9}"
 printf '[INFO] Running backend tests on PostgreSQL 17 (database %s).\n' "${release_test_db}"
 docker compose exec -T postgres sh -c \
   "psql -U \$POSTGRES_USER -d postgres -q -v ON_ERROR_STOP=1 -c \"DROP DATABASE IF EXISTS ${release_test_db}\" -c \"CREATE DATABASE ${release_test_db}\""
@@ -33,6 +73,12 @@ docker compose exec -T postgres sh -c \
   "psql -U \$POSTGRES_USER -d postgres -q -v ON_ERROR_STOP=1 -c \"DROP DATABASE IF EXISTS ${release_test_db}\""
 printf '[INFO] Running frontend build.\n'
 docker compose exec -T frontend npm run build
+# Дерево не уехало за время прогонов. Иначе архив снимется с одного коммита, а
+# зелёными объявлены проверки другого — и отличить это потом нечем, кроме как
+# сверив `gitCommit` архива с коммитом, с которого начинали.
+[[ "$(git rev-parse HEAD)" == "${head_before}" ]] || fail "Дерево уехало во время сборки: начинали с ${head_before}, сейчас $(git rev-parse HEAD). Проверки относятся к прежнему коммиту — соберите заново."
+[[ -z "$(git status --porcelain)" ]] || fail "Дерево испачкано во время сборки: проверки относятся к другому состоянию файлов."
+
 commit=$(git rev-parse --short HEAD)
 full_commit=$(git rev-parse HEAD)
 build_date=$(date -Is)
