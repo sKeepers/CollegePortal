@@ -33,7 +33,15 @@ use Tests\TestCase;
  */
 class EmptyStateTellsFailureTest extends TestCase
 {
-    /** @var array<string, string> экран → подпись, которая врала при отказе */
+    /**
+     * Экран → подпись, которая врала при отказе; подписей может быть несколько.
+     *
+     * Список там, где их больше одной: у экрана карт подписи разные на разных
+     * вкладках — «Карт нет» в реестре, «Записей нет» в журнале, — и одна
+     * строка на файл оставила бы вторую вкладку без сторожа.
+     *
+     * @var array<string, string|list<string>>
+     */
     private const SCREENS = [
         'pages/admin/users/UsersPage.vue' => 'Пользователи не найдены',
         'pages/admin/roles/RolesPage.vue' => 'Роли не найдены',
@@ -63,6 +71,29 @@ class EmptyStateTellsFailureTest extends TestCase
         'pages/journal/JournalPage.vue' => 'Данные журнала не найдены',
         'pages/attendance/AttendancePage.vue' => 'Нет данных для анализа',
         'pages/journal/SemesterGradesPage.vue' => 'Выберите группу и дисциплину',
+
+        // Проходная, карты и общежитие, замер 03.09.2026 тем же обрывом:
+        // «Корпуса не заведены. Добавьте корпуса и точки прохода» стояло на
+        // списке для эвакуации при трёх заведённых корпусах, «Выпустите первый
+        // QR-пропуск» — при 861 живом пропуске, «Карт нет» — при 244 картах.
+        'pages/access/MusterPage.vue' => 'Корпуса не заведены',
+        'pages/access/AccessReportsPage.vue' => 'События не найдены',
+        'pages/identity/DigitalPassesPage.vue' => 'Цифровые пропуска не найдены',
+        'pages/identity/RfidCardsPage.vue' => ['Карт нет', 'Записей нет'],
+
+        // Двух экранов области здесь намеренно нет, и это сказано вслух, чтобы
+        // следующий не счёл их забытыми.
+        //
+        // У «Точек прохода» пустого состояния нет вовсе: числа стоят строкой в
+        // панели — «Корпусов: 0 · точек прохода: 0» при трёх и трёх. Починены
+        // они тем же `referenceLoaded`, но этот сторож смотрит `AppEmptyState`
+        // и увидеть их не может; держит их только обход с обрывом запроса.
+        //
+        // Общежитие честно **формулировкой**, а не ветвлением: «Сводка не
+        // загрузилась» верна и когда данных нет, и когда спросить не удалось,
+        // поэтому спрашивать ему нечего — сторож объявил бы виноватым исправный
+        // экран. Слабое место у такой честности своё: перепишут подпись на
+        // «Записей нет» — и ничто здесь этого не заметит.
     ];
 
     /**
@@ -80,13 +111,25 @@ class EmptyStateTellsFailureTest extends TestCase
      */
     private const REFUSAL_ASKED = ['store.error', 'store.loaded', 'store.referencesLoaded'];
 
+    /**
+     * Имя признака «дошёл ли ответ» у каждого хранилища своё.
+     *
+     * За один вечер 04.09.2026 в одной только области проходной их набралось
+     * четыре: `musterLoaded`, `referenceLoaded`, `cardsLoaded`, `journalLoaded`
+     * — по признаку на список, потому что на экране карт списка два и пришёл
+     * один. Список литералов выше такой рост догоняет строкой на каждый новый
+     * (и однажды не догонит молча), поэтому рядом стоит шаблон: он принимает
+     * любое `store.…Loaded`, не требуя вписывать имя.
+     */
+    private const REFUSAL_PATTERN = '~store\\.[A-Za-z]*[Ll]oaded\\b~';
+
     public function test_the_empty_list_asks_whether_the_request_failed(): void
     {
         $mute = [];
         $missing = [];
         $read = 0;
 
-        foreach (self::SCREENS as $path => $lie) {
+        foreach (self::SCREENS as $path => $lies) {
             $source = $this->frontendFile($path);
 
             if ($source === null) {
@@ -95,28 +138,22 @@ class EmptyStateTellsFailureTest extends TestCase
             }
 
             $read++;
-            $groups = array_values(array_filter(
-                $this->emptyStateGroups($source),
-                fn (string $group): bool => str_contains($group, $lie),
-            ));
 
-            if ($groups === []) {
-                $mute[] = $path.': не нашлось пустого состояния списка (подпись «'.$lie.'» переписали — проверьте, что вместе с ней не потеряли отличие отказа)';
-                continue;
-            }
+            foreach ((array) $lies as $lie) {
+                $groups = array_values(array_filter(
+                    $this->emptyStateGroups($source),
+                    fn (string $group): bool => str_contains($group, $lie),
+                ));
 
-            foreach ($groups as $group) {
-                $asked = false;
-
-                foreach (self::REFUSAL_ASKED as $sign) {
-                    if (str_contains($group, $sign)) {
-                        $asked = true;
-                        break;
-                    }
+                if ($groups === []) {
+                    $mute[] = $path.': не нашлось пустого состояния списка (подпись «'.$lie.'» переписали — проверьте, что вместе с ней не потеряли отличие отказа)';
+                    continue;
                 }
 
-                if (! $asked) {
-                    $mute[] = $path.': «'.$lie.'» говорится, не спросив, не отказал ли запрос';
+                foreach ($groups as $group) {
+                    if (! $this->refusalAsked($group)) {
+                        $mute[] = $path.': «'.$lie.'» говорится, не спросив, не отказал ли запрос';
+                    }
                 }
             }
         }
@@ -134,6 +171,18 @@ class EmptyStateTellsFailureTest extends TestCase
             "экран из списка не найден — переименован или унесён, впишите новый путь:\n".implode("\n", $missing));
 
         $this->assertSame([], $mute, "пустое состояние выдаёт отказ за пустоту:\n".implode("\n", $mute));
+    }
+
+    /** Спрошено ли в группе, дошёл ли ответ и не отказал ли запрос. */
+    private function refusalAsked(string $group): bool
+    {
+        foreach (self::REFUSAL_ASKED as $sign) {
+            if (str_contains($group, $sign)) {
+                return true;
+            }
+        }
+
+        return preg_match(self::REFUSAL_PATTERN, $group) === 1;
     }
 
     /**
