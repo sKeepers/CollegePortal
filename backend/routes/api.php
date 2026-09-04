@@ -923,7 +923,14 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated', 'view.
     // требует `teachers.bulk_accounts` — так же устроено у студентов.
     Route::post('teachers/bulk/preview', [TeacherBulkController::class, 'preview'])->middleware('permission:teachers.view');
     Route::post('teachers/bulk/apply', [TeacherBulkController::class, 'apply'])->middleware('permission:teachers.view');
-    Route::get('students/export', [StudentController::class, 'export'])->middleware('permission:students.view');
+    // Файл со всем контингентом — не «посмотреть список». До 03.09.2026 его
+    // открывало право видеть студентов, а его держат десять ролей; выгрузку же
+    // выбранных строк открывает `students.bulk_export`, и он есть у четырёх.
+    // То есть весь контингент одним файлом скачивало больше ролей, чем выборку.
+    // Решение владельца 03.09.2026: закрыть тем же правом, что и выборку.
+    // Право видеть студентов при этом не сужается — списки на экране у всех
+    // десяти ролей остаются прежними, и это проверяется отдельно.
+    Route::get('students/export', [StudentController::class, 'export'])->middleware('permission:students.bulk_export');
     Route::post('students/import', [StudentController::class, 'import'])->middleware('permission:students.update');
     Route::apiResource('students', StudentController::class)
         ->middlewareFor(['index', 'show'], 'permission:students.view')

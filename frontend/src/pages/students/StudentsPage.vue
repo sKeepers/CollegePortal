@@ -42,7 +42,9 @@ const canUpdate = computed(() => permissions.hasPermission('students.update') ||
 const canDelete = computed(() => permissions.hasPermission('trash.manage'))
 const canRequestDeletion = computed(() => !canDelete.value && permissions.hasPermission('trash.request'))
 const canImport = computed(() => canUpdate.value)
-const canExport = computed(() => permissions.hasPermission('students.update') || permissions.hasPermission('students.edit') || permissions.hasPermission('students.view'))
+// Кнопка спрашивает ровно то право, что и маршрут за ней: иначе она видна, а
+// нажатие отвечает 403 — «написанное есть, а действия нет».
+const canExport = computed(() => permissions.hasPermission('students.bulk_export'))
 
 const importFile = ref(null)
 const formVisible = ref(false)
