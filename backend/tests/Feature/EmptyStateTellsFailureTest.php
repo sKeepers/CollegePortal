@@ -39,6 +39,19 @@ class EmptyStateTellsFailureTest extends TestCase
         'pages/admin/roles/RolesPage.vue' => 'Роли не найдены',
         'pages/admin/permissions/PermissionsPage.vue' => 'Разрешения не найдены',
         'pages/admin/audit/AuditPage.vue' => 'Событий аудита нет',
+
+        // Область студентов и документов, замер 03-04.09.2026 тем же способом
+        // (обрыв одного запроса на экран, `asking-failed-docs.mjs`). Три экрана
+        // называли число, которого не считали: «Найдено записей: 0» при 618
+        // студентах, «Найдено людей: 0» при 241, «Найдено выпускников: 0» при 9,
+        // и каждый советовал менять фильтры или заводить запись. ФРДО и ФИС на
+        // стенде пусты по-настоящему, поэтому врали не числом, а тем, что при
+        // отказе и при пустоте говорили слово в слово одно и то же.
+        'pages/students/StudentsPage.vue' => 'Студенты не найдены',
+        'pages/people/PeoplePage.vue' => 'Люди не найдены',
+        'pages/graduation/GraduationPage.vue' => 'Выпускники не найдены',
+        'pages/frdo/FrdoPage.vue' => 'Пакеты ФРДО не найдены',
+        'pages/fis/FisPage.vue' => 'Пакеты ФИС не найдены',
     ];
 
     public function test_the_empty_list_asks_whether_the_request_failed(): void
