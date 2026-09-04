@@ -23,10 +23,13 @@ use Tests\TestCase;
  * вовсе. Обратная сторона — обход с обрывом запроса (`asking-failed-access.mjs`
  * рядом с `look.js`); держать надо обе, они ловят разное.
  *
- * **Проверка держится на паре «подпись пустоты → рядом спрошен отказ», а не на
- * едином тексте отказа.** Заголовки у экранов могут быть свои («Реестр не
- * получен», «Отчёт не получен») — это не мешает; сюда дописывается строка на
- * экран, и соседняя область может добавить свои тем же способом.
+ * **Форму записи проверка не навязывает, и это не мелочь.** Отличить отказ можно
+ * двумя способами, оба живут в портале: тернарник в одном `AppEmptyState`
+ * (`:title="store.error ? … : …"`) и два соседних тега с `v-if="!store.error"` /
+ * `v-else` — так написан реестр справок. Сторож, знающий одну форму, слеп ко
+ * второй и вынуждает переписывать работающие экраны под себя; поэтому смотрим
+ * **группу соседних пустых состояний** и требуем, чтобы отказ был спрошен
+ * где-то в ней.
  */
 class EmptyStateTellsFailureTest extends TestCase
 {
@@ -53,16 +56,18 @@ class EmptyStateTellsFailureTest extends TestCase
             }
 
             $read++;
-            $states = $this->emptyStates($source);
-            $forTheList = array_values(array_filter($states, fn (string $tag): bool => str_contains($tag, $lie)));
+            $groups = array_values(array_filter(
+                $this->emptyStateGroups($source),
+                fn (string $group): bool => str_contains($group, $lie),
+            ));
 
-            if ($forTheList === []) {
+            if ($groups === []) {
                 $mute[] = $path.': не нашлось пустого состояния списка (подпись «'.$lie.'» переписали — проверьте, что вместе с ней не потеряли отличие отказа)';
                 continue;
             }
 
-            foreach ($forTheList as $tag) {
-                if (! str_contains($tag, 'store.error')) {
+            foreach ($groups as $group) {
+                if (! str_contains($group, 'store.error')) {
                     $mute[] = $path.': «'.$lie.'» говорится, не спросив, не отказал ли запрос';
                 }
             }
@@ -84,15 +89,43 @@ class EmptyStateTellsFailureTest extends TestCase
     }
 
     /**
-     * Теги `AppEmptyState` целиком, вместе с их свойствами.
+     * Соседние `AppEmptyState` — одной группой.
+     *
+     * Соседними считаем те, между которыми нет ничего, кроме пробелов: это и
+     * есть развилка «нет данных / не спросили», записанная двумя тегами. Тег,
+     * стоящий отдельно (например, «Пользователь не выбран» в правой колонке),
+     * остаётся своей группой и чужой отказ на себя не примеряет.
      *
      * @return list<string>
      */
-    private function emptyStates(string $source): array
+    private function emptyStateGroups(string $source): array
     {
-        preg_match_all('~<AppEmptyState\b[^>]*/?>~su', $source, $tags);
+        preg_match_all('~<AppEmptyState\b[^>]*?/?>~su', $source, $tags, PREG_OFFSET_CAPTURE);
 
-        return $tags[0];
+        $groups = [];
+        $current = '';
+        $endOfPrevious = null;
+
+        foreach ($tags[0] as [$tag, $offset]) {
+            $between = $endOfPrevious === null ? null : substr($source, $endOfPrevious, $offset - $endOfPrevious);
+
+            if ($between !== null && trim($between) === '') {
+                $current .= $tag;
+            } else {
+                if ($current !== '') {
+                    $groups[] = $current;
+                }
+                $current = $tag;
+            }
+
+            $endOfPrevious = $offset + strlen($tag);
+        }
+
+        if ($current !== '') {
+            $groups[] = $current;
+        }
+
+        return $groups;
     }
 
     private function frontendFile(string $path): ?string
