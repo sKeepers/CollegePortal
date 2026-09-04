@@ -44,7 +44,13 @@ class RoleSeeder extends Seeder
         $all = Permission::query()->pluck('id');
         $this->syncPermissions('admin', $all);
         $this->syncPermissions('director', $this->ids($this->directorPermissions()));
-        $this->syncPermissions('deputy', $this->ids($this->academicEditorPermissions()));
+        // `gate.reports` назван здесь **явно**, и это не дубль: набор заместителя
+        // общий с ролью `academic_office` (та же `academicEditorPermissions()`),
+        // а решение владельца 04.09.2026 разное — учебной части проходная не
+        // нужна, а заместителю «Кто сейчас в здании» открыт наравне с
+        // директором: это лист на случай эвакуации. Без этой строки он ушёл бы
+        // у заместителя молча, за компанию с чужой ролью.
+        $this->syncPermissions('deputy', $this->ids(array_merge($this->academicEditorPermissions(), ['gate.reports'])));
         $this->syncPermissions('study', $this->ids($this->studySchedulePermissions()));
         $this->syncPermissions('study_records', $this->ids($this->studyRecordsPermissions()));
         $this->syncPermissions('academic_office', $this->ids($this->academicEditorPermissions()));
@@ -351,7 +357,6 @@ class RoleSeeder extends Seeder
             'graduation.view', 'graduation.edit', 'diploma.blanks.view', 'certificates.view',
             'frdo.view', 'frdo.export', 'fis.view', 'fis.export',
             'attendance.reports',
-            'gate.scan', 'gate.reports', 'gate.points.manage', 'digitalpasses.manage',
             // Загрузка данных — обычная работа этой роли: студенты, расписание,
             // шаблоны. Владелец подтвердил 10.08.2026. Осторожно: тем же правом
             // открывается очистка рабочих данных стенда — развести их отдельная
@@ -428,7 +433,7 @@ class RoleSeeder extends Seeder
             // Владелец подтвердил состав 10.08.2026. Прав на удаление среди них
             // не было и не появилось.
             'admissions.view', 'admissions.edit', 'frdo.export', 'fis.export',
-            'gate.scan', 'gate.reports', 'gate.points.manage', 'digitalpasses.manage', 'view_own_data',
+            'view_own_data',
             'trash.request',
         ];
     }
