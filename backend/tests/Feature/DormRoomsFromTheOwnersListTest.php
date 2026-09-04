@@ -17,12 +17,15 @@ use Tests\TestCase;
  * вместимостями, и в одну из них уже заселили двоих. Настоящий список пришёл от
  * владельца документом: 40 жилых блоков, 236 койко-мест, по 10 блоков и 59 мест
  * на каждом из этажей 2-5. К ним 03.09.2026 добавилась комната 312 на два места
- * — бывший кабинет воспитателя, владелец велел завести его жилым, — и потому
- * строк 41, мест 238, а на третьем этаже 11 строк и 61 место.
+ * — бывший кабинет воспитателя, владелец велел завести его жилым.
  *
- * Сорок — это блоки, а не комнаты: в блоке две жилые комнаты, кухня и санузел
- * (владелец, 01.09.2026). Деление мест между двумя комнатами он не назвал, и
- * портал держит блок одной строкой, пока не назовёт.
+ * Сорок — это блоки, а не комнаты. Деление владелец назвал 04.09.2026: **6 мест
+ * — две комнаты по 3+3, 8 мест — три по 3+3+2**. Про трёхместный блок он не
+ * сказал; там одна комната, и это не догадка, а следствие его же числа 80 жилых
+ * комнат: при делении надвое их было бы 84.
+ *
+ * Отсюда числа этого сторожа: **80 комнат и комната 312 — 81 строка, 238 мест**,
+ * по 20 комнат и 59 мест на этажах 2, 4 и 5 и 21 комната с 61 местом на третьем.
  *
  * Числа здесь — не пожелание, а сверка с тем документом. Список в команде
  * записан позициями (вместимость каждой позиции одинакова на всех четырёх
@@ -41,18 +44,18 @@ class DormRoomsFromTheOwnersListTest extends TestCase
 
         $rooms = DormRoom::query()->get();
 
-        $this->assertCount(41, $rooms, 'сорок блоков документа и комната 312');
+        $this->assertCount(81, $rooms, 'восемьдесят комнат документа и комната 312');
         $this->assertSame(238, $rooms->sum('capacity'), '236 койко-мест документа и два места в 312');
 
         foreach ([2, 4, 5] as $floor) {
             $onTheFloor = $rooms->where('floor', $floor);
-            $this->assertCount(10, $onTheFloor, "на этаже {$floor} десять блоков");
+            $this->assertCount(20, $onTheFloor, "на этаже {$floor} двадцать комнат");
             $this->assertSame(59, $onTheFloor->sum('capacity'), "на этаже {$floor} 59 мест");
         }
 
         $third = $rooms->where('floor', 3);
-        $this->assertCount(11, $third, 'на третьем этаже десять блоков и комната 312');
-        $this->assertSame(61, $third->sum('capacity'), 'на третьем этаже 59 мест в блоках и два в 312');
+        $this->assertCount(21, $third, 'на третьем этаже двадцать комнат и 312');
+        $this->assertSame(61, $third->sum('capacity'), 'на третьем этаже 59 мест в комнатах и два в 312');
     }
 
     public function test_it_does_not_create_the_non_residential_rooms(): void
@@ -81,6 +84,68 @@ class DormRoomsFromTheOwnersListTest extends TestCase
                 "{$number} — не комната общежития, заводить её нельзя",
             );
         }
+    }
+
+    public function test_a_block_becomes_the_rooms_the_owner_named(): void
+    {
+        // Владелец 04.09.2026: 6 мест — две комнаты по 3+3, 8 мест — три по
+        // 3+3+2. Про трёхместный блок он не сказал, и там одна комната: при
+        // делении надвое всего комнат вышло бы 84 против названных им 80.
+        $this->dorm();
+
+        $this->artisan('dorm:import-rooms')->assertSuccessful();
+
+        $комнаты = fn (string $prefix) => DormRoom::query()
+            ->where('number', 'like', $prefix.'%')
+            ->orderBy('number')
+            ->pluck('capacity', 'number')
+            ->all();
+
+        $this->assertSame(['201' => 3], $комнаты('201'),
+            'трёхместный блок — одна комната, и номер без буквы: различать нечего');
+
+        $this->assertSame(['202а' => 3, '202б' => 3], $комнаты('202'),
+            'шестиместный блок — две комнаты по три');
+
+        $this->assertSame(['208а' => 3, '208б' => 3, '208в' => 2], $комнаты('208'),
+            'восьмиместный блок — три комнаты, 3+3+2');
+    }
+
+    public function test_an_old_block_row_keeps_its_residents(): void
+    {
+        // До 04.09.2026 блок стоял одной строкой. Завести комнаты рядом и
+        // бросить её нельзя: заселения висят на строке, и брошенная увела бы
+        // жильцов в никуда, а коменданту осталась бы комната-призрак.
+        // Поэтому строка блока становится комнатой «а» вместе с жильцами.
+        $building = $this->dorm();
+        $блок = DormRoom::create([
+            'building_id' => $building->id,
+            'number' => '202',
+            'floor' => 2,
+            'capacity' => 6,
+            'kind' => DormRoom::KIND_REGULAR,
+            'is_active' => true,
+        ]);
+
+        foreach (['Первый', 'Второй'] as $lastName) {
+            DormPlacement::create([
+                'dorm_room_id' => $блок->id,
+                'student_id' => $this->student($lastName)->id,
+                'moved_in_at' => '2026-09-01',
+            ]);
+        }
+
+        $this->artisan('dorm:import-rooms')->assertSuccessful();
+
+        $блок->refresh();
+        $this->assertSame('202а', $блок->number, 'та же строка стала первой комнатой блока');
+        $this->assertSame(3, $блок->capacity, 'и получила вместимость комнаты, а не блока');
+        $this->assertSame(2, $блок->currentPlacements()->count(), 'жильцы остались на своей строке');
+
+        $this->assertNull(DormRoom::query()->firstWhere('number', '202'),
+            'строки-призрака с номером блока не остаётся');
+        $this->assertNotNull(DormRoom::query()->firstWhere('number', '202б'),
+            'вторая комната блока заведена рядом');
     }
 
     public function test_the_tutors_office_is_now_a_room(): void
@@ -117,10 +182,11 @@ class DormRoomsFromTheOwnersListTest extends TestCase
 
         $this->artisan('dorm:import-rooms')->assertSuccessful();
 
-        $this->assertSame(41, DormRoom::query()->count(), 'заготовка обязана обновиться, а не встать рядом второй строкой');
+        $this->assertSame(81, DormRoom::query()->count(), 'заготовка обязана обновиться, а не встать рядом второй строкой');
 
         $placeholder->refresh();
-        $this->assertSame(6, $placeholder->capacity, 'вместимость взята из списка владельца');
+        $this->assertSame('204а', $placeholder->number, 'заготовка блока стала первой комнатой блока');
+        $this->assertSame(3, $placeholder->capacity, 'вместимость комнаты, а не блока');
         $this->assertNull($placeholder->note, 'пометка заготовки снята');
     }
 
@@ -199,7 +265,7 @@ class DormRoomsFromTheOwnersListTest extends TestCase
         $second = DormRoom::query()->orderBy('number')->get(['number', 'floor', 'capacity'])->toArray();
 
         $this->assertSame($first, $second);
-        $this->assertSame(41, DormRoom::query()->count());
+        $this->assertSame(81, DormRoom::query()->count());
     }
 
     public function test_a_dry_run_writes_nothing(): void

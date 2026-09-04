@@ -405,28 +405,68 @@ function printResidents() {
   }))
 }
 
-/** Лист на дверь одной комнаты — книжный, крупным шрифтом. */
-function printRoomSheet(room) {
-  const rows = room.people.length
+/**
+ * Номер блока — номер комнаты без буквы: «202а» → «202», «201» → «201».
+ *
+ * Буква русская и стоит последней; латиница добавлена на случай, если номер
+ * когда-нибудь наберут не в той раскладке — тогда блок всё равно сойдётся.
+ */
+function blockNumber(number) {
+  return String(number ?? '').replace(/[а-яёa-z]$/i, '')
+}
+
+/**
+ * Комнаты этажа, собранные по блокам.
+ *
+ * Лист вешают **на дверь блока** — владелец, 03.09.2026, дословно: «Делится на
+ * блоки». Комнаты нужны коменданту при заселении, чтобы знать, в какой из двух
+ * есть место; на дверь идёт один лист со всеми жильцами блока.
+ */
+function blocksOf(floor) {
+  const блоки = new Map()
+
+  for (const room of floor.rooms) {
+    const ключ = blockNumber(room.number)
+    if (!блоки.has(ключ)) {
+      блоки.set(ключ, { number: ключ, rooms: [] })
+    }
+    блоки.get(ключ).rooms.push(room)
+  }
+
+  return [...блоки.values()]
+}
+
+/** Лист на дверь блока — книжный, крупным шрифтом. */
+function printBlockSheet(block) {
+  // В блоке на 3 места комната одна, и колонка «Комната» в листе была бы
+  // столбцом с одним и тем же числом. Заголовок тогда тоже про комнату.
+  const несколько = block.rooms.length > 1
+  const ячейка = (room) => (несколько ? `<td>${escapeHtml(room.number)}</td>` : '')
+
+  const rows = block.rooms.flatMap((room) => (room.people.length
     ? room.people.map((person) => `
         <tr>
+          ${ячейка(room)}
           <td>${escapeHtml(person.full_name)}</td>
           <td>${escapeHtml(person.course ? person.course + ' курс' : '')}</td>
           <td>${escapeHtml(person.group || '')}</td>
-        </tr>`).join('')
-    : '<tr><td colspan="3">Комната свободна</td></tr>'
+        </tr>`)
+    : [`<tr>${ячейка(room)}<td colspan="3">свободна</td></tr>`])).join('')
+
+  const мест = block.rooms.reduce((сумма, room) => сумма + Number(room.capacity ?? 0), 0)
+  const занято = block.rooms.reduce((сумма, room) => сумма + Number(room.occupied ?? room.people.length ?? 0), 0)
 
   printHtmlDocument(printPage({
-    title: `Комната № ${room.number}`,
+    title: `${несколько ? 'Блок' : 'Комната'} № ${block.number}`,
     // Дата здесь важнее, чем на любом другом листе портала: этот висит на
     // двери месяцами, жильцы за это время меняются, и отличить сегодняшний
     // от прошлогоднего было нечем — даты не стояло вообще. Время не пишем:
     // лист живёт днями, а час его составления никому не нужен и только
     // сбивал бы с толку рядом с числом.
-    subtitle: `Мест ${room.capacity}, занято ${room.occupied}. Составлен ${printedDayNow()}`,
+    subtitle: `Мест ${мест}, занято ${занято}. Составлен ${printedDayNow()}`,
     landscape: false,
     body: `<table style="font-size:15px">
-      <thead><tr><th>Фамилия, имя, отчество</th><th>Курс</th><th>Группа</th></tr></thead>
+      <thead><tr>${несколько ? '<th>Комната</th>' : ''}<th>Фамилия, имя, отчество</th><th>Курс</th><th>Группа</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`,
   }))
@@ -882,7 +922,7 @@ onMounted(() => store.loadToday())
         </AppToolbar>
 
         <div class="dorm-hint">
-          Список по этажам — тот, что вывешивают и носят с собой. Лист на дверь печатается отдельно, по комнате.
+          Список по этажам — тот, что вывешивают и носят с собой. Лист на дверь печатается отдельно, по блоку: комнаты нужны при заселении, а лист вешают на дверь блока.
         </div>
 
         <AppLoading v-if="store.loading" />
@@ -891,14 +931,17 @@ onMounted(() => store.loadToday())
             <div class="dorm-block__title">
               {{ floor.floor ? floor.floor + ' этаж' : 'Без этажа' }} — занято {{ floor.occupied }} из {{ floor.capacity }}
             </div>
-            <div v-for="room in floor.rooms" :key="room.id" class="dorm-row">
-              <b>№ {{ room.number }}</b>
-              <span class="dorm-secondary"> — {{ room.occupied }} из {{ room.capacity }}</span>
-              <q-btn flat dense no-caps size="sm" color="primary" class="q-ml-sm" @click="printRoomSheet(room)">лист на дверь</q-btn>
-              <div v-for="person in room.people" :key="person.student_id" class="dorm-secondary">
-                {{ person.full_name }}<span v-if="person.course"> · {{ person.course }} курс</span><span v-if="person.group"> · {{ person.group }}</span><span v-if="person.phone"> · {{ formatPhone(person.phone) }}</span>
+            <div v-for="block in blocksOf(floor)" :key="block.number" class="dorm-row">
+              <b>№ {{ block.number }}</b>
+              <q-btn flat dense no-caps size="sm" color="primary" class="q-ml-sm" @click="printBlockSheet(block)">лист на дверь</q-btn>
+              <div v-for="room in block.rooms" :key="room.id">
+                <span v-if="block.rooms.length > 1" class="dorm-secondary">комната {{ room.number }} — {{ room.occupied }} из {{ room.capacity }}</span>
+                <span v-else class="dorm-secondary">{{ room.occupied }} из {{ room.capacity }}</span>
+                <div v-for="person in room.people" :key="person.student_id" class="dorm-secondary">
+                  {{ person.full_name }}<span v-if="person.course"> · {{ person.course }} курс</span><span v-if="person.group"> · {{ person.group }}</span><span v-if="person.phone"> · {{ formatPhone(person.phone) }}</span>
+                </div>
+                <div v-if="!room.people.length" class="dorm-secondary">свободна</div>
               </div>
-              <div v-if="!room.people.length" class="dorm-secondary">свободна</div>
             </div>
           </div>
         </template>
