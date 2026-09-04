@@ -99,6 +99,43 @@ function declaresAccessRequirement(route) {
 /**
  * @param {object|string} target маршрут (предпочтительно) или его путь
  */
+/**
+ * Может ли человек открыть раздел — **весь** браузерный отбор целиком.
+ *
+ * Заслонок четыре: список путей роли, «только администратору», требуемые роли и
+ * требуемые права. `isRoleScopedRouteAllowed` — только первая из них.
+ *
+ * Функция заведена 04.09.2026, когда сторож `check-role-navigation.mjs` покраснел
+ * на утверждении «кабинет студента закрыт приёмной комиссии»: он звал **первую**
+ * заслонку и называл её ответ ответом на вопрос о разделе. Замер того дня: та же
+ * первая заслонка отвечала «открыто» и для `director`, `hr`, `study`,
+ * `academic_office`, `curator`, `commandant`, `employee` — семи ролей, у которых
+ * своего списка путей не было никогда. То есть кабинет закрывали не она, а
+ * `roles: ['student']` и право `mobile.student.view`, и у приёмной комиссии он
+ * оказывался закрыт по случайности — просто у неё список был.
+ *
+ * Держать эти четыре проверки в `router/index.js` было нельзя по той же причине:
+ * сторож не может позвать то, что живёт внутри `beforeEach`, и вынужден звать
+ * половину. Теперь и маршрутизатор, и сторож спрашивают одно и то же место.
+ */
+export function canOpenRoute(auth, route) {
+  if (!isRoleScopedRouteAllowed(auth, route)) return false
+
+  const meta = route?.meta || {}
+
+  if (meta.adminOnly && !auth.isAdmin) return false
+  if (meta.roles && !auth.hasRole(meta.roles)) return false
+  if (meta.permission && !auth.can(meta.permission)) return false
+
+  const any = meta.permissionsAny || meta.permissions
+  if (Array.isArray(any) && any.length && !any.some((code) => auth.can(code))) return false
+
+  const all = meta.permissionsAll
+  if (Array.isArray(all) && all.length && !all.every((code) => auth.can(code))) return false
+
+  return true
+}
+
 export function isRoleScopedRouteAllowed(auth, target) {
   const path = typeof target === 'string' ? target : target?.path
 

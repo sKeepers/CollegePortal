@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { routes } from './routes'
 import { useAuthStore } from '../stores/auth'
-import { isRoleScopedRouteAllowed, primaryRoleCode } from '../services/roleNavigation'
+import { canOpenRoute, primaryRoleCode } from '../services/roleNavigation'
 import { layoutService } from '../services/layoutService'
 
 export const router = createRouter({
@@ -86,31 +86,10 @@ router.beforeEach(async (to) => {
   // Передаём маршрут целиком, а не путь: по его `meta` видно, объявляет ли раздел
   // требование доступа. Без этого общий раздел вроде «Моей учётной записи» закрывался
   // таблицей префиксов, хотя права у него нет ни здесь, ни на сервере.
-  if (!isRoleScopedRouteAllowed(auth, to)) {
-    return { name: 'forbidden' }
-  }
-
-  if (to.meta.adminOnly && !auth.isAdmin) {
-    return { name: 'forbidden' }
-  }
-
-  if (to.meta.roles && !auth.hasRole(to.meta.roles)) {
-    return { name: 'forbidden' }
-  }
-
-  const permission = to.meta.permission
-  const permissionsAny = to.meta.permissionsAny || to.meta.permissions
-  const permissionsAll = to.meta.permissionsAll
-
-  if (permission && !auth.can(permission)) {
-    return { name: 'forbidden' }
-  }
-
-  if (Array.isArray(permissionsAny) && permissionsAny.length && !permissionsAny.some((code) => auth.can(code))) {
-    return { name: 'forbidden' }
-  }
-
-  if (Array.isArray(permissionsAll) && permissionsAll.length && !permissionsAll.every((code) => auth.can(code))) {
+  // Отбор целиком живёт в `roleNavigation.js`, и то же место зовёт сторож
+  // `check-role-navigation.mjs`. Пока четыре проверки стояли здесь, позвать их
+  // сторож не мог и спрашивал только первую — а утверждал про раздел.
+  if (!canOpenRoute(auth, to)) {
     return { name: 'forbidden' }
   }
 
