@@ -423,13 +423,20 @@ export const routes = [
         // отдаёт, и «Кто сейчас в здании» им уже открыто. Закрыт был только этот
         // маршрут, при том что пункт меню кадрам показывался: замер того же дня —
         // пункт «Отчеты по проходам» виден, нажатие даёт «Доступ запрещён».
-        meta: { title: 'Отчеты по проходам', roles: ['admin', 'security', 'hr'], permission: 'gate.reports' },
+        // `director` и `deputy` здесь по решению владельца 04.09.2026, и довод
+        // тот же, что был у кадров: право `gate.reports` у обоих уже есть,
+        // сервер отчёты им отдаёт, закрыт был только экран. Замер того же дня
+        // в режиме просмотра: заход директора и заместителя на `/access/muster`
+        // и `/access/reports` уводил на «Доступ запрещён». «Кто сейчас в
+        // здании» — лист на случай эвакуации, и держать его закрытым от
+        // директора при живом праве незачем.
+        meta: { title: 'Отчеты по проходам', roles: ['admin', 'director', 'deputy', 'security', 'hr'], permission: 'gate.reports' },
       },
       {
         path: 'access/muster',
         name: 'access-muster',
         component: MusterPage,
-        meta: { title: 'Кто сейчас в здании', roles: ['admin', 'security', 'hr'], permission: 'gate.reports' },
+        meta: { title: 'Кто сейчас в здании', roles: ['admin', 'director', 'deputy', 'security', 'hr'], permission: 'gate.reports' },
       },
       {
         path: 'access/points',
