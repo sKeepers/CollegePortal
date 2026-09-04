@@ -149,8 +149,9 @@ const resultColumns = [
   { name: "status", label: "Стат.", field: "status", align: "left" },
   { name: "actions", label: "", field: "actions", align: "right" },
 ];
-const tableSubtitle = computed(
-  () => `Найдено экзаменов: ${store.filteredExams.length}`,
+// Число называется только когда его посчитали.
+const tableSubtitle = computed(() =>
+  store.loaded ? `Найдено экзаменов: ${store.filteredExams.length}` : "Список не получен",
 );
 const examTypeOptions = computed(() => referenceOptions.options("exam_types"));
 function examTypeLabel(value) {
@@ -521,6 +522,10 @@ onMounted(async () => {
                 @click.stop="requestDelete(props.row)"
                 ><Trash2 :size="16" /></q-btn></q-td></template></AppTable
         ><AppEmptyState
+          v-else-if="!store.loaded"
+          title="Список экзаменов не получен"
+          description="Портал не ответил на запрос. Сколько экзаменов и ГИА назначено, экран сейчас не знает."
+        /><AppEmptyState
           v-else
           title="Экзамены не найдены"
           description="Создайте экзамен или импортируйте CSV."

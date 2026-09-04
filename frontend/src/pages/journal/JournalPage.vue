@@ -123,7 +123,11 @@ const canRequestEdit = computed(() => hasPermission('journal.edit')
   && !isForeignLesson.value
   && store.selectedLesson?.status === 'signed')
 
+// Три числа называются только когда их посчитали: при отказе запроса
+// «Занятий: 0; не заполнено: 0; ожидают подписи: 0» — это не пустой журнал,
+// а несостоявшийся вопрос, и подпись про подписи здесь тревожит зря.
 const tableSubtitle = computed(() => {
+  if (!store.loaded) return 'Журнал не получен'
   const stats = store.dashboardStats
   return `Занятий: ${store.journalLessons.length}; не заполнено: ${stats.needsFill}; ожидают подписи: ${stats.awaitingSign}`
 })
@@ -444,6 +448,7 @@ onMounted(async () => {
           </div>
         </div>
 
+        <AppEmptyState v-else-if="!store.loaded" title="Журнал не получен" description="Портал не ответил на запрос. Есть ли занятия за выбранный период, экран сейчас не знает." />
         <AppEmptyState v-else title="Данные журнала не найдены" description="Выберите режим, группу, дату или дисциплину. Журнал занятия создается из расписания кнопкой «Открыть журнал»." />
       </div>
 

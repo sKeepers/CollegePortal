@@ -80,7 +80,13 @@ watch(
     </AppCard>
 
     <AppEmptyState
-      v-if="!store.ready"
+      v-if="!store.referencesLoaded && !store.referencesLoading"
+      title="Справочники не получены"
+      description="Портал не ответил на запрос групп и дисциплин. Выбрать их сейчас не из чего — повторите запрос."
+    />
+
+    <AppEmptyState
+      v-else-if="!store.ready"
       title="Выберите группу и дисциплину"
       description="Ведомость строится на группу, дисциплину и семестр — без них показывать нечего."
     />

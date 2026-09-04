@@ -82,6 +82,12 @@ export const useAttendanceAnalysisStore = defineStore('attendanceAnalysis', () =
   const loadingOptions = ref(false)
   const exporting = ref(false)
   const error = ref('')
+  // Список получен — только тогда его длина что-то значит. Замер 03.09.2026
+  // в браузере: при оборванном запросе экран говорил «Нет данных для анализа. Добавьте расписание и события проходной» — то есть
+  // утверждал о колледже то, чего не спрашивал, и называл число, которого не
+  // считал. Признак заведён по образцу экранов проходной (053103511).
+  const loaded = ref(false)
+
   // marked_without_entry — признак рядом со статусом, а не вместо него: студент
   // может быть и «не вошёл», и отмеченным преподавателем на занятии.
   const filters = reactive({ status: '', marked_without_entry: '', group_id: '', teacher_id: '', person_id: '', date_from: todayIsoDate(), date_to: todayIsoDate() })
@@ -174,7 +180,9 @@ export const useAttendanceAnalysisStore = defineStore('attendanceAnalysis', () =
       if (reportMode.value !== 'today') {
         await loadPersonDays()
       }
+      loaded.value = true
     } catch (err) {
+      loaded.value = false
       error.value = err.message || 'Не удалось загрузить аналитику посещаемости'
     } finally {
       loading.value = false
@@ -274,7 +282,7 @@ export const useAttendanceAnalysisStore = defineStore('attendanceAnalysis', () =
     loading,
     loadingOptions,
     exporting,
-    error,
+    error, loaded,
     filters,
     rows,
     summary,

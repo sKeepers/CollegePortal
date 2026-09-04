@@ -94,6 +94,12 @@ export const useJournalStore = defineStore('journal', () => {
   const detailsLoading = ref(false)
   const saving = ref(false)
   const error = ref('')
+  // Список получен — только тогда его длина что-то значит. Замер 03.09.2026
+  // в браузере: при оборванном запросе экран говорил «Данные журнала не найдены» и «Занятий: 0; не заполнено: 0; ожидают подписи: 0» — то есть
+  // утверждал о колледже то, чего не спрашивал, и называл число, которого не
+  // считал. Признак заведён по образцу экранов проходной (053103511).
+  const loaded = ref(false)
+
 
   const filteredLessons = computed(() => lessons.value.filter((lesson) => (
     isLessonInAcademicYear(lesson, filters.value.academic_year)
@@ -193,7 +199,9 @@ export const useJournalStore = defineStore('journal', () => {
       if (!selectedLessonId.value && journalLessons.value[0]) selectedLessonId.value = journalLessons.value[0].id
       if (selectedLessonId.value && !journalLessons.value.some((lesson) => Number(lesson.id) === Number(selectedLessonId.value))) selectedLessonId.value = journalLessons.value[0]?.id || null
       await loadJournalData()
+      loaded.value = true
     } catch (err) {
+      loaded.value = false
       error.value = err.message || 'Не удалось загрузить журнал'
     } finally {
       loading.value = false
@@ -383,7 +391,7 @@ export const useJournalStore = defineStore('journal', () => {
     filters, lessons, filteredLessons, journalLessons, groups, teachers, subjects, students, studentRows,
     attendance, grades, files, attendanceSuggestion, pendingEditRequests, editRequestHistory, selectedLessonId, selectedLesson, selectedAttendance,
     selectedGrades, selectedFiles, lessonStudents, dashboardStats, groupOptions, teacherOptions, subjectOptions,
-    academicYearOptions, loading, detailsLoading, saving, error, load, loadJournalData, setFilters, resetFilters,
+    academicYearOptions, loading, detailsLoading, saving, error, loaded, load, loadJournalData, setFilters, resetFilters,
     selectLesson, saveLesson, completeLesson, signLesson, reopenLesson, requestEdit, reviewEditRequest, loadPendingEditRequests, loadEditRequestHistory, openJournalLesson, saveAttendanceRows, saveGradeRows,
     markAllPresent, markSelectedAbsent, loadAttendanceSuggestion, applyAttendanceSuggestion, uploadLessonFile,
     deleteLessonFile, openFromSchedule, openFromLegacySchedule, lessonLabel, fullName, classroomLabel, attendanceMark,

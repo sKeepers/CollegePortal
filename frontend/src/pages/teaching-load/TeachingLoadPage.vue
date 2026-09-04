@@ -74,7 +74,12 @@ const itemColumns = [
 ]
 
 const loadTypeOptions = computed(() => referenceOptions.options('teaching_load_types', { valueField: 'name' }))
-const tableSubtitle = computed(() => profileUnavailable.value ? 'Профиль преподавателя еще не настроен' : `Найдено нагрузок: ${store.filteredLoads.length}`)
+// Число называется только когда его посчитали: при отказе запроса «Найдено
+// нагрузок: 0» — это не ноль нагрузок, а несостоявшийся вопрос.
+const tableSubtitle = computed(() => {
+  if (profileUnavailable.value) return 'Профиль преподавателя еще не настроен'
+  return store.loaded ? `Найдено нагрузок: ${store.filteredLoads.length}` : 'Список не получен'
+})
 /**
  * Число покрытия — или прочерк, если покрытие не спрашивали.
  *
@@ -164,6 +169,7 @@ onMounted(async () => { if (profileUnavailable.value) return; if (!isOwnView.val
           <template #body-cell-coverage="props"><q-td :props="props">{{ loadCoverage(props.row) }}</q-td></template>
           <template #body-cell-actions="props"><q-td :props="props"><q-btn v-if="canUpdate" flat round dense title="Редактировать" @click.stop="openEditForm(props.row)"><Edit3 :size="16" /></q-btn><q-btn v-if="canDelete" flat round dense color="negative" title="Удалить" @click.stop="requestDelete(props.row)"><Trash2 :size="16" /></q-btn></q-td></template>
         </AppTable>
+        <AppEmptyState v-else-if="!store.loaded && !profileUnavailable" title="Нагрузка не получена" description="Портал не ответил на запрос. Сколько нагрузок заведено, экран сейчас не знает." />
         <AppEmptyState v-else :title="profileUnavailable ? 'Профиль преподавателя не настроен' : 'Нагрузка не найдена'" :description="profileUnavailable ? 'Обратитесь к администратору, чтобы связать учётную запись с карточкой преподавателя.' : 'Создайте нагрузку или сформируйте ее из учебного плана.'" />
       </div>
 

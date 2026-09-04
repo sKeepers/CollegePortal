@@ -43,6 +43,11 @@ export const useSemesterGradesStore = defineStore('semesterGrades', () => {
   const loading = ref(false)
   const saving = ref(false)
   const error = ref('')
+  // Списки групп и дисциплин получены — только тогда «выберите группу и
+  // дисциплину» осмысленный совет. Замер 03.09.2026: при оборванном запросе
+  // справочников экран просил выбрать из списков, которых нет, и выполнить
+  // этот совет было нельзя.
+  const referencesLoaded = ref(false)
   const notice = ref('')
 
   const filters = reactive({
@@ -73,7 +78,9 @@ export const useSemesterGradesStore = defineStore('semesterGrades', () => {
       ])
       groups.value = extractRows(groupsPayload)
       subjects.value = extractRows(subjectsPayload)
+      referencesLoaded.value = true
     } catch (err) {
+      referencesLoaded.value = false
       error.value = err.message || 'Не удалось загрузить справочники'
     } finally {
       referencesLoading.value = false
@@ -138,7 +145,7 @@ export const useSemesterGradesStore = defineStore('semesterGrades', () => {
 
   return {
     groups, subjects, students, controlType,
-    referencesLoading, loading, saving, error, notice,
+    referencesLoading, referencesLoaded, loading, saving, error, notice,
     filters, groupOptions, subjectOptions, semesterOptions, ready, filled,
     loadReferences, loadSheet, save,
   }

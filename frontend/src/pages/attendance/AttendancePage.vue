@@ -263,6 +263,7 @@ onMounted(async () => {
           <template #body-cell-minutes_inside="props"><q-td :props="props">{{ store.minutesLabel(props.row.minutes_inside) }}</q-td></template>
           <template #body-cell-average_minutes_per_present_day="props"><q-td :props="props">{{ store.minutesLabel(props.row.average_minutes_per_present_day) }}</q-td></template>
         </AppTable>
+        <AppEmptyState v-else-if="!store.loaded" title="Сопоставление не получено" description="Портал не ответил на запрос. Есть ли расписание и события проходной, экран сейчас не знает." />
         <AppEmptyState v-else title="Нет данных для анализа" description="Добавьте расписание и события проходной, чтобы увидеть сопоставление посещаемости." />
       </div>
 

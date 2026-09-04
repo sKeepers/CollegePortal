@@ -64,7 +64,8 @@ const subjectColumns = [
   { name: 'actions', label: '', field: 'actions', align: 'right' },
 ]
 
-const tableSubtitle = computed(() => `Найдено учебных планов: ${store.filteredCurricula.length}`)
+// Число называется только когда его посчитали.
+const tableSubtitle = computed(() => (store.loaded ? `Найдено учебных планов: ${store.filteredCurricula.length}` : 'Список не получен'))
 const curriculumMetrics = computed(() => [
   { label: 'Год', value: store.selectedCurriculum?.year_start || '—' },
   { label: 'Дисциплин', value: store.selectedSummary?.subjects_count ?? store.selectedSubjects.length },
@@ -154,6 +155,7 @@ onMounted(async () => { await store.selectById(routeSelectedId()); await store.l
           <template #body-cell-subjects_count="props"><q-td :props="props">{{ props.row.subjects_count ?? props.row.items_count ?? 0 }}</q-td></template>
           <template #body-cell-actions="props"><q-td :props="props"><q-btn v-if="canUpdate" flat round dense title="Редактировать" @click.stop="openEditForm(props.row)"><Edit3 :size="16" /></q-btn><q-btn v-if="canDelete" flat round dense color="negative" title="Удалить" @click.stop="requestDelete(props.row)"><Trash2 :size="16" /></q-btn></q-td></template>
         </AppTable>
+        <AppEmptyState v-else-if="!store.loaded" title="Учебные планы не получены" description="Портал не ответил на запрос. Сколько планов заведено, экран сейчас не знает." />
         <AppEmptyState v-else title="Учебные планы не найдены" description="Создайте учебный план или импортируйте CSV." />
       </div>
 

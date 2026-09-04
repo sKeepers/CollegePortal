@@ -29,15 +29,40 @@ function authHeaders(method = 'GET') {
  * Единственный способ обратиться к API с учётными данными. Cookie отправляет браузер,
  * поэтому заголовка с токеном больше нет; наша забота — признак CSRF.
  */
-function authFetch(url, options = {}) {
-  return fetch(url, {
-    credentials: 'include',
-    ...options,
-    headers: {
-      ...authHeaders(options.method),
-      ...options.headers,
-    },
-  })
+/**
+ * Запрос, который не дошёл, объясняется по-русски.
+ *
+ * Ошибки ответа портал переводит (`request` ниже), а отказ **сети** случается
+ * раньше ответа и уходил сырым: на экран попадало браузерное `Failed to fetch`.
+ * Замер 03.09.2026 обрывом запроса — все семь экранов учебного процесса
+ * показывали именно эту строку, то есть портал говорил по-английски ровно в
+ * том случае, когда человек меньше всего понимает, что случилось.
+ *
+ * Отменённых запросов в портале нет — ни одного `AbortController`, ни одного
+ * `signal:` (проверено поиском), — поэтому отказ `fetch` здесь означает ровно
+ * одно: до портала не достучались. Если отмена появится, её надо будет
+ * отличать: `cause.name === 'AbortError'`.
+ *
+ * `status = 0` — признак «ответа не было вовсе»: он отличает это от любого
+ * настоящего кода и от 401, у которого своя обработка.
+ */
+async function authFetch(url, options = {}) {
+  try {
+    return await fetch(url, {
+      credentials: 'include',
+      ...options,
+      headers: {
+        ...authHeaders(options.method),
+        ...options.headers,
+      },
+    })
+  } catch (cause) {
+    const error = new Error('Не удалось связаться с порталом: запрос не дошёл. Проверьте связь и повторите.')
+    error.status = 0
+    error.offline = true
+    error.cause = cause
+    throw error
+  }
 }
 
 const VALIDATION_RULE_MESSAGES = {

@@ -67,6 +67,11 @@ export const useExamsStore = defineStore('exams', () => {
   const exams = ref([]), groups = ref([]), subjects = ref([]), teachers = ref([]), classrooms = ref([]), students = ref([])
   const filters = ref({ ...initialFilters })
   const selectedId = ref(null), loading = ref(false), saving = ref(false), error = ref(''), importSummary = ref(null)
+  // Список получен — только тогда его длина что-то значит. Замер 03.09.2026:
+  // при оборванном запросе экран говорил «Экзамены не найдены. Создайте
+  // экзамен или импортируйте CSV» и «Найдено экзаменов: 0» — утверждение о
+  // колледже, которого не спрашивали, и число, которого не считали.
+  const loaded = ref(false)
   const selectedExam = computed(() => exams.value.find((item) => Number(item.id) === Number(selectedId.value)) || null)
   const selectedResults = computed(() => selectedExam.value?.results || [])
   const filteredExams = computed(() => exams.value.filter((exam) => (!filters.value.academic_year || exam.academic_year === filters.value.academic_year)
@@ -90,7 +95,8 @@ export const useExamsStore = defineStore('exams', () => {
       })
       exams.value = extractRows(payloads.exams); groups.value = extractRows(payloads.groups); subjects.value = extractRows(payloads.subjects); teachers.value = extractRows(payloads.teachers); classrooms.value = extractRows(payloads.classrooms); students.value = extractRows(payloads.students)
       if (selectedId.value && !selectedExam.value) selectedId.value = null
-    } catch (err) { error.value = err.message || 'Не удалось загрузить экзамены и ГИА' }
+      loaded.value = true
+    } catch (err) { loaded.value = false; error.value = err.message || 'Не удалось загрузить экзамены и ГИА' }
     finally { loading.value = false }
   }
   async function save(payload, id = null) { saving.value = true; error.value = ''; try { const response = id ? await api.update('exams', id, cleanExam(payload)) : await api.create('exams', cleanExam(payload)); await load(); selectedId.value = response?.data?.id || id || selectedId.value; return response?.data || null } catch (err) { error.value = err.message || 'Не удалось сохранить экзамен'; throw err } finally { saving.value = false } }
@@ -103,5 +109,5 @@ export const useExamsStore = defineStore('exams', () => {
   function resetFilters() { filters.value = { ...initialFilters } }
   function select(exam) { selectedId.value = exam?.id || null }
   function selectById(id) { selectedId.value = id || null }
-  return { exams, filteredExams, groups, subjects, teachers, classrooms, students, filters, selectedId, selectedExam, selectedResults, loading, saving, error, importSummary, academicYearOptions, groupOptions, subjectOptions, teacherOptions, classroomOptions, studentOptions, load, save, remove, saveResult, removeResult, importCsv, exportCsv, setFilters, resetFilters, select, selectById }
+  return { exams, filteredExams, groups, subjects, teachers, classrooms, students, filters, selectedId, selectedExam, selectedResults, loading, saving, error, loaded, importSummary, academicYearOptions, groupOptions, subjectOptions, teacherOptions, classroomOptions, studentOptions, load, save, remove, saveResult, removeResult, importCsv, exportCsv, setFilters, resetFilters, select, selectById }
 })

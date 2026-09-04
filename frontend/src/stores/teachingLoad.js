@@ -36,6 +36,12 @@ export const useTeachingLoadStore = defineStore('teachingLoad', () => {
   const loading = ref(false)
   const saving = ref(false)
   const error = ref('')
+  // Список получен — только тогда его длина что-то значит. Замер 03.09.2026
+  // в браузере: при оборванном запросе экран говорил «Нагрузка не найдена. Создайте нагрузку» и «Найдено нагрузок: 0» — то есть
+  // утверждал о колледже то, чего не спрашивал, и называл число, которого не
+  // считал. Признак заведён по образцу экранов проходной (053103511).
+  const loaded = ref(false)
+
   const importSummary = ref(null)
   const generationPreview = ref(null)
   const coverage = ref(null)
@@ -71,7 +77,8 @@ export const useTeachingLoadStore = defineStore('teachingLoad', () => {
       subjects.value = extractRows(subjectsPayload)
       if (selectedId.value && !selectedLoad.value) selectedId.value = null
       if (selectedId.value) await loadCoverage(selectedId.value)
-    } catch (err) { error.value = err.message || 'Не удалось загрузить нагрузку преподавателей' }
+      loaded.value = true
+    } catch (err) { loaded.value = false; error.value = err.message || 'Не удалось загрузить нагрузку преподавателей' }
     finally { loading.value = false }
   }
   async function loadCoverage(id = selectedId.value) {
@@ -105,5 +112,5 @@ export const useTeachingLoadStore = defineStore('teachingLoad', () => {
   function select(load, { includeCoverage = true } = {}) { selectedId.value = load?.id || null; if (selectedId.value && includeCoverage) loadCoverage(selectedId.value) }
   function selectById(id, { includeCoverage = true } = {}) { selectedId.value = id || null; if (selectedId.value && includeCoverage) loadCoverage(selectedId.value) }
 
-  return { loads, filteredLoads, teachers, groups, subjects, filters, selectedId, selectedLoad, selectedItems, selectedHours, loading, saving, error, importSummary, generationPreview, coverage, academicYearOptions, semesterOptions, teacherOptions, groupOptions, subjectOptions, load, loadCoverage, generatePreview, generateApply, save, remove, addItem, assignTeacher, bulkAssignTeacher, removeItem, importCsv, exportCsv, setFilters, resetFilters, select, selectById }
+  return { loads, filteredLoads, teachers, groups, subjects, filters, selectedId, selectedLoad, selectedItems, selectedHours, loading, saving, error, loaded, importSummary, generationPreview, coverage, academicYearOptions, semesterOptions, teacherOptions, groupOptions, subjectOptions, load, loadCoverage, generatePreview, generateApply, save, remove, addItem, assignTeacher, bulkAssignTeacher, removeItem, importCsv, exportCsv, setFilters, resetFilters, select, selectById }
 })

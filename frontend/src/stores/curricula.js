@@ -60,6 +60,12 @@ export const useCurriculaStore = defineStore('curricula', () => {
   const loading = ref(false)
   const saving = ref(false)
   const error = ref('')
+  // Список получен — только тогда его длина что-то значит. Замер 03.09.2026
+  // в браузере: при оборванном запросе экран говорил «Учебные планы не найдены. Создайте учебный план» и «Найдено учебных планов: 0» — то есть
+  // утверждал о колледже то, чего не спрашивал, и называл число, которого не
+  // считал. Признак заведён по образцу экранов проходной (053103511).
+  const loaded = ref(false)
+
   const importSummary = ref(null)
 
   const selectedCurriculum = computed(() => curricula.value.find((item) => Number(item.id) === Number(selectedId.value)) || null)
@@ -101,7 +107,8 @@ export const useCurriculaStore = defineStore('curricula', () => {
       controlTypes.value = extractRows(payloads.controlTypes)
       if (selectedId.value && !selectedCurriculum.value) selectedId.value = null
       if (selectedId.value) await loadEngine(selectedId.value)
-    } catch (err) { error.value = err.message || 'Не удалось загрузить учебные планы' }
+      loaded.value = true
+    } catch (err) { loaded.value = false; error.value = err.message || 'Не удалось загрузить учебные планы' }
     finally { loading.value = false }
   }
   async function save(payload, id = null) {
@@ -182,5 +189,5 @@ export const useCurriculaStore = defineStore('curricula', () => {
   function resetFilters() { filters.value = { ...initialFilters } }
   async function select(curriculum) { selectedId.value = curriculum?.id || null; await loadEngine() }
   async function selectById(id) { selectedId.value = id || null; await loadEngine() }
-  return { curricula, filteredCurricula, educationPrograms, specialties, subjects, controlTypes, selectedSubjects, selectedSemesters, selectedSummary, filters, selectedId, selectedCurriculum, selectedItems, selectedHours, loading, saving, error, importSummary, programOptions, specialtyOptions, subjectOptions, controlTypeOptions, yearOptions, load, loadEngine, save, remove, addSubject, updateSubject, removeSubject, addItem, removeItem, importCsv, exportCsv, setFilters, resetFilters, select, selectById }
+  return { curricula, filteredCurricula, educationPrograms, specialties, subjects, controlTypes, selectedSubjects, selectedSemesters, selectedSummary, filters, selectedId, selectedCurriculum, selectedItems, selectedHours, loading, saving, error, loaded, importSummary, programOptions, specialtyOptions, subjectOptions, controlTypeOptions, yearOptions, load, loadEngine, save, remove, addSubject, updateSubject, removeSubject, addItem, removeItem, importCsv, exportCsv, setFilters, resetFilters, select, selectById }
 })
