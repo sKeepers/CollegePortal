@@ -124,10 +124,26 @@ class HrAbsenceCalendarApiTest extends TestCase
             ->assertSee('Сотрудник');
     }
 
+    /**
+     * Календарь отсутствий открыт тем, кому положен, и закрыт остальным.
+     *
+     * Смысл проверки прежний; изменился один факт. Строка про преподавателя
+     * переписана 04.09.2026 вслед за решением владельца — `/hr/calendar` ему не
+     * нужен, право `hr.calendar.view` у роли снято миграцией и сидером
+     * (`TeacherDoesNotKeepTheHrCalendarTest`). Переписана, а не удалена: то, что
+     * роль **не** пускают, здесь утверждение не менее нужное, чем прежнее.
+     *
+     * **Куратор добавлен той же правкой, и не для полноты.** Его набор прав в
+     * `RoleSeeder` собирается из набора преподавателя, поэтому снятие права у
+     * преподавателя забирает календарь и у куратора — молча, за компанию, и ни
+     * одна проверка об этом не скажет, потому что обе роли «правильные».
+     * Проверка ответа, а не таблицы прав: до предмета доходит только запрос.
+     */
     public function test_hr_calendar_permissions(): void
     {
-        $this->withApiAuth($this->createApiUser(roleCode: 'teacher'))->getJson('/api/hr/calendar')->assertOk()->assertJsonPath('data.summary.total', 0);
+        $this->withApiAuth($this->createApiUser(roleCode: 'teacher'))->getJson('/api/hr/calendar')->assertForbidden();
         $this->withApiAuth($this->createApiUser(roleCode: 'student'))->getJson('/api/hr/calendar')->assertForbidden();
+        $this->withApiAuth($this->createApiUser(roleCode: 'curator'))->getJson('/api/hr/calendar')->assertOk()->assertJsonPath('data.summary.total', 0);
         $this->withApiAuth($this->createApiUser(roleCode: 'director'))->getJson('/api/hr/calendar')->assertOk();
     }
 

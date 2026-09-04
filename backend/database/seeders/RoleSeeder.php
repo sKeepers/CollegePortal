@@ -57,7 +57,11 @@ class RoleSeeder extends Seeder
         $this->syncPermissions('dorm_warden', $this->ids($this->dormWardenPermissions()));
         $this->syncPermissions('deputy_upbringing', $this->ids($this->deputyUpbringingPermissions()));
         $this->syncPermissions('hr', $this->ids($this->hrPermissions()));
-        $this->syncPermissions('curator', $this->ids(array_values(array_unique(array_merge($this->teacherPermissions(), ['students.view', 'groups.view', 'attendance.reports', 'mobile.curator.view'])))));
+        // `hr.calendar.view` назван здесь **явно**: набор куратора собирается из
+        // набора преподавателя, а у преподавателя это право снято решением
+        // владельца 04.09.2026. Без этой строки куратор потерял бы календарь
+        // молча — за компанию, а не по решению.
+        $this->syncPermissions('curator', $this->ids(array_values(array_unique(array_merge($this->teacherPermissions(), ['students.view', 'groups.view', 'attendance.reports', 'mobile.curator.view', 'hr.calendar.view'])))));
     }
 
     private function permissions(): array
@@ -484,7 +488,7 @@ class RoleSeeder extends Seeder
 
     private function teacherPermissions(): array
     {
-        return ['dashboard.view', 'hr.calendar.view', 'schedule.view', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.semester_grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.export', 'attendance.view', 'exams.view', 'view_own_data', 'teachingload.view_own', 'mobile.teacher.view'];
+        return ['dashboard.view', 'schedule.view', 'journal.view', 'journal.edit', 'journal.attendance', 'journal.grades', 'journal.semester_grades', 'journal.files', 'journal.complete', 'journal.sign', 'journal.export', 'attendance.view', 'exams.view', 'view_own_data', 'teachingload.view_own', 'mobile.teacher.view'];
     }
 
     private function studentPermissions(): array
