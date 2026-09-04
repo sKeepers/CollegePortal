@@ -37,6 +37,7 @@ const editingUser = ref(null)
 const deleteDialog = ref(false)
 const blockDialog = ref(false)
 const unblockDialog = ref(false)
+const resetPasswordDialog = ref(false)
 const rolesDialog = ref(false)
 const provisionDialog = ref(false)
 const credentialDialog = ref(false)
@@ -277,6 +278,28 @@ function askBlock(user) {
 function askUnblock(user) {
   pendingUser.value = user
   unblockDialog.value = true
+}
+
+/**
+ * Задать пароль названной записи.
+ *
+ * На своей строке кнопки нет: выданный пароль показывается один раз, а смена
+ * пароля спрашивает текущий — не записав показанное, человек закрыл бы вход
+ * себе. Сервер отказывает в том же случае и по той же причине: кнопки может не
+ * быть, а ручка остаётся, и проверка на месте нужна обеим сторонам.
+ */
+function askResetPassword(user) {
+  pendingUser.value = user
+  resetPasswordDialog.value = true
+}
+
+async function confirmResetPassword() {
+  try {
+    credential.value = await store.resetPassword(pendingUser.value)
+    credentialDialog.value = true
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error?.message || 'Не удалось сбросить пароль', position: 'top-right' })
+  }
 }
 
 async function confirmDelete() {
@@ -555,6 +578,7 @@ onMounted(async () => {
             <q-td :props="props" class="users-actions">
               <q-btn v-if="canViewAs && props.row.is_active" flat dense round color="purple-9" title="Смотреть портал глазами этого человека (только просмотр)" @click.stop="askViewAs(props.row)"><Eye :size="16" /></q-btn>
               <q-btn v-if="canManage" flat dense round title="Редактировать" @click.stop="openEdit(props.row)"><Edit :size="16" /></q-btn>
+              <q-btn v-if="canManage && props.row.is_active && props.row.id !== auth.user?.id" flat dense round color="primary" title="Задать этой записи новый пароль и показать карточку доступа" @click.stop="askResetPassword(props.row)"><KeyRound :size="16" /></q-btn>
               <q-btn v-if="canManage && props.row.is_active" flat dense round color="warning" title="Заблокировать" @click.stop="askBlock(props.row)"><Ban :size="16" /></q-btn>
               <q-btn v-else-if="canManage" flat dense round color="positive" title="Разблокировать" @click.stop="askUnblock(props.row)"><CheckCircle2 :size="16" /></q-btn>
               <q-btn v-if="canManage" flat dense round color="negative" title="Удалить" @click.stop="askDelete(props.row)"><Trash2 :size="16" /></q-btn>
@@ -599,6 +623,7 @@ onMounted(async () => {
           <div class="users-card-actions">
             <q-btn v-if="canManage" outline color="primary" @click="openEdit(selectedUser)"><Edit :size="16" class="q-mr-xs" /> Редактировать</q-btn>
             <q-btn v-if="canManage" outline color="primary" @click="openRolesDialog(selectedUser)"><ShieldCheck :size="16" class="q-mr-xs" /> Роли</q-btn>
+            <q-btn v-if="canManage && selectedUser.is_active && selectedUser.id !== auth.user?.id" outline color="primary" @click="askResetPassword(selectedUser)"><KeyRound :size="16" class="q-mr-xs" /> Сбросить пароль</q-btn>
             <q-btn v-if="canManage && selectedUser.is_active" outline color="warning" @click="askBlock(selectedUser)"><Ban :size="16" class="q-mr-xs" /> Заблокировать</q-btn>
             <q-btn v-else-if="canManage" outline color="positive" @click="askUnblock(selectedUser)"><CheckCircle2 :size="16" class="q-mr-xs" /> Разблокировать</q-btn>
             <q-btn v-if="openPerson(selectedUser)" flat color="primary" :to="openPerson(selectedUser)">Открыть связанную карточку</q-btn>
@@ -724,6 +749,7 @@ onMounted(async () => {
     <AppConfirmDialog v-model="deleteDialog" title="Удалить пользователя" :message="`Удалить учётную запись ${pendingUser?.name || ''}?`" confirm-label="Удалить" @confirm="confirmDelete" />
     <AppConfirmDialog v-model="blockDialog" title="Заблокировать пользователя" :message="`Заблокировать ${pendingUser?.name || ''}? Пользователь не сможет войти в систему.`" confirm-label="Заблокировать" tone="warning" @confirm="confirmBlock" />
     <AppConfirmDialog v-model="unblockDialog" title="Разблокировать пользователя" :message="`Разблокировать ${pendingUser?.name || ''}?`" confirm-label="Разблокировать" tone="success" @confirm="confirmUnblock" />
+    <AppConfirmDialog v-model="resetPasswordDialog" title="Сбросить пароль" :message="`Выдать новый пароль для ${pendingUser?.name || ''}? Прежний перестанет работать сразу, а новый портал покажет один раз — записать или распечатать его нужно до закрытия карточки.`" confirm-label="Сбросить" tone="warning" @confirm="confirmResetPassword" />
   </AppPage>
 </template>
 

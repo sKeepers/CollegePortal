@@ -227,6 +227,29 @@ export const useUsersStore = defineStore('users', () => {
     }
   }
 
+  /**
+   * Задать пароль названной учётной записи.
+   *
+   * Список после этого не перезагружаем нарочно: пароля в нём нет, состояние
+   * записи не меняется, а лишний запрос под открытой карточкой доступа —
+   * лишний повод ей закрыться раньше, чем её прочитали.
+   */
+  async function resetPassword(user) {
+    if (!user?.id) return null
+    saving.value = true
+    error.value = ''
+
+    try {
+      const response = await api.create(`admin/users/${user.id}/reset-password`, {})
+      return response?.data || null
+    } catch (err) {
+      error.value = err.message || 'Не удалось сбросить пароль'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
   function resetFilters() {
     filters.value = { ...initialFilters }
   }
@@ -251,6 +274,7 @@ export const useUsersStore = defineStore('users', () => {
     unblock,
     assignRoles,
     provision,
+    resetPassword,
     resetFilters,
   }
 })

@@ -467,6 +467,12 @@ Route::middleware(['api.token', 'api.csrf', 'throttle:api.authenticated', 'view.
         // Право то же, что у работы с учётной записью; след пишется в журнал аудита.
         Route::get('admin/users/{user}/notifications', [AdminNotificationController::class, 'index']);
         Route::delete('admin/users/{user}/notifications/{subscription}', [AdminNotificationController::class, 'destroy']);
+        // «Задать пароль вот этой записи»: выбирает человек, а не отбор.
+        // Сброс по карточке при двух действующих записях выбирать отказывается
+        // и отправляет сюда — а здесь до 03.09.2026 пароль можно было только
+        // придумать руками в правке карточки, без срока и без карточки доступа.
+        Route::post('admin/users/{user}/reset-password', [AdminUserController::class, 'resetPasswordForUser'])
+            ->whereNumber('user');
         Route::post('admin/users/{user}/block', [AdminUserController::class, 'block']);
         Route::post('admin/users/{user}/unblock', [AdminUserController::class, 'unblock']);
         Route::apiResource('admin/users', AdminUserController::class);
