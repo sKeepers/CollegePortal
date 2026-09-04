@@ -22,6 +22,11 @@ use Tests\TestCase;
  * API: подпись рисуется на стороне браузера, а фронтенд-тестов в портале нет
  * вовсе. Обратная сторона — обход с обрывом запроса (`asking-failed-access.mjs`
  * рядом с `look.js`); держать надо обе, они ловят разное.
+ *
+ * **Проверка держится на паре «подпись пустоты → рядом спрошен отказ», а не на
+ * едином тексте отказа.** Заголовки у экранов могут быть свои («Реестр не
+ * получен», «Отчёт не получен») — это не мешает; сюда дописывается строка на
+ * экран, и соседняя область может добавить свои тем же способом.
  */
 class EmptyStateTellsFailureTest extends TestCase
 {
@@ -36,14 +41,18 @@ class EmptyStateTellsFailureTest extends TestCase
     public function test_the_empty_list_asks_whether_the_request_failed(): void
     {
         $mute = [];
+        $missing = [];
+        $read = 0;
 
         foreach (self::SCREENS as $path => $lie) {
             $source = $this->frontendFile($path);
 
             if ($source === null) {
-                $this->markTestSkipped('Рядом нет каталога frontend: проверка идёт в полном дереве, как в CI.');
+                $missing[] = $path;
+                continue;
             }
 
+            $read++;
             $states = $this->emptyStates($source);
             $forTheList = array_values(array_filter($states, fn (string $tag): bool => str_contains($tag, $lie)));
 
@@ -58,6 +67,18 @@ class EmptyStateTellsFailureTest extends TestCase
                 }
             }
         }
+
+        // Ни одного файла — фронтенда рядом нет, это прогон по `backend/`.
+        // **Часть файлов — другое дело:** экран переименовали или унесли, и молчать
+        // тут нельзя. Строка списка прикрывала бы уже несуществующее, а проверка
+        // выглядела бы работающей — ровно так список внешних ключей у `groups`
+        // разошёлся со схемой, оставаясь зелёным.
+        if ($read === 0) {
+            $this->markTestSkipped('Рядом нет каталога frontend: проверка идёт в полном дереве, как в CI.');
+        }
+
+        $this->assertSame([], $missing,
+            "экран из списка не найден — переименован или унесён, впишите новый путь:\n".implode("\n", $missing));
 
         $this->assertSame([], $mute, "пустое состояние выдаёт отказ за пустоту:\n".implode("\n", $mute));
     }
