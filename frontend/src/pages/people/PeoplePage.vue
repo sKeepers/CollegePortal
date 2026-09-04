@@ -51,7 +51,9 @@ const columns = [
 ]
 
 const selected = computed(() => store.selected)
-const tableSubtitle = computed(() => `Найдено людей: ${store.people.length}`)
+const tableSubtitle = computed(() => (store.error
+  ? 'Найдено людей: неизвестно, ответ не получен'
+  : `Найдено людей: ${store.people.length}`))
 const metrics = computed(() => {
   const counts = selected.value?.profiles_count || {}
   return [
@@ -329,6 +331,7 @@ onMounted(async () => {
           </template>
           <template #body-cell-status="props"><q-td :props="props"><AppStatusBadge :label="statusLabel(props.row.status)" :tone="statusTone(props.row.status)" /></q-td></template>
         </AppTable>
+        <AppEmptyState v-else-if="store.error" title="Список людей прочитать не удалось" description="Это не значит, что людей нет: ответ не получен. Сообщение об ошибке — выше." />
         <AppEmptyState v-else title="Люди не найдены" description="Измените фильтры или выполните привязку существующих профилей." />
       </section>
 

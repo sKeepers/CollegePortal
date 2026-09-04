@@ -105,7 +105,10 @@ const columns = [
   { name: "status", label: "Статус", field: "status", align: "left" },
 ];
 const tableSubtitle = computed(
-  () => `Найдено пакетов: ${store.filteredPackages.length}`,
+  () =>
+    store.error
+      ? "Найдено пакетов: неизвестно, ответ не получен"
+      : `Найдено пакетов: ${store.filteredPackages.length}`,
 );
 const outboundSummary = computed(
   () => store.outboundSummary || { total: 0, ready: 0, blocked: true },
@@ -679,6 +682,10 @@ onMounted(async () => {
                   statusTone(FIS_STATUS_OPTIONS, props.row.status)
                 " /></q-td></template></AppTable
         ><AppEmptyState
+          v-else-if="store.error"
+          title="Список пакетов прочитать не удалось"
+          description="Это не значит, что пакетов нет: ответ не получен. Сообщение об ошибке — выше."
+        /><AppEmptyState
           v-else
           title="Пакеты ФИС не найдены"
           description="Создайте пакет приема или ГИА."

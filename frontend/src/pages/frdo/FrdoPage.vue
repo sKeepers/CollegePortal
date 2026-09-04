@@ -103,7 +103,10 @@ const recordColumns = [
   { name: "actions", label: "", field: "actions", align: "right" },
 ];
 const tableSubtitle = computed(
-  () => `Найдено пакетов: ${store.filteredPackages.length}`,
+  () =>
+    store.error
+      ? "Найдено пакетов: неизвестно, ответ не получен"
+      : `Найдено пакетов: ${store.filteredPackages.length}`,
 );
 const selected = computed(() => store.selectedPackage);
 const recordCount = computed(
@@ -344,6 +347,10 @@ onMounted(async () => {
                   statusTone(FRDO_STATUS_OPTIONS, props.row.status)
                 " /></q-td></template></AppTable
         ><AppEmptyState
+          v-else-if="store.error"
+          title="Список пакетов прочитать не удалось"
+          description="Это не значит, что пакетов нет: ответ не получен. Сообщение об ошибке — выше."
+        /><AppEmptyState
           v-else
           title="Пакеты ФРДО не найдены"
           description="Создайте пакет из выпускников за выбранный год."

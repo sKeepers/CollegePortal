@@ -132,7 +132,10 @@ function diplomaStatusTone(value) {
   return referenceOptions.tone("diploma_statuses", value, "neutral");
 }
 const tableSubtitle = computed(
-  () => `Найдено выпускников: ${store.filteredGraduates.length}`,
+  () =>
+    store.error
+      ? "Найдено выпускников: неизвестно, ответ не получен"
+      : `Найдено выпускников: ${store.filteredGraduates.length}`,
 );
 const selected = computed(() => store.selectedGraduate);
 const diploma = computed(() => selected.value?.diploma || null);
@@ -511,6 +514,10 @@ onMounted(async () => {
                 @click.stop="requestDelete(props.row)"
                 ><Trash2 :size="16" /></q-btn></q-td></template></AppTable
         ><AppEmptyState
+          v-else-if="store.error"
+          title="Список выпускников прочитать не удалось"
+          description="Это не значит, что выпускников нет: ответ не получен. Сообщение об ошибке — выше."
+        /><AppEmptyState
           v-else
           title="Выпускники не найдены"
           description="Создайте выпускника из студента или импортируйте CSV."

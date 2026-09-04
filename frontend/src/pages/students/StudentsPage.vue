@@ -151,6 +151,12 @@ const tableSubtitle = computed(() => {
     return 'Ищем записи…'
   }
 
+  // Спросить не удалось — числа у нас нет. «Найдено записей: 0» здесь было бы
+  // утверждением о колледже: 29.08.2026 владелец прочитал такое как факт.
+  if (store.error) {
+    return 'Найдено записей: неизвестно, ответ не получен'
+  }
+
   const total = store.pagination?.total ?? store.students.length
 
   return `Найдено записей: ${total}`
@@ -704,6 +710,12 @@ onMounted(async () => {
             </q-td>
           </template>
         </AppTable>
+
+        <AppEmptyState
+          v-else-if="store.error"
+          title="Список студентов прочитать не удалось"
+          description="Это не значит, что студентов нет: ответ не получен. Сообщение об ошибке — выше."
+        />
 
         <AppEmptyState
           v-else
