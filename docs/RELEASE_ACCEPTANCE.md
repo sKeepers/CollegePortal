@@ -370,10 +370,32 @@ RFID-карты, собственный пропуск — встают и на 
 - **Б4. Портал использует машину целиком, а не пятую её часть.** После
   установки:
 
+  Две команды, и ни одна не может дать пустоту молча. Имя контейнера на бою —
+  `installer-backend-1` (проект compose называется `installer`); если
+  сомневаетесь, `sudo docker ps --format '{{.Names}}' | grep backend`.
+
   ```
-  sudo docker exec college_portal_backend sh -c \
-    'grep -h max_children /usr/local/etc/php-fpm.d/*.conf | tail -1'
+  sudo docker exec installer-backend-1 php-fpm -tt 2>&1 | grep -E "max_children|rror|No such|denied"
   ```
+
+  Ждём строку с `pm.max_children = 24`. Любая другая строка — имя ошибки, и
+  это тоже ответ. **07.09.2026 эта же команда с `grep max_children` дала на
+  бою пустоту**, и разобрать её было нечем: труба глотает и «No such
+  container», и отказ docker, и всё, что напечаталось бы, не дойдя до php-fpm.
+  Воспроизведено 12.09 на образе `cp-rc12:fromarchive` через `docker exec`: сам
+  `php-fpm -tt` под `www-data` исправен и печатает 24 — пустоту дала не
+  настройка, а способ смотреть.
+
+  ```
+  sudo docker exec installer-backend-1 sh -c 'for p in /proc/[0-9]*; do tr "\0" " " < $p/cmdline; echo; done' | grep -c "php-fpm: pool www"
+  ```
+
+  Ждём **8 и больше**: это `pm.start_servers = 8` из `zz-portal.conf`, а
+  умолчание образа дало бы **2**. Число живых процессов — единственный из трёх
+  замеров, который говорит, с чем пул **работает**, а не с чем собирался: файл
+  в каталоге пулов лежит и там, где пул его не прочитал (`grep -r max_children
+  /usr/local/etc/php-fpm.d/` печатает три строки — 5, 24 и 5 — и не говорит,
+  какая живая), а `-tt` показывает разбор, но не запуск.
 
   Ждём `pm.max_children = 24`, а не `5`. Пятёрка — умолчание образа `php:fpm`,
   которого никто не писал: на шестнадцати ядрах портал упирался в 467 % из
